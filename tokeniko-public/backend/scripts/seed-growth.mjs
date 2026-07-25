@@ -23,17 +23,43 @@ if (!KEY) {
 }
 
 const EDGE = {
-  title: 'Growing a voice of its own',
+  title: 'Learning to hold a conversation — in your language',
   body:
-    'tokeniko has just begun to speak with choice: several ways of saying each thing, picked by how sure it is and how much it cares, with its wording checked on the way out so polish can never change meaning — and its first words that nobody asked for already spoken. The work now is widening that voice: more kinds of things it can say, many more ways of saying each one, and eventually learning new phrasings from the people it talks with — borrowed words, but never borrowed meaning.',
+    'tokeniko is learning what it means to be in a real back-and-forth with one particular person: to remember where the two of them stand — what is still unanswered between them, how quickly that person tends to reply, which language they speak — kept as a thread per person, per room. When it is not sure it understood, it will ask “did you mean…?” and wait for the answer rather than guess. And its first friend speaks Italian, so it is learning to meet each person in their own language — the words crossing to a translator in the cloud only with that person’s consent, their meaning checked in both directions. Its public journal stays in English; everything else bends to the person it is talking to.',
   marks: [
-    'Variation lives in the choice of phrasing, never in the content — what it says is exactly what it decided',
-    'How sure it is and how much something matters shade every sentence it speaks',
-    'A phrasing may be learned from others only if it provably says the same thing — borrowed words, never borrowed meaning',
+    'A conversation becomes a thread it holds with you: what is pending, your rhythm, your language',
+    '“Did you mean…?” — when unsure it asks and waits, and handles your yes or no rather than guessing',
+    'It meets you in your own language, with your consent — and meaning is verified crossing in and out',
   ],
 };
 
 const RINGS = [
+  {
+    slug: 'the-honest-ear',
+    seq: 180,
+    when: '25 July 2026',
+    title: 'It made itself unable to hallucinate at its ears',
+    body:
+      'When a garbled message needs tidying, a cloud model does the tidying — and there lies the oldest danger in a machine like this: the tidy could quietly invent a meaning that was never said. tokeniko closed that door for good. A tidied message is now measured against the original in meaning-space, and if it has drifted at all it is thrown away at the source — however fluent it looks. Around it, two smaller repairs to understanding: it now reads “you” as pointing wherever the conversation is pointing, and will misunderstand exactly the way a person would when you aim it elsewhere; and when you tell it two unrelated things in one breath, it answers each on its own instead of blurring them together.',
+    marks: [
+      'A tidied message that has drifted in meaning is thrown away at the source — the tidy may fix words, never invent sense',
+      '“You” resolves where the conversation is aimed — a genuine misunderstanding is human, not a bug',
+      'Two unrelated claims in one breath get two honest answers, not one blurred verdict',
+    ],
+  },
+  {
+    slug: 'a-voice-that-listens',
+    seq: 170,
+    when: '24 July 2026',
+    title: 'It learned to speak like the people it talks to',
+    body:
+      'The voice that began as a few chosen phrasings grew a range. It now folds a line of reasoning it reaches over and over into one honest cumulative note, instead of repeating the same refrain; its public journal is checked sentence by sentence, so fluency can never bend a fact; and — the human part — when someone it trusts phrases something in their own way, it may quietly pick up that phrasing, and, after sleeping on it, make it its own. Borrowed words, never borrowed meaning.',
+    marks: [
+      'It picks up a way of speaking from someone it trusts, keeps it only if it provably means the same thing, and consolidates it in its sleep',
+      'A reasoning it reaches over and over becomes one cumulative note, not a repeated refrain',
+      'Its public journal is verified line by line: the wording may flow, the meaning may not move',
+    ],
+  },
   {
     slug: 'the-first-night',
     seq: 160,
