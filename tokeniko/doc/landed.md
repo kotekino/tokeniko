@@ -2024,3 +2024,18 @@ SURVEY ARC IS COMPLETE)**
   — the trust echo was lifted out of the verdict branch so it fires once on either route).
 - +8 tests (`test_and_split.py`, on real compiled zips — the split table AND every carve-out).
   Full gate **658 passed, 1 xfailed**.
+
+**The ears' wh-escalation residuals closed (2026-07-25 — QM inline; the officer-reported tail of the strong verifier)**
+- The strong-verifier build (2026-07-24) exempted only the PREDICATE-gap wh family from
+  `_leaf_sound`; the officer reported two families still reading as stumbles and escalating (safe
+  behind the wall, but a burned Haiku call each): SUBJECT-gap («who is happy?» — subject IS the
+  gap, `subject=None` → died at the subject requirement) and COPULA-predicate («where is Rome?» —
+  the bare `be.v.01` tripped the tangle-census wart, though that copula is the question's SHAPE).
+- The cure, one rule for all three (the author accepted the ripple): a wh leaf is SOUND when it
+  carries ANY known non-gap role (`bool(subject or predicate)`), and the parse-warts don't apply
+  to it (a bare copula in a question is not the assertion fault it signals). Non-wh behavior is
+  byte-identical. The relaxation rides through the shared `verifier_voice` too — a composed
+  outbound wh-reply becomes rag2-out-polishable where it once shipped verbatim, mood-gate-protected
+  (the accepted ripple); a FRAGMENT stays unsound («why?» is `unknown=True`).
+- +1 test (`test_translator.py::test_wh_residual_families_do_not_escalate`; the two families +
+  the non-wh carve-out). Full gate **659 passed, 1 xfailed**.

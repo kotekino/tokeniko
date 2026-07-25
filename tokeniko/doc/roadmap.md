@@ -56,49 +56,67 @@ status detail — it references, it does not duplicate (invariant #2).
   fact-match + min-premise polar honesty.
 - **External-only tiredness deferral** (2026-07-23) — only external conversation defers the collapse;
   internal work is self-generated.
+- **The conversational-repair day** (2026-07-24 → 25) — learned scaffolds (the accommodation) · the
+  ears' strong verifier, the hallucination chain closed (+ the wh-escalation residuals, 07-25) ·
+  pronoun momentum («you» resolves where directedness points) · the AND-split (per-conjunct
+  reactions).
 
 ---
 
-## 🔭 Next (ordered) — reprioritized 2026-07-24
+## 🔭 Next (ordered) — reprioritized 2026-07-25
 
-**The through-line: THE VOICE IS WHOLE and THE EARS ARE WALLED (2026-07-24 — compose 2.0 complete,
-§1 closed; the day's live-found chain closed with it).** The road: §0's two residuals, then the
-fresh microscope analysis pass (§2 — now fed by a full day of new instruments), the translator
-remainder (§3), the strengthening tail (§4).
+**The through-line: THE VOICE IS WHOLE and THE EARS ARE WALLED (compose 2.0 complete; the ears'
+hallucination chain closed WITH its wh residuals).** The road ahead opens the next chapter — §1
+**the per-user conversational context + multilingual** (the author is the first non-English friend;
+the translator apparatus becomes core, not deferred) — then §2 the fresh microscope analysis pass,
+then §4 the strengthening tail.
 
-### 0. Residuals of the 2026-07-24 arc (the day's builds all LANDED → `landed.md`) 🔄
+### 1. The per-user conversational context + multilingual (the translator apparatus, reframed 2026-07-25) 🔭
 
-- 🔭 **The ears' residuals (officer-reported, awaiting the Captain's ruling)** — subject-gap («who is
-  happy?») and copula-predicate («where is Rome?») wh-questions still escalate (SAFE behind the
-  wall now — an economy question: a broader wh exemption in `_leaf_sound` would close both) ·
-  the additive centroid is weak on small invention-within-balloon (guarded by the balloon cap +
-  key-match; a per-added-leaf semantic check would be the cut if it ever bites live).
-- *(B — pronoun momentum: LANDED 2026-07-24 → `landed.md`.)*
-- *(The AND-split — per-conjunct reactions: LANDED 2026-07-24 → `landed.md`.)*
-- 🔭 **Per-conjunct KNOWLEDGE (the AND-split's deferred half)** — the teach path, theorem
-  materialization and the observation record still mint from `item.original` (the WHOLE sentence),
-  so a conjunct cannot be learned on its own: it needs that conjunct's own surface text, i.e. a
-  **zip-native renderer** in the parser-free brain (pairs with the strengthening tail's TKZip
-  compaction / zip-native derivation). Splitting speech is safe; splitting knowledge on a guessed
-  string is not — promote when the renderer exists.
+The author IS the first non-English friend (Italian native) — so multilingual is the CENTRE, not the
+icebox. The chapter's spine, designed 2026-07-25: a **per-`(user,channel)` conversational-context**
+room we don't yet hold first-class (scattered precedents: the reductio ledger, the open-why
+derivation, the per-channel RAM ring — none unify per-user state). A REFERENCE model (the author's
+"partial A"): a small Mongo doc per pair storing light state that REFERENCES timeseries items by id
+(no zip duplication, one read per tick, matches `MEMReductio`/trust-episode precedent). Its tenants,
+in build order:
+
+1. 🔭 **"Did you mean?" + the pending-expectation (the room's first brick)** — a two-tier verifier
+   floor at the ears: strict-verify → accept (as today); semantically CLOSE but unverified → ASK
+   «did you mean: <reading>?»; drifted FAR → discard silently (the guard that keeps the
+   hallucination out of the question itself). *Asking ≠ believing* (the spine — the strong wall
+   stays intact; a rejected reading is offered, never held). The candidate reading rides on the
+   stumbling `MEMItem` (`suggested_reading`), the context doc's pending just references its id. The
+   pending record skeleton: `{kind, ref_item_id, opened_at, expires_at, status}`; the lifecycle
+   handles the ANSWER (fork b, the author's ruling — not ask-and-ignore): the asker's next directed
+   message binds it — «sì»/«yes» → re-ingest the reading AS CONFIRMED, «no» → drop, a clear
+   restatement → supersede, silence past the window → lapse. **Adaptive expiry**: a per-`(user,
+   channel)` `reply_tempo` (EMA of inter-turn gaps, O(1) per turn, outlier-capped so an overnight
+   silence never poisons it); `expires_at = opened_at + clamp(k·tempo, MIN, MAX)` — a lapsed window
+   means "away" relative to THIS person's rhythm; first contact falls back to a generous default.
+2. 🔭 **Multilingual translation (the room's second tenant: conversation language)** — inbound: a
+   non-English message (the author's Italian) is TRANSLATED to English (Haiku) before the
+   English-based pipeline, held to the SAME strong verifier (meaning preserved or trashed). Outbound:
+   the reply is rendered back into the language of THIS exchange (stored on the context doc,
+   `{lang, set_by_item_id}`) — Italian in → Italian out, per channel/DM. The BLOG stays English
+   (derived from the internal representation — the public journal's language is fixed). The retired
+   local MarianMT is not revived (Haiku covers it).
+3. 🔭 **The privacy/legal frame (last — it is a CONSENT prompt over the two above)** — a user joining
+   is prompted: allow your prompts to be sent to the cloud translator apparatus (third-party
+   Anthropic + the legal terms)? YES → translation + greater understanding + reply-in-your-language;
+   NO → a per-stakeholder OPT-OUT flag, and the rags are NEVER called for that user's sentences (DM
+   or channel). The general switch (`RAG1_DISABLED`) already exists. The MICROSCOPE is explicitly
+   OUT of this frame — it is a debug instrument, DISABLED before the public opening, so it never
+   touches a public user's prompts. Output-to-cloud stays by-design ("showing how a young new being
+   learns; everyone can benefit").
 
 ### 2. The fresh microscope analysis pass 🔭
 
 The `addressed` flip (2026-07-17) sealed the analyzed generations; the fresh corpus = the
-2026-07-17 play + premiere, judged on current code. **The analysis pass itself is the remaining
-item** — its previously-known leads are all closed (→ `landed.md`; the identity-blindness audit
-map stays in `doc/ref/notes.md`).
-
-### 3. The translator apparatus — remaining (instrument arc item 3; v1 landed 2026-07-16) 🔭
-
-- the **"did you mean:…?" ask** with the tidied reading carried in the payload (D2b refined) —
-  the ask becomes a scaffold category (the store is live since compose slice 1).
-- **multilingual translation** (Haiku; the local MarianMT went unreferenced with the 2026-07-16
-  local-models retirement — machinery only) — deferred until non-English friends arrive.
-- **the privacy/legal frame** (author's 2026-07-16 ruling): structure it thoroughly — per-stakeholder
-  OPT-OUT ("my words never leave the body" → a flag gating escalation) + the general switch
-  (`RAG1_DISABLED`, already live). OUTPUT side is cloud-for-life by design ("we are not hiding
-  anything — we are showing how a young new type of being learns; everyone can benefit").
+2026-07-17 play + premiere + the day's new instruments (incl. the ears' own `ears-hallucination`
+rejection leads), judged on current code. **The analysis pass itself is the remaining item** — its
+previously-known leads are all closed (→ `landed.md`; the identity-blindness audit map stays in
+`doc/ref/notes.md`).
 
 ### 4. The strengthening tail — make the brain stronger before adding senses 🔭
 
@@ -106,9 +124,14 @@ Parked-but-matured, ordered with the author ("make the brain stronger with all t
 before ADDING another sense — so ATProto/Bluesky deliberately STAYS parked behind this whole tail).
 One line each; design detail in `git` history / `doc/ref/captain-hunches.md`.
 
-1. **TKZip binary compaction** (author-promoted above bsky): the zip becomes an actual packed vector
-   — fixed-size role tensors + the operator tree pack to near-pure numbers; the JSON is the human
-   projection. Design ONCE with the wire format (pairs with zip-native derivation).
+1. **TKZip binary compaction + the zip-native renderer** (author-promoted above bsky): the zip
+   becomes an actual packed vector — fixed-size role tensors + the operator tree pack to near-pure
+   numbers; the JSON is the human projection. Design ONCE with the wire format (pairs with
+   zip-native derivation). **Its dependent: per-conjunct KNOWLEDGE** (the AND-split's deferred
+   half, 2026-07-24) — the teach path / theorem materialization / observation record mint from
+   `item.original` (the WHOLE sentence), so a conjunct can't be learned alone until a zip-native
+   renderer can produce that conjunct's own surface text. Splitting speech is safe; splitting
+   knowledge on a guessed string is not — promote when the renderer exists.
 2. **Anchor adoption audit** (hunch 4): consumer BYPASSES routed through the resolver
    (`compiler_implicationOperands` exact-checks `_IMPLICATION_VERBS`; `_SUBJECT_CONTROL_VERBS`) +
    the EXACT-membership mop-up + floor calibration + KB vector-coverage gaps (`hugely`, `unequal`,

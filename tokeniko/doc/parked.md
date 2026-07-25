@@ -113,3 +113,5 @@ The parked fork: reposition `e_facts` as the AUTHORITATIVE pricer ahead of the s
 chainer — an exact restatement is a lookup, not a derivation, so arguably worth the fact's full
 trust (0.9). Promote if live behavior makes the conservative pricing feel dishonest (answers
 about well-trusted beliefs sounding oddly unsure).
+
+**The ears' semantic floor — small invention-within-balloon (2026-07-24, the strong-verifier build's finding)** — the additive sound-only semantic centroid is weak when a small fluent invention rides beside true content: «a cat is a mammal → …and pigs fly» measures ~0.97 (+1 leaf) / ~0.86 (+2), because the shared content dominates the sum, so the floor does not catch it — that class stays guarded by the existing +2 balloon cap and the structural key-match, NOT the geometry. An honest limit, not a regression. The cut if it ever bites live: a PER-ADDED-LEAF semantic check (each ballooned leaf must itself be close to some original leaf), rather than the whole-zip centroid. Promote only if a real live polish sneaks a small invention past the cap.

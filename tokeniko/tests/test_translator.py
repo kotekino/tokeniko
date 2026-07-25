@@ -175,6 +175,22 @@ def test_wh_question_does_not_escalate(compile_zip):
     assert detector_stumbles(compile_zip("what is a cat?")) is False
 
 
+def test_wh_residual_families_do_not_escalate(compile_zip):
+    # 2026-07-25: the subject-gap and copula-predicate families — the officer-reported residuals of
+    # the ears build. Each empties a DIFFERENT gap role; one soundness rule (any known non-gap role)
+    # covers all three, so neither escalates any longer.
+    assert detector_stumbles(compile_zip("who is happy?")) is False       # subject IS the gap
+    assert detector_stumbles(compile_zip("where is Rome?")) is False      # copula shape, location gap
+    # and the leaf-level signatures behind them: sound despite the emptied role / the bare copula
+    subj_gap = _zip_leaves(compile_zip("who is happy?").items)[0]
+    assert _leaf_sound(subj_gap) is True                                  # no subject, but a predicate
+    loc_gap = _zip_leaves(compile_zip("where is Rome?").items)[0]
+    assert _leaf_sound(loc_gap) is True                                   # be.v.01 wart relaxed for wh
+    # the carve-out holds: a NON-wh bare copula is still a wart (an assertion parse fault escalates)
+    non_wh_copula = _zip_leaves(compile_zip("a wug is a blicket").items)[0]
+    assert _leaf_sound(non_wh_copula) is False                            # unknown vocab, still unsound
+
+
 def test_live_specimen_rejected(compile_zip):
     # the mother-of-all: the prompt-soup answer must be trashed at the source (mood and/or semantic)
     ok, note = verifier_preserves(compile_zip(_SPECIMEN_ORIGINAL), compile_zip(_SPECIMEN_POLISH))

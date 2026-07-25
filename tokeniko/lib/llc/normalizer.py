@@ -45,17 +45,21 @@ def _leaf_sound(leaf) -> bool:
     identities = getattr(leaf, "identities", None) or {}
     subject = identities.get("subject") or senses.get("subject")
     predicate = senses.get("predicate")
-    if not subject:
+    # a WH-QUESTION legitimately empties the GAP role — whichever role it asks for (the predicate/
+    # complement of «what are you?», the subject of «who is happy?», the location of «where is
+    # Rome?») is the variable X, not a missing claim. So a wh leaf is SOUND when it carries ANY known
+    # non-gap role, and the parse-warts below DON'T apply to it: a bare copula in «where is Rome?»
+    # is the question's SHAPE, not the tangle-census fault it signals in an assertion. Else every
+    # well-formed wh-question reads as a stumble and burns a Haiku call at the ears (the live role-
+    # confusion hallucination's first link). (2026-07-24 exempted the predicate-gap family; 2026-07-25
+    # closes the subject-gap + copula-predicate residuals — one rule for all three.) The relaxation
+    # rides through verifier_voice too (the shared consumer): a composed outbound wh-reply becomes
+    # rag2-out-polishable where it once shipped verbatim — mood-gate-protected, the author's accepted
+    # ripple. A FRAGMENT stays unsound: «why?» is unknown=True and never reaches here.
+    if getattr(leaf, "wh_role", None) is not None:
+        return bool(subject or predicate)
+    if not subject or not predicate:
         return False
-    # a WH-QUESTION is legitimately predicate-less (2026-07-24): the gap IS the question — the
-    # predicate/complement it asks for is the variable X, not a missing claim. So exempt the
-    # predicate requirement for a wh leaf, else EVERY well-formed wh-question reads as a stumble and
-    # burns a Haiku call at the ears (the live role-confusion hallucination's first link). The
-    # predicate-warts below still bite when a predicate IS present — a self-loop / bare-copula parse
-    # fault is a fault whether the mood is a question or an assertion.
-    is_wh = getattr(leaf, "wh_role", None) is not None
-    if not predicate:
-        return is_wh
     if subject == predicate:
         return False          # «software is software» — the tangle self-loop wart
     if predicate == "be.v.01":
