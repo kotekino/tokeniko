@@ -281,3 +281,86 @@ def test_ears_rejection_write_failure_never_blocks(_io):
     from api.main import _log_ears_rejection
     _log_ears_rejection("ears-test-bad", "x", "polish drifts semantically (0.10 < floor 0.60)",
                         "y", None, None)  # must not raise
+
+
+# ---- the two-tier floor at the ears: ACCEPT | ASK | DISCARD (the room + ask, 1a) --------------------
+# asking ≠ believing — the strong wall still trashes a drifting polish (DISCARD), but a polish that is
+# a COHERENT, semantically-plausible ALTERNATIVE reading is neither believed nor discarded: it is
+# OFFERED as a question (ASK). verifier_verdict is built ON TOP of verifier_preserves (the accept wall
+# is unchanged), so every test above stays valid — this only exercises the added middle tier.
+
+def test_verdict_accept_is_the_old_accept(compile_zip):
+    # a genuine segmentation still passes the accept wall -> ACCEPT (behaves exactly as verifier_preserves)
+    from lib.llc.normalizer import verifier_verdict
+    verdict, _ = verifier_verdict(
+        compile_zip("a cat is a mammal and a dog is an animal"),
+        compile_zip("a cat is a mammal. a dog is an animal."))
+    assert verdict == "ACCEPT"
+
+
+def test_verdict_ask_offerable_reading(compile_zip):
+    # a coherent alternative reading (a locative re-hearing, one swapped content word) sits in the
+    # ask band [ASK_FLOOR, SEM_FLOOR) -> ASK (offer it, don't believe it)
+    from lib.llc.normalizer import verifier_verdict
+    verdict, note = verifier_verdict(compile_zip("the cat is on the mat"),
+                                     compile_zip("the cat is on the bed"))
+    assert verdict == "ASK", note
+
+
+def test_verdict_discard_far_drift(compile_zip):
+    # a wholesale drift (below the ask floor, both sides sound) is trashed at the source -> DISCARD
+    from lib.llc.normalizer import verifier_verdict
+    verdict, note = verifier_verdict(compile_zip("a cat is a mammal"),
+                                     compile_zip("a rock is a mineral"))
+    assert verdict == "DISCARD", note
+
+
+def test_verdict_discard_prompt_soup(compile_zip):
+    # the live specimen (a mood flip, no shared semantic anchor) must land DISCARD, never ASK — a
+    # hallucination is trashed, not offered
+    from lib.llc.normalizer import verifier_verdict
+    verdict, note = verifier_verdict(compile_zip(_SPECIMEN_ORIGINAL), compile_zip(_SPECIMEN_POLISH))
+    assert verdict == "DISCARD", note
+
+
+def test_ask_floor_measured_margins(compile_zip):
+    # pin the calibration RAG1_ASK_FLOOR rests on (default 0.12, the second/lower floor under the
+    # accept floor 0.60). measured 2026-07-25 on whole-zip semantic centroids:
+    #   far drift        «cat is a mammal»     vs «rock is a mineral»   ~0.03  (DISCARD, below the floor)
+    #   taxon re-hearing «gold is a metal»     vs «gold is a mineral»   ~0.20  (ASK, inside the band)
+    #   locative re-hear «cat is on the mat»   vs «cat is on the bed»   ~0.35  (ASK, inside the band)
+    from lib.llc.normalizer import _semantic_proximity, _ask_floor, _semantic_floor
+    from lib.core.kb_extract import _zip_leaves
+
+    def prox(a, b):
+        return _semantic_proximity(_zip_leaves(compile_zip(a).items), _zip_leaves(compile_zip(b).items))
+
+    ask_floor, sem_floor = _ask_floor(), _semantic_floor()
+    assert ask_floor < sem_floor  # the ask floor is the SECOND, lower floor
+    # the far drift sits BELOW the ask floor (with margin) -> DISCARD
+    drift = prox("a cat is a mammal", "a rock is a mineral")
+    assert drift is not None and drift < ask_floor
+    # the offerable re-hearings sit INSIDE the band [ask_floor, sem_floor) -> ASK
+    for a, b in [("gold is a metal", "gold is a mineral"),
+                 ("the cat is on the mat", "the cat is on the bed")]:
+        p = prox(a, b)
+        assert p is not None and ask_floor <= p < sem_floor, (a, b, p)
+
+
+def test_input_stores_suggested_reading_only_on_ask(_io):
+    # the /input contract (1a): the ASK candidate rides on the item as suggested_reading (stored
+    # exactly once, here — the room only references its id); ACCEPT/DISCARD leave it None. Proven at
+    # the field level: the model round-trips the reading, and the verdict tiers above decide when
+    # /input sets it. The raw parse ALWAYS stands (original/zip unchanged — asking ≠ believing).
+    from lib.core.models import TKMemoryItemDoc
+    item = TKMemoryItemDoc(original="the cat is on the mat", zip=None,
+                           sourceId="dym-store-test",
+                           suggested_reading="the cat is on the bed")
+    item.insert()
+    try:
+        fetched = TKMemoryItemDoc.get(item.id).run()
+        assert fetched is not None
+        assert fetched.suggested_reading == "the cat is on the bed"
+        assert fetched.original == "the cat is on the mat"  # true history — the raw words stand
+    finally:
+        TKMemoryItemDoc.get_motor_collection().delete_many({"sourceId": "dym-store-test"})

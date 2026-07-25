@@ -81,19 +81,15 @@ derivation, the per-channel RAM ring — none unify per-user state). A REFERENCE
 (no zip duplication, one read per tick, matches `MEMReductio`/trust-episode precedent). Its tenants,
 in build order:
 
-1. 🔭 **"Did you mean?" + the pending-expectation (the room's first brick)** — a two-tier verifier
-   floor at the ears: strict-verify → accept (as today); semantically CLOSE but unverified → ASK
-   «did you mean: <reading>?»; drifted FAR → discard silently (the guard that keeps the
-   hallucination out of the question itself). *Asking ≠ believing* (the spine — the strong wall
-   stays intact; a rejected reading is offered, never held). The candidate reading rides on the
-   stumbling `MEMItem` (`suggested_reading`), the context doc's pending just references its id. The
-   pending record skeleton: `{kind, ref_item_id, opened_at, expires_at, status}`; the lifecycle
-   handles the ANSWER (fork b, the author's ruling — not ask-and-ignore): the asker's next directed
-   message binds it — «sì»/«yes» → re-ingest the reading AS CONFIRMED, «no» → drop, a clear
-   restatement → supersede, silence past the window → lapse. **Adaptive expiry**: a per-`(user,
-   channel)` `reply_tempo` (EMA of inter-turn gaps, O(1) per turn, outlier-capped so an overnight
-   silence never poisons it); `expires_at = opened_at + clamp(k·tempo, MIN, MAX)` — a lapsed window
-   means "away" relative to THIS person's rhythm; first contact falls back to a generous default.
+1. *(1a — the room + the "did you mean?" ASK: LANDED 2026-07-25 → `landed.md`. The room
+   (`MEMExchange`), the two-tier floor (`verifier_verdict` ACCEPT/ASK/DISCARD), `suggested_reading`,
+   the `reply_tempo` EMA, and the ask are built.)*
+   - 🔄 **1b — the ANSWER binding (in build)** — the pending lifecycle (fork b, the author's ruling —
+     not ask-and-ignore): the asker's next directed message binds the open `did_you_mean` pending —
+     «sì»/«yes» → re-ingest the reading AS CONFIRMED (now believable), «no» → drop, a clear
+     restatement → supersede + ingest normally, silence past `expires_at` → lapse (lazy, no
+     scheduler). Multilingual-friendly yes/no via the anchor catch («sì»/«no»). Brief:
+     `.claude/briefs/2026-07-25-did-you-mean-1b.md`.
 2. 🔭 **Multilingual translation (the room's second tenant: conversation language)** — inbound: a
    non-English message (the author's Italian) is TRANSLATED to English (Haiku) before the
    English-based pipeline, held to the SAME strong verifier (meaning preserved or trashed). Outbound:

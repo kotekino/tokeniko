@@ -9,7 +9,7 @@ from lib.llc.parser import parser, parser_diagram, parser_init
 from lib.core.io import get_stakeholder, get_tokeniko, init_io, upsert_individual
 from lib.core.models import TKMemoryItemDoc
 from lib.core.evaluation_harness import zip_senses
-from lib.llc.normalizer import detector_stumbles, detector_unrepairable, normalizer_enabled, normalizer_polish, verifier_preserves, verifier_voice
+from lib.llc.normalizer import detector_stumbles, detector_unrepairable, normalizer_enabled, normalizer_polish, verifier_preserves, verifier_verdict, verifier_voice
 from lib.llc.social import social_detect
 
 logger_api = logging.getLogger("tokeniko-api")
@@ -510,6 +510,7 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
         # disposes, whoever proposes). Unverifiable/unreachable -> the raw parse stands exactly
         # as before (unknown leaves never become beliefs; eval:unknown already asks).
         normalized_text: Optional[str] = None
+        suggested_reading: Optional[str] = None  # the "did you mean?" candidate (ASK tier) — the brain reacts
         rag1_rejection: Optional[tuple] = None  # (note, polished, polished_zip) — logged post-store
         if normalizer_enabled() and flatResult and detector_stumbles(flatResult[1]):
             # unrepairable-by-tidying (pronoun-subject leaves = a COREFERENCE gap, not a surface
@@ -523,10 +524,18 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
             if polished:
                 rec2 = parser(polished, talkerEntity, app.state.tokeniko, app.state.ai_client, addressed=addressed)
                 flat2: tuple[TKLLC, TKZip] = compiler_compile(copy.deepcopy(rec2))
-                ok, note = verifier_preserves(flatResult[1], flat2[1]) if flat2 else (False, "no compile")
-                if ok:
+                # the two-tier floor at the ears (1a): ACCEPT | ASK | DISCARD (verifier_verdict).
+                verdict, note = verifier_verdict(flatResult[1], flat2[1]) if flat2 else ("DISCARD", "no compile")
+                if verdict == "ACCEPT":
                     recursiveResult, flatResult, normalized_text = rec2, flat2, polished
                     logger_api.info("[rag1] normalized «%s» -> «%s» (verified)", tokens[:60], polished[:60])
+                elif verdict == "ASK":
+                    # a COHERENT offerable reading — the raw parse still stands (asking ≠ believing);
+                    # the candidate rides on the item and the BRAIN reacts (open a pending + ask).
+                    # NOT a caught drift, so it writes NO ears-hallucination lead.
+                    suggested_reading = polished
+                    logger_api.info("[rag1] polish OFFERED for «%s» -> «%s» (%s) — «did you mean?»",
+                                    tokens[:60], polished[:60], note)
                 else:
                     logger_api.info("[rag1] polish REJECTED for «%s» (%s) — raw parse stands", tokens[:60], note)
                     rag1_rejection = (note, polished, flat2[1] if flat2 else None)
@@ -556,6 +565,7 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
                 metadata=metadata,
                 directedness=directedness,
                 normalized=normalized_text,
+                suggested_reading=suggested_reading,  # the ASK candidate (1a) — the brain asks «did you mean?»
             )
             memory_doc.insert()
 

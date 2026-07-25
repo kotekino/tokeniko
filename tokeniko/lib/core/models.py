@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from typing import Annotated, Optional
 from bunnet import Document, Granularity, Indexed, TimeSeriesConfig
+from pymongo import ASCENDING, IndexModel
 from pydantic import Field
 from lib.core.tk import TKBase, TKDictionary, TKMarker, TKName, TKPlace, TKProperty
-from lib.core.memory import MEMAxiom, MEMDefinition, MEMTheorem, MEMItem, MEMStakeholder, MEMIdea, MEMAction, MEMBehaviorRule, MEMReductio, MEMScaffold, MEMTrustEpisode, MEMZipDebug, BrainState
+from lib.core.memory import MEMAxiom, MEMDefinition, MEMTheorem, MEMItem, MEMStakeholder, MEMIdea, MEMAction, MEMBehaviorRule, MEMExchange, MEMReductio, MEMScaffold, MEMTrustEpisode, MEMZipDebug, BrainState
 
 _VECTOR_INDEX = "vector_index"
 
@@ -214,3 +215,14 @@ class TKTrustEpisodeDoc(MEMTrustEpisode, Document):
     stakeholder_uid: Annotated[str, Indexed()] = ""   # non-unique (many episodes per stakeholder)
     class Settings:
         name = "trust_episodes"
+
+
+# exchanges: the per-(user, channel) conversational-context room (1a) — LIGHT state + timeseries-id
+# references, one doc per pair. The compound (user_uid, channel_id) key is UNIQUE: exactly one room
+# per pair (get_exchange fetch-or-creates against it).
+class TKExchangeDoc(MEMExchange, Document):
+    class Settings:
+        name = "exchanges"
+        indexes = [
+            IndexModel([("user_uid", ASCENDING), ("channel_id", ASCENDING)], unique=True),
+        ]

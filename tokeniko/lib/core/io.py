@@ -4,7 +4,7 @@ import time
 import ollama
 from pymongo import MongoClient
 from bunnet import init_bunnet
-from lib.core.models import TKAxiomDoc, TKBaseDoc, TKDefinitionDoc, TKDictionaryDoc, TKMarkerDoc, TKMemoryItemDoc, TKMemoryStakeholdersDoc, TKNameDoc, TKPlaceDoc, TKPropertyDoc, TKRelationDoc, TKDerivedRelationDoc, TKDerivedRuleDoc, TKTheoremDoc, TKIdeaDoc, TKActionDoc, TKBehaviorRuleDoc, TKBrainStateDoc, TKReductioDoc, TKScaffoldDoc, TKTrustEpisodeDoc, TKZipDebugDoc
+from lib.core.models import TKAxiomDoc, TKBaseDoc, TKDefinitionDoc, TKDictionaryDoc, TKExchangeDoc, TKMarkerDoc, TKMemoryItemDoc, TKMemoryStakeholdersDoc, TKNameDoc, TKPlaceDoc, TKPropertyDoc, TKRelationDoc, TKDerivedRelationDoc, TKDerivedRuleDoc, TKTheoremDoc, TKIdeaDoc, TKActionDoc, TKBehaviorRuleDoc, TKBrainStateDoc, TKReductioDoc, TKScaffoldDoc, TKTrustEpisodeDoc, TKZipDebugDoc
 from lib.core.constants import _ME_NAME, _ME_UID
 from lib.core.memory import MEMChannels
 
@@ -61,7 +61,8 @@ def init_io(mongo_uri: str = None, mongo_db_name: str = None, mongo_db_name_memo
             TKScaffoldDoc,
             TKReductioDoc,
             TKTrustEpisodeDoc,
-            TKZipDebugDoc
+            TKZipDebugDoc,
+            TKExchangeDoc
         ]
     )
 
@@ -143,3 +144,19 @@ def upsert_individual(name: str, uid: str, ner_type: str, vector: list, context_
         ).save()
 
     return individual
+
+
+# fetch-or-create the conversational-context room (1a) for a (user, channel) pair — the brain's ONE
+# entry point to the room. `user_uid` is the CANONICAL soul uid (resolve through resolve_canonical
+# before calling, as the trust ledger does); `channel_id` is the channel id off the item's metadata
+# (the context-ring key). Idempotent by the unique (user_uid, channel_id) compound index.
+def get_exchange(user_uid: str, channel_id: str):
+
+    exchange = TKExchangeDoc.find_one(
+        {"user_uid": user_uid, "channel_id": channel_id}
+    ).run()  # Bunnet: .run() executes the query
+
+    if not exchange:
+        exchange = TKExchangeDoc(user_uid=user_uid, channel_id=channel_id).save()
+
+    return exchange

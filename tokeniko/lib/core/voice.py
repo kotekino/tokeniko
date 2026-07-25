@@ -33,6 +33,8 @@ _FALLBACK: dict[str, str] = {
     "speakup_disagree": "I do not agree",
     "clarify_conflict": "that contradicts what you said before — which holds?",
     "ask_more": "can you tell me more about that?",
+    # the "did you mean?" ask (the room + ask, 1a): the offered re-hearing rides VERBATIM (the fence)
+    "did_you_mean": "did you mean: {reading}?",
     "why": "why is that?",
     "concede_plain": "you are right",
     "concede_retract": "you are right — I no longer hold that {retracted}",

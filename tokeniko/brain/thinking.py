@@ -30,8 +30,8 @@ import lib.core.evaluation_harness as evaluation_harness
 from lib.core.deixis import normalize_deixis, strip_vocative
 from lib.core.evaluation_harness import evaluate_zip
 from lib.core.evaluation import EvaluatorResult, EvaluatorStatus
-from lib.core.io import get_tokeniko
-from lib.core.memory import (EvalToken, LifeEventKind, MEMChannels, MEMProvenance,
+from lib.core.io import get_exchange, get_tokeniko
+from lib.core.memory import (EvalToken, LifeEventKind, MEMChannels, MEMPending, MEMProvenance,
                              ReductioStatus, TrustEpisodeKind)
 from lib.core import trust
 from lib.core.models import (
@@ -59,6 +59,17 @@ FALSE_CEIL = 0.15
 WONDER_QUEUE_CAP = 256     # max pending re-examinations (lifespan-bounded work, not history-bounded)
 DRIFT_INTERVAL = 60        # seconds of wondering-idle before a drift (random) batch is enqueued
 DRIFT_BATCH = 4            # how many random memory ids a drift batch enqueues
+
+# THE CONVERSATIONAL-CONTEXT ROOM tunables (the room + ask, 1a).
+#  reply_tempo EMA: α weights the newest gap; a gap above the CEIL is an at-work/overnight silence,
+#  never conversational rhythm — ignored so it can't poison the EMA (the MIMIC_-style outlier cap).
+EXCHANGE_TEMPO_ALPHA = float(os.getenv("EXCHANGE_TEMPO_ALPHA", "0.3"))
+EXCHANGE_GAP_CEIL = float(os.getenv("EXCHANGE_GAP_CEIL", "3600"))     # s — above this the sample is dropped
+#  the did_you_mean window: clamp(k × reply_tempo, MIN, MAX). A clarification deserves more patience
+#  than an ambient beat (the 600s momentum) — MIN is generous by construction.
+EXCHANGE_WIN_K = float(os.getenv("EXCHANGE_WIN_K", "4"))
+EXCHANGE_WIN_MIN = float(os.getenv("EXCHANGE_WIN_MIN", "600"))        # s — the floor (> the 600s momentum edge)
+EXCHANGE_WIN_MAX = float(os.getenv("EXCHANGE_WIN_MAX", "3600"))       # s — the ceiling
 
 
 # memory `timestamp` is stored tz-aware UTC, but the timeseries collection reads it back NAIVE
@@ -149,6 +160,64 @@ def _try_anecdote(item) -> None:
         context.record_anecdote(key, assoc["notion_id"])
         logger.info("[thinking] ASSOCIATION «%s» (p=%.2f) on channel %s -> side-note idea",
                     assoc["notion"], assoc["proximity"], key)
+
+
+# THE REPLY-TEMPO EMA (the room + ask, 1a) — fold ONE conversational gap into the (user, channel)
+# room's adaptive rhythm. The ONLY per-turn write to the room; kept O(1). The sample is the plain
+# INTER-TURN CADENCE (this turn's timestamp − the pair's previous turn's): response-latency (the gap
+# only when the prior turn was tokeniko's) is the richer signal but needs a per-turn speaker memo the
+# room does not carry — the plain cadence is the accepted proxy (brief §3). A gap above the outlier
+# CEIL (an overnight/at-work silence) is DROPPED from the EMA (never conversational rhythm) but still
+# advances last_turn_at, so the next gap is measured from the real last turn, not a stale one. First
+# contact seeds nothing — the room's default tempo stands. tokeniko's OWN turns never move it (the
+# rhythm is the human's cadence). Best-effort: the caller swallows any error (never blocks thinking).
+def _update_tempo(item) -> None:
+    soul = trust.resolve_canonical(item.sourceId)
+    if soul is None or soul.isMe or not soul.uid:
+        return
+    turn_at = int(_epoch_utc(item.timestamp))
+    room = get_exchange(soul.uid, context.channel_key(item))
+    prev = room.last_turn_at or 0
+    if prev:
+        gap = turn_at - prev
+        if 0 < gap <= EXCHANGE_GAP_CEIL:
+            room.reply_tempo = (EXCHANGE_TEMPO_ALPHA * gap
+                                + (1.0 - EXCHANGE_TEMPO_ALPHA) * room.reply_tempo)
+    room.last_turn_at = turn_at
+    room.updated_at = int(time.time())
+    room.save()
+
+
+# THE "DID YOU MEAN?" REACTION (the room + ask, 1a) — a processed item carries a suggested_reading
+# (the ears' ASK tier: a coherent offerable re-hearing). Two effects: (1) OPEN a pending in the room
+# (the 1b resolution hook — REFERENCES the item by id, never a copy; the window is clamped off the
+# pair's reply_tempo, generous by construction), and (2) SPAWN the eval:did_you_mean -> tokeniko:ask
+# idea directed at the asker, carrying the reading as the compose slot. Opening is idempotent per
+# item (thinking's source cursor advances once per item; the guard belts a re-tick). Whether the ask
+# is actually SPOKEN is Priorities' call (the ask's urge × the item's directedness vs the act
+# threshold — an ambient stumble may stay silent, the existing mechanism, no special case here).
+def _react_did_you_mean(item) -> bool:
+    reading = getattr(item, "suggested_reading", None)
+    if not reading:
+        return False
+    soul = trust.resolve_canonical(item.sourceId)
+    if soul is None or soul.isMe or not soul.uid:
+        return False
+    now = int(time.time())
+    room = get_exchange(soul.uid, context.channel_key(item))
+    window = int(max(EXCHANGE_WIN_MIN, min(EXCHANGE_WIN_MAX, EXCHANGE_WIN_K * room.reply_tempo)))
+    if not any(p.ref_item_id == str(item.id) and p.kind == "did_you_mean" for p in room.pending):
+        room.pending.append(MEMPending(
+            kind="did_you_mean", ref_item_id=str(item.id),
+            opened_at=now, expires_at=now + window, status="open"))
+        room.updated_at = now
+        room.save()
+    ideas = behavior.spawn_ideas_for(
+        EvalToken.DID_YOU_MEAN.value, payload=item.zip, source=str(item.id),
+        target=item.sourceId, answer={"reading": reading})
+    logger.info("[thinking] «did you mean» on memory=%s -> «%s» (window %ds, %d idea(s))",
+                str(item.id), reading[:60], window, len(ideas))
+    return bool(ideas)
 
 
 # B1 (compose 2.0 slice 4, generalized for the reductio §0): the premise ids that resolve to
@@ -1557,6 +1626,13 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
     except Exception as error:
         logger.warning("[thinking] context ring feed failed (%s) — continuing", error)
 
+    # THE REPLY-TEMPO EMA (the room + ask, 1a): fold this turn's cadence into the (user, channel)
+    # room — the one per-turn write to the room (covers social turns too; self-turns no-op inside).
+    try:
+        _update_tempo(item)
+    except Exception as error:
+        logger.warning("[thinking] reply-tempo update failed (%s) — continuing", error)
+
     # LEARNED SCAFFOLDS (§1, stage one): pick up a decently-trusted talker's phrasing mid-
     # conversation as a person-scoped MIMIC row (social acts + slot-less whole-zip matches). Runs
     # for BOTH social and zipped items; an error logs + continues (never blocks thinking).
@@ -1617,10 +1693,21 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
 
         # THE AND-SPLIT (the author's design, 2026-07-24 — fork b): independent claims coordinated
         # in one utterance are REACTED TO one by one (see _react_conjuncts). None = stays whole.
-        conjuncts = evaluation_harness.split_conjuncts(item.zip) if not corrected else None
+        # THE "DID YOU MEAN?" ASK (the room + ask, 1a): a stumbling message whose polish was a
+        # coherent offerable reading (MEMItem.suggested_reading, set at the ears' ASK tier) is
+        # RE-HEARD, not reacted to (asking is not believing). It REPLACES the whole content reaction
+        # for this item (the generic eval:unknown why included): a mis-heard turn drives no
+        # speakup/why/learn, no trust echo, no cross-item conflict — nothing is held until the human
+        # confirms (1b). Questions/social never reach here (handled above / early-returned).
+        dym = not corrected and bool(getattr(item, "suggested_reading", None))
+
+        conjuncts = (evaluation_harness.split_conjuncts(item.zip)
+                     if not corrected and not dym else None)
 
         if corrected:
             pass  # the correction path spawned its own ideas (retreat + trust echo)
+        elif dym:
+            _react_did_you_mean(item)
         elif conjuncts is not None:
             _react_conjuncts(item, conjuncts)
         elif token:
@@ -1695,7 +1782,7 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
         # ABOUT the verdict, computed after it. WHOLE-ITEM on both routes (the AND-split fans
         # SPEECH, not the ledger: one conversation turn moves trust once, however many claims
         # it carried — the folded verdict is the honest summary of the turn).
-        if not corrected and token:
+        if not corrected and not dym and token:
             trust_trigger, trust_answer = _trust_echo(token, item, result)
             if trust_trigger is not None:
                 behavior.spawn_ideas_for(
@@ -1707,7 +1794,7 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
         # or no strong conclusion. Every other verdict already speaks (speakup/why/clarify) or
         # revises; a question is answered above. The gates (ambient band, floor, cooldown,
         # novelty) live in _try_anecdote/context.
-        if not corrected and token in (None, EvalToken.TRUE.value):
+        if not corrected and not dym and token in (None, EvalToken.TRUE.value):
             _try_anecdote(item)
 
         # ----------------------------------------------------------
@@ -1721,7 +1808,7 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
         # ("eating" vs "dead") needing forward-chaining — DIRECT contraries (X∧¬X / antonym) only.
         # SKIPPED for an accepted correction (retreat arc #4): a self-correction is deliberate
         # revision — never the honest-liar signal.
-        n_clauses = evaluation_harness._zip_leaves(item.zip.items) if not corrected else []
+        n_clauses = evaluation_harness._zip_leaves(item.zip.items) if not corrected and not dym else []
         priors = (
             TKMemoryItemDoc.find(
                 {"sourceId": item.sourceId, "timestamp": {"$lt": item.timestamp}}
@@ -1729,7 +1816,7 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
             .sort("-timestamp")
             .limit(25)
             .to_list()
-        ) if not corrected else []
+        ) if not corrected and not dym else []
         for m in priors:
             if m.zip is None:
                 continue

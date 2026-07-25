@@ -145,6 +145,13 @@ class MEMItem(BaseModel):
     # John» is John's greeting to answer (the 2026-07-05 over-engagement note honored).
     social: Optional[str] = None
     social_at: Optional[str] = None
+    # the "did you mean?" reading (the room + ask, 1a): when a STUMBLING message got a polish that
+    # was neither ACCEPTED nor DISCARDED but is a COHERENT offerable alternative reading (the ASK
+    # tier of the ears' verdict), the polished text rides HERE — the item is stored anyway (from its
+    # raw parse: `original`/`zip` unchanged, true history be it), so the reading lives exactly once,
+    # on the item, and the room only REFERENCES its id. The brain reacts (open a pending + ask);
+    # `/input` only flags the candidate. None = accepted verbatim OR discarded (nothing to offer).
+    suggested_reading: Optional[str] = None
 
 # alias for list of memory items
 MEMContext = list[MEMItem]
@@ -279,6 +286,12 @@ class EvalToken(str, Enum):
     GREETING = "eval:greeting"
     THANKS = "eval:thanks"
     FAREWELL = "eval:farewell"
+    # the "did you mean?" ask (the room + ask, 1a): a STUMBLING message whose polish is a COHERENT
+    # offerable alternative reading (the ears' ASK verdict) — NEITHER believed nor discarded but
+    # OFFERED back as a question. Spawned in think_one when a processed item carries
+    # `MEMItem.suggested_reading`; REPLACES the generic eval:unknown -> «why» for that item (asking
+    # ≠ believing — nothing is held until the human confirms, which is 1b's resolution).
+    DID_YOU_MEAN = "eval:did_you_mean"
 
 # action side — the reflexes tokeniko CAN fire (the hardwired repertoire).
 class TokenikoAction(str, Enum):
@@ -429,6 +442,44 @@ class MEMReductio(BaseModel):
     generation: int = Field(default=0)  # re-open counter — keys the spawn dedup per asking round
     createdAt: int = Field(default_factory=lambda: int(time.time()))
     resolvedAt: Optional[int] = None
+
+
+# --------------------------------------------------------------
+# THE CONVERSATIONAL-CONTEXT ROOM (the per-user context + ask, 1a — the author's "partial A"). A
+# REFERENCE model, never a content mirror: one small doc per (user, channel) pair holding LIGHT
+# state that REFERENCES timeseries items by id (no zip/text duplication) — the same store-the-
+# relation-not-the-content discipline as MEMReductio / the trust episodes. One read per brain tick.
+# --------------------------------------------------------------
+
+# a PENDING interaction awaiting the human — usually 0-1 per room. v1 kind: "did_you_mean" (the
+# ears offered a re-hearing and holds the state until confirmed). `status` is a small enum
+# (open|resolved|lapsed); 1a only ever writes "open" — the yes/no/restate RESOLUTION is 1b.
+class MEMPending(BaseModel):
+    kind: str                                  # "did_you_mean" (v1)
+    ref_item_id: str                           # the timeseries item this pending refers to (a REFERENCE, never a copy)
+    opened_at: int
+    expires_at: int                            # opened_at + the tempo-clamped window (the 1b lapse boundary)
+    status: str = "open"                       # "open" | "resolved" | "lapsed" — 1a writes "open" only
+
+
+# the distilled current state of one exchange (user, channel). Keyed by the CANONICAL soul uid (one
+# room per soul across a channel's bodies, the trust-ledger discipline) + the channel id.
+class MEMExchange(BaseModel):
+    user_uid: str                              # the canonical soul uid (resolve_canonical, like the trust ledger)
+    channel_id: str                            # the Discord channel id (from the item's metadata; DMs carry one too)
+    pending: list[MEMPending] = Field(default_factory=list)  # usually 0-1 (the did_you_mean hook for 1b)
+    # the ADAPTIVE RHYTHM (the reply-tempo EMA): seconds between this pair's conversational turns,
+    # exponentially smoothed. Seeds from the default on first contact; each turn folds one outlier-
+    # capped gap in (see brain.thinking). The clarification window is clamped off it (a fast room
+    # gets a shorter patience than a slow one), so the ask matches the exchange's own cadence.
+    reply_tempo: float = Field(default=180.0)  # the seed (EXCHANGE_TEMPO_DEFAULT_S)
+    last_turn_at: int = Field(default=0)       # the previous turn's epoch (the EMA gap) — 0 = first contact
+    updated_at: int = Field(default_factory=lambda: int(time.time()))
+
+
+# the reply-tempo seed (the model default above, named for the tuning sites): a generous-ish
+# conversational cadence so the first-contact clarification window (k x this, clamped) is patient.
+EXCHANGE_TEMPO_DEFAULT_S = 180.0
 
 
 # the BRAIN_STATE singleton — cognitive continuity across process restarts: the per-speaker memory

@@ -82,6 +82,13 @@ def _route(action_token: str, trigger: Optional[str], answer: Optional[dict]) ->
     if action_token == TokenikoAction.CLARIFY.value:
         return "clarify_conflict", {}
     if action_token == TokenikoAction.ASK.value:
+        # the "did you mean?" ask (the room + ask, 1a): a STUMBLING message whose polish is a
+        # coherent offerable reading — offer it back VERBATIM (the fence) for the human to confirm.
+        # Routed by TRIGGER (both the did-you-mean and the curiosity ask ride tokeniko:ask): a
+        # did_you_mean with no reading is nothing to offer -> None (never fabricate a re-hearing).
+        if trigger == EvalToken.DID_YOU_MEAN.value:
+            reading = (answer or {}).get("reading")
+            return ("did_you_mean", {"reading": reading}) if reading else None
         # the curiosity ask (survey slice 3): the learned lesson rides as {topic} so the
         # deepening question names it — «why is it that «X»?» is the kicker-hunting shape
         # (the closed why-loop). Slot-gated: no topic -> the bare ask_more shelf speaks.

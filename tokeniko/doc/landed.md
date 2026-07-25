@@ -2039,3 +2039,33 @@ SURVEY ARC IS COMPLETE)**
   (the accepted ripple); a FRAGMENT stays unsound («why?» is `unknown=True`).
 - +1 test (`test_translator.py::test_wh_residual_families_do_not_escalate`; the two families +
   the non-wh carve-out). Full gate **659 passed, 1 xfailed**.
+
+**The per-user conversational-context room + the "did you mean?" ask (2026-07-25 — §1's first brick, 1a; the 1st Officier's build, finished under the QM after a session-limit cut)**
+- The chapter opener (the author is the first non-English friend, so the translator apparatus is
+  now CORE): a per-`(user,channel)` conversational-context ROOM we did not hold first-class. The
+  author's "partial A" — a REFERENCE model, never a content mirror: `MEMExchange`/`MEMPending`
+  (`TKExchangeDoc`, unique `(user_uid,channel_id)`) store LIGHT state that references timeseries
+  items by id (the `MEMReductio`/trust-episode discipline); `io.get_exchange` fetch-or-creates.
+- The two-tier floor at the ears — *asking ≠ believing*: `verifier_verdict` = ACCEPT | ASK |
+  DISCARD, built ON TOP of `verifier_preserves` (every existing consumer keeps the `(ok,note)`
+  contract). ASK = a structurally-sound, mood-preserved polish whose semantic proximity sits in
+  `[RAG1_ASK_FLOOR, RAG1_SEMANTIC_FLOOR)` — a coherent OFFERABLE re-hearing, neither believed nor
+  trashed (writes NO ears-hallucination lead — it is not a caught drift). Calibrated: ASK_FLOOR
+  0.12 in the clean ~0.09 gap between drift (~0.03) and the offerable cluster (0.20–0.35); the
+  whole-zip metric captures a DISTINCT-but-related re-hearing, not a near-synonym (a documented
+  coarseness, surfaced).
+- The reaction (`brain/thinking._react_did_you_mean`): a processed item carrying
+  `MEMItem.suggested_reading` (set at `/input`'s ASK tier) OPENS one pending (window clamped off
+  the pair's `reply_tempo`, generous by construction) + spawns `eval:did_you_mean → tokeniko:ask`
+  («did you mean: {reading}?», the fenced compose category), directed at the asker. The `dym` gate
+  SHORT-CIRCUITS the whole content path — no speakup/why/learn, no trust echo, no anecdote, no
+  cross-item check: a mis-heard turn is HELD, not reacted to (nothing believed until the human
+  confirms — that resolution is 1b). Directedness-gated by construction (urge 0.7 × ambient 0.6 <
+  the act threshold → an ambient stumble stays quiet); exempt from the curiosity-ask cooldown
+  (a clarification is per-stumble, not per-teaching-burst).
+- The adaptive rhythm: `reply_tempo` EMA per room (O(1) per turn, outlier-capped so an
+  overnight/at-work silence never poisons it, self-turns no-op) — the plain inter-turn cadence
+  (response-latency is the richer signal, deferred per the brief). Seed behavior rule surfaced
+  (`scripts/seed_behavior_rules.py`, `--apply` is the Captain's hand). +15 tests
+  (`test_exchange_room.py` + the translator verdict/calibration set). Full gate **674 passed,
+  1 xfailed**. The ANSWER binding (yes/no/restate/lapse) is 1b.

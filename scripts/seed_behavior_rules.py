@@ -55,6 +55,13 @@ RULES = [
     (EvalToken.FAREWELL.value,     TokenikoAction.FAREWELL_BACK.value, 0.6, "a farewell is returned"),
     (EvalToken.CONFLICT.value,     TokenikoAction.CLARIFY.value, 0.7,  "a cross-item conflict — ask the speaker to reconcile"),
     (EvalToken.QUESTION.value,     TokenikoAction.ANSWER.value,  0.9,  "answer a question (yes/no/value/idk, directed at the asker)"),
+    # the "did you mean?" ask (the room + ask, 1a): a coherent offerable re-hearing of a stumbling
+    # message — offer it back for the human to confirm (asking is not believing; the yes/no/restate
+    # resolution is 1b). Rides tokeniko:ask (routed by trigger in compose, exempt from the curiosity
+    # ASK cooldown — a clarification is per-stumble, not per-teaching-burst). Directedness-gated by
+    # construction: urge 0.7 x addressed 0.9 = 0.63 >= 0.5 speaks; x ambient 0.6 = 0.42 < 0.5 stays
+    # quiet (an ambient stumble is not worth interjecting over — the existing effective_urge gate).
+    (EvalToken.DID_YOU_MEAN.value, TokenikoAction.ASK.value,     0.7,  "an offerable re-hearing — «did you mean X?» (directedness-gated)"),
     # belief-revision v1 (retreat arc #4): a trust-gated quantified correction. RETREAT is INTERNAL
     # (raw urge, no directedness factor — a conclusion is never muted); CONCEDE is the directed
     # acknowledgment spawned by the retreat HANDLER after the KB actually moved (eval:correction-done).

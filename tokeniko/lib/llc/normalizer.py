@@ -154,6 +154,26 @@ def _semantic_floor() -> float:
     return float(os.getenv("RAG1_SEMANTIC_FLOOR", "0.6"))
 
 
+# the ASK floor (the room + ask, 1a): the SECOND, LOWER floor under the accept floor. A polish that
+# is NOT accepted but whose semantic proximity sits in [RAG1_ASK_FLOOR, RAG1_SEMANTIC_FLOOR) is a
+# COHERENT offerable alternative reading — neither believed nor trashed but asked back («did you
+# mean X?»). BELOW this floor is drift (DISCARD, as before).
+#
+# CALIBRATED 2026-07-25 against compiled specimens (whole-zip semantic centroids; see
+# test_translator.test_ask_floor_measured_margins). The measured landscape:
+#   a wholesale drift        «a cat is a mammal»       vs «a rock is a mineral»  -> 0.03  (DISCARD)
+#   a same-subject swap      «gold is a metal»         vs «gold is a mineral»    -> 0.20  (ASK)
+#   a locative re-hearing    «the cat is on the mat»   vs «the cat is on the bed»-> 0.35  (ASK)
+#   a near-synonym sense swap «a cat is a mammal»       vs «a cat is an animal»   -> 0.64  (>= the
+#     SEMANTIC floor: the brief's band excludes it — semantically near-identical yet structurally
+#     altered reads as DISCARD, not an offer; and a clean sentence never stumbles into escalation).
+# 0.12 sits in the clean gap between the drift floor (~0.03) and the offerable cluster (0.20-0.35):
+# ~0.09 of margin on each side. Tune via the env; the whole-zip metric is coarse (a design note
+# surfaced to the QM: the band captures the DISTINCT-but-related re-hearing, not the near-synonym).
+def _ask_floor() -> float:
+    return float(os.getenv("RAG1_ASK_FLOOR", "0.12"))
+
+
 def _semantic_centroid(leaves) -> np.ndarray:
     # sum the 2925 semantic slice of every populated role over the SOUND leaves -> one per-zip centroid.
     acc = np.zeros(2925, dtype=np.float64)
@@ -231,6 +251,41 @@ def verifier_preserves(original_zip, polished_zip) -> tuple[bool, str]:
             if getattr(ol, flag, None) != getattr(match, flag, None):
                 return False, f"flag flipped on {key}: {flag}"
     return True, "verified"
+
+
+# ---- the THREE-WAY verdict (the room + ask, 1a) ----------------------------------------------------
+# The two-tier floor at the ears: ACCEPT | ASK | DISCARD. asking ≠ believing — the strong wall
+# (2026-07-24) still trashes a drifting polish (DISCARD), but a polish that is a COHERENT,
+# semantically-plausible ALTERNATIVE reading is neither believed nor discarded — it is OFFERED as a
+# question (ASK). Built ON TOP of verifier_preserves (the accept wall is unchanged: verifier_voice
+# and every existing consumer keep the (ok, note) contract) so this only ADDS the middle tier.
+#   ACCEPT  — passes verifier_preserves (sound leaves preserved + mood gate + semantic floor).
+#   ASK     — NOT accepted, BUT: structurally SOUND (no unsound leaves), MOOD-preserved, and
+#             semantically PLAUSIBLE (the two zips' semantic proximity in [ASK_FLOOR, SEM_FLOOR)).
+#   DISCARD — everything else (a mood flip, a far drift, a still-stumbling polish, no shared
+#             semantic anchor to judge plausibility): the reject-and-trash of before.
+def verifier_verdict(original_zip, polished_zip) -> tuple[str, str]:
+    from lib.core.kb_extract import _zip_leaves
+    ok, note = verifier_preserves(original_zip, polished_zip)
+    if ok:
+        return "ACCEPT", note
+
+    orig_leaves = _zip_leaves(original_zip.items) if original_zip is not None else []
+    pol_leaves = _zip_leaves(polished_zip.items) if polished_zip is not None else []
+
+    # an offerable reading must itself be SOUND — a still-stumbling polish repaired nothing.
+    if not pol_leaves or any(not _leaf_sound(l) for l in pol_leaves):
+        return "DISCARD", note
+    # …and MOOD-preserved — a question that came back a statement changed meaning wholesale, never
+    # a re-hearing to offer.
+    if any(_is_interrogative(ol) for ol in orig_leaves) and not any(_is_interrogative(pl) for pl in pol_leaves):
+        return "DISCARD", note
+    # …and semantically PLAUSIBLE: proximity in the ask band. None (no shared sound anchor to judge)
+    # is NOT offerable — without a bearing on the meaning we cannot claim the reading is coherent.
+    sim = _semantic_proximity(orig_leaves, pol_leaves)
+    if sim is not None and _ask_floor() <= sim < _semantic_floor():
+        return "ASK", f"offerable reading ({sim:.2f} in [{_ask_floor():.2f}, {_semantic_floor():.2f}))"
+    return "DISCARD", note
 
 
 # ---- the OUTBOUND voice verifier (rag2-out — compose 2.0 slice 3) -----------------------------------

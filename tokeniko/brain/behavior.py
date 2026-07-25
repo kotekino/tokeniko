@@ -280,8 +280,12 @@ def plan_action(idea: TKIdeaDoc, tokeniko_uid: str) -> Optional[dict]:
         target = None
 
     # the ASK throttle (survey slice 3): one curiosity question per teacher per window — within
-    # it the plan dissolves (the lesson is still learned; only the question is skipped).
-    if token == TokenikoAction.ASK.value and target:
+    # it the plan dissolves (the lesson is still learned; only the question is skipped). SCOPED to
+    # the curiosity ask (the room + ask, 1a): a «did you mean?» rides tokeniko:ask too but is
+    # per-STUMBLE (once-per-item, dedup'd at spawn), so a teaching burst's cooldown must never
+    # swallow a clarification the ears actually need.
+    if (token == TokenikoAction.ASK.value and target
+            and idea.trigger != EvalToken.DID_YOU_MEAN.value):
         last = (TKActionDoc.find({"payload.action_token": token, "targetId": target})
                 .sort("-createdAt").limit(1).to_list())
         if last and (int(time.time()) - last[0].createdAt) < _ASK_COOLDOWN_S:
