@@ -70,6 +70,11 @@ EXCHANGE_GAP_CEIL = float(os.getenv("EXCHANGE_GAP_CEIL", "3600"))     # s — ab
 EXCHANGE_WIN_K = float(os.getenv("EXCHANGE_WIN_K", "4"))
 EXCHANGE_WIN_MIN = float(os.getenv("EXCHANGE_WIN_MIN", "600"))        # s — the floor (> the 600s momentum edge)
 EXCHANGE_WIN_MAX = float(os.getenv("EXCHANGE_WIN_MAX", "3600"))       # s — the ceiling
+#  the ANSWER-BINDING directedness floor (1b): an answer to «did you mean?» arrives DIRECTED — a DM
+#  (1.0), an addressed reply (0.9), or an ambient turn inside the still-open exchange (momentum 0.85,
+#  senses/inbound). A cold-ambient aside (0.6) mid-window is not necessarily the answer — it does not
+#  bind (the pending stays open). The bar the ask itself respected.
+EXCHANGE_BIND_DIRECTEDNESS = float(os.getenv("EXCHANGE_BIND_DIRECTEDNESS", "0.85"))
 
 
 # memory `timestamp` is stored tz-aware UTC, but the timeseries collection reads it back NAIVE
@@ -218,6 +223,132 @@ def _react_did_you_mean(item) -> bool:
     logger.info("[thinking] «did you mean» on memory=%s -> «%s» (window %ds, %d idea(s))",
                 str(item.id), reading[:60], window, len(ideas))
     return bool(ideas)
+
+
+# --------------------------------------------------------------
+# THE "DID YOU MEAN?" ANSWER BINDING (the room + ask, 1b — the author's fork b: a «did you mean?»
+# must HANDLE the answer, not ask-and-ignore). The asker's next DIRECTED message binds an OPEN
+# did_you_mean pending BEFORE the normal assertion path — affirmation confirms, negation drops,
+# a restatement supersedes, silence lapses. PARSER-FREE throughout (classify off item.original via
+# the answer-polarity anchor table; re-ingest a confirmed reading by delegating to the api).
+# --------------------------------------------------------------
+
+# tokenize a message into word lemmas (unicode-aware — accented «sì»/«esatto» survive) for the
+# per-token answer-polarity read. Lowercased; digits and punctuation dropped.
+_WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+
+
+# classify a (soundly-parsed) message as an ANSWER: "affirmation" | "negation" | "restatement".
+# Per-token via the answer-polarity anchor (never a fixed inline list): a bare/short acknowledgment
+# whose EVERY word agrees on one polarity binds as that yes/no; any non-answer word (or a mixed
+# polarity) means the human REWORDED — a restatement that keeps its content ("no, a cat is a dog"
+# is a restatement, never a bare drop). Empty/word-less input degenerates to restatement (harmless:
+# the item has a zip, so the normal path can ingest it).
+def _classify_answer(text: str) -> str:
+    from lib.llc.anchors import anchor_answerPolarity
+    tokens = _WORD_RE.findall((text or "").lower())
+    if not tokens:
+        return "restatement"
+    polarities = {anchor_answerPolarity(t) for t in tokens}
+    if polarities == {"affirmation"}:
+        return "affirmation"
+    if polarities == {"negation"}:
+        return "negation"
+    return "restatement"
+
+
+# lazily LAPSE (no scheduler) every OPEN pending in the room whose window has expired — the check
+# runs whenever the room is touched (here, the binding fetch). A lapsed window means "away" relative
+# to this person's rhythm: nothing is believed, and it simply stops being a binding target. Biography:
+# a pending is never deleted, only marked. Returns True iff any pending changed (the caller saves).
+def _lapse_expired(room, now: int) -> bool:
+    changed = False
+    for p in room.pending:
+        if p.status == "open" and now >= p.expires_at:
+            p.status = "lapsed"
+            changed = True
+    return changed
+
+
+# RE-INGEST a confirmed reading as if the speaker had said it cleanly (1b affirmation). The reading's
+# meaning differs from the stumbling item's stored zip, so it must be re-COMPILED and flow through the
+# NORMAL ingestion path — attributed to the ORIGINAL speaker/channel/directedness, gated by that
+# speaker's own trust (teaching/hypothesis/corroboration), never minted directly. Delegated to the
+# api (the brain is parser-free); graceful — an unreachable api means the answer was still understood,
+# the reading simply not re-ingested this tick. Returns True iff the api accepted the re-ingestion.
+def _confirm_reading(ref_item) -> bool:
+    reading = getattr(ref_item, "suggested_reading", None)
+    if not reading:
+        return False
+    body = None
+    try:
+        body = TKMemoryStakeholdersDoc.get(ObjectId(ref_item.sourceId)).run()  # channel-scoped body
+    except Exception:
+        body = None
+    if body is None:
+        logger.warning("[thinking] confirmed reading «%s» — speaker %r unresolvable, not re-ingested",
+                       reading[:60], ref_item.sourceId)
+        return False
+    channel = getattr(ref_item.channel, "value", ref_item.channel)
+    resp = api_client.ingest_input(
+        tokens=reading, talker=body.uid, channel=str(channel or "internal"),
+        directedness=float(getattr(ref_item, "directedness", 1.0) or 1.0),
+        talker_name=body.name, metadata=getattr(ref_item, "metadata", None),
+    )
+    ok = bool(resp and resp.get("status") == "complete")
+    if ok:
+        logger.info("[thinking] CONFIRMED reading «%s» (of %s) re-ingested as %s said it cleanly",
+                    reading[:60], str(ref_item.id), body.name)
+    else:
+        logger.warning("[thinking] confirmed reading «%s» — api re-ingestion failed (retry not built)",
+                       reading[:60])
+    return ok
+
+
+# BIND an OPEN did_you_mean pending to this incoming message, BEFORE the normal assertion path.
+# Returns "affirmation" | "negation" | "restatement" (the pending resolved) or None (no binding —
+# no open pending, or the message is not directed enough to be the answer). The caller STOPS the item
+# on affirmation/negation (a yes/no is an answer, not an assertion), and FALLS THROUGH on restatement
+# (the reworded turn ingests normally) and on None (nothing changed).
+def _bind_pending_answer(item, brain_state) -> Optional[str]:
+    soul = trust.resolve_canonical(item.sourceId)
+    if soul is None or soul.isMe or not soul.uid:
+        return None
+    now = int(time.time())
+    room = get_exchange(soul.uid, context.channel_key(item))
+    touched = _lapse_expired(room, now)   # the room is touched — fold in any lapses
+    pending = next((p for p in room.pending
+                    if p.kind == "did_you_mean" and p.status == "open" and now < p.expires_at), None)
+    if pending is None:
+        if touched:
+            room.updated_at = now
+            room.save()
+        return None
+    # the directedness guard: an ambient aside mid-window is not necessarily the answer (the pending
+    # stays open for a later directed turn; a lapse eventually closes it).
+    if float(getattr(item, "directedness", 1.0) or 1.0) < EXCHANGE_BIND_DIRECTEDNESS:
+        if touched:
+            room.updated_at = now
+            room.save()
+        return None
+    verdict = _classify_answer(item.original)
+    if verdict == "affirmation":
+        ref = None
+        try:
+            ref = TKMemoryItemDoc.get(ObjectId(pending.ref_item_id)).run()
+        except Exception:
+            ref = None
+        if ref is not None:
+            _confirm_reading(ref)
+        else:
+            logger.warning("[thinking] affirmation binds pending %s but ref item %r is gone",
+                           pending.ref_item_id, pending.ref_item_id)
+    pending.status = "resolved"
+    room.updated_at = now
+    room.save()
+    logger.info("[thinking] answer binding on channel %s: «%s» -> %s (pending of %s resolved)",
+                context.channel_key(item), str(item.original)[:60], verdict, pending.ref_item_id)
+    return verdict
 
 
 # B1 (compose 2.0 slice 4, generalized for the reductio §0): the premise ids that resolve to
@@ -1648,6 +1779,21 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
     # --------------------------------------------------------------
     if getattr(item, "social", None):
         _social_react(item)
+        cursors[focus_source] = _epoch_utc(item.timestamp)
+        brain_state.source_cursors = cursors
+        brain_state.save()
+        return True
+
+    # --------------------------------------------------------------
+    # THE "DID YOU MEAN?" ANSWER BINDING (the room + ask, 1b) — BEFORE the assertion path: if the room
+    # holds an OPEN, non-expired did_you_mean pending for this (soul, channel), the asker's DIRECTED
+    # next message binds it. affirmation -> re-ingest the reading as CONFIRMED + resolve + STOP (the
+    # «yes» is an answer, not an assertion); negation -> resolve + drop + STOP; restatement -> resolve
+    # + FALL THROUGH (the reworded turn ingests normally); None -> no binding, the normal path stands.
+    # Lazy lapse folds in on the room touch (no scheduler).
+    # --------------------------------------------------------------
+    bound = _bind_pending_answer(item, brain_state)
+    if bound in ("affirmation", "negation"):
         cursors[focus_source] = _epoch_utc(item.timestamp)
         brain_state.source_cursors = cursors
         brain_state.save()

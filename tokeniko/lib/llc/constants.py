@@ -298,3 +298,30 @@ _SOCIAL_BASE_ANCHORS = {
     "farewell": "farewell", "goodnight": "farewell", "good night": "farewell",
     "see you": "farewell", "see ya": "farewell", "cya": "farewell", "gn": "farewell",
 }
+
+# the "did you mean?" ANSWER-POLARITY table (the room + ask, 1b) — a bare acknowledgment token ->
+# affirmation | negation, the yes/no side of the pending's resolution. EXACT by MEASUREMENT, the same
+# ruling _SOCIAL_BASE_ANCHORS records: the 2925-dim base vectors are near-ORTHOGONAL for interjections
+# ("yes"·"yeah" cosine ≈ 0, "definitely"·"sure" ≈ 0.12), so a nearest-anchor floor discriminates
+# nothing — the semantic catch yields to the measurement and a generously-widened, MULTILINGUAL table
+# is the honest catch instead (the author is the first non-English friend — «sì»/«no»/«esatto» are
+# caught as first-class, not as a translation step: chapter 2's job). Single lemmas only: the binder
+# resolves PER-TOKEN and binds only when EVERY token agrees, so a mixed turn ("no, a cat is a dog")
+# is a RESTATEMENT that keeps its content, never a bare drop.
+_ANSWER_BASE_ANCHORS = {
+    # affirmation — English + a friendly multilingual seed
+    "yes": "affirmation", "yeah": "affirmation", "yep": "affirmation", "yup": "affirmation",
+    "ya": "affirmation", "aye": "affirmation", "sure": "affirmation",
+    "ok": "affirmation", "okay": "affirmation", "okey": "affirmation", "right": "affirmation",
+    "correct": "affirmation", "exactly": "affirmation", "indeed": "affirmation",
+    "absolutely": "affirmation", "affirmative": "affirmation", "true": "affirmation",
+    "agreed": "affirmation",
+    "si": "affirmation", "sì": "affirmation", "sí": "affirmation", "esatto": "affirmation",
+    "esattamente": "affirmation", "giusto": "affirmation", "certo": "affirmation",
+    "vero": "affirmation", "oui": "affirmation", "ja": "affirmation", "da": "affirmation",
+    # negation — English + the multilingual seed
+    "no": "negation", "nope": "negation", "nah": "negation", "naw": "negation",
+    "not": "negation", "wrong": "negation", "incorrect": "negation", "negative": "negation",
+    "false": "negation", "nay": "negation",
+    "non": "negation", "sbagliato": "negation", "falso": "negation", "nein": "negation",
+}

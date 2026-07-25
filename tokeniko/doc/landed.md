@@ -2069,3 +2069,29 @@ SURVEY ARC IS COMPLETE)**
   (`scripts/seed_behavior_rules.py`, `--apply` is the Captain's hand). +15 tests
   (`test_exchange_room.py` + the translator verdict/calibration set). Full gate **674 passed,
   1 xfailed**. The ANSWER binding (yes/no/restate/lapse) is 1b.
+
+**The "did you mean?" ANSWER binding — §1's first brick complete (2026-07-25 — 1b; the 1st Officier's build, verified under the QM after a watchdog stall)**
+- The resolution half of the ask (the author's fork b: a «did you mean?» must HANDLE the answer,
+  not ask-and-ignore). `brain/thinking._bind_pending_answer`, BEFORE the assertion path: the room's
+  OPEN, non-expired `did_you_mean` pending is bound by the asker's next DIRECTED message
+  (`EXCHANGE_BIND_DIRECTEDNESS` 0.85 — the momentum-inclusive bar the ask itself respected; an
+  ambient aside mid-window does not bind). The three outcomes: **affirmation** → re-ingest the
+  referenced item's `suggested_reading` AS CONFIRMED + resolve + STOP (the «yes» is an answer, not
+  an assertion); **negation** → resolve + drop + STOP; **restatement** → resolve + FALL THROUGH
+  (the reworded turn ingests normally). Lazy **lapse** on the room touch (no scheduler): an OPEN
+  pending past `expires_at` → `lapsed`, never a binding target.
+- The classifier (`_classify_answer`): PER-TOKEN via a new `answer_polarity` anchor
+  (`anchor_answerPolarity`, EXACT closed-class — interjection base vectors are near-orthogonal, the
+  measured `_SOCIAL_BASE_ANCHORS` ruling), binding yes/no only when EVERY token agrees — so «no, a
+  cat is a dog» is a RESTATEMENT that keeps its content, never a bare drop. **Multilingual seeds**
+  first-class (the author is the first non-English friend): «sì»/«esatto»/«giusto»/«no»/«sbagliato»
+  caught as exact-hits, not a translation step (chapter 2's job).
+- The re-ingest (`_confirm_reading` → new `api_client.ingest_input` on `/api/v1/input`): a confirmed
+  reading re-enters through the NORMAL pipeline attributed to the ORIGINAL speaker, gated by THEIR
+  trust (teaching/hypothesis/corroboration) — never minted directly as belief. Graceful: API
+  unreachable → None (the answer was still understood; the reading simply not re-ingested this tick
+  — brain-runtime safe, the brain is parser-free by design).
+- +9 tests (`test_answer_binding.py`: classify parametrized, all four outcomes, the ambient-aside
+  guard, no-pending passthrough, lapse, the two think_one routing cases). Full gate **700 passed,
+  1 xfailed** (after clearing an orphaned-fixture sandbox artifact from the day's interrupted runs —
+  not a code fault). **§1's first brick — the room + ask + answer — is WHOLE.**

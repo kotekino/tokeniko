@@ -84,12 +84,9 @@ in build order:
 1. *(1a — the room + the "did you mean?" ASK: LANDED 2026-07-25 → `landed.md`. The room
    (`MEMExchange`), the two-tier floor (`verifier_verdict` ACCEPT/ASK/DISCARD), `suggested_reading`,
    the `reply_tempo` EMA, and the ask are built.)*
-   - 🔄 **1b — the ANSWER binding (in build)** — the pending lifecycle (fork b, the author's ruling —
-     not ask-and-ignore): the asker's next directed message binds the open `did_you_mean` pending —
-     «sì»/«yes» → re-ingest the reading AS CONFIRMED (now believable), «no» → drop, a clear
-     restatement → supersede + ingest normally, silence past `expires_at` → lapse (lazy, no
-     scheduler). Multilingual-friendly yes/no via the anchor catch («sì»/«no»). Brief:
-     `.claude/briefs/2026-07-25-did-you-mean-1b.md`.
+   - *(1b — the ANSWER binding: LANDED 2026-07-25 → `landed.md`. The pending lifecycle
+     (affirmation→re-ingest-as-confirmed, negation→drop, restatement→supersede, silence→lapse) +
+     the multilingual yes/no anchor. **§1's first brick — room + ask + answer — is WHOLE.**)*
 2. 🔭 **Multilingual translation (the room's second tenant: conversation language)** — inbound: a
    non-English message (the author's Italian) is TRANSLATED to English (Haiku) before the
    English-based pipeline, held to the SAME strong verifier (meaning preserved or trashed). Outbound:

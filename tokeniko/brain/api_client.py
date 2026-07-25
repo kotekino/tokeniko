@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
 logger = logging.getLogger("tokeniko-brain")
@@ -42,6 +43,43 @@ def _post_json(path: str, body: dict) -> dict | None:
     except (ValueError, json.JSONDecodeError) as e:
         logger.warning("[api_client] POST %s — malformed response (%s)", path, e)
     return None
+
+
+# GET a JSON body from `path` on the local API with query `params`. Same graceful contract as
+# _post_json (returns None on ANY failure, logged never raised). `/api/v1/input` is a GET.
+def _get_json(path: str, params: dict) -> dict | None:
+    url = _API_BASE.rstrip("/") + path + "?" + urllib.parse.urlencode(params)
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        body_text = e.read().decode("utf-8", "replace") if e.fp else ""
+        logger.warning("[api_client] GET %s -> HTTP %s: %s", path, e.code, body_text[:200])
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        logger.warning("[api_client] GET %s unreachable (%s) — will retry next tick", path, e)
+    except (ValueError, json.JSONDecodeError) as e:
+        logger.warning("[api_client] GET %s — malformed response (%s)", path, e)
+    return None
+
+
+# RE-INGEST a text through the NORMAL ingestion path (`/api/v1/input`) as if the speaker had said it
+# cleanly — the "did you mean?" confirmation seam (1b). The brain is parser-free; a CONFIRMED reading
+# must be COMPILED (its meaning differs from the stumbling item's stored zip) and then flow through
+# the very same pipeline any clean human turn does (teaching / hypothesis / corroboration / cross-
+# item), gated by the SPEAKER's own trust — so it re-enters as a fresh input attributed to that
+# speaker, not minted directly as a theorem. `talker` is the channel-scoped uid (get_stakeholder
+# fetch-or-creates it), `directedness`/`metadata` inherited from the original turn. Graceful: API
+# down -> None (the answer was still understood; the reading is simply not re-ingested this time).
+def ingest_input(tokens: str, talker: str, channel: str, directedness: float,
+                 talker_name: str | None = None, metadata: str | None = None) -> dict | None:
+    params: dict = {"tokens": tokens, "talker": talker, "channel": channel,
+                    "directedness": directedness}
+    if talker_name:
+        params["talker_name"] = talker_name
+    if metadata:
+        params["metadata"] = metadata
+    return _get_json("/api/v1/input", params)
 
 
 # MATERIALIZE a derived conclusion as a first-class theorem via the API pipeline. `tokens` is the

@@ -66,6 +66,7 @@ from lib.llc.constants import (
     _TEMPORAL_ANCHORS,
     _TENSE_ANCHORS,
     _SOCIAL_BASE_ANCHORS,
+    _ANSWER_BASE_ANCHORS,
     _TIME_UNITS,
     _TEMPORAL_PREP_FUTURE,
     _TEMPORAL_PREP_PAST,
@@ -286,6 +287,11 @@ _REGISTRY: dict[str, Category] = {
     # closer to «hey» than «howdy» is to «hello» — no floor discriminates, so a semantic
     # fallback would greet acknowledgments; the widened table is the honest catch).
     "social": Category("social", _SOCIAL_BASE_ANCHORS, Strategy.EXACT, default=None),
+    # the "did you mean?" answer polarity (1b): a bare acknowledgment token -> affirmation | negation.
+    # EXACT for the same measured reason as `social` (near-orthogonal interjection base vectors give
+    # the fuzzy fallback no floor to stand on — see _ANSWER_BASE_ANCHORS); the multilingual seeds are
+    # caught as exact-hits (no translation step), everything else -> default (None) -> a restatement.
+    "answer_polarity": Category("answer_polarity", _ANSWER_BASE_ANCHORS, Strategy.EXACT, default=None),
 }
 
 
@@ -539,6 +545,14 @@ _ADV_QUANTIFIER_TABLE: dict[str, TKQuantifier] = {
 def anchor_adverbialQuantifier(lemma: str) -> Optional[TKQuantifier]:
     key = (lemma or "").strip().lower()
     return _ADV_QUANTIFIER_TABLE.get(key)
+
+
+# the "did you mean?" answer polarity (the room + ask, 1b): a bare acknowledgment lemma ->
+# "affirmation" | "negation" | None. EXACT (closed-class, multilingual seeds); None = not a clear
+# yes/no. Parser-free by construction (pure table lookup, no spaCy, no Mongo) so the brain's binder
+# can call it without loading the pipeline.
+def anchor_answerPolarity(lemma: str) -> Optional[str]:
+    return anchor_resolve(lemma, "answer_polarity")
 
 
 # ------------------------------------------------------------------------------------------------
