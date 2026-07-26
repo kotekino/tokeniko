@@ -418,6 +418,18 @@ class MEMScaffold(BaseModel):
     category: str                     # the communicative act ("why", "answer_yes", "concede_retract", …)
     template: str                     # the surface form; named slots in braces ("I no longer hold that {retracted}")
     slots: list[str] = Field(default_factory=list)   # the slot names the template binds (subset-gated at pick time)
+    # the row's LANGUAGE (multilingual §1 step 2b, 2026-07-26 — the native voice). A scaffold is our
+    # OWN curated fixed string: rendering it in another tongue is a CURATION problem, not an
+    # epistemics one, so the shelves are curated per language instead of translated at runtime (zero
+    # cloud calls, zero verification, and «non lo so» is what an Italian actually says — a
+    # translation of «I cannot tell; I lack the knowledge» never lands that way). Defaulting to
+    # english means every row written before this field keeps speaking exactly as it did: no
+    # migration, no recompile. The shelf gate (lib/core/voice.creative_compose) falls back to the
+    # english shelf when a language has no row for a category — the outbound translator becomes the
+    # FALLBACK layer, never the primary path. The label speaks the ears' vocabulary
+    # (lib/llc/language.ENGLISH / the readers' language names — "italian", "spanish", …); the literal
+    # is spelled out here rather than imported so the model layer keeps owing nothing to the ears.
+    lang: str = Field(default="english")
     # the compiled zip of the template (slots filled with a neutral placeholder at seed time — the
     # wh-machinery's "sentence with a hole" pointed the other way). None when the fragment honestly
     # does not compile ("?"). Consumers: equivalence-learning + the rag2-out verifier (slices 3+).

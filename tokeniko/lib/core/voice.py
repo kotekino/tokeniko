@@ -11,10 +11,21 @@
 # scaffold choice + hedges + polish, never in paraphrasing the data). GRACEFUL BY FALLBACK: an
 # empty shelf / unreachable store speaks the legacy hardwired string (_FALLBACK) — the voice
 # never goes mute and never crashes its caller. PARSER-FREE: Mongo reads only.
+#
+# MULTILINGUAL (§1 step 2b, 2026-07-26): the shelf is keyed by LANGUAGE too. A scaffold is our own
+# curated string, so a second tongue is CURATED (a row per language), never translated at runtime —
+# and the fallback chain keeps the discipline of every other gate here: no row in the asked
+# language falls back to the ENGLISH shelf (which the outbound translator then handles as it always
+# has), never to silence.
 # --------------------------------------------------------------
 import logging
 import random
 from typing import Optional
+
+# import-light: the ears' language vocabulary is one constant + one loose comparator, and nothing
+# heavier hides behind them (lib/llc/language keeps spaCy lazy) — so the shared voice reader can
+# name a language without dragging the pipeline into `brain`.
+from lib.llc.language import ENGLISH, is_english
 
 logger = logging.getLogger("tokeniko-brain")
 
@@ -129,16 +140,32 @@ def _in_band(band, value: Optional[float]) -> bool:
     return lo <= value <= hi
 
 
+# the LANGUAGE label, normalized (multilingual §1 step 2b). An unlabelled row (every row written
+# before the field existed), an unlabelled request, and the ears' loose english forms ("English",
+# "en", "english (US)") all collapse to ENGLISH; every other tongue keeps the bare lowercase label
+# the readers hand us ("italian"). One notion of "the same language", used by the gate and by what
+# the composer reports back.
+def _lang_label(value: Optional[str]) -> str:
+    label = (value or "").strip().lower()
+    return ENGLISH if (not label or is_english(label)) else label
+
+
 # pick one scaffold from the category's shelf and bind the data. The shelf = enabled rows of the
 # category whose slots the data can satisfy (subset gate — a scaffold demanding {retracted} is
 # unreachable without it) AND whose intensity/arousal bands contain the tuple (slice 2: intensity
 # joins category as the retrieval double key). An emptied band-shelf falls back to the slot-shelf
 # — banding SHADES the voice, never mutes it. The pick is weighted-random (`rng` injectable); the
 # bind is str.format on named keys — VERBATIM, the fence. Any store trouble -> the fallback.
-def creative_compose(category: str, data: Optional[dict] = None,
-                     rng: Optional[random.Random] = None,
-                     intensity: Optional[dict] = None,
-                     target: Optional[str] = None) -> str:
+#
+# LANGUAGE (§1 step 2b): `lang` asks for a shelf, and the pair that comes back says what was
+# actually spoken — the row's own label, since the fallback chain may have answered an italian ask
+# in English. The carrier reads that label to decide whether the reply still needs translating;
+# `creative_compose` below is the plain-string face every existing caller keeps using.
+def creative_compose_lang(category: str, data: Optional[dict] = None,
+                          rng: Optional[random.Random] = None,
+                          intensity: Optional[dict] = None,
+                          target: Optional[str] = None,
+                          lang: Optional[str] = None) -> tuple[str, str]:
     data = {k: str(v) for k, v in (data or {}).items()}
     confidence = (intensity or {}).get("confidence")
     arousal = (intensity or {}).get("arousal")
@@ -146,6 +173,7 @@ def creative_compose(category: str, data: Optional[dict] = None,
     if hedge is not None:
         data.setdefault("hedge", hedge)  # available to {hedge}-designed templates only
     template = _FALLBACK.get(category, "")
+    spoken = ENGLISH        # the hardwired floor is English; only a native row moves this
     try:
         from lib.core.models import TKScaffoldDoc
         # the scope gate (§1 learned scaffolds): a global row (scope=None) speaks to everyone; a
@@ -154,6 +182,13 @@ def creative_compose(category: str, data: Optional[dict] = None,
         shelf = [s for s in TKScaffoldDoc.find({"category": category, "enabled": True}).to_list()
                  if set(s.slots or []) <= set(data)
                  and (getattr(s, "scope", None) is None or getattr(s, "scope", None) == target)]
+        # the LANGUAGE gate (§1 step 2b) + the Captain's FALLBACK CHAIN: the requested language's
+        # rows if the category has any, else the ENGLISH shelf exactly as before (which the outbound
+        # translator then handles as it does today — the translator is the fallback layer, never the
+        # primary path). A row written before this field defaults to english, so an unlabelled
+        # request over an unlabelled store is byte-identical to yesterday.
+        native = [s for s in shelf if _lang_label(getattr(s, "lang", None)) == _lang_label(lang)]
+        shelf = native or [s for s in shelf if _lang_label(getattr(s, "lang", None)) == ENGLISH]
         banded = [s for s in shelf
                   if _in_band(getattr(s, "intensity_band", None), confidence)
                   and _in_band(getattr(s, "arousal_band", None), arousal)]
@@ -162,8 +197,12 @@ def creative_compose(category: str, data: Optional[dict] = None,
             picker = rng if rng is not None else random
             chosen = picker.choices(pool, weights=[max(s.weight, 0.0) or 0.0 for s in pool])[0]
             template = chosen.template
-            logger.debug("[compose] %s (c=%s a=%s) -> scaffold %s «%s»",
-                         category, confidence, arousal, str(chosen.id), template)
+            # what he ACTUALLY spoke: the picked row's OWN label, never the request's — the
+            # fallback chain may well have answered an italian ask off the english shelf, and the
+            # carrier decides whether to translate on this.
+            spoken = _lang_label(getattr(chosen, "lang", None))
+            logger.debug("[compose] %s (c=%s a=%s l=%s) -> scaffold %s «%s»",
+                         category, confidence, arousal, spoken, str(chosen.id), template)
             # adoption signal: when he actually reaches for a picked-up phrasing, tick its `used`
             # (the consolidation reads it as proof the mimicry took). A failed save must never break
             # speech. Seeds/global rows carry no scope — no tick.
@@ -176,8 +215,22 @@ def creative_compose(category: str, data: Optional[dict] = None,
                                    str(chosen.id), tick_error)
     except Exception as error:  # the voice must never crash its caller — fall back, log, speak
         logger.warning("[compose] scaffold store unavailable for %s (%s) — fallback", category, error)
+        spoken = ENGLISH        # the hardwired floor speaks English, whatever was asked for
     try:
-        return template.format(**data)
+        return template.format(**data), spoken
     except (KeyError, IndexError, ValueError):
         logger.warning("[compose] template/data mismatch for %s — fallback", category)
-        return _FALLBACK.get(category, "").format(**data) if _FALLBACK.get(category) else ""
+        floor = _FALLBACK.get(category, "")
+        return (floor.format(**data) if floor else ""), ENGLISH
+
+
+# the plain-string face (the signature every caller before §1 step 2b knows). `lang` is accepted
+# here too — a caller that does not care WHICH language answered, only that the right shelf was
+# asked, needs nothing more.
+def creative_compose(category: str, data: Optional[dict] = None,
+                     rng: Optional[random.Random] = None,
+                     intensity: Optional[dict] = None,
+                     target: Optional[str] = None,
+                     lang: Optional[str] = None) -> str:
+    return creative_compose_lang(category, data, rng=rng, intensity=intensity,
+                                 target=target, lang=lang)[0]

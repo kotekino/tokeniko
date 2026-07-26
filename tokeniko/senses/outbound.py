@@ -13,6 +13,10 @@
 # (soul, channel) exchange carries it, written at the ears where the message was heard. The gate is
 # a ROUND TRIP through the SAME /voice/verify seam (back-translate, then compare English to
 # English): no new verification machinery, and an unverified trip ships the English.
+# THE NATIVE VOICE (§1 step 2b) demoted that round trip to the FALLBACK layer: the brain now
+# composes off a per-language scaffold shelf and stamps the language on the payload, so a reply that
+# is already native arrives here needing neither polish nor translation — this carrier's whole
+# cloud path becomes a no-op for it. An English raw is untouched: everything below is as it was.
 #
 # DRY-RUN by default (`SENSES_DELIVER_DRYRUN`!=0): resolve + decompile + LOG the would-send, mark DONE,
 # touch no socket — so the whole seam is verifiable without Discord credentials / risking live spam.
@@ -95,8 +99,29 @@ def _same_words(a: str, b: str) -> bool:
     return keep.split() == other.split()
 
 
-async def _localize(english: str, target_uid: Optional[str], channel_id: Optional[str]) -> str:
+# the language the BRAIN composed the reply in (the plan stamps it on the payload, §1 step 2b) —
+# None when it is English, when the action predates the field, or when the label is unreadable, and
+# None is exactly today's behavior. A non-None answer means the text is ALREADY native: it must not
+# be translated (there is nothing to translate it from — it is not English) and must not be polished
+# (rag2-out and its verifier both speak English).
+def _composed_lang(payload: Optional[dict]) -> Optional[str]:
+    try:
+        from lib.llc.language import is_english
+        lang = (payload or {}).get("lang")
+        return None if (not lang or is_english(lang)) else str(lang)
+    except Exception:
+        return None
+
+
+async def _localize(english: str, target_uid: Optional[str], channel_id: Optional[str],
+                    native: Optional[str] = None) -> str:
     from lib.llc.language import back_translate, translate_out, translator_enabled
+    if native:
+        # the NO-OP (§1 step 2b): the scaffold shelf already spoke this room's language, so the
+        # round trip has nothing to do — zero cloud calls, zero latency, and the curated native
+        # register reaches the person exactly as it was written.
+        logger.info("[outbound] composed native (%s) — no round trip: %r", native, english)
+        return english
     if not english or not target_uid or not channel_id or not translator_enabled():
         return english
     lang = await asyncio.to_thread(_room_language, target_uid, channel_id)
@@ -126,8 +151,8 @@ async def _localize(english: str, target_uid: Optional[str], channel_id: Optiona
 # `channel_id` are the room's key; without them (tests, an unaddressable action) the English ships
 # and the behavior is byte-identical to before the multilingual step.
 async def _voice_out(raw: str, target_uid: Optional[str] = None,
-                     channel_id: Optional[str] = None) -> str:
-    return await _localize(await _polish(raw), target_uid, channel_id)
+                     channel_id: Optional[str] = None, native: Optional[str] = None) -> str:
+    return await _localize(await _polish(raw), target_uid, channel_id, native)
 
 # tokeniko's own stakeholder id (the sourceId of his recorded speech), resolved lazily once.
 _self_id: Optional[str] = None
@@ -237,8 +262,13 @@ async def deliver_one(sender: Optional[Sender] = None) -> bool:
     # verbatim — they can only answer «which is false?» if they recognize their own taught
     # sentence — and the «a» or «b» structure is the r.a.a. itself; a polish that rewords either
     # corrupts the question. The scaffold text is already curated English — ship it verbatim.
+    # A NATIVE reply (composed off a non-English scaffold shelf, §1 step 2b) skips the polish for a
+    # third, harder reason than register: rag2-out's prompt and the zip-verifier behind it are both
+    # English, so there is nothing here that could judge «non lo so» — and the row is curated text
+    # already. It skips the translation too (see _localize): it is not English to translate FROM.
     _VERBATIM = {TokenikoAction.MENTION.value, TokenikoAction.REDUCT.value}
-    polishable = raw and payload.get("action_token") not in _VERBATIM
+    native = _composed_lang(payload)
+    polishable = raw and payload.get("action_token") not in _VERBATIM and native is None
     # the destination is resolved FIRST now: its channel id is half the room's key, and the room is
     # what says which language to speak (§1 step 2). VERBATIM means UNPOLISHED, NOT UNTRANSLATED
     # (the author's ruling, 2026-07-26): a side-note or a reductio still reaches the person in the
@@ -250,8 +280,8 @@ async def deliver_one(sender: Optional[Sender] = None) -> bool:
     # said. An English room is untouched — _localize is a no-op without a room language.
     dest = _resolve_destination(action.targetId, payload)
     channel_id = getattr(dest, "channel_id", None)
-    spoken = (await _voice_out(raw, action.targetId, channel_id) if polishable
-              else await _localize(raw, action.targetId, channel_id))
+    spoken = (await _voice_out(raw, action.targetId, channel_id, native) if polishable
+              else await _localize(raw, action.targetId, channel_id, native))
 
     if dest is None or not spoken:
         logger.warning(

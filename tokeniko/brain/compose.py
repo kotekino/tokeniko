@@ -19,8 +19,9 @@ from typing import Optional
 
 from lib.core.evaluation import AnswerKind, AnswerVerdict
 from lib.core.memory import EvalToken, TokenikoAction
+from lib.llc.language import ENGLISH        # import-light: the label, nothing behind it
 # re-exported for the existing consumers/tests: the shelf reader moved to lib at slice 4
-from lib.core.voice import _FALLBACK, creative_compose, hedge_for  # noqa: F401
+from lib.core.voice import _FALLBACK, creative_compose, creative_compose_lang, hedge_for  # noqa: F401
 
 
 # ---- the ROUTER: decision -> (category, data) --------------------------------------------------------
@@ -147,13 +148,23 @@ def _route(action_token: str, trigger: Optional[str], answer: Optional[dict]) ->
 # compose the RAW decision text for an outward action — the seam plan_action calls. `answer` is
 # the AnswerResult dict (tokeniko:answer / tokeniko:concede) or the belief carrier (speakup);
 # `trigger` is the eval:* token that fired the reflex; `intensity` is the (confidence, arousal)
-# tuple assembled by the plan (slice 2 — gates the shelf + feeds the hedge). Returns the composed
-# string, or "" when there is nothing to say.
-def compose_raw(action_token: str, trigger: Optional[str] = None, answer: Optional[dict] = None,
-                rng: Optional[random.Random] = None, intensity: Optional[dict] = None,
-                target: Optional[str] = None) -> str:
+# tuple assembled by the plan (slice 2 — gates the shelf + feeds the hedge); `lang` is the ROOM's
+# language (§1 step 2b — which shelf to speak from). Returns (text, the language it came out in),
+# or ("", english) when there is nothing to say.
+def compose_raw_lang(action_token: str, trigger: Optional[str] = None, answer: Optional[dict] = None,
+                     rng: Optional[random.Random] = None, intensity: Optional[dict] = None,
+                     target: Optional[str] = None, lang: Optional[str] = None) -> tuple[str, str]:
     routed = _route(action_token, trigger, answer)
     if routed is None:
-        return ""
+        return "", ENGLISH
     category, data = routed
-    return creative_compose(category, data, rng=rng, intensity=intensity, target=target)
+    return creative_compose_lang(category, data, rng=rng, intensity=intensity,
+                                 target=target, lang=lang)
+
+
+# the plain-string face (the signature every caller before §1 step 2b knows).
+def compose_raw(action_token: str, trigger: Optional[str] = None, answer: Optional[dict] = None,
+                rng: Optional[random.Random] = None, intensity: Optional[dict] = None,
+                target: Optional[str] = None, lang: Optional[str] = None) -> str:
+    return compose_raw_lang(action_token, trigger, answer, rng=rng, intensity=intensity,
+                            target=target, lang=lang)[0]

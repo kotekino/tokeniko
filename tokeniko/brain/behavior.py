@@ -199,6 +199,26 @@ _ADDRESSED_FLOOR = 0.9   # senses/inbound.grade_directedness: addressed
 _AMBIENT_GRADE = 0.6     # senses/inbound.grade_directedness: ambient
 
 
+# the language of the room this reply is headed for (multilingual §1 step 2b) — the shelf
+# creative_compose should speak from. The room's key is (canonical soul uid, channel id) and the
+# channel id is the SOURCE item's own, read through the one definition (io.exchange_channel_key —
+# the same key api/main writes the language under and senses/outbound reads it back with). READ-
+# ONLY (find_exchange never mints): a plan is not a turn. Graceful None everywhere — no target, no
+# source, no room, an english room, or an unreachable store all mean "the english shelf, as before".
+def _room_language(soul_uid: Optional[str], src: Optional[TKMemoryItemDoc]) -> Optional[str]:
+    if not soul_uid or src is None:
+        return None
+    try:
+        from lib.core.io import exchange_channel_key, find_exchange
+        from lib.llc.language import is_english
+        room = find_exchange(soul_uid, exchange_channel_key(getattr(src, "metadata", None),
+                                                            getattr(src, "channel", None)))
+        lang = getattr(room, "lang", None)
+        return None if (not lang or is_english(lang)) else lang
+    except Exception:
+        return None
+
+
 def effective_urge(idea: TKIdeaDoc, src: Optional[TKMemoryItemDoc]) -> float:
     directedness = getattr(src, "directedness", None) if src is not None else None
     if directedness is None:
@@ -327,12 +347,23 @@ def plan_action(idea: TKIdeaDoc, tokeniko_uid: str) -> Optional[dict]:
         soul = resolve_canonical(target)
         if soul is not None:
             compose_target = soul.uid
-    raw = compose.compose_raw(token, idea.trigger, idea.answer, intensity=intensity,
-                              target=compose_target)
+    # the ROOM's LANGUAGE (§1 step 2b): composition happens HERE, so the shelf must be picked here
+    # too — the room is keyed by (canonical uid, channel id) and BOTH are in hand at plan time (the
+    # channel id off the SOURCE item's own metadata, through the one definition of the key). Read-
+    # only: find_exchange never mints a room, so planning a reply into a pair that never had one
+    # changes nothing. No room / no source / an english room -> None -> the english shelf, exactly
+    # as before.
+    compose_lang = _room_language(compose_target, src)
+    raw, raw_lang = compose.compose_raw_lang(token, idea.trigger, idea.answer, intensity=intensity,
+                                             target=compose_target, lang=compose_lang)
     if raw:
         payload["raw"] = raw             # the decision text -> senses decompiles -> fluent English
         # (compose_raw returns "" for post — that's fine: raw is OPTIONAL here, the post composer
         # runs at the carrier over payload["material"] in P2/P3.)
+        # the language the raw is ACTUALLY in (the picked row's own label — the fallback chain may
+        # have answered an italian ask off the english shelf). The carrier reads it to know whether
+        # the reply still needs translating; auditable on the stored Action either way.
+        payload["lang"] = raw_lang
 
     # the reply THREAD-BACK (senses go-live P2): the perceiving channel stamped its reply coordinates
     # on the source memory item (P1: metadata = {"channel_id","message_id"}); forward them as the

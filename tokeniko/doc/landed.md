@@ -2146,3 +2146,42 @@ SURVEY ARC IS COMPLETE)**
   Italian row in an English shelf is a guessed string (parked: multilingual scaffolds). +45 tests
   (`test_multilingual.py`). Full gate **743 passed, 1 xfailed** (the officer's), re-verified after
   the verbatim ruling.
+
+**THE NATIVE VOICE — multilingual scaffolds (2026-07-26 — §1 step 2b; promoted from parked by the author's LIVE Italian test the same day)**
+- **The live finding that promoted it**: he spoke Italian and got the RIGHT VERDICTS IN THE WRONG
+  LANGUAGE — «sì — ne sono certo» came back Italian but «I cannot tell; I lack the knowledge» and
+  «because…?» came back English. The cause: `_localize` ships the target tongue only if the round
+  trip is word-perfect or `/voice/verify` passes, and `verifier_voice` REFUSES an unsound raw — every
+  short reflex («hello!», «because…?») is a fragment, hence unverifiable BY CONSTRUCTION.
+- **The design spine**: the zip-verifier is the WRONG TOOL for a scaffold. It exists to stop meaning
+  drift in DERIVED content; a scaffold is our OWN curated fixed string, so rendering it in another
+  tongue is a CURATION problem, not an epistemics one. The rows are therefore WRITTEN, not
+  translated: zero cloud calls, zero verification, zero latency, and a native register. The author's
+  framing (the vision talking): tokeniko is his TWIN and he is Italian — Italian is not a foreign
+  language tokeniko translates into, it is CO-NATIVE.
+- **The machinery** (the officer): `MEMScaffold.lang` (default "english" — every existing row keeps
+  working, no migration); the language gate + FALLBACK CHAIN in `creative_compose_lang` (no row in
+  the asked tongue → the ENGLISH shelf, which the outbound translator then handles as always → the
+  `_FALLBACK` floor; never silence); plan-time threading (`behavior._room_language` reads the room
+  READ-ONLY through the ONE key definition `io.exchange_channel_key`); and the carrier no-op —
+  `payload["lang"]` carries **the PICKED ROW's own label, not the requested language**, because the
+  fallback chain routinely answers an Italian ask off the English shelf and the carrier must
+  translate in exactly that case. A native reply skips BOTH polish and translation.
+- **The curation** (the QM, 232 rows across it/es/fr/de — the v1 FENCE is slot-less categories only,
+  the author's ruling; the other 10 keep composing English + the translator, for consistency).
+  GENDER: curate around agreement — his own review taught the trick that generalizes across the
+  Romance shelves, reach for the NOUN not the adjective («ne ho certezza», «tengo la certeza»,
+  «j'en ai la certitude»): the certainty is possessed, not worn, so nothing must agree with a gender
+  he does not have. His register note too: in dialogue the crisp «quale delle due?» carries the whole
+  question. German nouns capitalized (orthography, not register). Zips are None BY HONESTY (the
+  parser is English-only).
+- **A QM bug caught at the dry-run**: the seed's dedup key `(category, template)` is LANGUAGE-BLIND,
+  and two tongues legitimately share a spelling («no» is Italian AND Spanish AND English; «hi
+  {name}!» is German AND English). Three rows would have been silently skipped and **Italian would
+  have lost the plain crisp «no»** — the 1.0 leader of its own shelf. Keyed on
+  `(category, template, lang)` now: a row belongs to a shelf, so the shelf is part of its identity.
+- Residuals surfaced, not fixed: the REDUCT cannot be natively composed (its trigger is a derivation,
+  so there is no source item and no room key at plan time — it composes English and takes the
+  carrier's round trip) · when the mimicry fence is lifted, `mimic_observe` MUST stamp the source
+  language or it will seed unlabelled foreign strings into the English shelf. +17 tests. Full gate
+  **759 passed, 1 xfailed**.

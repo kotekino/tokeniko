@@ -90,12 +90,20 @@ in build order:
 2. *(Multilingual — the room's second tenant: LANDED 2026-07-26 → `landed.md`. Consensus of two
    independent readers judged by the compiler (ACCEPT/ASK/admit-and-DISCARD), the local
    skeleton detector, the round-trip-verified outbound, the admission voice, the mimicry fence.)*
+   - *(2b — THE NATIVE VOICE (multilingual scaffolds): LANDED 2026-07-26 → `landed.md`. Promoted
+     from parked by the live Italian test the same day — right verdicts, wrong language. `lang` on
+     the scaffold row + the shelf gate + the fallback chain + the carrier no-op; 232 curated rows
+     across it/es/fr/de, slot-less v1 fence.)*
    - 🔭 **Its residuals** (surfaced by the build, awaiting a live season): the detector's thin 0.05
      margins + the fully-misspelled-English blind spot (env-tunable; watch live) · the DM fallback
      destination carries no `channel_id`, so an action resolved via `contextKey` alone cannot key a
      room and ships English (real Discord traffic always carries coords) · the consensus cannot
      catch a mistranslation BOTH readers share (same model family — a second family would be the
-     cut if it ever bites).
+     cut if it ever bites) · the REDUCT cannot be natively composed (no source item at plan time ⇒
+     no room key; it composes English and takes the carrier's round trip) · when the mimicry fence
+     is lifted, `mimic_observe` must stamp the source language onto the row or it seeds unlabelled
+     foreign strings into the English shelf · the slotted 10 categories still compose English +
+     translator (the mixed curated-frame/English-slot problem is its own design session).
 3. 🔭 **The privacy/legal frame (last — it is a CONSENT prompt over the two above)** — a user joining
    is prompted: allow your prompts to be sent to the cloud translator apparatus (third-party
    Anthropic + the legal terms)? YES → translation + greater understanding + reply-in-your-language;

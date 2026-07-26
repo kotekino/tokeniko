@@ -9,9 +9,13 @@
 #
 # No live API in the gate — the readers are stubbed; the detector runs on REAL specimens and the
 # verdict on REAL compiled zips.
+#
+# Section 8 is step 2b (THE NATIVE VOICE): the shelves themselves learn a second language, and the
+# outbound translator is demoted from the primary path to the fallback layer.
 # ------------------------------------------------------------------------------------------------
 import json
 import pathlib
+import random
 from types import SimpleNamespace
 
 import pytest
@@ -868,3 +872,264 @@ def test_verbatim_acts_stay_english_in_an_english_room(out_env, monkeypatch):
     monkeypatch.setattr(outbound, "_room_language", lambda uid, chan: None)
     raw = "by the way, gold is beautiful"
     assert _run(outbound._localize(raw, "uid", "chan")) == raw
+
+
+# ---- 8. THE NATIVE VOICE (§1 step 2b, 2026-07-26) ------------------------------------------------
+# Promoted from the icebox by the Captain's live test: the verdicts were RIGHT and the language was
+# WRONG — «I cannot tell; I lack the knowledge» came back in English inside an Italian conversation,
+# because a curated FRAGMENT is unsound by construction and the round-trip gate above can only ship
+# what it can verify. The answer is not a better verifier: a scaffold is our OWN string, so the
+# shelves are CURATED per language and the translator is demoted to the fallback layer. What is
+# asserted here is the MACHINERY (the field, the gate, the threading, the carrier no-op) — the
+# curated rows themselves are the seed script's, and these fixtures stand in for them.
+_IT_IDK = "non lo so"
+_EN_IDK = "I cannot tell; I lack the knowledge"
+
+
+@pytest.fixture()
+def native_shelf(_io):
+    from lib.core.models import TKScaffoldDoc
+    rows = [
+        TKScaffoldDoc(category="answer_idk", template=_EN_IDK),
+        TKScaffoldDoc(category="answer_idk", template=_IT_IDK, lang="italian"),
+        # a SLOTTED category: english-only, exactly as the Captain's v1 fence leaves it — its
+        # {retracted} payload is stored English, so the whole reply composes English and travels
+        # through the translator like it did yesterday (his consistency ruling).
+        TKScaffoldDoc(category="concede_retract", template="I no longer hold that {retracted}",
+                      slots=["retracted"]),
+    ]
+    for row in rows:
+        row.insert()
+    yield rows
+    for row in rows:
+        row.delete()
+
+
+def test_the_italian_shelf_answers_an_italian_room(native_shelf):
+    from lib.core.voice import creative_compose_lang
+    text, spoken = creative_compose_lang("answer_idk", lang="italian", rng=random.Random(1))
+    assert (text, spoken) == (_IT_IDK, "italian")
+
+
+def test_an_english_room_never_sees_the_italian_row(native_shelf):
+    from lib.core.voice import creative_compose_lang
+    # every english spelling the ears may hand us, and the unlabelled ask (= today's callers)
+    for asked in (None, ENGLISH, "English", "en"):
+        picks = {creative_compose_lang("answer_idk", lang=asked, rng=random.Random(seed))
+                 for seed in range(20)}
+        assert picks == {(_EN_IDK, ENGLISH)}
+
+
+def test_a_category_with_no_native_row_falls_back_to_the_english_shelf(native_shelf):
+    # the Captain's FALLBACK CHAIN: the slotted concede has no italian row, so the italian ask is
+    # answered off the english shelf — and it says so, which is what keeps the carrier translating.
+    from lib.core.voice import creative_compose_lang
+    text, spoken = creative_compose_lang("concede_retract", {"retracted": "«a cat is a dog»"},
+                                         lang="italian", rng=random.Random(1))
+    assert text == "I no longer hold that «a cat is a dog»"
+    assert spoken == ENGLISH
+
+
+def test_lang_defaults_to_english_so_nothing_migrates(_io):
+    # the whole point of the default: a row written before the field — no `lang` key in mongo at
+    # all — keeps speaking. It is english, so it answers an english ask AND serves as the italian
+    # ask's fallback; no migration, no recompile.
+    from lib.core.models import TKScaffoldDoc
+    from lib.core.voice import creative_compose_lang
+    assert TKScaffoldDoc(category="answer_idk", template="x").lang == ENGLISH
+    old = {"category": "answer_idk", "template": "the row from before the field", "slots": [],
+           "intensity_band": [0.0, 1.0], "arousal_band": [0.0, 1.0], "weight": 1.0,
+           "provenance": "seed", "trusted": 1.0, "enabled": True, "used": 0, "createdAt": 0}
+    TKScaffoldDoc.get_motor_collection().insert_one(old)
+    try:
+        for asked in (None, "italian"):
+            assert creative_compose_lang("answer_idk", lang=asked, rng=random.Random(2)) == (
+                "the row from before the field", ENGLISH)
+    finally:
+        TKScaffoldDoc.get_motor_collection().delete_many({"template": old["template"]})
+
+
+def test_the_never_mute_floor_survives_the_language_gate(_io):
+    # an over-narrow gate must degrade to a wider shelf, never to silence: no rows at all (in any
+    # language) still speaks the hardwired string — in English, and honestly labelled as such.
+    from lib.core.voice import _FALLBACK, creative_compose_lang
+    assert creative_compose_lang("answer_idk", lang="italian") == (_FALLBACK["answer_idk"], ENGLISH)
+
+
+def test_the_blog_shelf_is_never_asked_for_another_language(_io):
+    # the public journal's language is fixed (the Captain's ruling): blog.py composes without a
+    # `lang`, so an italian blog row — should one ever be seeded — is simply unreachable.
+    from lib.core.models import TKScaffoldDoc
+    from lib.core.voice import creative_compose
+    rows = [TKScaffoldDoc(category="blog_lead_dream", template="While I slept, I untangled something."),
+            TKScaffoldDoc(category="blog_lead_dream", template="Mentre dormivo, ho sciolto un nodo.",
+                          lang="italian")]
+    for row in rows:
+        row.insert()
+    try:
+        picks = {creative_compose("blog_lead_dream", {}, rng=random.Random(seed))
+                 for seed in range(20)}
+        assert picks == {"While I slept, I untangled something."}
+    finally:
+        for row in rows:
+            row.delete()
+
+
+# ---- the threading: the room's language reaches the COMPOSER, at plan time ----------------------
+
+@pytest.fixture()
+def native_room(_io):
+    from lib.core.models import TKExchangeDoc, TKMemoryItemDoc, TKMemoryStakeholdersDoc
+    sh = TKMemoryStakeholdersDoc(uid="nativo@lang-test:9", name="nativo", isMe=False,
+                                 channel=MEMChannels.DISCORD, trust=0.5,
+                                 contextKey="discord:9").save()
+    yield sh
+    TKMemoryItemDoc.get_motor_collection().delete_many({"sourceId": str(sh.id)})
+    TKExchangeDoc.get_motor_collection().delete_many({"user_uid": sh.uid})
+    TKMemoryStakeholdersDoc.get_motor_collection().delete_many({"uid": sh.uid})
+
+
+def _room_item(sh, compile_zip, room_lang):
+    # the perceived turn (its metadata carries the channel id = half the room's key) + the room the
+    # ears wrote the language into, exactly as /input leaves them.
+    from api.main import _room_language_write
+    from lib.core.models import TKMemoryItemDoc
+    item = TKMemoryItemDoc(
+        original="what is a mind?", zip=compile_zip("what is a mind?"), sourceId=str(sh.id),
+        channel=MEMChannels.DISCORD, directedness=1.0,
+        metadata=json.dumps({"channel_id": "nativo-chan", "message_id": "m-7"}),
+    )
+    item.insert()
+    if room_lang:
+        _room_language_write(sh.uid, "nativo-chan", room_lang, str(item.id))
+    return item
+
+
+def _idk_plan(sh, item):
+    from brain.behavior import plan_action
+    from lib.core.evaluation import AnswerVerdict
+    from lib.core.models import TKIdeaDoc
+    idea = TKIdeaDoc(trigger=EvalToken.QUESTION.value, action_token=TokenikoAction.ANSWER.value,
+                     urge=0.9, target=str(sh.id), source=str(item.id),
+                     answer={"verdict": AnswerVerdict.UNKNOWN.value})
+    return plan_action(idea, "me")
+
+
+def test_a_plan_for_an_italian_room_composes_native(native_shelf, native_room, compile_zip):
+    # the seam: composition happens at plan time, so the room must be resolved there — and it can
+    # be, off the source item's own metadata through io.exchange_channel_key (the one definition).
+    plan = _idk_plan(native_room, _room_item(native_room, compile_zip, "italian"))
+    assert plan is not None
+    assert plan["payload"]["raw"] == _IT_IDK
+    assert plan["payload"]["lang"] == "italian"       # what the carrier reads to stay its hand
+
+
+def test_a_plan_for_an_english_room_is_byte_identical(native_shelf, native_room, compile_zip):
+    plan = _idk_plan(native_room, _room_item(native_room, compile_zip, ENGLISH))
+    assert plan["payload"]["raw"] == _EN_IDK
+    assert plan["payload"]["lang"] == ENGLISH
+
+
+def test_a_plan_with_no_room_at_all_stays_english(native_shelf, native_room, compile_zip):
+    # find_exchange never mints: a pair that never had a room plans exactly as it did yesterday
+    from lib.core.models import TKExchangeDoc
+    plan = _idk_plan(native_room, _room_item(native_room, compile_zip, None))
+    assert plan["payload"]["raw"] == _EN_IDK
+    assert TKExchangeDoc.find_one({"user_uid": native_room.uid,
+                                   "channel_id": "nativo-chan"}).run() is None
+
+
+# ---- the carrier: a native reply is neither polished nor translated -----------------------------
+
+def test_the_composed_language_is_read_off_the_payload(out_env):
+    outbound = out_env
+    assert outbound._composed_lang({"lang": "italian"}) == "italian"
+    assert outbound._composed_lang({"lang": ENGLISH}) is None      # english = nothing to stay
+    assert outbound._composed_lang({"raw": "yes"}) is None         # an action from before the field
+    assert outbound._composed_lang(None) is None
+
+
+def test_a_native_reply_is_never_translated_again(out_env, monkeypatch):
+    # the no-op: zero cloud calls, zero latency, the curated register reaching the person verbatim
+    outbound = out_env
+    import lib.llc.language as language
+
+    async def never(*args, **kw):
+        raise AssertionError("a native reply must never see the translator")
+
+    monkeypatch.setattr(language, "translate_out", never)
+    monkeypatch.setattr(outbound, "_room_language",
+                        lambda uid, chan: pytest.fail("a native reply needs no room read"))
+    assert _run(outbound._localize(_IT_IDK, "uid", "chan", "italian")) == _IT_IDK
+
+
+def test_an_english_row_in_an_italian_room_still_travels(out_env, monkeypatch):
+    # the fallback layer, intact: the categories with no native shelf (every slotted one, v1) keep
+    # taking the round trip exactly as they did before this step.
+    outbound = out_env
+    monkeypatch.setattr(outbound, "_room_language", lambda uid, chan: "italian")
+    _stub_translation(monkeypatch, "non lo so", "I do not know")
+    monkeypatch.setattr(outbound, "_verify_voice", lambda raw, back: {"ok": True, "note": "verified"})
+    assert _run(outbound._localize("I do not know", "uid", "chan", None)) == "non lo so"
+
+
+def test_a_native_reply_is_never_polished(out_env, monkeypatch):
+    # rag2-out's prompt AND the zip-verifier behind it are both English — there is nothing that
+    # could judge «non lo so», and the row is curated text already.
+    outbound = out_env
+    polished = []
+
+    async def fake_polish(raw):
+        polished.append(raw)
+        return "polished away"
+
+    monkeypatch.setattr(outbound, "_polish", fake_polish)
+    # the gating expression exactly as deliver_one computes it (the test_voice_out precedent)
+    payload = {"action_token": TokenikoAction.ANSWER.value, "raw": _IT_IDK, "lang": "italian"}
+    raw = payload["raw"]
+    _VERBATIM = {TokenikoAction.MENTION.value, TokenikoAction.REDUCT.value}
+    native = outbound._composed_lang(payload)
+    polishable = raw and payload.get("action_token") not in _VERBATIM and native is None
+    spoken = _run(outbound._voice_out(raw, "uid", "chan", native) if polishable
+                  else outbound._localize(raw, "uid", "chan", native))
+    assert spoken == _IT_IDK and polished == []
+
+
+def test_the_native_reply_reaches_the_socket_whole(_io, out_env, monkeypatch):
+    # end to end through the real carrier: a native action ships its curated Italian verbatim, with
+    # no polish call and no translation call anywhere in between.
+    from lib.core.memory import ActionStatus, ActionType
+    from lib.core.models import TKActionDoc
+    import lib.llc.language as language
+    outbound = out_env
+    monkeypatch.setenv("SENSES_DELIVER_DRYRUN", "0")
+
+    async def never(*args, **kw):
+        raise AssertionError("a native reply must never reach the cloud")
+
+    monkeypatch.setattr(language, "translate_out", never)
+    monkeypatch.setattr(outbound, "rag_call", never)
+    action = TKActionDoc(
+        action_type=ActionType.SEND_MESSAGE, sourceId="tokeniko-uid", targetId="nativo@lang-test:9",
+        channel=MEMChannels.DISCORD,
+        payload={"action_token": TokenikoAction.ANSWER.value, "raw": _IT_IDK, "lang": "italian",
+                 "destination": {"channel_id": "nativo-chan", "reply_to": "m-7"}},
+    ).insert()
+    sent = []
+
+    async def sender(dest, content):
+        sent.append((dest, content))
+        return "msg-777"
+
+    try:
+        # drain until OUR action is handled (the queue is oldest-first and shared with the sandbox)
+        for _ in range(5):
+            if TKActionDoc.get(action.id).run().status != ActionStatus.PENDING:
+                break
+            _run(outbound.deliver_one(sender))
+        assert TKActionDoc.get(action.id).run().status == ActionStatus.DONE
+        assert (_IT_IDK, "nativo-chan") in [(text, dest.channel_id) for dest, text in sent]
+    finally:
+        TKActionDoc.get_motor_collection().delete_many({"_id": action.id})
+        from lib.core.models import TKMemoryItemDoc
+        TKMemoryItemDoc.get_motor_collection().delete_many({"targetId": "nativo@lang-test:9"})
