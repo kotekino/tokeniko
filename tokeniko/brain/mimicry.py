@@ -74,6 +74,18 @@ def mimic_observe(item) -> bool:
     scope_uid = soul.uid                                    # the CANONICAL soul: the scope + provenance key
     talker_trust = 1.0 if soul.imprint else soul.trust
 
+    # 1b. NEVER FROM A TRANSLATED TURN (the Captain's fence, multilingual §1 step 2). The row's
+    # template is `item.original` VERBATIM — and on a translated turn `original` is the SOURCE
+    # language while the zip that matched is English. Minting would drop an Italian phrasing into
+    # an English shelf with no language recorded on it, where it would later meet the English
+    # polisher, the English zip-verifier and the outbound translator and survive only by luck.
+    # The same conservatism as the AND-split's «splitting speech is safe; splitting knowledge on a
+    # guessed string is not»: an unlabelled row IS a guessed string. Nothing is learned from a
+    # translated turn until the language-aware version exists (parked: MEMScaffold.lang + a shelf
+    # gated by the exchange's language + the carrier skipping a row already in the target tongue).
+    if getattr(item, "source_lang", None):
+        return False
+
     # 2. MOMENTUM («after a while») — enough prior turns from this talker in the channel's ring.
     # context_add already appended THIS item (thinking runs it first), so subtract it to count PRIORS.
     key = context.channel_key(item)

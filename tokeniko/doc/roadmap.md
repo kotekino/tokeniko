@@ -87,13 +87,15 @@ in build order:
    - *(1b — the ANSWER binding: LANDED 2026-07-25 → `landed.md`. The pending lifecycle
      (affirmation→re-ingest-as-confirmed, negation→drop, restatement→supersede, silence→lapse) +
      the multilingual yes/no anchor. **§1's first brick — room + ask + answer — is WHOLE.**)*
-2. 🔭 **Multilingual translation (the room's second tenant: conversation language)** — inbound: a
-   non-English message (the author's Italian) is TRANSLATED to English (Haiku) before the
-   English-based pipeline, held to the SAME strong verifier (meaning preserved or trashed). Outbound:
-   the reply is rendered back into the language of THIS exchange (stored on the context doc,
-   `{lang, set_by_item_id}`) — Italian in → Italian out, per channel/DM. The BLOG stays English
-   (derived from the internal representation — the public journal's language is fixed). The retired
-   local MarianMT is not revived (Haiku covers it).
+2. *(Multilingual — the room's second tenant: LANDED 2026-07-26 → `landed.md`. Consensus of two
+   independent readers judged by the compiler (ACCEPT/ASK/admit-and-DISCARD), the local
+   skeleton detector, the round-trip-verified outbound, the admission voice, the mimicry fence.)*
+   - 🔭 **Its residuals** (surfaced by the build, awaiting a live season): the detector's thin 0.05
+     margins + the fully-misspelled-English blind spot (env-tunable; watch live) · the DM fallback
+     destination carries no `channel_id`, so an action resolved via `contextKey` alone cannot key a
+     room and ships English (real Discord traffic always carries coords) · the consensus cannot
+     catch a mistranslation BOTH readers share (same model family — a second family would be the
+     cut if it ever bites).
 3. 🔭 **The privacy/legal frame (last — it is a CONSENT prompt over the two above)** — a user joining
    is prompted: allow your prompts to be sent to the cloud translator apparatus (third-party
    Anthropic + the legal terms)? YES → translation + greater understanding + reply-in-your-language;

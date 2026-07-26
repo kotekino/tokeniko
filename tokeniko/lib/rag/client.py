@@ -68,6 +68,8 @@ async def rag_call(spec: RagSpec, user: str, *,
             system=spec.system,
             messages=[{"role": "user", "content": user}],
         )
+        if spec.temperature is not None:
+            kwargs["temperature"] = spec.temperature
         if spec.schema is not None:
             kwargs["output_config"] = {"format": {"type": "json_schema", "schema": spec.schema}}
         resp = await cl.messages.create(**kwargs)

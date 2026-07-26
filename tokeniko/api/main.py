@@ -1,15 +1,18 @@
 import copy
 import logging
 import os
+import time
 from typing import Optional
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 from lib.llc.parser import parser, parser_diagram, parser_init
-from lib.core.io import get_stakeholder, get_tokeniko, init_io, upsert_individual
+from lib.core.io import exchange_channel_key, find_exchange, get_exchange, get_stakeholder, get_tokeniko, init_io, upsert_individual
 from lib.core.models import TKMemoryItemDoc
 from lib.core.evaluation_harness import zip_senses
-from lib.llc.normalizer import detector_stumbles, detector_unrepairable, normalizer_enabled, normalizer_polish, verifier_preserves, verifier_verdict, verifier_voice
+from lib.core.trust import resolve_canonical
+from lib.llc.language import ENGLISH, consensus_language, is_english, language_read, translate_in, translator_enabled
+from lib.llc.normalizer import detector_stumbles, detector_unrepairable, normalizer_enabled, normalizer_polish, translation_verdict, verifier_preserves, verifier_verdict, verifier_voice
 from lib.llc.social import social_detect
 
 logger_api = logging.getLogger("tokeniko-api")
@@ -77,6 +80,90 @@ def _log_ears_rejection(item_id: str, original: str, note: str, polished: str,
         ).save()
     except Exception as error:
         logger_api.info("[rag1] ears-rejection lead write failed (%s) — hearing unaffected", repr(error))
+
+
+# THE TRANSLATION'S CATCHES ARE LEADS TOO (multilingual §1 step 2): when the two independent
+# readings of a foreign message do NOT hold together, the message is discarded and admitted to —
+# and the failure joins the standing triage corpus so the ears' foreign-language blind spots are
+# visible, not silent. Deliberately its OWN category and severity: an untranslatable message is a
+# DIAGNOSTIC lead, not a hallucination (nothing was heard, so no meaning was corrupted) — MEDIUM,
+# where a rag1 meaning-change is RED. The digest is of the RAW (foreign) zip: what the English-only
+# compiler made of the original is exactly what an engineer needs to see. Best-effort, as above.
+def _log_translation_rejection(item_id: str, original: str, lang: Optional[str], note: str,
+                               readings: tuple, original_zip) -> None:
+    try:
+        from lib.core.models import TKZipDebugDoc
+        from lib.rag import RAG4_TRANSLATE_IN
+        from senses.microscope import digest_zip
+
+        rendered = " | ".join(f"«{r.english}»" for r in readings if r is not None) or "«»"
+        TKZipDebugDoc(
+            item_id=item_id,
+            original=original,
+            digest=digest_zip(original_zip),
+            verdict="mismatch",
+            category="ears-translation",
+            severity="medium",
+            note=f"rag4 readings DISAGREE ({lang or 'unknown language'}) — {note} | readings: {rendered}",
+            model=RAG4_TRANSLATE_IN.model,
+            confidence=1.0,
+        ).save()
+    except Exception as error:
+        logger_api.info("[rag4] translation lead write failed (%s) — hearing unaffected", repr(error))
+
+
+# ---- THE ROOM, from the api side (multilingual §1 step 2) -------------------------------------------
+# The conversational-context room (brick 1) gains a LANGUAGE, and the language is discovered where
+# the message is heard — here. The api only ever READS the room on the perceiving path (never mints
+# one: a room is born from a processed TURN, in the brain) and writes the language back once the
+# item that decided it has an id (the REFERENCE discipline: `lang_set_by` is that item's id).
+def _room_read(talker_entity, metadata, channel_enum) -> tuple:
+    try:
+        soul = resolve_canonical(str(talker_entity.id))
+        if soul is None or soul.isMe or not soul.uid:
+            return None, None, None
+        key = exchange_channel_key(metadata, channel_enum)
+        return find_exchange(soul.uid, key), soul.uid, key
+    except Exception as error:
+        logger_api.info("[rag4] room read failed (%s) — the message is heard without room context",
+                        repr(error))
+        return None, None, None
+
+
+def _room_language_write(soul_uid: Optional[str], channel_key: Optional[str],
+                         lang: Optional[str], item_id: str) -> None:
+    if not soul_uid or not channel_key or not lang:
+        return
+    try:
+        room = get_exchange(soul_uid, channel_key)   # the WRITE path may mint the room
+        if room.lang == lang and room.lang_set_by:
+            return                                   # unchanged — no write, no churn
+        room.lang, room.lang_set_by = lang, item_id
+        room.updated_at = int(time.time())
+        room.save()
+        logger_api.info("[rag4] room %s now speaks %s (set by %s)", channel_key, lang, item_id)
+    except Exception as error:
+        logger_api.info("[rag4] room language write failed (%s) — hearing unaffected", repr(error))
+
+
+# THE CONSENSUS OF TWO INDEPENDENT TRANSLATIONS (the Captain's ruling). Ask twice, compile BOTH
+# English candidates, and let THE COMPILER judge whether they agree — the one authority in this
+# engine that is not the cloud. Returns (verdict, lang, english, note, readings); verdict is
+# ACCEPT | ASK | DISCARD, or None when a reader simply did not answer (API down / kill-switch —
+# graceful by contract: the raw parse then stands exactly as today, nothing is recorded).
+async def _translation_consensus(tokens: str, talker_entity, addressed: bool) -> tuple:
+    primary, second = await translate_in(tokens)
+    if primary is None or second is None:
+        return None, None, None, "a reader did not answer", (primary, second)
+    lang = consensus_language(primary, second)
+    zips = []
+    for reading in (primary, second):
+        recursive = parser(reading.english, talker_entity, app.state.tokeniko,
+                           app.state.ai_client, addressed=addressed)
+        zips.append(compiler_compile(copy.deepcopy(recursive))[1])
+    verdict, note = translation_verdict(zips[0], zips[1])
+    return verdict, lang, primary.english, note, (primary, second)
+
 
 # define lifespan for startup and shutdown logic
 async def lifespan(app: FastAPI):
@@ -467,9 +554,73 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
         # get talker entity from memory, or create it if not exists
         talkerEntity = get_stakeholder(talker, channel=channel_enum, display_name=talker_name)
 
+        # the COREFERENCE GATE (the mammal incident, 2026-07-18; the bar softened by momentum, B
+        # 2026-07-24): «you»→tokeniko only when the utterance is actually ADDRESSED to him — now the
+        # ADDRESSED_BAR (default 0.75, below momentum's 0.85, above ambient's 0.6); in cold-ambient or
+        # someone-else's-thread talk the addressee is unknowable and «you» stays unresolved. (Read
+        # here rather than at the parse: the translation's own compiles need it too.)
+        addressed = _is_addressed(directedness)
+
         # pipeline: recursive, flat, raw, output (if output). The old prepare= Ollama pre-pass is
         # RETIRED (2026-07-16) — rag1 below is the only pre-input tidying, and only on a stumble.
         preparsedTokens = tokens
+
+        # --------------------------------------------------------------
+        # MULTILINGUAL AT THE EARS (§1 step 2 — the room's second tenant). FIRST of everything: the
+        # Captain speaks Italian, and every stage below (the social detector, the parser, rag1) is
+        # English-only — so the English must exist before any of them looks at the message.
+        #   1. DETECT, locally (never a cloud call: the privacy frame must be able to gate the cloud
+        #      per stakeholder, and a cloud language-detect would itself be such a call). Sticky:
+        #      a short or ambiguous turn INHERITS the room's language instead of being guessed at.
+        #   2. If foreign: TWO INDEPENDENT READINGS, and the COMPILER judges whether they agree
+        #      (asking twice restores the authority a translation otherwise escapes).
+        #   3. ACCEPT -> the English becomes the pipeline's input (and rides in `normalized`);
+        #      ASK -> the primary reading rides in `suggested_reading` and the brain asks «did you
+        #      mean: …?» (brick 1's room, pending and answer-binding, for free);
+        #      DISCARD -> nothing usable came back: the item is stored from its raw parse and the
+        #      derivable not-understood state earns an honest admission (the Captain's ruling).
+        # `original` ALWAYS keeps his own words, in his own language (true history be it).
+        # --------------------------------------------------------------
+        source_lang: Optional[str] = None
+        normalized_text: Optional[str] = None
+        suggested_reading: Optional[str] = None  # the "did you mean?" candidate (ASK tier) — the brain reacts
+        translation_lead: Optional[tuple] = None  # (lang, note, readings) — logged post-store
+        room, soul_uid, room_key = _room_read(talkerEntity, metadata, channel_enum)
+        heard = language_read(tokens, getattr(room, "lang", None))
+        # only a MEASURED verdict may move the room's language (an ambiguous turn leaves it alone).
+        room_lang: Optional[str] = ENGLISH if (heard.measured and not heard.foreign) else None
+        if heard.foreign and translator_enabled():
+            verdict, lang, english, note, readings = await _translation_consensus(
+                tokens, talkerEntity, addressed)
+            if verdict is None:
+                logger_api.info("[rag4] «%s» reads foreign (stop=%s odd=%s) but the readers are "
+                                "unreachable — the raw parse stands", tokens[:60], heard.stop, heard.odd)
+            elif is_english(lang):
+                # the local detector over-fired: BOTH independent readers name it English. Take the
+                # correction — the room is English and the original words stand (never rewritten on
+                # a false alarm; rag1 below is the tidy path for English, as always).
+                room_lang = ENGLISH
+                logger_api.info("[rag4] «%s» read foreign locally but both readers say english — "
+                                "correction taken", tokens[:60])
+            else:
+                # a reading with no LABEL is still a reading (the label is metadata, the English is
+                # the substance): `source_lang` records the ATTEMPT — which is what the derivable
+                # not-understood state reads — while only a real name is worth teaching the room,
+                # since the outbound carrier has to speak it.
+                source_lang = lang or "unknown"
+                room_lang = lang or None
+                if verdict == "ACCEPT":
+                    preparsedTokens = normalized_text = english
+                    logger_api.info("[rag4] %s heard: «%s» -> «%s» (%s)",
+                                    source_lang, tokens[:60], english[:60], note)
+                elif verdict == "ASK":
+                    suggested_reading = english
+                    logger_api.info("[rag4] %s readings DIVERGE coherently for «%s» -> «%s» (%s) — "
+                                    "«did you mean?»", source_lang, tokens[:60], english[:60], note)
+                else:
+                    translation_lead = (source_lang, note, readings)
+                    logger_api.info("[rag4] %s NOT understood: «%s» (%s) — the honest admission stands",
+                                    source_lang, tokens[:60], note)
 
         # THE SOCIAL-ACT DETECTOR (survey slice 4, hunch 8): a social act is RECOGNIZED, never
         # evaluated. PURE act -> stored as memory WITHOUT a zip (a greeting is not a claim —
@@ -488,17 +639,15 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
                 directedness=directedness,
                 social=social.kind,
                 social_at=social.at,
+                normalized=normalized_text,   # a «ciao» is greeted BECAUSE it was heard as «hello»
+                source_lang=source_lang,
             )
             memory_doc.insert()
+            _room_language_write(soul_uid, room_key, room_lang, str(memory_doc.id))
             return {"status": "complete",
                     "data": {"original": tokens, "social": social.kind, "social_at": social.at}}
         if social is not None:
             preparsedTokens = social.remainder
-        # the COREFERENCE GATE (the mammal incident, 2026-07-18; the bar softened by momentum, B
-        # 2026-07-24): «you»→tokeniko only when the utterance is actually ADDRESSED to him — now the
-        # ADDRESSED_BAR (default 0.75, below momentum's 0.85, above ambient's 0.6); in cold-ambient or
-        # someone-else's-thread talk the addressee is unknowable and «you» stays unresolved.
-        addressed = _is_addressed(directedness)
         recursiveResult = parser(preparsedTokens, talkerEntity, app.state.tokeniko, app.state.ai_client, addressed=addressed)
         recursiveResultCopy: TKStatements = copy.deepcopy(recursiveResult)
         flatResult: tuple[TKLLC, TKZip] = compiler_compile(recursiveResultCopy)
@@ -509,10 +658,13 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
         # its recompiled zip preserves every soundly-parsed leaf (the zip-verifier: the compiler
         # disposes, whoever proposes). Unverifiable/unreachable -> the raw parse stands exactly
         # as before (unknown leaves never become beliefs; eval:unknown already asks).
-        normalized_text: Optional[str] = None
-        suggested_reading: Optional[str] = None  # the "did you mean?" candidate (ASK tier) — the brain reacts
+        # The chains COMPOSE: an ACCEPTED translation hands English down here and may still be
+        # tidied. What rag1 must never touch is a message the translation could NOT resolve (ASK /
+        # DISCARD): the words below are still Italian, and an English surface-tidy of Italian is a
+        # burned call at best and a fabricated re-hearing at worst.
         rag1_rejection: Optional[tuple] = None  # (note, polished, polished_zip) — logged post-store
-        if normalizer_enabled() and flatResult and detector_stumbles(flatResult[1]):
+        foreign_unresolved = source_lang is not None and normalized_text is None
+        if normalizer_enabled() and not foreign_unresolved and flatResult and detector_stumbles(flatResult[1]):
             # unrepairable-by-tidying (pronoun-subject leaves = a COREFERENCE gap, not a surface
             # one): the polish would recompile to the same leaf and be rejected — skip the call.
             if detector_unrepairable(flatResult[0], flatResult[1]):
@@ -520,7 +672,9 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
                                 "escalation skipped", tokens[:60])
                 polished = None
             else:
-                polished = await normalizer_polish(tokens)
+                # the ENGLISH is what gets tidied when a translation was accepted (rag1 has no
+                # business reading Italian); otherwise the raw words, exactly as before.
+                polished = await normalizer_polish(normalized_text or tokens)
             if polished:
                 rec2 = parser(polished, talkerEntity, app.state.tokeniko, app.state.ai_client, addressed=addressed)
                 flat2: tuple[TKLLC, TKZip] = compiler_compile(copy.deepcopy(rec2))
@@ -566,14 +720,24 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
                 directedness=directedness,
                 normalized=normalized_text,
                 suggested_reading=suggested_reading,  # the ASK candidate (1a) — the brain asks «did you mean?»
+                source_lang=source_lang,              # the language heard (§1 step 2) — None when English
             )
             memory_doc.insert()
+
+            # the room's LANGUAGE, referenced to the item that decided it (§1 step 2)
+            _room_language_write(soul_uid, room_key, room_lang, str(memory_doc.id))
 
             # the ears' wall left a catch: log it as a microscope lead now that item_id is real
             if rag1_rejection is not None:
                 r_note, r_polished, r_polzip = rag1_rejection
                 _log_ears_rejection(str(memory_doc.id), tokens, r_note, r_polished,
                                     flatResult[1], r_polzip)
+
+            # …and so did the translation consensus, when the two readings did not hold together
+            if translation_lead is not None:
+                t_lang, t_note, t_readings = translation_lead
+                _log_translation_rejection(str(memory_doc.id), tokens, t_lang, t_note,
+                                           t_readings, flatResult[1])
 
             # home any entity-linked named individuals in the stakeholders collection (storing path
             # only — NOT /evaluate). contextKey = the scope after "@" in the parser-minted uid.

@@ -45,6 +45,7 @@ from lib.core.models import (
 )
 from lib.core.tk import TKQuantifier
 from lib.llc.evaluator.e_keys import role_key
+from lib.llc.language import language_not_understood   # import-light: no parser behind it
 from lib.core.zip_native import assemble_reportative_zip
 from brain import api_client, behavior, context, mimicry
 
@@ -222,6 +223,21 @@ def _react_did_you_mean(item) -> bool:
         target=item.sourceId, answer={"reading": reading})
     logger.info("[thinking] «did you mean» on memory=%s -> «%s» (window %ds, %d idea(s))",
                 str(item.id), reading[:60], window, len(ideas))
+    return bool(ideas)
+
+
+# THE ADMISSION (multilingual §1 step 2, the Captain's ruling) — the item is in the NOT-UNDERSTOOD
+# state: a message in another language whose two independent readings did not hold together, so
+# nothing was understood. Deliberately POORER than the did-you-mean reaction: NO pending is opened
+# (an admission is not an offer to confirm — a rephrase is simply a new message) and nothing is
+# referenced in the room. One idea, directed at the speaker; whether it is actually SPOKEN is
+# Priorities' call, as always (urge × directedness — an ambient foreign line stays quiet).
+def _react_not_understood(item) -> bool:
+    ideas = behavior.spawn_ideas_for(
+        EvalToken.NOT_UNDERSTOOD.value, payload=item.zip, source=str(item.id),
+        target=item.sourceId)
+    logger.info("[thinking] NOT understood (%s) on memory=%s -> %d idea(s)",
+                getattr(item, "source_lang", None) or "?", str(item.id), len(ideas))
     return bool(ideas)
 
 
@@ -1794,6 +1810,23 @@ def think_one(brain_state: TKBrainStateDoc) -> bool:
     # --------------------------------------------------------------
     bound = _bind_pending_answer(item, brain_state)
     if bound in ("affirmation", "negation"):
+        cursors[focus_source] = _epoch_utc(item.timestamp)
+        brain_state.source_cursors = cursors
+        brain_state.save()
+        return True
+
+    # --------------------------------------------------------------
+    # NOT UNDERSTOOD (multilingual §1 step 2) — a foreign message whose two independent readings did
+    # not hold together. The item carries a zip (the English-only compiler made SOMETHING of the
+    # foreign words) and that zip is exactly what must never be reacted to: it is noise wearing the
+    # shape of a claim. So this gate stands BEFORE the mood branch — a garbage zip that happens to
+    # end in «?» would otherwise be ANSWERED — and short-circuits everything downstream (no verdict,
+    # no speakup/why/learn, no trust echo, no anecdote, no cross-item check), exactly as the social
+    # and did-you-mean gates do. It stands AFTER the answer binding on purpose: an Italian «sì» to
+    # an open pending is an ANSWER first, and answering it needs no understanding of the words.
+    # --------------------------------------------------------------
+    if language_not_understood(item):
+        _react_not_understood(item)
         cursors[focus_source] = _epoch_utc(item.timestamp)
         brain_state.source_cursors = cursors
         brain_state.save()

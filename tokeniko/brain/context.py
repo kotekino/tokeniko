@@ -17,7 +17,6 @@
 # KB grows). The floor is CONSERVATIVE and env-tunable (ANECDOTE_FLOOR) — an explicit calibration
 # point. PARSER-FREE: Mongo reads + numpy only.
 # --------------------------------------------------------------
-import json
 import logging
 import os
 import time
@@ -28,6 +27,7 @@ from typing import Optional
 
 import numpy as np
 
+from lib.core.io import exchange_channel_key
 from lib.core.kb_extract import _zip_leaves
 from lib.core.models import TKAxiomDoc, TKMemoryItemDoc, TKTheoremDoc
 
@@ -73,15 +73,10 @@ def _epoch(ts) -> float:
 
 # the channel key of a memory item: the Discord channel id when the metadata carries one (one ring
 # per room), else the channel enum value (api / internal talk shares one ring per channel kind).
+# The definition itself moved to lib/core/io at the multilingual step — api/senses key the SAME
+# rooms off a request's metadata / a delivery's destination, and one ring must mean one room.
 def channel_key(item) -> str:
-    try:
-        meta = json.loads(getattr(item, "metadata", None) or "{}")
-        if isinstance(meta, dict) and meta.get("channel_id"):
-            return str(meta["channel_id"])
-    except (ValueError, TypeError):
-        pass
-    channel = getattr(item, "channel", None)
-    return str(getattr(channel, "value", channel) or "unknown")
+    return exchange_channel_key(getattr(item, "metadata", None), getattr(item, "channel", None))
 
 
 # the mean 2925-semantic of a zip's content-bearing role tensors (subject/predicate/direct per

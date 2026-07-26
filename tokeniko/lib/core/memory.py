@@ -106,6 +106,10 @@ class MEMZipDebug(BaseModel):
                                                # operator-flattening | other | ears-hallucination
                                                # (2026-07-24: a rag1 polish the zip-verifier trashed
                                                # — a deterministic finding, not a cloud verdict)
+                                               # | ears-translation (2026-07-26: two independent
+                                               # readings of a foreign message that did not hold
+                                               # together — an untranslatable message is a
+                                               # diagnostic lead, not a hallucination)
     note: Optional[str] = None                 # the judge's one-paragraph why
     model: Optional[str] = None                # which judge (model id) produced this
     timestamp: int = Field(default_factory=lambda: int(time.time()))
@@ -152,6 +156,14 @@ class MEMItem(BaseModel):
     # on the item, and the room only REFERENCES its id. The brain reacts (open a pending + ask);
     # `/input` only flags the candidate. None = accepted verbatim OR discarded (nothing to offer).
     suggested_reading: Optional[str] = None
+    # MULTILINGUAL (§1 step 2): the language the message was HEARD in, when it was not English —
+    # named by the two independent readers, set only when a translation was actually attempted.
+    # `original` ALWAYS keeps the speaker's own words (true history be it) and the accepted English
+    # rides in `normalized` (its existing meaning: the text actually compiled).
+    # The NOT-UNDERSTOOD state is DERIVABLE from this trio, never a fourth boolean: `source_lang`
+    # set + `normalized` None + `suggested_reading` None ⇒ a translation was attempted and nothing
+    # usable came back (lib/llc/language.language_not_understood).
+    source_lang: Optional[str] = None
 
 # alias for list of memory items
 MEMContext = list[MEMItem]
@@ -292,6 +304,13 @@ class EvalToken(str, Enum):
     # `MEMItem.suggested_reading`; REPLACES the generic eval:unknown -> «why» for that item (asking
     # ≠ believing — nothing is held until the human confirms, which is 1b's resolution).
     DID_YOU_MEAN = "eval:did_you_mean"
+    # multilingual (§1 step 2, the Captain's ruling): a message in another language whose two
+    # independent readings did NOT hold together — nothing was understood, so nothing may be
+    # reacted to. It earns an honest ADMISSION («I did not understand that»), which REPLACES the
+    # whole content path (today's silent discard falls through to the generic «why is that?» —
+    # nonsense about a message never understood). No pending is opened: an admission is not an
+    # offer to confirm, and a rephrase is simply a new message.
+    NOT_UNDERSTOOD = "eval:not_understood"
 
 # action side — the reflexes tokeniko CAN fire (the hardwired repertoire).
 class TokenikoAction(str, Enum):
@@ -474,6 +493,13 @@ class MEMExchange(BaseModel):
     # gets a shorter patience than a slow one), so the ask matches the exchange's own cadence.
     reply_tempo: float = Field(default=180.0)  # the seed (EXCHANGE_TEMPO_DEFAULT_S)
     last_turn_at: int = Field(default=0)       # the previous turn's epoch (the EMA gap) — 0 = first contact
+    # THE ROOM'S LANGUAGE (multilingual §1 step 2 — the room's second tenant). The exchange, not the
+    # message, is what has a language: a short turn («sì») INHERITS it instead of being guessed at,
+    # and the outbound carrier speaks it back. Written only by a CONFIDENT detection (an ambiguous
+    # turn leaves it untouched — sticky and self-correcting), and the REFERENCE discipline holds:
+    # `lang_set_by` is the timeseries id of the item that set it, never a copy of anything.
+    lang: Optional[str] = None
+    lang_set_by: Optional[str] = None
     updated_at: int = Field(default_factory=lambda: int(time.time()))
 
 

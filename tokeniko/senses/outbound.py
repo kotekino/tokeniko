@@ -9,6 +9,11 @@
 # OWNERSHIP (no cross-process race, no new status): the brain's `actions_phase` consumes only
 # channel=INTERNAL; this executor consumes only channel=discord. Disjoint filters over the SAME queue.
 #
+# MULTILINGUAL (§1 step 2): after the polish, the reply is spoken in the ROOM's language — the
+# (soul, channel) exchange carries it, written at the ears where the message was heard. The gate is
+# a ROUND TRIP through the SAME /voice/verify seam (back-translate, then compare English to
+# English): no new verification machinery, and an unverified trip ships the English.
+#
 # DRY-RUN by default (`SENSES_DELIVER_DRYRUN`!=0): resolve + decompile + LOG the would-send, mark DONE,
 # touch no socket — so the whole seam is verifiable without Discord credentials / risking live spam.
 # Flip to live (and pass a real `sender`) once the inbound listener + a connected DiscordClient land.
@@ -37,7 +42,7 @@ _POLISH_MIN_CHARS = int(os.getenv("SENSES_VOICE_POLISH_MIN_CHARS", "25"))
 # ---- the rag2-out voice gate (compose 2.0 slice 3) ---------------------------------------------------
 # polish + verify one composed reply; returns the text to ship (the polish ONLY when the compiler
 # consensus holds — every other path is the raw, verbatim). Never raises.
-async def _voice_out(raw: str) -> str:
+async def _polish(raw: str) -> str:
     if not rag_enabled("RAG2_OUT_DISABLED") or len(raw) < _POLISH_MIN_CHARS:
         return raw
     polished = await rag_call(RAG2_OUT, raw)
@@ -51,6 +56,78 @@ async def _voice_out(raw: str) -> str:
     logger.info("[outbound] rag2-out REJECTED (%s) — raw ships: %r",
                 (verdict or {}).get("note", "unverifiable"), raw)
     return raw
+
+
+# ---- the room's LANGUAGE, on the way out (multilingual §1 step 2) -----------------------------------
+# He answers in the language he was spoken to: the (soul, channel) room carries `lang` (written at
+# the ears, where the message was heard), and the composed — already polished — English reply is
+# translated into it before it hits the socket. The gate is a ROUND TRIP, and it reuses the EXISTING
+# machinery rather than inventing a second verifier: translate EN->target, back-translate ->EN, and
+# hand the back-translation to the /voice/verify seam. Both sides of THAT comparison are English, so
+# it is the rag2-out contract verbatim — the compiler proving the meaning came home.
+#   - identical round trip -> ship (a lossless trip needs no judge; and it is the ONLY gate a
+#     FRAGMENT can pass — «yes»/«why is that?» are unverifiable by construction, and a mind that
+#     could not say «sì» would be speaking English half the time);
+#   - verified round trip   -> ship the translation;
+#   - anything else         -> ship the English, exactly like a rejected polish. Graceful at every
+#     step: no room, no language, no key, a dead API — the English ships and nothing breaks.
+def _room_language(target_uid: Optional[str], channel_id: Optional[str]) -> Optional[str]:
+    if not target_uid or not channel_id:
+        return None
+    try:
+        from lib.core.io import find_exchange
+        from lib.core.trust import resolve_canonical
+        from lib.llc.language import is_english
+        soul = resolve_canonical(target_uid)
+        if soul is None or not soul.uid:
+            return None
+        room = find_exchange(soul.uid, str(channel_id))
+        lang = getattr(room, "lang", None)
+        return None if (not lang or is_english(lang)) else lang
+    except Exception as error:
+        logger.warning("[outbound] room language unreadable (%s) — english ships", error)
+        return None
+
+
+def _same_words(a: str, b: str) -> bool:
+    keep = "".join(c for c in (a or "").lower() if c.isalnum() or c.isspace())
+    other = "".join(c for c in (b or "").lower() if c.isalnum() or c.isspace())
+    return keep.split() == other.split()
+
+
+async def _localize(english: str, target_uid: Optional[str], channel_id: Optional[str]) -> str:
+    from lib.llc.language import back_translate, translate_out, translator_enabled
+    if not english or not target_uid or not channel_id or not translator_enabled():
+        return english
+    lang = await asyncio.to_thread(_room_language, target_uid, channel_id)
+    if lang is None:
+        return english
+    translated = await translate_out(english, lang)
+    if not translated or translated == english:
+        return english
+    back = await back_translate(translated)
+    if not back:
+        logger.info("[outbound] rag4-out round trip broke (no back-translation) — english ships: %r",
+                    english)
+        return english
+    if _same_words(english, back):
+        logger.info("[outbound] rag4-out %s (round trip lossless): %r -> %r", lang, english, translated)
+        return translated
+    verdict = await asyncio.to_thread(_verify_voice, english, back)
+    if verdict and verdict.get("ok"):
+        logger.info("[outbound] rag4-out %s verified: %r -> %r", lang, english, translated)
+        return translated
+    logger.info("[outbound] rag4-out %s REJECTED (%s) — english ships: %r",
+                lang, (verdict or {}).get("note", "unverifiable"), english)
+    return english
+
+
+# the carrier's ONE voice seam: polish (unchanged), then speak the room's language. `target_uid` /
+# `channel_id` are the room's key; without them (tests, an unaddressable action) the English ships
+# and the behavior is byte-identical to before the multilingual step.
+async def _voice_out(raw: str, target_uid: Optional[str] = None,
+                     channel_id: Optional[str] = None) -> str:
+    return await _localize(await _polish(raw), target_uid, channel_id)
 
 # tokeniko's own stakeholder id (the sourceId of his recorded speech), resolved lazily once.
 _self_id: Optional[str] = None
@@ -162,13 +239,24 @@ async def deliver_one(sender: Optional[Sender] = None) -> bool:
     # corrupts the question. The scaffold text is already curated English — ship it verbatim.
     _VERBATIM = {TokenikoAction.MENTION.value, TokenikoAction.REDUCT.value}
     polishable = raw and payload.get("action_token") not in _VERBATIM
-    english = await _voice_out(raw) if polishable else raw
+    # the destination is resolved FIRST now: its channel id is half the room's key, and the room is
+    # what says which language to speak (§1 step 2). VERBATIM means UNPOLISHED, NOT UNTRANSLATED
+    # (the author's ruling, 2026-07-26): a side-note or a reductio still reaches the person in the
+    # language of their room — a reply in Italian carrying an English aside is not one voice. The
+    # register argument above is about the POLISHER (which strips discourse framing and rewords a
+    # quoted premise); localization is round-trip verified, so meaning comes home either way. For a
+    # non-English teacher it is in fact the FAITHFUL choice: their words were translated INTO English
+    # at the ears, so quoting the premise back in their own tongue lands nearer what they actually
+    # said. An English room is untouched — _localize is a no-op without a room language.
     dest = _resolve_destination(action.targetId, payload)
+    channel_id = getattr(dest, "channel_id", None)
+    spoken = (await _voice_out(raw, action.targetId, channel_id) if polishable
+              else await _localize(raw, action.targetId, channel_id))
 
-    if dest is None or not english:
+    if dest is None or not spoken:
         logger.warning(
-            "[outbound] action %s undeliverable (dest=%s, english=%r) -> FAILED",
-            str(action.id), dest, english,
+            "[outbound] action %s undeliverable (dest=%s, spoken=%r) -> FAILED",
+            str(action.id), dest, spoken,
         )
         action.status = ActionStatus.FAILED
         action.save()
@@ -176,15 +264,15 @@ async def deliver_one(sender: Optional[Sender] = None) -> bool:
 
     if _dryrun() or sender is None:
         logger.info("[outbound] DRY-RUN would send to %s: %r  (raw=%r)",
-                    dest, english, payload.get("raw", ""))
+                    dest, spoken, payload.get("raw", ""))
         action.status = ActionStatus.DONE
         action.save()
         return True
 
     try:
-        msg_id = await sender(dest, english)
-        logger.info("[outbound] sent to %s (msg=%s): %r", dest, msg_id, english)
-        _record_self_speech(action, dest, english, msg_id)  # B1: spoken words are biography
+        msg_id = await sender(dest, spoken)
+        logger.info("[outbound] sent to %s (msg=%s): %r", dest, msg_id, spoken)
+        _record_self_speech(action, dest, spoken, msg_id)  # B1: spoken words are biography
         action.status = ActionStatus.DONE
     except Exception as error:
         logger.warning("[outbound] send failed for action %s (%s) -> FAILED", str(action.id), error)

@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import time
@@ -152,11 +153,37 @@ def upsert_individual(name: str, uid: str, ner_type: str, vector: list, context_
 # (the context-ring key). Idempotent by the unique (user_uid, channel_id) compound index.
 def get_exchange(user_uid: str, channel_id: str):
 
-    exchange = TKExchangeDoc.find_one(
-        {"user_uid": user_uid, "channel_id": channel_id}
-    ).run()  # Bunnet: .run() executes the query
+    exchange = find_exchange(user_uid, channel_id)
 
     if not exchange:
         exchange = TKExchangeDoc(user_uid=user_uid, channel_id=channel_id).save()
 
     return exchange
+
+
+# the READ-ONLY half of the same entry point (multilingual §1 step 2): fetch the room or None,
+# NEVER minting one. /input reads the room's language on every message and the outbound carrier
+# reads it on every reply — neither has anything to say about a pair that has never had a room, and
+# a room minted per perceived message (rather than per processed turn) would litter the collection.
+def find_exchange(user_uid: str, channel_id: str):
+
+    return TKExchangeDoc.find_one(
+        {"user_uid": user_uid, "channel_id": channel_id}
+    ).run()  # Bunnet: .run() executes the query
+
+
+# THE ROOM'S KEY, in one place. A room is keyed by the Discord channel id carried in a perception's
+# metadata; api/internal talk with no coordinates shares one room per channel kind. Homed here (the
+# room's own module) since the multilingual step: `api/main` keys a room off a request's metadata,
+# `senses/outbound` off a delivery's destination, `brain/context.channel_key` off a memory item —
+# three callers, ONE definition of what "the same room" means.
+def exchange_channel_key(metadata, channel) -> str:
+
+    try:
+        meta = json.loads(metadata or "{}")
+        if isinstance(meta, dict) and meta.get("channel_id"):
+            return str(meta["channel_id"])
+    except (ValueError, TypeError):
+        pass
+
+    return str(getattr(channel, "value", channel) or "unknown")

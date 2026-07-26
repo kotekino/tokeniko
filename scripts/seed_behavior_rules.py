@@ -62,6 +62,14 @@ RULES = [
     # construction: urge 0.7 x addressed 0.9 = 0.63 >= 0.5 speaks; x ambient 0.6 = 0.42 < 0.5 stays
     # quiet (an ambient stumble is not worth interjecting over — the existing effective_urge gate).
     (EvalToken.DID_YOU_MEAN.value, TokenikoAction.ASK.value,     0.7,  "an offerable re-hearing — «did you mean X?» (directedness-gated)"),
+    # multilingual (§1 step 2, the Captain's ruling): a message in another language whose two
+    # independent readings did not hold together earns an honest ADMISSION — «I did not understand
+    # that». Rides tokeniko:ask (routed by trigger in compose, exempt from the curiosity ASK
+    # cooldown: an admission is per-message, and swallowing it leaves the human talking to a wall).
+    # Urge matched to the did-you-mean's 0.7: same directedness gating — an addressed message he
+    # could not read is worth saying so about (0.7 × 0.9 = 0.63 ≥ 0.5), an ambient one is not
+    # (0.7 × 0.6 = 0.42 < 0.5). Delete this rule and he goes back to silent incomprehension.
+    (EvalToken.NOT_UNDERSTOOD.value, TokenikoAction.ASK.value,   0.7,  "a message he could not read — admit it honestly (directedness-gated)"),
     # belief-revision v1 (retreat arc #4): a trust-gated quantified correction. RETREAT is INTERNAL
     # (raw urge, no directedness factor — a conclusion is never muted); CONCEDE is the directed
     # acknowledgment spawned by the retreat HANDLER after the KB actually moved (eval:correction-done).

@@ -35,6 +35,10 @@ _FALLBACK: dict[str, str] = {
     "ask_more": "can you tell me more about that?",
     # the "did you mean?" ask (the room + ask, 1a): the offered re-hearing rides VERBATIM (the fence)
     "did_you_mean": "did you mean: {reading}?",
+    # the ADMISSION (multilingual §1 step 2): a message whose two independent readings did not hold
+    # together was NOT understood — and saying so is the honest reply, where the generic «why is
+    # that?» would be nonsense about something never heard. Slot-less: there is nothing to name.
+    "not_understood": "I did not understand that — can you say it another way?",
     "why": "why is that?",
     "concede_plain": "you are right",
     "concede_retract": "you are right — I no longer hold that {retracted}",

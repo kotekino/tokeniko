@@ -288,6 +288,43 @@ def verifier_verdict(original_zip, polished_zip) -> tuple[str, str]:
     return "DISCARD", note
 
 
+# ---- the TRANSLATION consensus (multilingual, §1 step 2) -------------------------------------------
+# The Captain's ruling: on a TRANSLATION the zip-verifier has nothing to verify against — the
+# original is Italian and this parser is English-only. So the authority becomes CONSENSUS OF TWO
+# INDEPENDENT TRANSLATIONS (lib/llc/language.translate_in), and THE COMPILER JUDGES WHETHER THEY
+# AGREE. Same three-way verdict, same primitives, ZERO new comparison logic: the pair rides straight
+# through verifier_verdict, which already means «does B preserve A» — here read as «do the two
+# readers say the same thing», which is exactly the same question asked of two peers instead of an
+# original and its polish.
+#
+# One tier IS new, and it is the reason a bare «sì» works: UNANIMITY. Two independent readers
+# returning the SAME structure agree completely — even when that structure is a FRAGMENT the
+# verifier would refuse as unsound («sì» -> «yes»: not a claim, but heard identically twice, so
+# there is nothing to adjudicate). Without it every short answer in Italian would fall to DISCARD
+# and earn an «I did not understand» — the opposite of understanding it.
+def _structure_key(leaf) -> tuple:
+    # the leaf's FULL identity for agreement purposes: the conclusion key (subject/predicate/direct/
+    # negation) plus the flags a translation may never silently move.
+    return (_leaf_key(leaf), getattr(leaf, "quantifier", None), getattr(leaf, "modal", None),
+            _is_interrogative(leaf), getattr(leaf, "wh_role", None))
+
+
+def translation_verdict(primary_zip, second_zip) -> tuple[str, str]:
+    from lib.core.kb_extract import _zip_leaves
+    a = _zip_leaves(primary_zip.items) if primary_zip is not None else []
+    b = _zip_leaves(second_zip.items) if second_zip is not None else []
+    if not a or not b:
+        return "DISCARD", "a candidate reading did not compile"
+    if sorted(map(_structure_key, a)) == sorted(map(_structure_key, b)):
+        return "ACCEPT", "unanimous (both readings compile to the same structure)"
+    # they DIVERGE — and a divergence can only be judged between two readings the compiler can
+    # actually hold. If either side still stumbles, the pair proves nothing: DISCARD (the honest
+    # admission), never an offer.
+    if any(not _leaf_sound(l) for l in a) or any(not _leaf_sound(l) for l in b):
+        return "DISCARD", "readings diverge and at least one does not compile soundly"
+    return verifier_verdict(primary_zip, second_zip)
+
+
 # ---- the OUTBOUND voice verifier (rag2-out — compose 2.0 slice 3) -----------------------------------
 # The inbound verifier's mirror, with the POLISHABILITY gate in front: only what the compiler can
 # FULLY hear can be re-voiced — a raw with any unsound leaf (fragments, «why is that?», bare «yes»)

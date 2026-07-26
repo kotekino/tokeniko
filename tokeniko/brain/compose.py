@@ -89,6 +89,11 @@ def _route(action_token: str, trigger: Optional[str], answer: Optional[dict]) ->
         if trigger == EvalToken.DID_YOU_MEAN.value:
             reading = (answer or {}).get("reading")
             return ("did_you_mean", {"reading": reading}) if reading else None
+        # the ADMISSION (multilingual §1 step 2): nothing was understood, so there is nothing to
+        # offer back and nothing to name — the category is slot-less and always speakable. Routed
+        # by TRIGGER like the did-you-mean above (three reflexes now ride tokeniko:ask).
+        if trigger == EvalToken.NOT_UNDERSTOOD.value:
+            return "not_understood", {}
         # the curiosity ask (survey slice 3): the learned lesson rides as {topic} so the
         # deepening question names it — «why is it that «X»?» is the kicker-hunting shape
         # (the closed why-loop). Slot-gated: no topic -> the bare ask_more shelf speaks.

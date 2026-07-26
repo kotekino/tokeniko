@@ -2095,3 +2095,54 @@ SURVEY ARC IS COMPLETE)**
   guard, no-pending passthrough, lapse, the two think_one routing cases). Full gate **700 passed,
   1 xfailed** (after clearing an orphaned-fixture sandbox artifact from the day's interrupted runs —
   not a code fault). **§1's first brick — the room + ask + answer — is WHOLE.**
+
+**MULTILINGUAL — the room's second tenant (2026-07-26 — §1 step 2; the 1st Officier's build + the author's verbatim ruling)**
+- The author IS the first non-English friend (Italian), so this is core hearing, not a nicety. **The
+  crux**: our ears doctrine («the compiler disposes, whoever proposes») has NO purchase on a
+  translation — the original is Italian and the English-only parser cannot compile it, so there is
+  nothing to compare against (the semantic floor abstains, the mood gate reads nothing). **The
+  author's ruling: CONSENSUS OF TWO INDEPENDENT READERS** — ask the cloud twice, independently, and
+  let the COMPILER judge whether the two English candidates agree (`translation_verdict`, reusing
+  `verifier_verdict`). Verdicts: agree → ACCEPT · coherent disagreement → ASK («did you mean…?» —
+  brick 1's room/pending/answer loop for free, now in Italian) · incoherent → DISCARD **+ an honest
+  ADMISSION that he did not understand** (his explicit ruling: a silent discard would fall through
+  to «why is that?», nonsense about a message never heard).
+- **The detector: the QM's brief premise was MEASURED AND REJECTED by the officer.** An OOV rate
+  over `en_core_web_lg` does not work — its vector table is huge and multilingual («penso che la
+  logica sia la base di tutto» scores 0.00 OOV; so does «the catt is a mamal»). The signal is the
+  sentence's SKELETON instead (`lib/llc/language.py`): `stop` = English function-word ratio (spaCy's
+  own bundled set) AND `odd` = the ratio the English tagger cannot place (it labels unknown
+  lowercase words PROPN, so Italian reads as a string of proper nouns). FOREIGN requires BOTH —
+  neither survives alone (bare-content English scores stop≈0; name-heavy English scores odd≈0.5).
+  Measured: **0/49 English false-positives, 30/30 Italian/French/Spanish caught**; worst margins
+  0.05 (thinner than the semantic floor's 0.09 — env-tunable, and a false positive is cheap and
+  self-correcting). Blind spot reported: fully-misspelled content-only English reads foreign.
+  LOCAL and dependency-free BY REQUIREMENT (the privacy frame will let a stakeholder opt out of the
+  cloud entirely — a cloud language-detect would itself be such a call). STICKY: short/ambiguous
+  turns INHERIT the room's language («sì» is Italian because the room is).
+- **Consensus independence** (the QM's flagged crux): `rag_call` never set `temperature` — it
+  inherited the API default 1.0, so not vacuous but UNDEFENDED (one default change and the wall
+  collapses silently). Bought three ways: two differently-framed prompts (`RAG4_TRANSLATE_IN`
+  "translate this" vs `RAG4_RENDER_IN` "state what it says"), `RagSpec.temperature` pinned
+  explicitly with a test proving it reaches the wire, and statelessness. **Honest limit, reported
+  not papered over**: both readers are the same model family, so a systematic mistranslation they
+  both share is NOT caught — the wall stops a sampling accident, not a bias. The real protection
+  stands: an ACCEPT enters the normal pipeline and is EVALUATED, never believed on the cloud's word.
+- **Outbound**: polish (unchanged) → translate EN→target → **back-translate → the EXISTING
+  `/voice/verify` seam** (both sides English there, so it is the rag2-out contract verbatim — no new
+  verification machinery). A lossless round trip ships without the judge — the only gate a FRAGMENT
+  can pass, and without it he could never say «sì». The BLOG stays English BY CONSTRUCTION (verified
+  structurally: `blog.py` never imports `outbound.py`, and the two executors drain disjoint channels).
+- **VERBATIM means UNPOLISHED, NOT UNTRANSLATED** (the author's ruling): the anecdote and the reduct
+  skip the polisher (their register is the point) but ARE localized — a reply in Italian carrying an
+  English aside is not one voice. For a non-English teacher it is the FAITHFUL choice: their words
+  were translated INTO English at the ears, so quoting the premise back in their own tongue lands
+  nearer what they actually said.
+- Also: `MEMItem.source_lang`, `MEMExchange.lang`/`lang_set_by` (the room's language tenant),
+  translation runs BEFORE `social_detect` (else «ciao»→«hello» arrives after the social detector has
+  seen Italian and a greeting becomes an unknown claim), `channel_key` untangled to ONE definition
+  (`io.exchange_channel_key`), and **the mimicry fence** (the author's ruling): a translated turn
+  mints NO mimic row — `original` is the source language while the zip is English, and an unlabelled
+  Italian row in an English shelf is a guessed string (parked: multilingual scaffolds). +45 tests
+  (`test_multilingual.py`). Full gate **743 passed, 1 xfailed** (the officer's), re-verified after
+  the verbatim ruling.
