@@ -108,10 +108,22 @@ in build order:
    is prompted: allow your prompts to be sent to the cloud translator apparatus (third-party
    Anthropic + the legal terms)? YES → translation + greater understanding + reply-in-your-language;
    NO → a per-stakeholder OPT-OUT flag, and the rags are NEVER called for that user's sentences (DM
-   or channel). The general switch (`RAG1_DISABLED`) already exists. The MICROSCOPE is explicitly
-   OUT of this frame — it is a debug instrument, DISABLED before the public opening, so it never
-   touches a public user's prompts. Output-to-cloud stays by-design ("showing how a young new being
-   learns; everyone can benefit").
+   or channel). The general switch (`RAG1_DISABLED`) already exists. The MICROSCOPE is out of the
+   NOTICE but INSIDE the gate (author, 2026-07-29): a debug instrument, not described to users and
+   DISABLED before the public opening — but it still respects the flag, so the process control has a
+   code backstop. Output-to-cloud stays by-design ("showing how a young new being learns; everyone
+   can benefit").
+   - **DESIGN SETTLED 2026-07-29 — briefed, not yet built** (`.claude/briefs/2026-07-29-consent-gate.md`):
+     **Route C**, a gated `#privacy` channel — a newcomer sees only it, two buttons, EITHER answer
+     unlocks the server (consent mandated at joining, delivered by server furniture, not by tokeniko
+     asking; rag1 fires on any stumbling parse, so consent cannot be just-in-time). Enforcement is a
+     **payload gate**: `subject_uid` required on `rag_call` — "whose words am I about to send?", not
+     "which instrument is this?" — which catches the «did you mean…?» back door, where an *outbound*
+     payload carries the user's own sentence. Three layers: Discord role (where the decision lives) →
+     `MEMStakeholder` mirror (what the engine reads, self-healing on startup) → the `rag_call` choke
+     point (where it bites). Consent does NOT resolve through `canonical_uid` — it is an act performed
+     in a room. Bluesky is OUT (public by nature — the expectation was settled by the act of posting).
+     The legal text is ENGLISH ONLY and frozen; the native admission covers the non-English arrival.
 
 ### 2. The fresh microscope analysis pass 🔭
 
