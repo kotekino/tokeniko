@@ -207,6 +207,7 @@ Gathered so nothing is lost; each waits on its parent feature's next season.
 - **`doc/ref/test-feedback.md`** — the living empirical fragility log (observed → diagnosis → action).
 - **`doc/ref/kb-growing-outward.md`** — the "synthetic learning" design (analytic/synthetic cut).
 - **`doc/ref/paper_outline.md`** — the paper (external artifact).
+- **`doc/ref/deploy-body.md`** — the RUNBOOK for tokeniko's own machine (the Mac mini body): all-in-Docker, LAN-only, the MacBook as workshop; the load-bearing facts, the biography transplant, the deploy loop.
 
 **Root:**
 - **`VISION.md`** — the why (north star).
