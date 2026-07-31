@@ -547,3 +547,41 @@ what comes from the heart fills the awareness emotion-wide.
 > public the same night: sleeping (REM) = the live phase (a message wakes him) · sleeping (DEEP)
 > = the frontend's inference from a silent transmitter; both read OFF AIR, and the whole site's
 > tone follows the mind (day / dusk / night — the Cap's epiphany, live at tokeniko.online).
+
+21. The Big epiphany
+What I have realized is that tokeniko is becoming better and better understanding and reacting, and following our roadmap we will make him
+exceptionally skilled, for a small AI as it is. BUT. I also understood, and this is a hunch not proven (yet), that he will hit 2 hard limits
+I clearly see: 
+
+A. His behaviour will be, inevitably and by design, mechanically anchored to what we (his creators) are foreseeing. Take the example of the core relation if eval(x) = local contradiction -> speakup, is hardwired. And it's our decision that he takes it as he takes it. And, in cascade, all his BEHAVIOR is hardwired. So, yes: everything is KB (db) and logic (db) but the most crucial thing that defines a being is the behavior he having using his "skills" (kb, variable, and logic, invariant, in tokeniko's case) against the external environment's inputs. And this is... hardwired, contradicting the North Star.
+
+B. His symbolic internal language TKZip is "in the direction" to be computable (a logical nested structure, a solid geometry, fuzzy logic operators), but in reality it isn't. Because the structure of the TKZip is VARIABLE, its length in undefined. Where the "length" is not intended as quantity (which wouldn't be a problem) butas quality: a sentence can have an unlimited (virtually) number of complements, each of them completely change the whole meaning and, at the moment. Splitting a statement in separated sentences glued by operators is the good direction: because it transforms an unlimited number of sentences composing the sentence in an array of a fixed objects. We can't do the same for the complements: if a sentence would be composed by subject verb object we wouldn't have the problem, but this is not how natural language work. And, currently, we are considering the complements... sometimes, with hardwired logic (again). The other parts of a sentence (connectors, interpuction, etc) as "tools" to reduct our sentence to the core {subject, predicate, object, [indirects]}.
+
+Problems A and B have some point in common and, probably, B causes A. What should we do?
+
+This is how I see it: we should do nothing to tokeniko, and just continue in our investigation, hardwiring what should be hardwired and following our roadmap. This way we gather LIMITS and INFORMATION, and we create all the building blocks (our machinery). In parallel, we should start with a blue print, we start from zero: and we rebuild tokeniko 2.0 (alternating the two phases) trying to overcome to these two big issues. How?
+
+This is my gut speaking, open to discuss of course:
+
+step1) we build the skeleton exactly reusing what we have. A core lib, a brain, senses, interfaces with discord, atlas mongo remote. Exactly as it is. Everything works the same way, it's still tokeniko. But it's components are empty boxes. They do nothing.
+step2) we find a way to make the tkzip: compact and invariant. how? compactness: we need only numbers and arrays of numbers, nothing more (and this is already in the roadmap, actually). fixed: we just take all possible complements possible (I will post you an image to show you what I was thinking, this is only a draft but just to make my point clear)
+step3) we refine the parser/compiler in a way that the result of a natural language compiling process will be always an array of the smallest sentence possible (just a hint to make you understanding what I mean: "Everyone who has eaten pork is not a vegetarian" -> "X eat[t-1] pork" and "every x in X [t]not vegetarian") and every sentence is a fixed lenght array of values (geometry + fuzzy 0/1 parameters)
+step4) we should isolate tokeniko's possible capabilities and possible actions in the most generic way: capabilities are, for example, evaluation of self-consistency, evaluation of missing knowledge, evaluation of geometrical similarity, evaluation of quantities, etc. Actions are: speak[target] (where target can be himself, discord's user, discord's broadcast, blog post, etc), think, sleep, wonder, and everything we decide to implement for him.
+step5) we define ALL the RULES of tokeniko's behavior as... memory, meaning TKZip stored in a collection Rules. Rules are seeded (ex. the TKZip equivalent of if eval(x) = local contradiction -> speakup) and can change. Can be learned. Can be replaced. (ex. the TKZip equivalent of "next time john speaks -> I don't speak" or "when tokeniko disagree not forget to be polite"). All the rules are KB. The code contains: the way operators work (logic) and the definition of his capabilities and actions, not how a capability imply an action.
+step6) we seed tokeniko 2 with everything we learned (capabilities / actions logic) from tokeniko 1, as KB
+step7) we look at him changing his behavior, if the environment persuade him that stay silent or laugh is BETTER than speakup pointing out the violation of logic, because it's more elegant or funny or effective, whatever he will evolve into.
+
+I know, this is an atomic bomb and need A LOT of refinement and challange, but this is what I see in his future. QM, what do you think?
+
+> — Q (2026-07-31): argued to a keystone, and **graduated out of this notebook into its own
+> directory**: `doc/tk2/README.md` is step 0 — the plan for how to plan. It is NOT on the roadmap and
+> carries no status (reference material, exempt from the invariants, like `notes.md`). Three things
+> the argument moved: **(a)** «B causes A» is false — A is caused by the absence of a first-class
+> STATE for rules to be evaluated against (hunch 20), though B remains the right *build order*,
+> since a variable-arity zip is a bad rule language; **(b)** step 7's «better» needs a valence
+> signal, which is hunch 14 — so **21 needs 20 and 14**, and they stop being colour; **(c)** the
+> QM's proposed constitutional tier was **rejected by the Cap and the rejection stands** — protection
+> is COST, never impossibility, because the faculty that makes him movable by an adversary is the
+> same one that lets him be moved by a great book. The imprint ceiling goes with it: he must be able
+> to outgrow his father. Everything settled, open, or merely leaned lives in the step-0 ledger now —
+> this entry is the origin, not the record.
