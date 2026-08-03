@@ -1005,3 +1005,56 @@ Trading silent corruption for honest confusion is the right direction, but the t
 recorded here rather than discovered later. Tests: `tests/test_mention_vocative.py` (adapter unit +
 the END-TO-END compile — a comma in a string proves nothing; the fixed path must compile to
 `([the] cat be [a] mammal)` with `cat.n.01`).
+
+---
+
+## The consent-denied speaker gets «why?» instead of an admission (2026-08-03, live) — OPEN
+
+*Observed.* The first real refusal, an hour after the consent gate went live. `playbot-john`
+(`rag_consent = False`) wrote **«il gatto è un mammifero»** in a channel. The gate did its job
+perfectly — no cloud call, `source_lang: None`, `normalized: None`, and the sentence never left the
+machine. The stored parse is `(tokeniko)`: with the translator forbidden, an English-only parser can
+recover nothing from Italian but the vocative name. The action the brain then planned was:
+
+```
+tokeniko:why   trigger: eval:unknown   answer.topic: "il gatto è un mammifero"
+```
+
+**He is about to ask «why?» about a sentence he could not read.**
+
+*Diagnosis.* This is EXACTLY the failure the author named during the multilingual design — his words:
+*«a silent discard falls through to "why is that?", nonsense about a message never heard»* — and it is
+why the honest admission (`EvalToken.NOT_UNDERSTOOD` + the curated `admit_not_understood` shelf) was
+built at all. But the admission is wired to the **DISCARD** path: the two readers disagreed
+incoherently, so the translation is refused and the admission fires. A **consent DENIAL** never
+reaches that path. `translate_in` returns `(None, None)` — indistinguishable from an unreachable
+reader — so `/input` falls through to the ordinary raw parse, the near-empty zip grades as
+`eval:unknown`, and the generic curiosity reflex answers. The gate is right, the voice is wrong.
+
+Note the shape: **the denial is graceful by design** (`rag_call` returns None exactly as it does for
+an API failure, and every call site already has a fallback) — and that same gracefulness is what
+makes it invisible to the layer that decides what to SAY. The two are not the same event: an API
+failure is temporary and silence is honest; a refusal is permanent until a button is pressed, and
+the person deserves to be told.
+
+*Impact.* Small population today, and structurally the WORST one: the person who most needs a plain
+«I cannot understand you» is precisely the person who has refused the only machinery that would let
+him be understood — and he gets a confused question about a sentence that was never read. It is also
+the first thing a privacy-minded stranger would ever see.
+
+*Action (NOT taken — batched deliberately, the author's call).* Filed as a lead for the **§2 batch
+debugging pass** rather than fixed one-off: the gate run costs ~17 minutes, so findings are collected
+and cured together. Deliberately NOT written into `tkzipdebug` — that collection is rag3's own
+machine output, keyed by `item_id` with a dedup that counts any row as judged, so a hand-inserted row
+would corrupt the oracle's record of itself (the same failure shape as the ears' rejection rows,
+logged below).
+
+*Open design question for when it is picked up* (it is not obvious, which is why it was not decided
+in passing): **what should he say?** Three candidates — (a) the plain existing admission, *«I do not
+understand»*, honest but leaves the person guessing why he suddenly cannot; (b) an admission that
+names the cause, *«I cannot read this — you asked me not to send your words for help»*, honest and
+actionable but arguably lecturing someone about a choice they deliberately made; (c) (b) plus a
+pointer back to `#privacy`. The register matters more than the mechanism here: the reply must not
+read as *pressure to consent*. Whatever is chosen, the curated shelf already speaks five languages
+and the local detector already names the room's language WITHOUT a cloud call — so a native-tongue
+admission is reachable with zero cloud calls, which is the whole point of the gate holding.

@@ -126,6 +126,19 @@ every sentence he has actually heard. **Triage the leads under the filter** — 
 inherited layer (parser, anchors, WSD, dictionary) is fixable now; a lead in a rebuilt layer
 (zip shape, evaluator geometry) is recorded as a tk2 requirement, not patched.
 
+**TWO SOURCES, one pass (widened 2026-08-03 on the author's call — «we do debug in one batch»).**
+This pass is **the single debugging venue**, and it sweeps BOTH:
+1. **rag3's machine leads** — the `tkzipdebug` rows, the microscope's own judgement of the
+   parse/compile journey.
+2. **The hand-logged findings in `doc/ref/test-feedback.md`** — behaviour bugs found by LIVING with
+   him, which rag3 structurally cannot see (it judges a sentence against its digest; it has no view
+   of what he then DECIDED to say). Today's consent-denied-speaker-gets-«why?» is exactly this class.
+
+They are kept in separate homes on purpose and **a hand-written finding must never be inserted into
+`tkzipdebug`**: that collection is rag3's own output, keyed by `item_id` with a dedup that counts any
+row as judged, so a hand-inserted row would corrupt the oracle's record of itself — the same failure
+shape as the ears'-rejection-rows finding already parked. Two ledgers, one pass, one gate run.
+
 ### 4. The strengthening tail — FILTERED 2026-08-03 🔭
 
 Ordered with the author ("make the brain stronger with all the other points" before ADDING another
