@@ -74,7 +74,7 @@ status detail — it references, it does not duplicate (invariant #2).
 - **§1 — the per-user context + multilingual + consent** (2026-07-25 → 08-03) — the room + the «did
   you mean?» ask + the answer binding · multilingual (two-reader consensus judged by the compiler) ·
   the native voice (232 curated rows) · **the consent gate** (Route C + the payload gate at
-  `rag_call`). **The chapter is WHOLE** *(its multilingual residuals → §1 below)*.
+  `rag_call`). **The chapter is WHOLE** *(its residuals → Pending follow-ons)*.
 
 ---
 
@@ -85,30 +85,6 @@ status detail — it references, it does not duplicate (invariant #2).
 in their own language, with their own ruling on where their words may travel. The road ahead is
 **§2 the fresh microscope analysis pass** (promoted: its findings feed both v1 and the tk2 blueprint)
 then **§4 the strengthening tail**, now filtered to asset work only (see the tk2 filter above).
-
-### 1. Multilingual residuals — the tail of a CLOSED chapter 🔭
-
-*(§1 — the per-user conversational context + multilingual + the consent gate — is **WHOLE**: steps 1
-(the room + the ask), 1b (the answer binding), 2 (multilingual), 2b (the native voice) and 3 (the
-consent gate) all LANDED → `landed.md`. Only the multilingual build's own residuals remain, and they
-wait on a live season rather than on work.)*
-
-🔭 **The residuals** (surfaced by the 2026-07-26 build, awaiting live evidence): the detector's thin
-0.05 margins + the fully-misspelled-English blind spot (env-tunable; watch live) · the DM fallback
-destination carries no `channel_id`, so an action resolved via `contextKey` alone cannot key a room
-and ships English (real Discord traffic always carries coords) · the consensus cannot catch a
-mistranslation BOTH readers share (same model family — a second family would be the cut if it ever
-bites) · the REDUCT cannot be natively composed (no source item at plan time ⇒ no room key; it
-composes English and takes the carrier's round trip) · when the mimicry fence is lifted,
-`mimic_observe` must stamp the source language onto the row or it seeds unlabelled foreign strings
-into the English shelf · the slotted 10 categories still compose English + translator (the mixed
-curated-frame/English-slot problem is its own design session).
-
-**Left by the consent build (2026-08-03), waiting on the room rather than on code:** the notice must
-be POSTED once into `#privacy` (a one-time operation, `senses/privacy.post_consent_message`) and the
-gate must be verified from an account that is **not** an admin — admins bypass all channel
-permissions, so testing from the owner account proves nothing. Both are the author's hand; the
-runbook carries them (`doc/ref/deploy-body.md`).
 
 ### 2. The fresh microscope analysis pass 🔭 — PROMOTED by the tk2 filter
 
@@ -200,7 +176,7 @@ left unfiltered** — each is small and conditional, and the honest moment to ru
 inheritance ledger is when its parent's season actually arrives, not now. One known casualty already
 visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2` when it surfaces.
 - **Blog**: `life:learned` / `life:discussion` triggers *(the consensus-over-the-polisher itself
-  → §1)*.
+  LANDED 2026-07-24 → `landed.md`)*.
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.
@@ -217,6 +193,16 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
   rows; Renzo/john duplicates → aliases) · the trust-ding-from-engine-bugs repair question.
 - **«I picked up a way of speaking from X»** — a transmission voice for a consolidated learned
   scaffold (left by the learned-scaffolds design, 2026-07-24); waits on the feature living a while.
+- **Multilingual residuals** (left by the 2026-07-26 build; these wait on a LIVE SEASON, not on
+  work): the detector's thin 0.05 margins + the fully-misspelled-English blind spot (env-tunable;
+  watch live) · the DM fallback destination carries no `channel_id`, so an action resolved via
+  `contextKey` alone cannot key a room and ships English (real Discord traffic always carries
+  coords) · the consensus cannot catch a mistranslation BOTH readers share (same model family — a
+  second family would be the cut if it ever bites) · the REDUCT cannot be natively composed (no
+  source item at plan time ⇒ no room key) · when the mimicry fence is lifted, `mimic_observe` must
+  stamp the source language onto the row or it seeds unlabelled foreign strings into the English
+  shelf · the slotted 10 categories still compose English + translator (the mixed
+  curated-frame/English-slot problem is its own design session).
 
 ---
 

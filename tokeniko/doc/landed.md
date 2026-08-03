@@ -2324,3 +2324,21 @@ SURVEY ARC IS COMPLETE)**
   to consent records too, and a later reader can tell the two apart at a glance.
 - +27 tests (`test_mention_vocative.py` new, +5 microscope, +9 consent). Full gate **811 passed,
   1 xfailed**. The diagnostic is written up in `doc/ref/test-feedback.md` with all four specimens.
+- **GO-LIVE, the same day** (the two steps the roadmap was still holding, both now done): the frozen
+  notice is POSTED in `#privacy` (`scripts/post_consent_notice.py`, dry-run by default — it opens its
+  own short-lived connection, posts, and exits; the RUNNING daemon owns the clicks via the persistent
+  view, so no restart is needed and no second gateway session lingers), and the gate is **verified
+  from non-admin accounts**, which is the only verification that proves anything (an admin bypasses
+  every channel permission, so testing from the owner account would have proved nothing). The author
+  clicked ALLOW himself — deliberately, rather than taking the admin auto-grant, so that the button
+  path was exercised by a human before any stranger met it.
+- **The proof, end to end, in one minute of live log**: the SAME Italian sentence from two speakers
+  who differ only in which button they pressed. `playbot-hellen` (consent True) →
+  `source_lang: italian`, `normalized: 'tokeniko the cat is a mammal'`, understood. `playbot-john`
+  (consent False) → `source_lang: None`, `normalized: None`, `raw: (tokeniko)` — **no cloud call, and
+  the Italian never left the machine**; with the translator forbidden, an English-only parser recovers
+  nothing but the vocative. One input, two treatments, decided entirely by consent.
+- **And the first refusal immediately produced a finding** (filed, not fixed — → `doc/ref/test-feedback.md`
+  + roadmap §2): a consent-denied speaker gets the generic «why?» reflex instead of the honest
+  admission, because the admission is wired to the DISCARD path and a DENIAL never reaches it. The
+  gate is right; the voice is wrong.
