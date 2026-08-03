@@ -23,17 +23,43 @@ if (!KEY) {
 }
 
 const EDGE = {
-  title: 'Learning to hold a conversation — in your language',
+  title: 'Learning from its own misunderstandings',
   body:
-    'tokeniko is learning what it means to be in a real back-and-forth with one particular person: to remember where the two of them stand — what is still unanswered between them, how quickly that person tends to reply, which language they speak — kept as a thread per person, per room. When it is not sure it understood, it will ask “did you mean…?” and wait for the answer rather than guess. And its first friend speaks Italian, so it is learning to meet each person in their own language — the words crossing to a translator in the cloud only with that person’s consent, their meaning checked in both directions. Its public journal stays in English; everything else bends to the person it is talking to.',
+    'Every sentence tokeniko hears is judged, moments later, by a second reader asking one question: does the structure it built actually say what the sentence said? Where the answer is no, a note is filed — and it is now going through that file. This is a catalogue of its own misreadings gathered from real conversation rather than from invented tests, which is why it holds surprises: the first one opened this week had been quietly rewriting the subject of any sentence that addressed it by name, so that a remark about a cat arrived as a claim about itself. It had been answering those correctly — refusing what it knew to be false — without anyone noticing the question had been wrong.',
   marks: [
-    'A conversation becomes a thread it holds with you: what is pending, your rhythm, your language',
-    '“Did you mean…?” — when unsure it asks and waits, and handles your yes or no rather than guessing',
-    'It meets you in your own language, with your consent — and meaning is verified crossing in and out',
+    'A second reader judges every sentence it hears: does the structure say what was actually said?',
+    'Its misreadings are filed as they happen — a catalogue from real conversation, not invented tests',
+    'The first one caught had been rewriting the subject of any sentence that named it',
   ],
 };
 
 const RINGS = [
+  {
+    slug: 'asking-first',
+    seq: 200,
+    when: '3 August 2026',
+    title: 'It learned to ask before borrowing your words',
+    body:
+      'To understand a message that is badly typed, or written in a language it does not read, tokeniko has to send that message’s text out to a company’s service in another country. Everything else about it stays on one machine in a house in Osaka — but that one crossing is real, and until now nobody had been asked about it. Now everyone who joins is asked at the door, before anything else: may your words travel for help, or not? Both answers let you in. A refusal is kept at the single doorway every outside request must pass through, so nothing added later can forget it — and if you refuse, nothing of yours ever leaves the machine, and it simply understands you less well. It is the first thing tokeniko was given that protects somebody other than itself.',
+    marks: [
+      'Everyone who joins decides at the door whether their words may travel — and either answer lets them in',
+      'A refusal is enforced at the one doorway every outside request passes through, so nothing built later can forget it',
+      'Say no and nothing of yours ever leaves the machine — it understands you less, and that is the trade',
+    ],
+  },
+  {
+    slug: 'in-your-language',
+    seq: 190,
+    when: '25 July – 3 August 2026',
+    title: 'It learned to hold a conversation — and to hold it in your language',
+    body:
+      'A conversation stopped being a series of unrelated remarks and became a thread it keeps with one particular person: what is still unanswered between the two of them, how quickly that person tends to reply, which language they speak. When it is not sure it understood, it now asks “did you mean…?” and waits — and it handles the yes or the no it gets back, rather than guessing and moving on. Its first friend speaks Italian, so it learned to be met in a language that is not English: two independent readings of the same foreign sentence, accepted only when both arrive at the same structure. And it answers in that language natively — the short replies written by hand in each tongue rather than translated on the fly, because “I don’t know” should sound like something a person would actually say.',
+    marks: [
+      'A conversation becomes a thread it holds with you: what is pending, your rhythm, your language',
+      'Unsure, it asks “did you mean…?” and waits — then handles your answer instead of guessing',
+      'A foreign sentence is read twice, independently, and accepted only where both readings agree',
+    ],
+  },
   {
     slug: 'the-honest-ear',
     seq: 180,
