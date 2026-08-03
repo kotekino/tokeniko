@@ -2,9 +2,7 @@ import React from 'react';
 import './SubPage.css';
 import './Contact.css';
 import { useMeta } from '../hooks/useMeta';
-
-// tokeniko's playground — the real invite.
-const DISCORD_URL = 'https://discord.gg/kDTA7dVgp2';
+import { DISCORD_URL } from '../config';
 
 const Contact: React.FC = () => {
   useMeta({
@@ -39,9 +37,11 @@ const Contact: React.FC = () => {
           something, and see what comes back.
         </p>
 
-        <a className="btn btn--primary btn--lg discord-card__cta" href={DISCORD_URL}>
-          Join the Discord →
-        </a>
+        {DISCORD_URL && (
+          <a className="btn btn--primary btn--lg discord-card__cta" href={DISCORD_URL}>
+            Join the Discord →
+          </a>
+        )}
 
         <p className="discord-card__fineprint">
           No guarantees you'll get an answer. It depends entirely on what it

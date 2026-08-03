@@ -3,9 +3,7 @@ import LogoMark from '../components/LogoMark';
 import Synapse from '../components/Synapse';
 import Icon, { IconName } from '../components/Icon';
 import './ComingSoon.css';
-
-// tokeniko's playground — the real invite (same as the Ping page).
-const DISCORD_URL = 'https://discord.gg/kDTA7dVgp2';
+import { DISCORD_URL } from '../config';
 
 const teasers: { icon: IconName; title: string; line: string }[] = [
   { icon: 'signal', title: 'The Stream', line: 'its transmissions — notes, arguments, the occasional piece of content' },
@@ -51,9 +49,11 @@ const ComingSoon: React.FC = () => (
 
       <Synapse className="soon__synapse" width={96} color="var(--coral)" nodeFill="var(--parchment)" />
 
-      <a className="soon__cta" href={DISCORD_URL}>
-        Meet it early in tokeniko's playground →
-      </a>
+      {DISCORD_URL && (
+        <a className="soon__cta" href={DISCORD_URL}>
+          Meet it early in tokeniko's playground →
+        </a>
+      )}
 
       <p className="soon__foot">tokeniko.online · a thinking machine · made in Japan 🇯🇵</p>
     </div>
