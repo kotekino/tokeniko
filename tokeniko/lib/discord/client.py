@@ -32,14 +32,47 @@ SetupHook = Callable[[], Awaitable[None]]
 # Discord user-mention wire tokens: <@id> and the legacy nickname form <@!id>.
 _MENTION_RE = re.compile(r"<@!?(\d+)>")
 
+# punctuation that ALREADY closes a leading vocative — the human typed it, we never double it.
+_VOCATIVE_PUNCT = ",.!?;:…-—"
+
 
 # decode `<@id>` mention tokens to plain usernames (from the message's resolved mention list) —
 # normalization of the channel's wire encoding, part of the adapter's job. An id missing from the
 # list is dropped; whitespace is re-collapsed so the parser never sees the artifacts.
-def _decode_mentions(content: str, mentions) -> str:
+#
+# THE LEADING-VOCATIVE COMMA (2026-08-03, found live). «@tokeniko the cat is a mammal» decodes to
+# «tokeniko the cat is a mammal» — a bare name glued to the following noun phrase, and spaCy reads
+# the pair as ONE NP headed by *tokeniko*: the subject is silently STOLEN and the sentence compiles
+# to a claim ABOUT him ((tokeniko be [a] mammal); cat.n.01 gone, and «tokeniko every bird has
+# feathers» loses the quantifier too). The comma is the only thing that marks the address, and the
+# WIRE knows this token was a mention — that information exists exactly here and was being thrown
+# away. Restoring the punctuation a human would have typed is not inference.
+#
+# Scoped to HIS OWN mention, by id (the same signal mentions_me reads, and the same reading the
+# directedness ladder already commits to: a mention of him is an ADDRESS). For anyone else the same
+# comma would COST more than it buys — measured on the live pipeline, «hellen, is a machine» loses
+# its subject outright where «hellen is a machine» compiles clean, and «hellen the cat is a mammal»
+# never suffered the theft in the first place (it splits into a stray leaf, not a false claim).
+def _decode_mentions(content: str, mentions, me_id: Optional[str] = None) -> str:
     names = {str(u.id): u.name for u in (mentions or [])}
-    decoded = _MENTION_RE.sub(lambda match: names.get(match.group(1), ""), content or "")
-    return re.sub(r"\s{2,}", " ", decoded).strip()
+    rest = (content or "").lstrip()
+
+    head = ""
+    if me_id is not None:
+        lead = _MENTION_RE.match(rest)
+        if lead is not None and lead.group(1) == str(me_id) and names.get(lead.group(1)):
+            head = names[lead.group(1)]
+            rest = rest[lead.end():].lstrip()
+
+    body = re.sub(r"\s{2,}", " ",
+                  _MENTION_RE.sub(lambda match: names.get(match.group(1), ""), rest)).strip()
+    if not head:
+        return body
+    if not body:
+        return head                                  # a bare «@tokeniko» — nothing to separate
+    if body[0] in _VOCATIVE_PUNCT:
+        return f"{head}{body}"                       # «@tokeniko, …» / «@tokeniko: …» already read
+    return f"{head}, {body}"
 
 
 class DiscordClient:
@@ -94,27 +127,36 @@ class DiscordClient:
 
     def _to_member(self, m) -> DiscordMember:
         me = self._client.user
+        # guild_permissions is discord.py's FOLD of every role the member wears (plus the owner
+        # short-circuit) — the resolved bit, which is why this read belongs here and nowhere else.
+        # Defensive getattr: a member object from a partial cache may carry no permissions at all,
+        # and "not an admin" is the safe reading (it only ever means «ask them properly»).
+        perms = getattr(m, "guild_permissions", None)
         return DiscordMember(
             user_id=str(m.id),
             name=m.name,
             guild_id=str(m.guild.id) if getattr(m, "guild", None) is not None else "",
             role_names=[r.name for r in getattr(m, "roles", [])],
             is_self=bool(me is not None and m.id == me.id),
+            is_admin=bool(getattr(perms, "administrator", False)),
         )
 
     def _to_message(self, m: discord.Message) -> DiscordMessage:
         guild_id = str(m.guild.id) if m.guild is not None else None
+        me = self._client.user
         # decode Discord's mention wire-encoding BEFORE the content crosses the seam: a raw
         # `<@id>` token is channel encoding, not language — the parser met one literally and the
         # compile failed («I agree with <@15188…>», 2026-07-11). Names come from the message's own
-        # resolved mention list; an unresolvable id is dropped rather than shipped as noise.
-        content = _decode_mentions(m.content, m.mentions)
+        # resolved mention list; an unresolvable id is dropped rather than shipped as noise. His own
+        # id goes in so a LEADING mention of him is restored to the vocative a human would have
+        # punctuated (2026-08-03 — see _decode_mentions).
+        content = _decode_mentions(m.content, m.mentions,
+                                   me_id=(str(me.id) if me is not None else None))
         reply_to = (
             str(m.reference.message_id)
             if (m.reference is not None and m.reference.message_id is not None)
             else None
         )
-        me = self._client.user
         # addressing signals (senses C directedness): a real @-mention OR the bot's name as a word;
         # and whether the replied-to message is one of the bot's own (resolved may be a
         # DeletedReferencedMessage or None if not in cache — treat both as "not me").

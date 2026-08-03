@@ -43,10 +43,14 @@ format + evaluator). **And "real self-knowledge for how do you feel?" is hunch 2
 awareness — which is already investigation order #3 in the blueprint. The whole entry sits in
 rebuilt layers.
 
-**Etiquette — the DISPATCH half** (hunch 8) `→ tk2` — the thinking-reaction → idea → reflex chain
-that makes «hello John» stop being evaluated as an assertion. **This is limit A in miniature**:
-hardwiring which reaction follows which trigger is exactly what tk2 turns into revisable KB. *(The
-curation half — the scaffold rows — stayed on the road: `roadmap.md` tail #5.)*
+**Etiquette — the DISPATCH half, and ALL of REGISTER** (hunch 8) `→ tk2` — (a) the thinking-reaction →
+idea → reflex chain that makes «hello John» stop being evaluated as an assertion: **limit A in
+miniature**, since hardwiring which reaction follows which trigger is exactly what tk2 turns into
+revisable KB. And (b) **register** — warmth, formality, whether he thanks at all — which the author
+ruled out of tk1 for a second, independent reason: *register is shaped by the HEART* (hunch 14), so
+building it before the heart exists builds something unreusable, and the heart must come first for
+obvious reasons. In tk2 both halves converge on behaviour rules anyway. *(The PROTOCOL half — where
+getting it wrong CORRUPTS rather than merely offends — stayed on the road: `roadmap.md` tail #5.)*
 
 **D-phase realtime enhancements** `→ tk2` — cross-speaker patterns, inference-implied conflicts, the
 full working-memory consumer set on top of the landed context ring (`brain/context.py`). State-layer
@@ -182,3 +186,50 @@ about well-trusted beliefs sounding oddly unsure).
 **The sentence tag-vector — a per-zip aboutness centroid (2026-07-25, the author's brainstorm)** `→ tk2 (design)` *(2026-08-03: the weighting formula reads OFF the zip's roles, so it must be designed against tk2's fixed-arity schema — where it gets easier, not harder: uniform slots make a role-weighted centroid a matrix operation rather than a traversal. Design it in the blueprint; the consumers listed below are unaffected.)* — a 2925-dim centroid computed AT INGESTION over a zip (and over each KB doc: axioms/definitions/theorems), stored + Mongo-indexed for native `$vectorSearch`. NOT meaning and NOT a duplication of the zip: it is the zip's CLASSIFICATION — an *aboutness TAG* (the author's framing), a first-class derived artifact used only as such (possibly wrong, never authoritative). By construction it discards all logical structure — operators, negation, quantifier, role-order, spacetime — so "a cat is a mammal" and "a mammal is a cat" tag alike, and antonyms (love/hate ≈ 0.86 in this dictionary) don't separate: FENCED to retrieval / association / recall, NEVER grounding or truth (geometry doesn't vote on is_a, nor here). **Consumers it folds:** the anecdote's "by the way, this reminds me…" (today an in-memory centroid scan — this is literally the promotion of its own parked "`$vectorSearch` becomes right when the KB grows" note), semantic recall/search over memory + KB, clustering, a public "what this belief is about" surface. **Reuse map (unify, don't reinvent):** `e_label.evaluator_assignWord` already does centroid→nearest-dictionary-word via `$vectorSearch` (the tag EXTRACTOR — top-N nouns from the centroid); `context.topic_centroid` + the anecdote's per-doc cached centroids; `_semantic_centroid` (normalizer, sound-only); the `vector_index` already exists for senses. **The weighting is the whole game (its own design session):** role weights à la `e_label` (noun-heavy; subject+predicate over indirects), drop operators/negation/quantifier (aboutness, not meaning), how much the predicate verb counts; a bad formula makes every stored tag subtly useless and expensive to recompute KB-wide. **Discipline:** version the formula + recompute on change (the `recompile.py` precedent), the zip stays the source of truth. **Promote when** a concrete consumer needs it OR the KB outgrows the in-memory centroid scan (the laptop-ceiling trigger) — design now, build on first real need.
 
 **LEARNING a voice in the speaker's own language (2026-07-26 — the author's idea; its CURATED half LANDED the same day, see `landed.md`)** — the machinery (`MEMScaffold.lang`, the per-language shelf gate, the fallback chain, the carrier no-op) and 232 curated it/es/fr/de rows are BUILT. What stays parked is the LEARNING half: the convergence with the accommodation (2026-07-24) — tokeniko picking up native phrasings directly from what a person actually says in their own tongue, so his Italian register becomes THEIRS rather than our curation. **The blocking coupling, confirmed from both sides**: `brain/mimicry.py` mints `template = item.original` VERBATIM, and on a translated turn `original` is the SOURCE language while the matched zip is English — so a mint would drop an unlabelled Italian row into the English shelf. The step-2 FENCE (a translated turn mints nothing) holds that shut today. **The honest minimum when the fence is lifted**: stamp the row's language from the item's `source_lang` (the officer's finding — without it, `mimic_observe` seeds unlabelled foreign strings at the `lang="english"` default), and let the existing shelf gate do the rest — it already filters by language and the carrier already skips a native row. **The fuller prize**: per-language mimic shelves consolidated in sleep like any other, so his Italian voice GROWS from Italian conversation instead of being written for him. Promote when the curated voice has lived a while.
+
+**The mention-vocative refinement — a POS-aware comma (2026-08-03, the fix's own residual)** — the
+landed fix inserts a comma after a leading mention of tokeniko unconditionally, which restores the
+vocative reading («@tokeniko the cat is a mammal») and **breaks the SUBJECT reading** («@tokeniko is
+a machine that thinks» → `(be [a] machine) AND (machine think)`, subject lost). The trade was taken
+DELIBERATELY and ruled by the author: a mention *pings*, and people ping when addressing rather than
+when discussing, so the vocative population is far larger — and the two failures are not equally
+bad. The old one was a **confident false claim about himself, silently stored**; the new one is a
+**subjectless clause that grades honestly as unknown**. Trading silent corruption for honest
+confusion is the right direction. **The refinement**: insert the comma only when the body opens with
+a NOUN PHRASE, not with a finite verb — which fixes both readings. It is parked rather than built
+because it needs a POS check, and the adapter is **deliberately dumb about language** (it owns the
+wire, not the grammar); doing it there would break that contract. Promote when the subject-mention
+reading is seen failing live, and home it at a layer that already has the parser.
+
+**The `talker` default mints an ungated placeholder speaker (2026-08-03, the officer's finding)** —
+`api/main.py` `GET /api/v1/input` declares `talker: str = "unknown"`, so a hand-made call with no
+talker files its words under a placeholder stakeholder (`uid: "unknown"`, channel `api`) that no one
+consented for. Live count is 2 items of 743 — both the author's own probes — so **the shape is the
+finding, not the count**: a default parameter is a route for words to enter ungated. The honest fix
+is to make `talker` REQUIRED (or mint a per-caller uid); both are one-line changes with a blast
+radius on every manual probe, which is why it is parked rather than slipped into an unrelated build.
+*(The microscope now treats such items as UNJUDGEABLE rather than denied-pending-consent — a
+placeholder is not someone who can be asked. See `landed.md`.)*
+
+**rag1/rag4 rejection rows hide their items from the microscope (2026-08-03, pre-existing)** —
+`_log_ears_rejection` / `_log_translation_rejection` write `TKZipDebugDoc` rows keyed by `item_id`,
+and the microscope's dedup counts ANY row for an item as already-judged. So an item that had an ears
+or translation rejection is **never examined by rag3**. Possibly intended (a rejected reading is
+arguably not a specimen of the compile path) — but if it is not, the microscope is blind to exactly
+the items most likely to be interesting, which is the opposite of the instrument's purpose. Decide
+the intent before changing anything; the cure is a discriminated row type, not a dedup tweak.
+
+**Etiquette protocol — the three parked candidates (2026-08-03, scoped with the author)** — the
+protocol half of hunch 8 was scoped to TWO items (repair initiation + farewell → `roadmap.md` tail
+#5). Parked with the author, in the order I would promote them:
+- **«I wasn't talking to you» — the directedness correction.** Real in a multi-person channel where
+  he listens to everything: a human currently has no way to say *you misread the address*. One
+  utterance, direct effect on the directedness ladder he already has.
+- **Acknowledgment — «ok», «I see», «got it».** The most frequent utterances in human conversation and
+  entirely CONTENTLESS: they must not compile as assertions, and an ack after his answer is a
+  RECEIPT — evidence the answer landed, a stronger signal than today's silence=consent.
+- **The unprompted greeting — he never speaks first.** Every channel he is in is opened by a human,
+  but the consent click is now a JOIN EVENT (2026-08-03), and a person who has just entered is
+  exactly whom a host would greet. Protocol in the purest sense — opening a channel rather than
+  answering in one — and his first genuinely unprompted social act, which makes it a small step
+  toward the volitional layer. The greeting scaffolds already exist in five languages.

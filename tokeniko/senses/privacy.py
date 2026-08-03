@@ -118,22 +118,50 @@ def _is_tokeniko(member: DiscordMember) -> bool:
     return bool(getattr(member, "is_self", False))
 
 
+# THE ADMIN GRANT (the Captain's ruling, 2026-08-03). An administrator BYPASSES channel
+# permissions, so the #privacy room — a channel everyone else is funnelled through — structurally
+# cannot reach them: they would sit at *unasked*, and therefore denied, forever. Not because they
+# declined; because the mechanism cannot touch them. An act that cannot be asked for needs another
+# way to be expressed, and the admin grant itself carries it: our server, our rules — administering
+# the server IS accepting its privacy terms.
+#
+# BUT AN EXPLICIT ROLE WINS, in BOTH directions, and the deny direction is the load-bearing one:
+# the DENY role is the only way an admin can refuse at all. If the permission bit overrode it, the
+# two people who run the server would be the only two who CANNOT opt out — «you can always change
+# your mind» would be false for exactly them, and a consent that cannot be refused is not consent.
+# So the bit only speaks where the roles say nothing (which is also where both-roles-at-once, the
+# server-side accident, lands — and auto-allowing there is the same "we could not ask" case).
+def _auto_admin(member: DiscordMember) -> bool:
+    return bool(getattr(member, "is_admin", False))
+
+
 # reconcile ONE member's mirror against their roles; returns the value the mirror now holds.
 # Write-avoiding: on_member_update fires for a nickname change too, and the mirror must not churn.
-# A member with neither role has their record CLEARED (unasked), never stamped.
+# A member with neither role has their record CLEARED (unasked), never stamped — unless they are an
+# admin, whom the room cannot reach (see above).
 def reconcile_member(member: DiscordMember) -> Optional[bool]:
-    from lib.core.consent import consent_for
+    from lib.core.consent import CONSENT_AUTO_ADMIN, CONSENT_TEXT_VERSION, consent_for
     if _is_tokeniko(member):
         return None
     uid = member_uid(member)
     wanted = consent_from_roles(member.role_names)
+    auto = wanted is None and _auto_admin(member)
+    if auto:
+        wanted = True
     if consent_for(uid) == wanted:
         return wanted
     if wanted is None:
         clear_consent(uid)
     else:
-        record_consent(uid, wanted, name=member.name)
-    logger.info("[privacy] mirror reconciled for %s -> %s", uid, wanted)
+        # the stamp is the honesty: a record must say how it came to be, so a later reader can
+        # never mistake a permission bit for a pressed button.
+        record_consent(uid, wanted, name=member.name,
+                       text_version=CONSENT_AUTO_ADMIN if auto else CONSENT_TEXT_VERSION)
+    if auto:
+        logger.info("[privacy] %s is a server ADMIN — consent AUTO-GRANTED (%s); nobody pressed a "
+                    "button, the #privacy gate cannot reach an admin", uid, CONSENT_AUTO_ADMIN)
+    else:
+        logger.info("[privacy] mirror reconciled for %s -> %s", uid, wanted)
     return wanted
 
 

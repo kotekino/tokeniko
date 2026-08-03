@@ -391,6 +391,127 @@ def test_a_playbot_is_not_exempt(subject):
     assert consent_for(subject.uid) is False
 
 
+# ---- 9b. THE ADMIN GRANT — the one person the room cannot reach (2026-08-03) ------------------
+# An administrator BYPASSES channel permissions, so the #privacy funnel structurally cannot touch
+# them: they would sit at *unasked*, and therefore denied, forever — not because they declined. The
+# admin grant itself carries the meaning («our server, our rules»), and the record says so.
+
+def test_an_admin_is_auto_allowed_and_the_ledger_says_nobody_pressed_a_button(subject):
+    from lib.core.consent import CONSENT_AUTO_ADMIN, _body
+    from senses.privacy import reconcile_member
+
+    admin = DiscordMember(user_id="9001", name="consentito", guild_id="g1",
+                          role_names=["@everyone"], is_admin=True)
+    assert reconcile_member(admin) is True
+    assert consent_for(subject.uid) is True
+    # THE HONESTY CONSTRAINT: a later reader must tell a grant from a click at a glance.
+    assert _body(subject.uid).consent_text_version == CONSENT_AUTO_ADMIN
+    assert CONSENT_AUTO_ADMIN != CONSENT_TEXT_VERSION
+    assert _body(subject.uid).consent_at is not None
+
+
+def test_an_admins_explicit_deny_role_WINS_over_the_permission_bit(subject):
+    """The load-bearing direction of «the explicit role wins».
+
+    The DENY role is the only way an admin can refuse AT ALL — the room cannot ask them, so there
+    is no button for them to press. If the permission bit overrode it, the two people who run the
+    server would be the only two who CANNOT opt out: «you can always change your mind» would be
+    false for exactly them, and a consent that cannot be refused is not consent."""
+    from lib.core.consent import CONSENT_AUTO_ADMIN, _body
+    from senses.privacy import reconcile_member, role_deny
+
+    admin = DiscordMember(user_id="9001", name="consentito", guild_id="g1",
+                          role_names=[role_deny()], is_admin=True)
+    assert reconcile_member(admin) is False
+    assert consent_for(subject.uid) is False
+    assert _body(subject.uid).consent_text_version == CONSENT_TEXT_VERSION   # a real answer
+    assert _body(subject.uid).consent_text_version != CONSENT_AUTO_ADMIN
+
+
+def test_an_admin_who_actually_clicked_allow_is_recorded_as_having_clicked(subject):
+    # the same rule in the other direction: the role is an ANSWER and outranks the bit, so the
+    # stamp is the live text version — the auto-grant only speaks where the roles say nothing.
+    from lib.core.consent import _body
+    from senses.privacy import reconcile_member, role_allow
+
+    admin = DiscordMember(user_id="9001", name="consentito", guild_id="g1",
+                          role_names=[role_allow()], is_admin=True)
+    assert reconcile_member(admin) is True
+    assert _body(subject.uid).consent_text_version == CONSENT_TEXT_VERSION
+
+
+def test_an_admin_wearing_both_roles_falls_back_to_the_auto_grant(subject):
+    # both roles at once is a server-side accident, not an answer (it reads None) — and None is
+    # exactly the «we could not ask them» case the grant exists for.
+    from lib.core.consent import CONSENT_AUTO_ADMIN, _body
+    from senses.privacy import reconcile_member, role_allow, role_deny
+
+    admin = DiscordMember(user_id="9001", name="consentito", guild_id="g1",
+                          role_names=[role_allow(), role_deny()], is_admin=True)
+    assert reconcile_member(admin) is True
+    assert _body(subject.uid).consent_text_version == CONSENT_AUTO_ADMIN
+
+
+def test_losing_the_admin_bit_reverts_to_unasked(subject):
+    from senses.privacy import reconcile_member
+    admin = DiscordMember(user_id="9001", name="consentito", guild_id="g1", is_admin=True)
+    assert reconcile_member(admin) is True
+    plain = DiscordMember(user_id="9001", name="consentito", guild_id="g1", is_admin=False)
+    assert reconcile_member(plain) is None
+    assert consent_for(subject.uid) is None      # unasked, and unasked denies
+
+
+def test_a_non_admin_is_never_auto_granted(subject):
+    # the guard on the whole idea: everyone the room CAN reach still has to answer for themselves.
+    from senses.privacy import reconcile_member
+    plain = DiscordMember(user_id="9001", name="consentito", guild_id="g1",
+                          role_names=["@everyone", "Moderator"])
+    assert reconcile_member(plain) is None
+    assert consent_for(subject.uid) is None
+
+
+def test_tokenikos_own_account_is_not_auto_granted_either(subject):
+    # he is an admin on his own server; the self guard still wins over everything.
+    from senses.privacy import reconcile_member
+    me = DiscordMember(user_id="9001", name="consentito", guild_id="g1",
+                       is_self=True, is_admin=True)
+    assert reconcile_member(me) is None
+    assert consent_for(subject.uid) is None      # no record minted for himself
+
+
+def test_the_adapter_reads_the_permission_BIT_not_a_role_name():
+    """is_admin is discord.py's RESOLVED permission fold — the adapter is the only layer that can
+    see it, exactly as it is for mentions_me. A role NAMED "admin" grants nothing."""
+    import discord
+    from lib.discord.client import DiscordClient
+
+    client = DiscordClient.__new__(DiscordClient)
+    client._client = discord.Client(intents=discord.Intents.default())
+
+    def _member(administrator, roles=()):
+        return SimpleNamespace(id=9001, name="consentito", guild=SimpleNamespace(id=1),
+                               roles=[_FakeRole(r) for r in roles],
+                               guild_permissions=SimpleNamespace(administrator=administrator))
+
+    assert client._to_member(_member(True)).is_admin is True
+    assert client._to_member(_member(False, roles=("admin", "Owner"))).is_admin is False
+    # a partial-cache member carrying no permissions at all reads as NOT an admin — the safe
+    # reading, since it only ever means «ask them properly».
+    bare = SimpleNamespace(id=9001, name="consentito", guild=SimpleNamespace(id=1), roles=[])
+    assert client._to_member(bare).is_admin is False
+
+
+def test_the_re_consent_sweep_clears_an_auto_grant_too(subject):
+    # «change the text -> ask everyone again» keys off the VALUE, not the stamp: an admin's grant is
+    # erased with everyone else's, and the next reconcile re-grants it under the new text.
+    from lib.core.consent import clear_all_consent
+    from senses.privacy import reconcile_member
+    reconcile_member(DiscordMember(user_id="9001", name="consentito", guild_id="g1", is_admin=True))
+    assert consent_for(subject.uid) is True
+    assert clear_all_consent() >= 1
+    assert consent_for(subject.uid) is None
+
+
 def test_a_self_click_records_nothing(subject):
     # unreachable through the UI (bots cannot press buttons) — the third door of the same rule.
     from senses.privacy import CONFIRM_FAILED, apply_choice, role_allow, role_deny

@@ -150,10 +150,27 @@ is the strongest evidence the criterion is sound.
 4. **KB growing OUTWARD** (tier-1 synthetic learning): learned axioms vs derived theorems — the
    analytic/synthetic cut; design + open forks in `doc/ref/kb-growing-outward.md`. *(Survives: KB
    layer. The largest survivor — worth its own scoping session before it starts.)*
-5. **Etiquette — the CURATION half only** (hunch 8): the greeting/thanks/formality **scaffold rows**,
-   curated per category like any other shelf. *(Split: scaffolds are `inherit`. The other half — the
-   thinking-reaction → idea → reflex DISPATCH — is limit A itself and went `→ tk2`. Curated rows are
-   cheap and permanent; a hardwired reflex chain is exactly what tk2 dissolves.)*
+5. **Etiquette — the PROTOCOL half only** (hunch 8; scoped with the author 2026-08-03). **The cut,
+   and its test: *does getting it wrong CORRUPT something, or merely make him seem RUDE?*** Corrupts
+   → protocol (channel management: who is addressed, when a channel opens and closes, whether the
+   last utterance landed). Rude → register (warmth, formality, whether he thanks at all). **Only
+   protocol is tk1 work.** The author's reasoning: register is shaped by the heart (hunch 14), which
+   is not in tk1 scope, so building it now builds something unreusable — and in tk2 both halves
+   converge on behaviour rules anyway. Protocol has to exist NOW because it is already load-bearing:
+   today's mention-vocative bug proved a purely conventional act (naming the addressee) is
+   *structural*, not decorative. **Two items, in order:**
+   - **Repair initiation** — «what?», «huh?», «I don't understand». The inbound MIRROR of his own
+     did-you-mean: he has a whole apparatus for *"I didn't understand you"* and **no channel at all
+     for *"you didn't understand me"***. Today «what?» is read as a question about the world. It must
+     REPHRASE his last utterance instead — and it is a free human label that his output missed, the
+     outbound twin of the microscope (which only ever judges input).
+   - **Farewell / channel-close** — «bye», «I'm off». Distinct from goodnight (the sleep ceremony, not
+     a channel act). The open-exchange window currently closes only by TIMEOUT; an explicit farewell
+     should close it at once — pending asks lapse, momentum drops — so he stops replying into a room
+     whose occupant has left.
+   *(The scaffold ROWS are `inherit` either way. The reflex DISPATCH is limit A itself and went
+   `→ tk2`; these two ride the existing `social_detect` reflex path, not the behaviour-rule layer.
+   Three further protocol candidates parked with the author → `parked.md`.)*
 6. **KB-load big-O honesty** (left by the 2026-07-16 wondering-freeze fix): the harness KB load
    pulls ALL definitions (~1.2 GB of all-gloss zips) and re-pulls on EVERY fingerprint bump — i.e.
    after each materialized theorem — blocking the tick for its duration (it gates thinking too, not

@@ -929,3 +929,79 @@ software and no software is an animal», three phrasings — and the binding nev
 disjoint string formats, no collision); the un-addressed ambient «you» still keys None — the
 gate's caution preserved, not bypassed. 2 tests in `test_reductio_loop.py` (the individual-subject
 bind + the ambient-denial refusal). The live answer belongs in the DM (directedness 1.0).
+
+---
+
+## 2026-08-03 — THE MENTION-VOCATIVE THEFT (the cleanest one-variable diagnostic yet)
+
+**Observed (live, on the freshly-armed consent gate).** A statement addressed to tokeniko by
+@-mention had its SUBJECT silently replaced by tokeniko. Four specimens, one variable isolated —
+their raw renders exactly as produced:
+
+```
+'tokeniko , the cat is a mammal'    -> ([the] cat be [a] mammal)   OK   cat.n.01 + mammal.n.01
+'tokeniko the cat is a mammal'      -> (tokeniko be [a] mammal)    BUG  subject stolen, cat LOST
+'tokeniko il gatto è un mammifero'  -> (tokeniko be [a] mammal)    BUG  (translation PERFECT —
+                                                    normalized: 'tokeniko the cat is a mammal')
+'a feline is a mammal'              -> ([a] feline be [a] mammal)  OK   (no vocative at all)
+```
+
+**THE COMMA IS THE ONLY DIFFERENCE, and MULTILINGUAL IS CLEARED** — stated explicitly so nobody
+re-investigates the translator: rag4 rendered the Italian flawlessly, and the English it produced
+then failed *identically* to the English typed by hand. The fault is downstream of the ears.
+
+*Diagnosis.* `@tokeniko` decodes on the wire to a bare «tokeniko » — a name, no punctuation. spaCy
+then reads `tokeniko the cat` as ONE noun phrase headed by *tokeniko*; the comma is what marks a
+vocative. `social_detect` strips a leading «tokeniko» vocative, but only on the GREETING path: a
+plain statement has no social head, so the detector returns None and nothing is stripped. The theft
+does not stop at the subject — measured on the same pipeline while fixing it:
+
+```
+'tokeniko every bird has feathers'  -> (tokeniko have feather)     the UNIVERSAL goes too
+'tokeniko the sky is blue'          -> (tokeniko be blue)
+'tokeniko what is a cat'            -> (be [a] cat what)           the wh-gap misplaced
+```
+
+*Severity — S1, not S0, and only by grace.* For an unknown stretch of time every statement
+addressed to him by mention (the most natural way anyone addresses him, and what a stranger joining
+the server will do constantly) was compiled as a claim ABOUT him. Two things kept it from being
+worse: **the logic floor REFUSED the false claim** rather than storing it («that does not match what
+I know» — correct reasoning on a corrupted input), and **rag3 diagnosed it unprompted in the same
+minute**, without being asked and without a human noticing anything was wrong:
+
+> *"the subject 'il gatto' was lost: subject bound to tokeniko's identity instead of carrying
+> cat.n.01… the predication now claims tokeniko is a mammal rather than the cat."*
+
+That is the microscope earning its keep on a bug neither the QM nor the 1st Officier had noticed —
+the instrument arc's whole thesis, demonstrated on its builders.
+
+*Action (landed same day).* Fixed **at the ears, in the adapter** (`lib/discord/client._decode_mentions`,
+the Captain's option A): the adapter knows it has just replaced `<@id>` with a name, so a LEADING
+mention of HIS OWN id gets back the comma a human would have typed. This is not inference — the wire
+carried the signal and the adapter was throwing it away. Constraints: leading only (a mid-sentence
+mention is content), never doubled over existing punctuation, and **his own mention only**. The
+parser-side alternative (strip any leading proper noun as a vocative) was considered and rejected:
+without the mention signal it is guessing.
+
+*Why HIS mention only — measured, not cautious.* A blind comma after any leading mention trades one
+bug for another, because a leading mention is not always an address:
+
+```
+'hellen is a machine'               -> (Hellen be [a] machine)     OK
+'hellen, is a machine'              -> (be [a] machine)            subject LOST by the comma
+'hellen the cat is a mammal'        -> (Hellen) AND ([the] cat be [a] mammal)   never stolen
+```
+
+For another name the comma costs more than it buys, and the theft never happened there anyway.
+
+*Residual (S2, open, worth knowing).* The same trade exists for HIS name too, in the smaller
+population where the mention is the grammatical SUBJECT: `'tokeniko, is a machine that thinks'`
+→ `(be [a] machine) AND (machine think)`, where the un-commaed form compiles clean. The fix takes
+that cost deliberately — the vocative population is far larger (a mention pings him, which people do
+when addressing, not when discussing; the directedness ladder already reads a mention as an address
+at 0.9), and the two failures are not equally bad: the vocative failure is a **confident false claim
+about himself**, the subject failure is a **subjectless clause** that grades honestly as unknown.
+Trading silent corruption for honest confusion is the right direction, but the trade is real and is
+recorded here rather than discovered later. Tests: `tests/test_mention_vocative.py` (adapter unit +
+the END-TO-END compile — a comma in a string proves nothing; the fixed path must compile to
+`([the] cat be [a] mammal)` with `cat.n.01`).

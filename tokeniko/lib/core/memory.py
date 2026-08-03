@@ -112,7 +112,12 @@ class MEMZipDebug(BaseModel):
     item_id: str                               # the judged memory item's Mongo id (dedup key)
     original: str                              # the sentence as heard
     digest: str                                # the zip's structural digest shown to the judge
-    verdict: str                               # "ok" | "mismatch"
+    verdict: str                               # "ok" | "mismatch" | "skipped" (2026-08-03: NOT a
+                                               # verdict — the item could not be judged at all, so
+                                               # no judge ever saw it. It exists to stop the poller
+                                               # re-asking forever; every lead query reads
+                                               # verdict=="mismatch", so it can never be counted as
+                                               # a finding. See senses/microscope.SKIPPED.)
     confidence: float = Field(default=0.5)     # the judge's own 0..1
     severity: Optional[str] = None             # "low" | "medium" | "high" (mismatch only)
     category: Optional[str] = None             # wrong-sense | wrong-structure | missed-negation |
@@ -126,6 +131,10 @@ class MEMZipDebug(BaseModel):
                                                # diagnostic lead, not a hallucination)
     note: Optional[str] = None                 # the judge's one-paragraph why
     model: Optional[str] = None                # which judge (model id) produced this
+    # the speaker whose words the judge would have carried — recorded on a "skipped" row ONLY, and
+    # recorded because the skip must be REVERSIBLE: it is the key the poller re-reads consent
+    # against, so the day that person says yes their items return to the queue.
+    subject_uid: Optional[str] = None
     timestamp: int = Field(default_factory=lambda: int(time.time()))
     # triage bookkeeping (2026-07-17): True once a feedback-analysis pass consumed this lead —
     # each analysis samples addressed=False only, so the corpus under the glass is always fresh.

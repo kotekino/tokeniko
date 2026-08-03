@@ -48,6 +48,16 @@ logger = logging.getLogger("tokeniko-senses")
 # --------------------------------------------------------------
 CONSENT_TEXT_VERSION = "v1"
 
+# THE PROVENANCE STAMP FOR A GRANT NOBODY CLICKED (2026-08-03). A server ADMIN bypasses every
+# channel permission, so the #privacy room structurally cannot reach them: they would sit at
+# *unasked* forever — not because they declined, but because the mechanism cannot touch them. The
+# admin grant itself carries the meaning («our server, our rules»), so senses/privacy resolves an
+# admin to allowed. It is recorded under THIS version rather than the text version, and the reason
+# is not cosmetic: the ledger must never claim someone pressed a button when nobody did. A later
+# reader — human or code — tells the two apart at a glance, and «change the text -> ask again»
+# still sweeps it away like any other answer (clear_all_consent keys off the value, not the stamp).
+CONSENT_AUTO_ADMIN = "auto:admin"
+
 CONSENT_TEXT = """### Before we talk
 
 tokeniko is an experiment: a small artificial mind that reads what you write, tries to understand
@@ -110,15 +120,19 @@ def consent_for(ref: str) -> Optional[bool]:
 
 
 def record_consent(uid: str, allowed: bool, *, name: Optional[str] = None,
-                   channel: MEMChannels = MEMChannels.DISCORD) -> TKMemoryStakeholdersDoc:
+                   channel: MEMChannels = MEMChannels.DISCORD,
+                   text_version: str = CONSENT_TEXT_VERSION) -> TKMemoryStakeholdersDoc:
     """Write the answer onto the channel body, stamping WHEN and WHICH TEXT. Fetch-or-create: a
     newcomer may answer before they have ever spoken a word (get_stakeholder owns the uid/rename
-    scheme — the consent path must not mint a second body for the same person)."""
+    scheme — the consent path must not mint a second body for the same person).
+
+    `text_version` defaults to the live text and is overridden ONLY by a grant nobody clicked
+    (CONSENT_AUTO_ADMIN) — the honesty constraint: a record must say how it came to be."""
     from lib.core.io import get_stakeholder
     body = get_stakeholder(uid, channel=channel, display_name=name)
     body.rag_consent = bool(allowed)
     body.consent_at = int(time.time())
-    body.consent_text_version = CONSENT_TEXT_VERSION
+    body.consent_text_version = text_version
     body.save()
     return body
 

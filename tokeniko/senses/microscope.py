@@ -17,6 +17,9 @@
 #     apparatus's verifier.
 #   - Opus on everything (author's economics: judge hardest while traffic is small and errors are
 #     dense). A judge failure skips the item with a log line — diagnostics never block or retry-storm.
+#   - UNJUDGEABLE ≠ UNJUDGED (2026-08-03): an item whose speaker has not consented can never be
+#     judged, so it is MARKED (verdict "skipped") and left alone rather than retried every minute.
+#     The marker is keyed by the speaker and is reversible — it lapses the moment they consent.
 #
 # Env: ANTHROPIC_API_KEY (required to run live), RAG3_DISABLED=1 (escape hatch),
 #      SENSES_RAG3_POLL (seconds between polls, default 60), RAG3_BATCH (items per poll, default 5).
@@ -29,9 +32,15 @@ from typing import Optional
 from lib.core.io import get_tokeniko
 from lib.core.models import TKMemoryItemDoc, TKZipDebugDoc
 from lib.core.tkzip import TKZip, TKZipContent
-from lib.rag import RAG3_JUDGE, rag_call
+from lib.rag import RAG3_JUDGE, consent_allows, rag_call
 
 logger = logging.getLogger("tokeniko-senses")
+
+# NOT a verdict — the marker for an item no judge could ever see (today: its speaker has not
+# allowed their words to travel). It is written so the poller stops re-asking, and it is written
+# as its own value so it can never be mistaken for a finding: every lead query reads
+# verdict == "mismatch". See _judgeable/microscope_pass for the reversal.
+SKIPPED = "skipped"
 
 # ---- the structural digest (pure) -------------------------------------------------------------
 # a deterministic, human/judge-readable rendering of the zip's SYMBOLIC content: per leaf, the
@@ -138,7 +147,9 @@ async def judge(original: str, digest: str, *, subject_uid: Optional[str],
     opens with their sentence VERBATIM. The microscope is deliberately absent from the consent
     notice — it is a debug instrument, disabled before the public opening, so it is not something
     users are asked about — but it respects the flag anyway, giving that process control a code
-    backstop. A denial skips the item exactly like a judge failure."""
+    backstop. The gate here is the BACKSTOP: the poller asks consent before it ever gets this far
+    (a denial is a permanent state, not a transient failure — see microscope_pass), so a None from
+    inside this function means the API failed and the next pass should retry."""
     user = f"SENTENCE:\n{original}\n\nDIGEST:\n{digest}"
     if glossary:
         user += ("\n\nGLOSSARY (the chosen senses' ACTUAL dictionary definitions — judge "
@@ -179,15 +190,52 @@ def pending_items(me_id: str, judged_ids: set, batch: int) -> list:
     return [i for i in items if str(i.id) not in judged_ids][:batch]
 
 
+# THE TWO FAILURES WEAR THE SAME `None` AND ARE ENTIRELY DIFFERENT ANIMALS (2026-08-03, found live
+# — «denied — no consent for 6a6a…» once a minute, forever). An API failure SHOULD retry: the next
+# pass may well succeed. A CONSENT DENIAL will not change until a human presses a button, so
+# retrying it every minute is pure waste — the queue never drains and the log fills indefinitely.
+# So the poller asks the gate ITSELF, before the call, and writes a `skipped` marker instead.
+#
+# REVERSIBLE BY CONSTRUCTION, which is the whole constraint: the marker is not a write-off, it is a
+# note of WHY, keyed by the speaker. A skip holds only while its reason holds — the day that person
+# consents the key flips and the item is back in the queue as if never touched. Nothing is lost, and
+# nothing waits on a sweep to notice. A marker whose key is MISSING holds nothing at all: it is
+# re-examined and re-written with one, rather than becoming a write-off by accident.
+def _drop_skip(item_id: str) -> None:
+    TKZipDebugDoc.find({"item_id": item_id, "verdict": SKIPPED}).delete().run()  # Bunnet: .run()
+
+
+def _skip(item, reason: str) -> None:
+    _drop_skip(str(item.id))                      # one marker per item, always the current reason
+    TKZipDebugDoc(item_id=str(item.id), original=item.original, digest="",
+                  verdict=SKIPPED, confidence=0.0, note=reason,
+                  subject_uid=item.sourceId).save()
+
+
 async def microscope_pass(client=None, batch: int = 5) -> int:
     """One poll: judge up to `batch` pending items; returns how many verdicts were written."""
     me_id = str(get_tokeniko().id)
-    judged_ids = {d.item_id for d in TKZipDebugDoc.find({}).to_list()}
+    rows = TKZipDebugDoc.find({}).to_list()
+    judged_ids = {d.item_id for d in rows if d.verdict != SKIPPED}
+    skipped = {d.item_id for d in rows if d.verdict == SKIPPED}
+    # a skipped item is out of the queue only while it is still unjudgeable — so it costs no batch
+    # slot, and needs no sweep to come back.
+    judged_ids |= {d.item_id for d in rows
+                   if d.verdict == SKIPPED and d.subject_uid and not consent_allows(d.subject_uid)}
     written = 0
     for item in pending_items(me_id, judged_ids, batch):
-        dig = digest_zip(item.zip)
         # the item's own speaker is the subject: sourceId is a stakeholder DOC id here (the other
         # currency), which the consent mirror resolves as readily as a uid.
+        if not consent_allows(item.sourceId):
+            _skip(item, "no consent from the speaker — nothing was sent, nothing was judged")
+            logger.info("[microscope] not judgeable: «%s» — no consent from %s (it returns to the "
+                        "queue the day they allow it)", item.original[:80], item.sourceId)
+            continue
+        if str(item.id) in skipped:
+            # the reason lapsed: they consented. The marker was bookkeeping, never history — the
+            # real verdict replaces it rather than sitting beside it.
+            _drop_skip(str(item.id))
+        dig = digest_zip(item.zip)
         verdict = await judge(item.original, dig, subject_uid=item.sourceId,
                               client=client, glossary=sense_glossary(item.zip))
         if verdict is None:

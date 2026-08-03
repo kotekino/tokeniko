@@ -2257,3 +2257,70 @@ SURVEY ARC IS COMPLETE)**
   1 xfailed**. Runbook: `doc/ref/deploy-body.md` (the server-side steps are the author's hand,
   including the trap that **admins bypass all channel permissions** — verifying the gate needs a
   second account with no admin and no roles).
+
+**The mention-vocative bug + three consent residuals (2026-08-03 — the first day of live consent)**
+- **THE BUG: a statement addressed to tokeniko by @-mention had its SUBJECT silently replaced by
+  tokeniko.** Found live within an hour of the consent gate going up. Four specimens, one variable:
+  `'tokeniko , the cat is a mammal'` → `([the] cat be [a] mammal)` ✓ · `'tokeniko the cat is a
+  mammal'` → `(tokeniko be [a] mammal)` ✗ · `'tokeniko il gatto è un mammifero'` → the same ✗
+  (rag4's translation was PERFECT — `normalized: 'tokeniko the cat is a mammal'`) · `'a feline is a
+  mammal'` → clean ✓. **The comma was the only difference**, and multilingual was cleared outright.
+- **The mechanism**: `social_detect` strips a leading «tokeniko» vocative only on the GREETING path;
+  a plain statement has no social head, nothing is stripped, and spaCy then reads `tokeniko the cat`
+  as ONE noun phrase headed by *tokeniko*. `@tokeniko` decodes to a bare name with no punctuation —
+  and mentioning him is the most natural way anyone addresses him, so this had been corrupting the
+  most-travelled path into his mind. **The theft took the QUANTIFIER and the MOOD too**, not just the
+  subject: `@tokeniko every bird has feathers` → `(tokeniko have feather)`, `@tokeniko what is a cat`
+  → `(be [a] cat what)`.
+- **Two things kept it from being worse, and both are the architecture working.** The logic floor
+  REFUSED the false claim rather than storing it — he answered «that does not match what I know»,
+  which is *correct reasoning on a corrupted input*; a mind that believed its input would now hold
+  "tokeniko is a mammal" from a trusted friend. And **rag3 wrote the diagnosis unprompted, in the
+  same minute, before either of the crew had looked** — hunch 11 doing exactly what it was built for.
+- **The fix (the author's ruling — option A, at the EARS)**: `_decode_mentions` restores the comma
+  after a leading mention **of his own id**. Not an inference — the wire told us the token was an
+  address, and that information existed at exactly that point and was being thrown away. Verified
+  END TO END (the compile, never the comma): `([the] cat be [a] mammal)` with `cat.n.01` and an
+  empty `identities`. Untouched by design: a mid-sentence mention, another person's mention, an
+  already-punctuated address, a bare `@tokeniko`.
+- **Scoped to HIS OWN mention by USER ID, and the officer's evidence is why** (the QM leaned wider
+  and was corrected by measurement): a blind comma trades one bug for another — `'hellen, is a
+  machine'` LOSES its subject where `'hellen is a machine'` compiles clean, and the theft never
+  happened for another name anyway (it splits into a stray leaf, not a false claim). The id match is
+  also the same signal `mentions_me` reads, and the directedness ladder ALREADY commits to reading a
+  mention of him as an address at 0.9 — so the fix is consistent with a decision the codebase had
+  made, not a new one.
+- **The trade, taken deliberately and ruled by the author**: «@tokeniko is a machine that thinks» —
+  a mention as SUBJECT — now loses its subject. Accepted because a mention *pings*, and people ping
+  when addressing rather than when discussing, and because **the two failures are not equally bad**:
+  the old one was a confident false claim about himself, silently stored; the new one is a
+  subjectless clause that grades honestly as unknown. *Trading silent corruption for honest confusion
+  is the right direction.* The POS-aware refinement is parked (→ `parked.md`) — it needs a grammar
+  check, and the adapter is deliberately dumb about language.
+- **The microscope's denial handling** (the residual its own first live hour produced): a consent
+  denial returned the same `None` as an API failure, so denied items were retried EVERY 60 SECONDS
+  FOREVER and the queue never drained. Now discriminated — an API failure retries (the next pass may
+  succeed), a denial writes a **`skipped` marker and moves on** — and the marker is REVERSIBLE
+  (keyed by `subject_uid`; it lapses if that person later consents) and never counts as a lead.
+- **The `unknown` placeholder answered with evidence, not opinion** (the QM asked, the officer
+  measured): it is not a person at all — `api/main.py`'s `talker: str = "unknown"` DEFAULT PARAMETER,
+  2 items out of 743, both the author's own manual probes. So an unidentifiable source is
+  **unjudgeable**, not *denied pending consent*, which is what the marker now records. *(The default
+  itself — a route for words to enter ungated — is parked as its own finding.)*
+- **Admin auto-consent** (the author's ruling, and he found the inconsistency in the QM's objection):
+  **admins BYPASS all channel permissions, so the `#privacy` gate structurally cannot reach them** —
+  they would sit at *unasked* forever, not because they declined but because the mechanism cannot
+  touch them. An act that cannot be forced needs another way to be expressed, so the admin grant
+  itself carries the meaning: *«our server, our rules»*. `DiscordMember.is_admin` reads the resolved
+  permission bit in the adapter (the only layer that can see it).
+- **An explicit role always WINS over the permission bit — and the officer's argument beat the QM's.**
+  The QM said "a deliberate click is a stronger signal"; the officer said the DENY role is **the only
+  way an admin can refuse at all** — there is no button for them, that is the item's premise — so if
+  the bit overrode it, *the two people who run the server would be the only two who cannot opt out*,
+  and **a consent that cannot be refused is not consent**. The bit speaks only where the roles are
+  silent (which is also where both-roles-at-once lands: the same "we could not ask" case).
+- **The honesty stamp**: an auto-grant records `consent_text_version = "auto:admin"`, never `"v1"`.
+  The ledger must not claim someone pressed a button when nobody did — *true history be it* applies
+  to consent records too, and a later reader can tell the two apart at a glance.
+- +27 tests (`test_mention_vocative.py` new, +5 microscope, +9 consent). Full gate **811 passed,
+  1 xfailed**. The diagnostic is written up in `doc/ref/test-feedback.md` with all four specimens.

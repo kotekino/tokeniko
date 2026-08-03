@@ -44,6 +44,11 @@ class DiscordMember(BaseModel):
     guild_id: str
     role_names: list[str] = []            # the member's role names, as the guild spells them
     is_self: bool = False                 # this member IS the bot (same signal as DiscordMessage.is_self)
+    # ADMINISTRATOR on the guild (privacy §1 step 3, 2026-08-03). Not a role NAME — the resolved
+    # permission bit, which only the adapter can see (discord.py folds every role's permissions
+    # together), exactly as it is for mentions_me. An admin BYPASSES channel permissions, so the
+    # #privacy gate structurally cannot reach them: senses/privacy reads this to auto-grant.
+    is_admin: bool = False
 
 
 # the outbound target. Exactly one of channel_id / user_id is set; reply_to threads the message.

@@ -169,6 +169,112 @@ def test_pass_judges_only_others_inputs_and_dedups(_io, clean_microscope, consen
     assert asyncio.run(microscope.microscope_pass(client=fake, batch=10)) == 0
 
 
+# ---- the denial is not a failure (2026-08-03) --------------------------------------------------
+# Live symptom: «[rag:rag3-judge] denied — no consent for 6a6a…» every 60 seconds, forever. The two
+# failures wore the same `None` and are entirely different animals — an API failure SHOULD retry,
+# a consent denial will not change until a human presses a button. The denial now MARKS the item
+# and moves on; the mark is keyed by the speaker so it lapses the day they consent.
+
+@pytest.fixture()
+def silent_speaker(_io):
+    """A stakeholder who has NOT consented — the mirror armed, the answer absent."""
+    from lib.core.consent import install_consent_reader
+    from lib.core.memory import MEMChannels
+    from lib.core.models import TKMemoryStakeholdersDoc
+    from lib.rag import set_consent_reader
+    uid = "rag3-silenzioso@discord:7002"
+    TKMemoryStakeholdersDoc.get_motor_collection().delete_many({"uid": uid})
+    sh = TKMemoryStakeholdersDoc(uid=uid, name="rag3-silenzioso", isMe=False,
+                                 channel=MEMChannels.DISCORD, contextKey="discord:7002").save()
+    install_consent_reader()
+    yield sh
+    set_consent_reader(None)
+    TKMemoryStakeholdersDoc.get_motor_collection().delete_many({"uid": uid})
+
+
+class _ExplodingClient:
+    """Reaching the wire at all is the failure — a denied item must never get that far."""
+    class _Messages:
+        async def create(self, **kwargs):
+            raise AssertionError("a denied item reached the judge — THE GATE LEAKED")
+
+    def __init__(self):
+        self.messages = self._Messages()
+
+
+def test_a_denied_item_is_marked_unjudgeable_and_never_retried(_io, clean_microscope, silent_speaker):
+    from lib.core.models import TKZipDebugDoc
+    item = _mk_item("rag3-test a coin has value", str(silent_speaker.id))
+
+    assert asyncio.run(microscope.microscope_pass(client=_ExplodingClient(), batch=10)) == 0
+    rows = TKZipDebugDoc.find({"original": {"$regex": "^rag3-test"}}).to_list()
+    assert len(rows) == 1
+    row = rows[0]
+    assert row.verdict == microscope.SKIPPED       # NOT a verdict — no judge ever saw it
+    assert row.item_id == str(item.id)
+    assert row.subject_uid == str(silent_speaker.id)   # the key the reversal reads
+    assert row.digest == "" and row.note                # nothing was shown; the why is recorded
+
+    # the point of the marker: the next pass does not ask again, and writes nothing further.
+    assert asyncio.run(microscope.microscope_pass(client=_ExplodingClient(), batch=10)) == 0
+    assert len(TKZipDebugDoc.find({"original": {"$regex": "^rag3-test"}}).to_list()) == 1
+
+
+def test_a_skip_is_never_counted_as_a_lead(_io, clean_microscope, silent_speaker):
+    # every lead query reads verdict == "mismatch"; an unjudgeable item must never appear in one.
+    from lib.core.models import TKZipDebugDoc
+    _mk_item("rag3-test a coin has value", str(silent_speaker.id))
+    asyncio.run(microscope.microscope_pass(client=_ExplodingClient(), batch=10))
+    leads = TKZipDebugDoc.find({"original": {"$regex": "^rag3-test"},
+                                "verdict": "mismatch"}).to_list()
+    assert leads == []
+
+
+def test_the_skip_lapses_the_day_the_speaker_consents(_io, clean_microscope, silent_speaker):
+    """REVERSIBLE, which is the whole constraint — a skip is a note of WHY, not a write-off."""
+    from lib.core.consent import record_consent
+    from lib.core.models import TKZipDebugDoc
+    item = _mk_item("rag3-test a coin has value", str(silent_speaker.id))
+    asyncio.run(microscope.microscope_pass(client=_ExplodingClient(), batch=10))
+    assert TKZipDebugDoc.find({"item_id": str(item.id)}).to_list()[0].verdict == microscope.SKIPPED
+
+    record_consent(silent_speaker.uid, True, name="rag3-silenzioso")
+    fake = _FakeClient(text=json.dumps(dict(_GOOD, verdict="ok", severity=None, category=None)))
+    assert asyncio.run(microscope.microscope_pass(client=fake, batch=10)) == 1
+
+    rows = TKZipDebugDoc.find({"item_id": str(item.id)}).to_list()
+    assert len(rows) == 1                          # the marker was bookkeeping — replaced, not kept
+    assert rows[0].verdict == "ok" and rows[0].digest
+
+
+def test_an_api_failure_still_retries(_io, clean_microscope, consenting_speaker):
+    # the other half of the distinction: a transient failure leaves the item UNJUDGED, and the next
+    # pass tries again. Nothing is marked, because nothing is known to be impossible.
+    from lib.core.models import TKZipDebugDoc
+    _mk_item("rag3-test a coin has value", str(consenting_speaker.id))
+    broken = _FakeClient(exc=RuntimeError("api down"))
+    assert asyncio.run(microscope.microscope_pass(client=broken, batch=10)) == 0
+    assert TKZipDebugDoc.find({"original": {"$regex": "^rag3-test"}}).to_list() == []
+
+    fake = _FakeClient(text=json.dumps(dict(_GOOD, verdict="ok", severity=None, category=None)))
+    assert asyncio.run(microscope.microscope_pass(client=fake, batch=10)) == 1
+
+
+def test_a_skipped_item_costs_no_batch_slot(_io, clean_microscope, silent_speaker,
+                                            consenting_speaker):
+    # a permanently-unjudgeable item must not sit at the head of the queue eating the batch: with
+    # batch=1 the judgeable item behind it is still reached on the very next pass.
+    from lib.core.models import TKZipDebugDoc
+    _mk_item("rag3-test unjudgeable", str(silent_speaker.id))
+    good = _mk_item("rag3-test a coin has value", str(consenting_speaker.id))
+    fake = _FakeClient(text=json.dumps(dict(_GOOD, verdict="ok", severity=None, category=None)))
+
+    assert asyncio.run(microscope.microscope_pass(client=fake, batch=1)) == 0   # the skip is written
+    assert asyncio.run(microscope.microscope_pass(client=fake, batch=1)) == 1   # and stands aside
+    judged = TKZipDebugDoc.find({"item_id": str(good.id)}).to_list()
+    assert len(judged) == 1 and judged[0].verdict == "ok"
+
+
 def test_judge_maps_sentinels_to_none():
     # the schema carries no null unions (the API rejects enum-vs-type-array) — "none"/"" come back
     # as sentinels and must land as real Nones in the entry
