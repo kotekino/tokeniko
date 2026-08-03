@@ -3,6 +3,63 @@
 > Deliberately deferred — good ideas and known gaps that are **not** the current focus. Moved out of
 > `roadmap.md` so the road ahead stays clean. Promote an item back to `roadmap.md` Next when its time
 > comes. The active road is `roadmap.md`; history is `landed.md`.
+>
+> **`→ tk2` tags (2026-08-03).** An item tagged `→ tk2` is parked for a *structural* reason, not a
+> scheduling one: the layer it touches is marked **rebuild** in the inheritance ledger
+> (`doc/tk2/README.md` §5), so building it in v1 means building it twice. These do **not** get
+> promoted back here when "their time comes" — their time comes inside the blueprint. The status
+> lives in this file; the design reasoning lives in **`doc/tk2/carried-in.md`** (reference, exempt
+> from the status invariants — a pointer, never a copy).
+
+---
+
+## → tk2 — carried into the blueprint (moved off `roadmap.md` 2026-08-03)
+
+**TKZip binary compaction + the zip-native renderer** `→ tk2` — the zip becomes an actual packed
+vector; the JSON is the human projection. **The author's own worked example of the filter**: the
+format changes substantially in tk2, so this is optimization of a thing being replaced — partial
+reuse at best, significant overhead certainly. **Its dependent, per-conjunct KNOWLEDGE** (the
+AND-split's deferred half, 2026-07-24) travels with it: the teach path mints from `item.original`
+(the WHOLE sentence), so a conjunct cannot be learned alone until a renderer can produce that
+conjunct's own surface text. Splitting speech is safe; splitting knowledge on a guessed string is
+not. *(Note for the blueprint: tk2 answers this differently — open question 9, "fixed arity is a
+property of the schema, not of the storage".)*
+
+**Restricted-universal residuals** (Brain v1.1 2c) `→ tk2` — relative-clause restriction ("all
+machines THAT THINK are minds") + object-side modifiers ("an ARTIFICIAL body"); the basket's trailer
+(indirect roles + markers as chainer fuel) travels with it. **This IS the binder problem** —
+blueprint open question 6. A restricted universal needs a variable bound across atoms with a
+quantifier scoping over both; v1 can only approximate it with hardwired special cases, and tk2
+dissolves it structurally.
+
+**Conditional reasoning / premise-in-question (R4b)** `→ tk2` — "given P, is Q?": the
+co-submitted-premise discriminator then hypothetical premise USE. The *logic* transfers; the
+evaluator implementation does not (evaluator grounding is `rebuild`). Recorded as a **capability
+requirement** for the blueprint's capability inventory (hunch 21 step 4) rather than as v1 work.
+
+**Questions follow-ups** `→ tk2` — imperatives (the `imperative` scalar: a mood field on the zip =
+format), wh when/how solving (evaluator), multi-clause/embedded questions («Do you know why…» =
+format + evaluator). **And "real self-knowledge for how do you feel?" is hunch 20** — situational
+awareness — which is already investigation order #3 in the blueprint. The whole entry sits in
+rebuilt layers.
+
+**Etiquette — the DISPATCH half** (hunch 8) `→ tk2` — the thinking-reaction → idea → reflex chain
+that makes «hello John» stop being evaluated as an assertion. **This is limit A in miniature**:
+hardwiring which reaction follows which trigger is exactly what tk2 turns into revisable KB. *(The
+curation half — the scaffold rows — stayed on the road: `roadmap.md` tail #5.)*
+
+**D-phase realtime enhancements** `→ tk2` — cross-speaker patterns, inference-implied conflicts, the
+full working-memory consumer set on top of the landed context ring (`brain/context.py`). State-layer
+work, and the state layer is what limit A is actually waiting on (blueprint §6.3, hunch 20).
+*(Ingestion-time differentia was split out and stayed on the road: `roadmap.md` tail #3.)*
+
+**The third memory tier — EVENT vs general knowledge** `→ tk2` — episodic event vs timeless theorem,
+the missing middle tier (author-ruled 2026-07-21, all design reasoning deferred until approached).
+**A data-model question**, therefore a blueprint question: deciding it inside v1's format would be
+deciding it twice. It also converges with hunch 20's event-magnitude work (an event is a delta in
+the SA matrix; a fact is a payload), which is where it should be designed. Holding ruling unchanged:
+moment-anchored claims stay events — remembered, not believed. Candidate anchors + the live specimen
+→ `doc/ref/notes.md`.
 
 ---
 
@@ -48,8 +105,10 @@ substantially grow the enriched-soak fuel. Promote when the parser voice signal 
 **Performance (optimize-later)** — the fingerprint KB cache (`_kb_cache`) landed, but every
 materialized theorem changes the fingerprint → the next tick still pays a FULL reload (3233
 definition zips, tens of seconds) — an incremental/delta reload would cut soak tick cost ~10x.
-Dual `en_core_web_lg` load (`parser.nlp` + `c_state.nlp`) → consolidate. *(TKZip binary
-compaction was promoted OUT of here 2026-07-14 — roadmap strengthening-tail #1, author's call.)*
+Dual `en_core_web_lg` load (`parser.nlp` + `c_state.nlp`) → consolidate. *(TKZip binary compaction
+left here for the roadmap 2026-07-14 and RETURNED 2026-08-03 under the tk2 filter — it now lives in
+the `→ tk2` section at the top of this file. The delta-reload half stayed on the road as
+strengthening-tail #6: instrument fitness, not tuning.)*
 
 **WSD (deeper refinements)** — contextual WSD for ambiguous heads; co-predication hint (prefer
 attribute-sharing adjective senses); graded attribute-contrariety (no crisp `antonym` edge).
@@ -65,7 +124,11 @@ support ("to err is human"); negative-quantifier subject rewrite ("nobody").
 **Evaluator** — geometric negation-awareness in `compareContent`; quantifier effect on the *geometric*
 grounding; axiom/theorem `≡1` tautology creation guard; intrinsic comparison grounding (eq/noteq);
 trust-weighted grounding + conflict arbitration; defeasibility of biological universals (crisp `all`
-over-asserts — penguins don't fly).
+over-asserts — penguins don't fly). *(2026-08-03: the **geometry-coupled** half of this list is
+effectively `→ tk2` — `evaluator comparison/grounding` is `rebuild` in the ledger, so refining how
+today's role tensors compare is refining a thing being replaced. The **logic-level** items —
+tautology guard, trust-weighted arbitration, defeasible universals — are engine questions that
+survive any format and stay honestly parked here.)*
 
 **Cleanup / misc** — 1b **verbs** (the "means"-frame drags a spurious predicate); legacy `axioms` /
 `names` collection cleanup; `@-1,0,0` spacetime artifact; t-norm / implication choice (Gödel vs
@@ -116,6 +179,6 @@ about well-trusted beliefs sounding oddly unsure).
 
 **The ears' semantic floor — small invention-within-balloon (2026-07-24, the strong-verifier build's finding)** — the additive sound-only semantic centroid is weak when a small fluent invention rides beside true content: «a cat is a mammal → …and pigs fly» measures ~0.97 (+1 leaf) / ~0.86 (+2), because the shared content dominates the sum, so the floor does not catch it — that class stays guarded by the existing +2 balloon cap and the structural key-match, NOT the geometry. An honest limit, not a regression. The cut if it ever bites live: a PER-ADDED-LEAF semantic check (each ballooned leaf must itself be close to some original leaf), rather than the whole-zip centroid. Promote only if a real live polish sneaks a small invention past the cap.
 
-**The sentence tag-vector — a per-zip aboutness centroid (2026-07-25, the author's brainstorm)** — a 2925-dim centroid computed AT INGESTION over a zip (and over each KB doc: axioms/definitions/theorems), stored + Mongo-indexed for native `$vectorSearch`. NOT meaning and NOT a duplication of the zip: it is the zip's CLASSIFICATION — an *aboutness TAG* (the author's framing), a first-class derived artifact used only as such (possibly wrong, never authoritative). By construction it discards all logical structure — operators, negation, quantifier, role-order, spacetime — so "a cat is a mammal" and "a mammal is a cat" tag alike, and antonyms (love/hate ≈ 0.86 in this dictionary) don't separate: FENCED to retrieval / association / recall, NEVER grounding or truth (geometry doesn't vote on is_a, nor here). **Consumers it folds:** the anecdote's "by the way, this reminds me…" (today an in-memory centroid scan — this is literally the promotion of its own parked "`$vectorSearch` becomes right when the KB grows" note), semantic recall/search over memory + KB, clustering, a public "what this belief is about" surface. **Reuse map (unify, don't reinvent):** `e_label.evaluator_assignWord` already does centroid→nearest-dictionary-word via `$vectorSearch` (the tag EXTRACTOR — top-N nouns from the centroid); `context.topic_centroid` + the anecdote's per-doc cached centroids; `_semantic_centroid` (normalizer, sound-only); the `vector_index` already exists for senses. **The weighting is the whole game (its own design session):** role weights à la `e_label` (noun-heavy; subject+predicate over indirects), drop operators/negation/quantifier (aboutness, not meaning), how much the predicate verb counts; a bad formula makes every stored tag subtly useless and expensive to recompute KB-wide. **Discipline:** version the formula + recompute on change (the `recompile.py` precedent), the zip stays the source of truth. **Promote when** a concrete consumer needs it OR the KB outgrows the in-memory centroid scan (the laptop-ceiling trigger) — design now, build on first real need.
+**The sentence tag-vector — a per-zip aboutness centroid (2026-07-25, the author's brainstorm)** `→ tk2 (design)` *(2026-08-03: the weighting formula reads OFF the zip's roles, so it must be designed against tk2's fixed-arity schema — where it gets easier, not harder: uniform slots make a role-weighted centroid a matrix operation rather than a traversal. Design it in the blueprint; the consumers listed below are unaffected.)* — a 2925-dim centroid computed AT INGESTION over a zip (and over each KB doc: axioms/definitions/theorems), stored + Mongo-indexed for native `$vectorSearch`. NOT meaning and NOT a duplication of the zip: it is the zip's CLASSIFICATION — an *aboutness TAG* (the author's framing), a first-class derived artifact used only as such (possibly wrong, never authoritative). By construction it discards all logical structure — operators, negation, quantifier, role-order, spacetime — so "a cat is a mammal" and "a mammal is a cat" tag alike, and antonyms (love/hate ≈ 0.86 in this dictionary) don't separate: FENCED to retrieval / association / recall, NEVER grounding or truth (geometry doesn't vote on is_a, nor here). **Consumers it folds:** the anecdote's "by the way, this reminds me…" (today an in-memory centroid scan — this is literally the promotion of its own parked "`$vectorSearch` becomes right when the KB grows" note), semantic recall/search over memory + KB, clustering, a public "what this belief is about" surface. **Reuse map (unify, don't reinvent):** `e_label.evaluator_assignWord` already does centroid→nearest-dictionary-word via `$vectorSearch` (the tag EXTRACTOR — top-N nouns from the centroid); `context.topic_centroid` + the anecdote's per-doc cached centroids; `_semantic_centroid` (normalizer, sound-only); the `vector_index` already exists for senses. **The weighting is the whole game (its own design session):** role weights à la `e_label` (noun-heavy; subject+predicate over indirects), drop operators/negation/quantifier (aboutness, not meaning), how much the predicate verb counts; a bad formula makes every stored tag subtly useless and expensive to recompute KB-wide. **Discipline:** version the formula + recompute on change (the `recompile.py` precedent), the zip stays the source of truth. **Promote when** a concrete consumer needs it OR the KB outgrows the in-memory centroid scan (the laptop-ceiling trigger) — design now, build on first real need.
 
 **LEARNING a voice in the speaker's own language (2026-07-26 — the author's idea; its CURATED half LANDED the same day, see `landed.md`)** — the machinery (`MEMScaffold.lang`, the per-language shelf gate, the fallback chain, the carrier no-op) and 232 curated it/es/fr/de rows are BUILT. What stays parked is the LEARNING half: the convergence with the accommodation (2026-07-24) — tokeniko picking up native phrasings directly from what a person actually says in their own tongue, so his Italian register becomes THEIRS rather than our curation. **The blocking coupling, confirmed from both sides**: `brain/mimicry.py` mints `template = item.original` VERBATIM, and on a translated turn `original` is the SOURCE language while the matched zip is English — so a mint would drop an unlabelled Italian row into the English shelf. The step-2 FENCE (a translated turn mints nothing) holds that shut today. **The honest minimum when the fence is lifted**: stamp the row's language from the item's `source_lang` (the officer's finding — without it, `mimic_observe` seeds unlabelled foreign strings at the `lang="english"` default), and let the existing shelf gate do the rest — it already filters by language and the carrier already skips a native row. **The fuller prize**: per-language mimic shelves consolidated in sleep like any other, so his Italian voice GROWS from Italian conversation instead of being written for him. Promote when the curated voice has lived a while.

@@ -8,6 +8,17 @@
 
 Legend: 🔄 in progress · 🔭 next · ✅ done  ·  *(done → `landed.md` · parked → `parked.md`)*
 
+> **⚠️ THE tk2 FILTER (author's ruling, 2026-08-03) — read before adding anything here.** Since
+> `doc/tk2/` opened, this road is filtered by ONE criterion: **work that builds an ASSET migrates to
+> tokeniko 2; work that builds MACHINERY gets rebuilt there.** Assets = the dictionary, curated
+> senses/scaffolds, the KB, the anchors, findings, tests. Machinery = anything coupled to the TKZip
+> format or to hardwired behaviour (the two limits — `doc/tk2/README.md` §1). Before an item enters
+> this file, run it through the inheritance ledger (`doc/tk2/README.md` §5): if the layer it touches
+> is marked *rebuild*, it belongs in `parked.md` tagged `→ tk2`, not here. **v1 is NOT frozen** — it
+> remains the empirical instrument, and work that keeps it fit for that job (or that produces
+> findings) stays on the road even when it looks like tuning. The carried-in reasoning, per item, is
+> `doc/tk2/carried-in.md`.
+
 ---
 
 ## ✅ Landed arcs — pointers only (full detail in `landed.md`; no status lives here)
@@ -125,7 +136,7 @@ in build order:
      in a room. Bluesky is OUT (public by nature — the expectation was settled by the act of posting).
      The legal text is ENGLISH ONLY and frozen; the native admission covers the non-English arrival.
 
-### 2. The fresh microscope analysis pass 🔭
+### 2. The fresh microscope analysis pass 🔭 — PROMOTED by the tk2 filter
 
 The `addressed` flip (2026-07-17) sealed the analyzed generations; the fresh corpus = the
 2026-07-17 play + premiere + the day's new instruments (incl. the ears' own `ears-hallucination`
@@ -133,58 +144,57 @@ rejection leads), judged on current code. **The analysis pass itself is the rema
 previously-known leads are all closed (→ `landed.md`; the identity-blindness audit map stays in
 `doc/ref/notes.md`).
 
-### 4. The strengthening tail — make the brain stronger before adding senses 🔭
+**Why it rose rather than fell (2026-08-03):** its output is FINDINGS, and findings are exactly what
+tk2's format must be designed against — every case where the pipeline mis-reads a real sentence is
+evidence about the fixed-arity schema's required coverage. It is the big brother of the blueprint's
+fifty-sentence drill (`doc/tk2/README.md` §6.1): the drill is fifty sentences we choose, this is
+every sentence he has actually heard. **Triage the leads under the filter** — a lead in an
+inherited layer (parser, anchors, WSD, dictionary) is fixable now; a lead in a rebuilt layer
+(zip shape, evaluator geometry) is recorded as a tk2 requirement, not patched.
 
-Parked-but-matured, ordered with the author ("make the brain stronger with all the other points"
-before ADDING another sense — so ATProto/Bluesky deliberately STAYS parked behind this whole tail).
-One line each; design detail in `git` history / `doc/ref/captain-hunches.md`.
+### 4. The strengthening tail — FILTERED 2026-08-03 🔭
 
-1. **TKZip binary compaction + the zip-native renderer** (author-promoted above bsky): the zip
-   becomes an actual packed vector — fixed-size role tensors + the operator tree pack to near-pure
-   numbers; the JSON is the human projection. Design ONCE with the wire format (pairs with
-   zip-native derivation). **Its dependent: per-conjunct KNOWLEDGE** (the AND-split's deferred
-   half, 2026-07-24) — the teach path / theorem materialization / observation record mint from
-   `item.original` (the WHOLE sentence), so a conjunct can't be learned alone until a zip-native
-   renderer can produce that conjunct's own surface text. Splitting speech is safe; splitting
-   knowledge on a guessed string is not — promote when the renderer exists.
-2. **Anchor adoption audit** (hunch 4): consumer BYPASSES routed through the resolver
+Ordered with the author ("make the brain stronger with all the other points" before ADDING another
+sense — so ATProto/Bluesky deliberately STAYS parked behind this whole tail). **Seven of the eleven
+original entries left this list under the tk2 filter** (→ `parked.md`, tagged `→ tk2`; the reasoning
+is `doc/tk2/carried-in.md`). What remains is, without exception, **asset work** — the dictionary, the
+KB, the anchors, the curated voice — which is precisely the layer tk2 inherits untouched. That the
+filter partitioned the tail exactly along the inheritance ledger's line, without being aimed at it,
+is the strongest evidence the criterion is sound.
+
+1. **Anchor adoption audit** (hunch 4): consumer BYPASSES routed through the resolver
    (`compiler_implicationOperands` exact-checks `_IMPLICATION_VERBS`; `_SUBJECT_CONTROL_VERBS`) +
    the EXACT-membership mop-up + floor calibration + KB vector-coverage gaps (`hugely`, `unequal`,
-   `dissimilar`). Closed-class function words stay EXACT by design.
-3. **Restricted-universal residuals** (Brain v1.1 2c): relative-clause restriction ("all machines
-   THAT THINK are minds") + object-side modifiers ("an ARTIFICIAL body"). M6's companion; the
-   basket's deferred trailer — **indirect roles + markers as chainer fuel** (M5's orbit) — lives
-   here too.
-4. **Conditional reasoning / premise-in-question (R4b)**: "given P, is Q?" — the co-submitted-premise
-   discriminator (the floor fix) then hypothetical premise USE; pairs with the landed
-   conditional-rule extractor.
-5. **Questions follow-ups**: imperatives (the `imperative` scalar); wh when/how solving; real
-   self-knowledge for "how do you feel?"; multi-clause/embedded questions («Do you know why…»).
-6. **Vocabulary growth** (hunches 1+2): OOV → a staging TKDictionary entry + the typo-ALIAS table +
+   `dissimilar`). Closed-class function words stay EXACT by design. *(Survives: the anchor resolver
+   is `inherit` in the ledger — untouched by the format change.)*
+2. **Vocabulary growth** (hunches 1+2): OOV → a staging TKDictionary entry + the typo-ALIAS table +
    definitional triangulation (a trusted definition's zip matched against known definitions → a graded
-   link at the definition's trust, never a hard `=`).
-7. **Etiquette layer** (hunch 8): greetings/thanks/formality as ACTIONS — a thinking reaction → idea →
-   the proper reflex («hello John» stops being evaluated as an assertion).
-8. **KB growing OUTWARD** (tier-1 synthetic learning): learned axioms vs derived theorems — the
-   analytic/synthetic cut; design + open forks in `doc/ref/kb-growing-outward.md`.
-9. **D-phase enhancements + ingestion-time differentia**: cross-speaker patterns, inference-implied
-   conflicts, the working-memory layer (its SEED — the context ring — LANDED with compose slice 5,
-   `brain/context.py`; this item is the full realtime consumer set on top of it); differentia
-   extraction wired at definition INGESTION.
-10. **KB-load big-O honesty** (left by the 2026-07-16 wondering-freeze fix): the harness KB load
-    pulls ALL definitions (~1.2 GB of all-gloss zips) and re-pulls on EVERY fingerprint bump — i.e.
-    after each materialized theorem — blocking the tick for its duration (it gates thinking too, not
-    just wondering). Delta-load, or trim the load to what the evaluator actually reads; pair with
-    watermark-gating kb_wonder's re-saturation (the noted future optimization in `thinking.py`).
-11. **The third memory tier — EVENT vs general knowledge** (author-ruled 2026-07-21; all design
-    reasoning DEFERRED until this item is approached): episodic event vs timeless theorem — the
-    missing middle tier. Holding ruling: moment-anchored claims stay events (remembered, not
-    believed). Candidate anchors + the live specimen → `doc/ref/notes.md` (the third-tier note).
-    A full design session when its time comes — not before.
+   link at the definition's trust, never a hard `=`). *(Survives: it grows the DICTIONARY — the
+   crown-jewel asset, `inherit untouched`. Every row minted here crosses the bridge.)*
+3. **Ingestion-time differentia**: differentia extraction wired at definition INGESTION. *(Survives:
+   it enriches the KB. Split from the old #9 — its D-phase realtime half went `→ tk2`.)*
+4. **KB growing OUTWARD** (tier-1 synthetic learning): learned axioms vs derived theorems — the
+   analytic/synthetic cut; design + open forks in `doc/ref/kb-growing-outward.md`. *(Survives: KB
+   layer. The largest survivor — worth its own scoping session before it starts.)*
+5. **Etiquette — the CURATION half only** (hunch 8): the greeting/thanks/formality **scaffold rows**,
+   curated per category like any other shelf. *(Split: scaffolds are `inherit`. The other half — the
+   thinking-reaction → idea → reflex DISPATCH — is limit A itself and went `→ tk2`. Curated rows are
+   cheap and permanent; a hardwired reflex chain is exactly what tk2 dissolves.)*
+6. **KB-load big-O honesty** (left by the 2026-07-16 wondering-freeze fix): the harness KB load
+   pulls ALL definitions (~1.2 GB of all-gloss zips) and re-pulls on EVERY fingerprint bump — i.e.
+   after each materialized theorem — blocking the tick for its duration (it gates thinking too, not
+   just wondering). Delta-load, or trim the load to what the evaluator actually reads; pair with
+   watermark-gating kb_wonder's re-saturation (the noted future optimization in `thinking.py`).
+   *(Survives a filter that reads it as "tuning": it is **instrument fitness**. v1's job is now to
+   produce findings, and a loop that stalls on every materialized theorem produces fewer of them.
+   Do the cheap half — the delta-load — not a rewrite.)*
 
 ### Pending follow-ons — tails left by the landed arcs (surface when their time comes) 🔭
 
-Gathered so nothing is lost; each waits on its parent feature's next season.
+Gathered so nothing is lost; each waits on its parent feature's next season. **These are deliberately
+left unfiltered** — each is small and conditional, and the honest moment to run it through the
+inheritance ledger is when its parent's season actually arrives, not now. One known casualty already
+visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2` when it surfaces.
 - **Blog**: `life:learned` / `life:discussion` triggers *(the consensus-over-the-polisher itself
   → §1)*.
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
@@ -212,6 +222,10 @@ Gathered so nothing is lost; each waits on its parent feature's next season.
 - **`doc/roadmap.md`** — *(this)* the road ahead: in-progress + ordered next. Nothing landed, nothing parked.
 - **`doc/landed.md`** — what's done (the history).
 - **`doc/parked.md`** — the icebox (deferred ideas + known gaps).
+
+**The tk2 conception (`doc/tk2/` — reference material, NOT status; nothing here ever enters a status doc):**
+- **`doc/tk2/README.md`** — step 0: the plan for how to plan. The two limits, the continuity contract, the governing decisions, the **inheritance ledger** (§5 — the filter's authority), the investigation order, the open questions, the success criteria.
+- **`doc/tk2/carried-in.md`** — the per-item reasoning for everything the filter moved off this road.
 
 **Reference docs (`doc/ref/` — extended context per task + future-reference material; NOT status):**
 - **`doc/ref/brain-v1.1.md`** — the Brain v1.1 **vision + design** (the Unified-KB reframe: everything-is-reasoned-over-TKZip, write-path invariant, universal gate, trust-by-source; + the #1–#6 findings). The conceptual center.
