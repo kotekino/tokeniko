@@ -1,6 +1,7 @@
 import asyncio
 from collections import Counter
 import json
+from typing import Optional
 from lib.core.tk import TKOperator
 from lib.core.tkllc import TKLLC, TKLLCContent, TKLLEntity, TKLLEntityReference, LLCItemPayload
 from ollama import AsyncClient as OllamaClient
@@ -152,9 +153,16 @@ def decompiler_raw(tkLLC: TKLLC) -> str:
 # the system prompt (operator rules mirroring decompiler_raw_op's labels) + model live in the
 # lib/rag registry (RAG2_DECOMPILE); rag_call is graceful by contract, json_envelope unwraps the
 # prompt-instructed {'translation': ...} object — any failure returns the raw render unchanged.
-async def decompiler_decompile(tokens: str) -> str:
+async def decompiler_decompile(tokens: str, *, subject_uid: Optional[str]) -> str:
+    # `subject_uid` (privacy §1 step 3) — AUDITED, and the two consumers answer differently, which
+    # is exactly why the argument has no default. `/input?output=1` hands this the raw render of the
+    # SPEAKER's just-compiled sentence: a symbolic rendering of someone's own words is close enough
+    # to verbatim to gate, so that caller passes the talker. `/output?tokens=` is a bare debug
+    # surface over an arbitrary raw TKLL string with no subject in scope — its caller declares one
+    # explicitly (an optional `talker` query param) or declares None. A denial is the graceful
+    # fallback this function already had: the raw render returns unchanged.
     from lib.rag import RAG2_DECOMPILE, json_envelope, rag_call
-    text = await rag_call(RAG2_DECOMPILE, f"Input: '{tokens}'")
+    text = await rag_call(RAG2_DECOMPILE, f"Input: '{tokens}'", subject_uid=subject_uid)
     data = json_envelope(text)
     if not data:
         return tokens

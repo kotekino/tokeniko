@@ -8,6 +8,7 @@ import os
 import signal
 import sys
 from dotenv import load_dotenv
+from lib.core.consent import install_consent_reader
 from lib.core.io import init_io
 from senses.inbound import handle_discord_message
 from senses.outbound import outbound_executor_task
@@ -65,6 +66,11 @@ async def main():
     #    No spaCy/Stanza pipeline: the brain compiled the input; senses only DECOMPILES the reply.
     db, db_memory, ai_client = init_io()
 
+    # THE CONSENT GATE (privacy §1 step 3): the outbound voice, the localizer and the microscope all
+    # send someone's words, so senses arms the gate exactly like the api does. Before this call the
+    # default reader denies everything — deliberately: an unwired process must be silent, not leaky.
+    install_consent_reader()
+
     # 2. Graceful Shutdown
     loop = asyncio.get_running_loop()
     stop_event = asyncio.Event()
@@ -84,7 +90,14 @@ async def main():
     token = os.getenv("DISCORD_TOKEN")
     if token:
         from lib.discord.client import DiscordClient  # import here: discord.py only when actually used
+        from senses.privacy import consent_setup_hook, register_consent_events
         discord_client = DiscordClient(token)
+        # the setup_hook re-registers the PERSISTENT #privacy view (privacy §1 step 3) and launches
+        # the roster sweep. It must be installed BEFORE start(): discord.py awaits it at the end of
+        # login(), before the gateway connects. Registering the view in on_ready instead fails
+        # SILENTLY — the buttons of the already-posted notice stop answering after every restart.
+        discord_client.set_setup_hook(consent_setup_hook(discord_client))
+        register_consent_events(discord_client)
         sender = make_discord_sender(discord_client)
     else:
         logger.warning("💬 Discord interface idle — no DISCORD_TOKEN in env")

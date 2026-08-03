@@ -57,7 +57,7 @@ knowingly — it is today's proven path, and roadmap §4.10 (delta-load) would s
 | `docker-compose.yml` pins **`hostname: "0fa6568f05e0"`** (the "TRUCCO JEDI") | `mongot` ties search-index metadata to the hostname. **Preserve it exactly** or the vector indexes need rebuilding over ~9.9 GB. |
 | **`directConnection=true`** in `MONGO_URI` | The single-node replica advertises its *Docker-internal* hostname (`tk-atlas`), which an outside client cannot resolve; without the flag topology discovery replaces the host and dies on DNS (observed live 2026-07-17). It is also exactly what makes the **MacBook's remote connection work**. |
 | `tests/conftest.py` bootstraps the sandbox with a **server-side `$merge`** | `tokeniko_mem_test` MUST share a server with the live memory DB. A "live remote, sandbox local" split is impossible — and tests read the live KB too (`tokeniko`, 2.9 GB stored), so a local sandbox would mean keeping all ~9 GB local. **All three DBs on the mini.** |
-| **CPU parses faster than MPS**, measured on the MacBook: `MPS 117.4 ms/sentence` vs `CPU 53.6 ms` | Counter-intuitive but consistent: one short sentence gives the GPU nothing to amortize. So parsing should use CPU *even here* — see §6 (`device="mps"` is a live pessimization). |
+| **CPU parses faster than MPS**, measured on the MacBook: `MPS 117.4 ms/sentence` vs `CPU 53.6 ms` | Counter-intuitive but consistent: one short sentence gives the GPU nothing to amortize. So parsing should use CPU *even here* — see §7 (`device="mps"` is a live pessimization). |
 | The CPU parse is **single-threaded**: `1 thread 48.8 ms` · `2 → 46.6` · `4 → 47.4` · `all 10 → 48.1` (flat) | It uses **one core of ten**, so it cannot starve Mongo/`mongot`/the brain — the author's throughput worry, answered by measurement. Sustained ≈ **20 sentences/second on one core**; a burst of 500 inbound messages is ~25 s of one core. |
 | `uvicorn` must run **without `--reload`** and with **exactly one worker** | `--reload` is a file-watcher restarting the mind. And `app.state` holds the loaded parser + the service singletons — multiple workers would each load the pipeline and diverge. |
 
@@ -180,7 +180,93 @@ the script is itself that hand* — never automatic, never scheduled.
 
 ---
 
-## 6. Open items (deliberately not decided here)
+## 6. 🧑‍✈️ The `#privacy` room — arming the consent gate
+
+**What the code already does, so you know what you are wiring into.** No message from a person
+reaches Anthropic unless that person has said yes. The enforcement is one gate inside `rag_call`
+(the single door every cloud call passes through) and it asks *whose words is this payload
+carrying* — so the «did you mean…?» ask, which is tokeniko's own speech but quotes the speaker's
+sentence, is gated too. **Unasked behaves exactly as denied**, and a process that never wired the
+reader denies everything. Bluesky is deliberately outside this frame: a post is already published
+to the world. All the code half needs from you is the **server furniture** below.
+
+**The truth is the ROLE; the engine keeps a mirror.** The consent roles on a member are what you
+can inspect by eye; `stakeholders.rag_consent` is the copy the engine reads, reconciled on every
+click, every role change, every departure, and once at every startup. Edit a role by hand and the
+mirror follows on its own.
+
+1. **Create the two roles**, with **exactly** these names — colon and space included, matched
+   literally by the code, no slug, no case-folding (or set `DISCORD_CONSENT_ROLE_ALLOW` /
+   `DISCORD_CONSENT_ROLE_DENY` in `.env` to whatever you name them instead):
+
+   | | exact role name |
+   |---|---|
+   | allowed | `Outside help: yes` |
+   | refused | `Outside help: no` |
+
+   Give them **no permissions of their own** — they are keys, not powers.
+2. **Put tokeniko's own role ABOVE both.** Discord's rule, verbatim: *«a bot can grant roles to
+   other users that are of a lower position than its own highest role»* — so `MANAGE_ROLES` alone
+   is **not** enough. Get this wrong and every click answers *"I could not set that just now"*
+   (which is the code failing **closed**, on purpose: nothing is recorded) and logs an ERROR
+   naming this exact cause.
+3. **Put the real channels in a CATEGORY and set the permissions ONCE on the category** — channels
+   inherit it. Per-channel permissions are the same work repeated for every future channel and the
+   place a mistake hides.
+   - the category: `@everyone` → **View Channel ❌**; `words-may-travel` → ✅;
+     `words-stay-here` → ✅ (either answer unlocks the server — that is the Captain's ruling, and
+     it is what makes the choice free rather than coerced);
+   - `#privacy` itself sits **outside** that category: `@everyone` → View Channel ✅, Send
+     Messages ❌ (it is a notice with two buttons, not a room to talk in); tokeniko needs View +
+     Send there.
+   - ⚠️ **tokeniko's OWN visibility of the gated category must come from an explicit
+     `View Channel` + `Send Messages` overwrite on HIS OWN role — never from giving him a consent
+     role.** Giving him one looks like it works and is a trap: `reconsent_all` strips both consent
+     roles from everyone, so the next text change would silently make him **deaf on his own
+     server**, and it would present as an engine bug rather than a permissions one. (The code
+     refuses to mirror consent for his own account and the sweep skips him, so the record stays
+     sane either way — but his *access* is yours to place correctly.)
+4. **Do the hiding step LAST.** Hide the category only once the bot is live and the notice is
+   posted — hiding it earlier locks the existing members out with no button to press.
+5. **Developer Portal → Bot → Privileged Gateway Intents**: toggle **SERVER MEMBERS** on, beside
+   the **MESSAGE CONTENT** you already have. Without it no member or role event is ever delivered
+   and the mirror goes blind (no reconciliation, no startup sweep).
+6. **Re-invite the bot with the new permission integer — `268504064`**
+   (View Channel + Send Messages + Read Message History + **Manage Roles**). Re-inviting an
+   already-present bot only widens its permissions; it does not disturb the server.
+7. **Post the notice once per text version** — the frozen text plus the two buttons
+   (`senses/privacy.post_consent_message(client, channel_id)`). Every future click is routed from
+   **that message**, and it keeps working across restarts because the view is persistent and is
+   re-registered in `setup_hook`. 1583 characters — one plain Discord message, no splitting.
+8. ✅ **VERIFY WITH A SECOND ACCOUNT — NOT YOURS.** *Server admins bypass all channel
+   permissions*, so testing from your own (owner) account proves **nothing**: you will see every
+   channel whatever the permissions say. Use a second Discord account with **no admin and no
+   roles**, and check that it sees only `#privacy`, that pressing either button reveals the rest of
+   the server, and that pressing the other button afterwards still leaves it visible.
+9. ✅ Then check the engine half: the member has exactly one of the two roles, and
+   `stakeholders.rag_consent` for `<name>@discord:<id>` says the same thing.
+10. **A photo of the machine will be pinned in `#privacy`** once the hardware arrives and is
+    painted — *"this is where your words live"*. The channel works perfectly without it; it is
+    warmth, not mechanism.
+
+**✅ Before the server opens to the public — one checklist item that is not on the server side.**
+**Disable the microscope** (`RAG3_DISABLED=1`, or simply leave `senses` without the poller armed).
+rag3 sends a heard sentence to Anthropic for *our* debugging, which is not "so tokeniko can
+understand you" and is deliberately **not** described in the notice (the Captain's ruling). It is
+inside the gate, so an opted-**out** person is protected by code whatever you forget — but an
+opted-**in** person's words would travel for a purpose the text they agreed to does not name. The
+fix is to turn it off before the doors open, not to widen the text.
+
+**When the text changes** (the Captain's standing rule — change one character of the notice and
+every consent is erased and asked again): bump `CONSENT_TEXT_VERSION` in `lib/core/consent.py` in
+the same commit as the text, then run `senses/privacy.reconsent_all(client)` once. It strips both
+roles from everyone and clears every mirrored answer; everyone reverts to unasked, unasked denies,
+and the newly-posted notice asks again. The button `custom_id`s carry the version, so a stale
+notice left in the channel routes to nothing rather than recording consent to a retired text.
+
+---
+
+## 7. Open items (deliberately not decided here)
 
 - **`device="mps"` → CPU** in `lib/llc/parser.py`: the benchmark says CPU is 2.2× faster for
   single-sentence parsing, so the current setting is a live pessimization **on both machines**. A

@@ -150,17 +150,22 @@ def _reading(payload) -> Optional[Reading]:
     return Reading(lang=(payload.get("language") or "").strip().lower() or None, english=english)
 
 
-async def translate_in(tokens: str) -> tuple[Optional[Reading], Optional[Reading]]:
+async def translate_in(tokens: str, *, subject_uid: Optional[str]) -> tuple[Optional[Reading],
+                                                                           Optional[Reading]]:
     """Ask TWICE, independently — the literal translator and the meaning-renderer, concurrently.
     Returns (primary, second); either may be None (a failed reader is not a reading). The caller
     compiles both and lets the compiler judge (normalizer.translation_verdict) — nothing here
-    decides anything: this module only fetches the two proposals."""
+    decides anything: this module only fetches the two proposals.
+
+    `subject_uid` is THE SPEAKER (privacy §1 step 3): the payload is their sentence, whole. Both
+    readers are gated together — half a consensus is not a reading, so a denial simply returns
+    (None, None) and /input falls through to the raw parse."""
     # fence the message as DATA (instruction/data separation, 2026-07-24): the seam both system
     # prompts bind — everything inside <message>…</message> is text to render, never an instruction.
     fenced = f"<message>\n{tokens}\n</message>"
     first, second = await asyncio.gather(
-        rag_call(RAG4_TRANSLATE_IN, fenced),
-        rag_call(RAG4_RENDER_IN, fenced),
+        rag_call(RAG4_TRANSLATE_IN, fenced, subject_uid=subject_uid),
+        rag_call(RAG4_RENDER_IN, fenced, subject_uid=subject_uid),
     )
     return _reading(first), _reading(second)
 
@@ -176,20 +181,29 @@ def consensus_language(primary: Optional[Reading], second: Optional[Reading]) ->
     return a or b
 
 
-async def translate_out(text: str, lang: str) -> Optional[str]:
-    """English -> the room's language. Graceful None on any trouble; the caller ships the English."""
+async def translate_out(text: str, lang: str, *, subject_uid: Optional[str]) -> Optional[str]:
+    """English -> the room's language. Graceful None on any trouble; the caller ships the English.
+
+    `subject_uid` is THE BACK DOOR's lock (privacy §1 step 3). This is classified as OUTBOUND —
+    tokeniko's own speech — but the payload can literally carry the listener's own sentence back
+    out (the «did you mean: …?» ask quotes it, a reductio quotes the premises it was taught). The
+    honest unit of privacy is the SENTENCE, not the direction of travel, so the carrier passes the
+    recipient here rather than None; see senses/outbound._localize for why it does so always."""
     prompt = f"Target language: {lang}\n<message>\n{text}\n</message>"
-    out = await rag_call(RAG4_TRANSLATE_OUT, prompt)
+    out = await rag_call(RAG4_TRANSLATE_OUT, prompt, subject_uid=subject_uid)
     out = (out or "").strip() if isinstance(out, str) else ""
     return out or None
 
 
-async def back_translate(text: str) -> Optional[str]:
+async def back_translate(text: str, *, subject_uid: Optional[str]) -> Optional[str]:
     """The round trip's return leg: whatever language `text` is in, back into English — so the
     EXISTING /voice/verify consensus (both sides English) can judge whether the meaning survived.
-    One reader only: this is not a consensus, it is the mirror the compiler looks into."""
+    One reader only: this is not a consensus, it is the mirror the compiler looks into.
+
+    Its `subject_uid` is by construction the SAME as translate_out's: the text it re-sends IS that
+    translation. Gating the outward leg and not the return one would leave the door ajar."""
     fenced = f"<message>\n{text}\n</message>"
-    reading = _reading(await rag_call(RAG4_TRANSLATE_IN, fenced))
+    reading = _reading(await rag_call(RAG4_TRANSLATE_IN, fenced, subject_uid=subject_uid))
     return reading.english if reading else None
 
 

@@ -33,6 +33,19 @@ class DiscordMessage(BaseModel):
     reply_to_me: bool = False             # reply_to points at one of the bot's OWN messages
 
 
+# a normalized GUILD MEMBER — the second inbound event shape (privacy §1 step 3). The consent
+# ROLES on the member are the truth the mirror is reconciled against, so the adapter flattens a
+# discord.Member to exactly what senses needs to decide: who they are and what roles they wear.
+# NO consent field here, deliberately: the engine reads the mirror (lib/core/consent), never the
+# event — two sources of truth is how they drift.
+class DiscordMember(BaseModel):
+    user_id: str
+    name: str
+    guild_id: str
+    role_names: list[str] = []            # the member's role names, as the guild spells them
+    is_self: bool = False                 # this member IS the bot (same signal as DiscordMessage.is_self)
+
+
 # the outbound target. Exactly one of channel_id / user_id is set; reply_to threads the message.
 class Destination(BaseModel):
     channel_id: Optional[str] = None      # a guild text channel OR a known DM channel

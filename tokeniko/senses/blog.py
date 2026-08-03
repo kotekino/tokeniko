@@ -523,7 +523,17 @@ async def polish(draft: PostDraft, client=None) -> tuple[dict, bool]:
     always meaning-true line by line."""
     raw_lines = list(draft.facts) + list(draft.proof)  # the alignment baseline (facts, then proof)
     try:
-        data = await rag_call(BLOG_POLISH, _polish_user_prompt(draft), client=client)
+        # `subject_uid=None` — tokeniko's own content (privacy §1 step 3). AUDITED 2026-07-29 and
+        # NOT a clean None: the derivative line is «verbatim never leaves; ideas tokeniko formed
+        # are his own», and a TAUGHT theorem's `original` is the teacher's own sentence carried
+        # into the draft's lead fact line (deixis-normalized + soul names scrubbed to epithets by
+        # _clean, but their words in substance). Same for a dream/retreat line that retracts a
+        # taught belief. The DM gate keeps private lessons out (postable=not _is_dm) and the
+        # scrubber keeps names out, so nothing here is attributable — but "not attributable" is
+        # not "not theirs". Surfaced to the crew rather than decided here: a draft carrying a
+        # taught line is the Captain's call, and changing this is one kwarg.
+        data = await rag_call(BLOG_POLISH, _polish_user_prompt(draft), subject_uid=None,
+                              client=client)
         if data is None:
             raise ValueError("rag call failed — see the [rag:blog-polish] log line")
         # client-side validation (the schema can't carry length constraints): keys present,

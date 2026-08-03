@@ -128,15 +128,22 @@ def sense_glossary(zp: TKZip) -> str:
         return ""
 
 
-async def judge(original: str, digest: str, client=None, glossary: str = "") -> Optional[dict]:
+async def judge(original: str, digest: str, *, subject_uid: Optional[str],
+                client=None, glossary: str = "") -> Optional[dict]:
     """One judged verdict for (sentence, digest), or None on ANY failure (logged, never raised).
 
-    A None simply skips the item this pass — the microscope is diagnostics, never a blocker."""
+    A None simply skips the item this pass — the microscope is diagnostics, never a blocker.
+
+    `subject_uid` is THE SPEAKER (privacy §1 step 3, the Captain's ruling 2026-07-29): the payload
+    opens with their sentence VERBATIM. The microscope is deliberately absent from the consent
+    notice — it is a debug instrument, disabled before the public opening, so it is not something
+    users are asked about — but it respects the flag anyway, giving that process control a code
+    backstop. A denial skips the item exactly like a judge failure."""
     user = f"SENTENCE:\n{original}\n\nDIGEST:\n{digest}"
     if glossary:
         user += ("\n\nGLOSSARY (the chosen senses' ACTUAL dictionary definitions — judge "
                  f"sense fidelity against THESE, never your recall):\n{glossary}")
-    data = await rag_call(RAG3_JUDGE, user, client=client)
+    data = await rag_call(RAG3_JUDGE, user, subject_uid=subject_uid, client=client)
     if data is None:
         return None  # API/JSON failure — already logged as [rag:rag3-judge]
     try:
@@ -179,7 +186,10 @@ async def microscope_pass(client=None, batch: int = 5) -> int:
     written = 0
     for item in pending_items(me_id, judged_ids, batch):
         dig = digest_zip(item.zip)
-        verdict = await judge(item.original, dig, client=client, glossary=sense_glossary(item.zip))
+        # the item's own speaker is the subject: sourceId is a stakeholder DOC id here (the other
+        # currency), which the consent mirror resolves as readily as a uid.
+        verdict = await judge(item.original, dig, subject_uid=item.sourceId,
+                              client=client, glossary=sense_glossary(item.zip))
         if verdict is None:
             continue  # judge failure: leave unjudged, the next pass retries
         TKZipDebugDoc(item_id=str(item.id), original=item.original, digest=dig,

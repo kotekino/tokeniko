@@ -10,16 +10,24 @@
 # It knows NOTHING about the brain: no memory, no MEMAction, no stakeholder/contextKey, no NL polish.
 # senses owns the translation to/from tokeniko's world; the adapter only moves bytes and normalizes them.
 
+import logging
 import re
 from typing import Awaitable, Callable, Optional
 
 import discord
 
 from lib.discord.constants import default_intents
-from lib.discord.models import DiscordAttachment, DiscordMessage, Destination
+from lib.discord.models import DiscordAttachment, DiscordMember, DiscordMessage, Destination
+
+logger = logging.getLogger("tokeniko-senses")
 
 # the inbound callback signature senses registers.
 MessageHandler = Callable[[DiscordMessage], Awaitable[None]]
+# the MEMBER callbacks (privacy §1 step 3): a role change and a departure, both normalized.
+MemberHandler = Callable[[DiscordMember], Awaitable[None]]
+# the startup hook, run by discord.py AFTER login and BEFORE the gateway connects — the only place
+# a persistent view may be re-registered (see senses/privacy.py).
+SetupHook = Callable[[], Awaitable[None]]
 
 # Discord user-mention wire tokens: <@id> and the legacy nickname form <@!id>.
 _MENTION_RE = re.compile(r"<@!?(\d+)>")
@@ -39,8 +47,18 @@ class DiscordClient:
     def __init__(self, token: str):
         self._token = token
         self._handler: Optional[MessageHandler] = None
+        self._member_update: Optional[MemberHandler] = None
+        self._member_remove: Optional[MemberHandler] = None
         self._client = discord.Client(intents=default_intents())
         self._register_events()
+
+    # discord.py awaits `self.setup_hook()` at the end of login(): assigning it on the instance is
+    # the seam a directly-constructed Client otherwise lacks. It is where a PERSISTENT view must be
+    # re-registered — after login, before the gateway connects — and doing that in on_ready instead
+    # fails SILENTLY (the buttons of an already-posted message simply stop responding after a
+    # restart). Set it before start(); a hook installed after login has already been missed.
+    def set_setup_hook(self, hook: SetupHook) -> None:
+        self._client.setup_hook = hook
 
     # --- seam: inbound ------------------------------------------------------
 
@@ -49,11 +67,40 @@ class DiscordClient:
     def on_message(self, handler: MessageHandler) -> None:
         self._handler = handler
 
+    # register the handlers fed a normalized member when their roles/profile change, and when they
+    # leave the guild (privacy §1 step 3 — the consent mirror reconciles off both).
+    def on_member_update(self, handler: MemberHandler) -> None:
+        self._member_update = handler
+
+    def on_member_remove(self, handler: MemberHandler) -> None:
+        self._member_remove = handler
+
     def _register_events(self) -> None:
         @self._client.event
         async def on_message(message: discord.Message):
             if self._handler is not None:
                 await self._handler(self._to_message(message))
+
+        @self._client.event
+        async def on_member_update(before: discord.Member, after: discord.Member):
+            # the event payload CARRIES the roles array — no fetch needed, no rate-limit cost.
+            if self._member_update is not None:
+                await self._member_update(self._to_member(after))
+
+        @self._client.event
+        async def on_member_remove(member: discord.Member):
+            if self._member_remove is not None:
+                await self._member_remove(self._to_member(member))
+
+    def _to_member(self, m) -> DiscordMember:
+        me = self._client.user
+        return DiscordMember(
+            user_id=str(m.id),
+            name=m.name,
+            guild_id=str(m.guild.id) if getattr(m, "guild", None) is not None else "",
+            role_names=[r.name for r in getattr(m, "roles", [])],
+            is_self=bool(me is not None and m.id == me.id),
+        )
 
     def _to_message(self, m: discord.Message) -> DiscordMessage:
         guild_id = str(m.guild.id) if m.guild is not None else None
@@ -148,6 +195,52 @@ class DiscordClient:
         if after is not None:
             kwargs["after"] = discord.Object(id=int(after))
         return [self._to_message(m) async for m in channel.history(**kwargs)]
+
+    # --- seam: persistent components + the member roster --------------------
+
+    # re-register a PERSISTENT view (timeout=None, every component carrying an explicit custom_id)
+    # so clicks on a message posted by a previous run are still routed after a restart. discord.py
+    # raises ValueError if the view is not persistent — a loud failure, and the right one.
+    def add_view(self, view) -> None:
+        self._client.add_view(view)
+
+    # every cached guild member, normalized — the source of the consent mirror's startup sweep.
+    # Requires the privileged `members` intent (constants.default_intents) AND a connected gateway:
+    # the member cache is filled at READY, so callers await wait_until_ready() first.
+    def members(self) -> list[DiscordMember]:
+        return [self._to_member(m) for g in self._client.guilds for m in g.members]
+
+    async def wait_until_ready(self) -> None:
+        await self._client.wait_until_ready()
+
+    # remove the named roles from EVERY member of every guild — the server half of the re-consent
+    # sweep (privacy §1 step 3: change the text, ask everyone again). Returns how many members were
+    # actually stripped; a Forbidden on one member is logged and skipped, never fatal.
+    async def strip_roles_from_all(self, role_names: list[str], *, reason: str = "") -> int:
+        wanted = set(role_names)
+        me = self._client.user
+        touched = 0
+        for guild in self._client.guilds:
+            roles = [r for r in guild.roles if r.name in wanted]
+            if not roles:
+                continue
+            for member in guild.members:
+                # NEVER strip the bot's own account. If tokeniko's channel access ever leant on one
+                # of these roles, a text-version change would silently make him DEAF on his own
+                # server — and it would present as an engine bug, not a permissions one.
+                if me is not None and member.id == me.id:
+                    continue
+                held = [r for r in roles if r in member.roles]
+                if not held:
+                    continue
+                try:
+                    await member.remove_roles(*held, reason=reason or None)
+                    touched += 1
+                except discord.Forbidden:
+                    logger.error("[discord] cannot strip %s from %s — tokeniko's role must sit "
+                                 "ABOVE those roles in the server's role order",
+                                 [r.name for r in held], member.name)
+        return touched
 
     # --- lifecycle ----------------------------------------------------------
 

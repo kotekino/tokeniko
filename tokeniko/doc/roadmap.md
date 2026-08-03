@@ -71,70 +71,44 @@ status detail — it references, it does not duplicate (invariant #2).
   ears' strong verifier, the hallucination chain closed (+ the wh-escalation residuals, 07-25) ·
   pronoun momentum («you» resolves where directedness points) · the AND-split (per-conjunct
   reactions).
+- **§1 — the per-user context + multilingual + consent** (2026-07-25 → 08-03) — the room + the «did
+  you mean?» ask + the answer binding · multilingual (two-reader consensus judged by the compiler) ·
+  the native voice (232 curated rows) · **the consent gate** (Route C + the payload gate at
+  `rag_call`). **The chapter is WHOLE** *(its multilingual residuals → §1 below)*.
 
 ---
 
-## 🔭 Next (ordered) — reprioritized 2026-07-25
+## 🔭 Next (ordered) — refiltered 2026-08-03
 
-**The through-line: THE VOICE IS WHOLE and THE EARS ARE WALLED (compose 2.0 complete; the ears'
-hallucination chain closed WITH its wh residuals).** The road ahead opens the next chapter — §1
-**the per-user conversational context + multilingual** (the author is the first non-English friend;
-the translator apparatus becomes core, not deferred) — then §2 the fresh microscope analysis pass,
-then §4 the strengthening tail.
+**The through-line: THE VOICE IS WHOLE, THE EARS ARE WALLED, AND THE DOOR IS GATED.** §1 closed
+2026-08-03 with the consent gate — tokeniko can now be spoken to by someone who is not the author,
+in their own language, with their own ruling on where their words may travel. The road ahead is
+**§2 the fresh microscope analysis pass** (promoted: its findings feed both v1 and the tk2 blueprint)
+then **§4 the strengthening tail**, now filtered to asset work only (see the tk2 filter above).
 
-### 1. The per-user conversational context + multilingual (the translator apparatus, reframed 2026-07-25) 🔭
+### 1. Multilingual residuals — the tail of a CLOSED chapter 🔭
 
-The author IS the first non-English friend (Italian native) — so multilingual is the CENTRE, not the
-icebox. The chapter's spine, designed 2026-07-25: a **per-`(user,channel)` conversational-context**
-room we don't yet hold first-class (scattered precedents: the reductio ledger, the open-why
-derivation, the per-channel RAM ring — none unify per-user state). A REFERENCE model (the author's
-"partial A"): a small Mongo doc per pair storing light state that REFERENCES timeseries items by id
-(no zip duplication, one read per tick, matches `MEMReductio`/trust-episode precedent). Its tenants,
-in build order:
+*(§1 — the per-user conversational context + multilingual + the consent gate — is **WHOLE**: steps 1
+(the room + the ask), 1b (the answer binding), 2 (multilingual), 2b (the native voice) and 3 (the
+consent gate) all LANDED → `landed.md`. Only the multilingual build's own residuals remain, and they
+wait on a live season rather than on work.)*
 
-1. *(1a — the room + the "did you mean?" ASK: LANDED 2026-07-25 → `landed.md`. The room
-   (`MEMExchange`), the two-tier floor (`verifier_verdict` ACCEPT/ASK/DISCARD), `suggested_reading`,
-   the `reply_tempo` EMA, and the ask are built.)*
-   - *(1b — the ANSWER binding: LANDED 2026-07-25 → `landed.md`. The pending lifecycle
-     (affirmation→re-ingest-as-confirmed, negation→drop, restatement→supersede, silence→lapse) +
-     the multilingual yes/no anchor. **§1's first brick — room + ask + answer — is WHOLE.**)*
-2. *(Multilingual — the room's second tenant: LANDED 2026-07-26 → `landed.md`. Consensus of two
-   independent readers judged by the compiler (ACCEPT/ASK/admit-and-DISCARD), the local
-   skeleton detector, the round-trip-verified outbound, the admission voice, the mimicry fence.)*
-   - *(2b — THE NATIVE VOICE (multilingual scaffolds): LANDED 2026-07-26 → `landed.md`. Promoted
-     from parked by the live Italian test the same day — right verdicts, wrong language. `lang` on
-     the scaffold row + the shelf gate + the fallback chain + the carrier no-op; 232 curated rows
-     across it/es/fr/de, slot-less v1 fence.)*
-   - 🔭 **Its residuals** (surfaced by the build, awaiting a live season): the detector's thin 0.05
-     margins + the fully-misspelled-English blind spot (env-tunable; watch live) · the DM fallback
-     destination carries no `channel_id`, so an action resolved via `contextKey` alone cannot key a
-     room and ships English (real Discord traffic always carries coords) · the consensus cannot
-     catch a mistranslation BOTH readers share (same model family — a second family would be the
-     cut if it ever bites) · the REDUCT cannot be natively composed (no source item at plan time ⇒
-     no room key; it composes English and takes the carrier's round trip) · when the mimicry fence
-     is lifted, `mimic_observe` must stamp the source language onto the row or it seeds unlabelled
-     foreign strings into the English shelf · the slotted 10 categories still compose English +
-     translator (the mixed curated-frame/English-slot problem is its own design session).
-3. 🔭 **The privacy/legal frame (last — it is a CONSENT prompt over the two above)** — a user joining
-   is prompted: allow your prompts to be sent to the cloud translator apparatus (third-party
-   Anthropic + the legal terms)? YES → translation + greater understanding + reply-in-your-language;
-   NO → a per-stakeholder OPT-OUT flag, and the rags are NEVER called for that user's sentences (DM
-   or channel). The general switch (`RAG1_DISABLED`) already exists. The MICROSCOPE is out of the
-   NOTICE but INSIDE the gate (author, 2026-07-29): a debug instrument, not described to users and
-   DISABLED before the public opening — but it still respects the flag, so the process control has a
-   code backstop. Output-to-cloud stays by-design ("showing how a young new being learns; everyone
-   can benefit").
-   - **DESIGN SETTLED 2026-07-29 — briefed, not yet built** (`.claude/briefs/2026-07-29-consent-gate.md`):
-     **Route C**, a gated `#privacy` channel — a newcomer sees only it, two buttons, EITHER answer
-     unlocks the server (consent mandated at joining, delivered by server furniture, not by tokeniko
-     asking; rag1 fires on any stumbling parse, so consent cannot be just-in-time). Enforcement is a
-     **payload gate**: `subject_uid` required on `rag_call` — "whose words am I about to send?", not
-     "which instrument is this?" — which catches the «did you mean…?» back door, where an *outbound*
-     payload carries the user's own sentence. Three layers: Discord role (where the decision lives) →
-     `MEMStakeholder` mirror (what the engine reads, self-healing on startup) → the `rag_call` choke
-     point (where it bites). Consent does NOT resolve through `canonical_uid` — it is an act performed
-     in a room. Bluesky is OUT (public by nature — the expectation was settled by the act of posting).
-     The legal text is ENGLISH ONLY and frozen; the native admission covers the non-English arrival.
+🔭 **The residuals** (surfaced by the 2026-07-26 build, awaiting live evidence): the detector's thin
+0.05 margins + the fully-misspelled-English blind spot (env-tunable; watch live) · the DM fallback
+destination carries no `channel_id`, so an action resolved via `contextKey` alone cannot key a room
+and ships English (real Discord traffic always carries coords) · the consensus cannot catch a
+mistranslation BOTH readers share (same model family — a second family would be the cut if it ever
+bites) · the REDUCT cannot be natively composed (no source item at plan time ⇒ no room key; it
+composes English and takes the carrier's round trip) · when the mimicry fence is lifted,
+`mimic_observe` must stamp the source language onto the row or it seeds unlabelled foreign strings
+into the English shelf · the slotted 10 categories still compose English + translator (the mixed
+curated-frame/English-slot problem is its own design session).
+
+**Left by the consent build (2026-08-03), waiting on the room rather than on code:** the notice must
+be POSTED once into `#privacy` (a one-time operation, `senses/privacy.post_consent_message`) and the
+gate must be verified from an account that is **not** an admin — admins bypass all channel
+permissions, so testing from the owner account proves nothing. Both are the author's hand; the
+runbook carries them (`doc/ref/deploy-body.md`).
 
 ### 2. The fresh microscope analysis pass 🔭 — PROMOTED by the tk2 filter
 

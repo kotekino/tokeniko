@@ -46,10 +46,10 @@ case required. **The honest unit of privacy is the sentence, not the direction o
   it nearly free (§4).
 - **The legal text is ENGLISH ONLY**, now and for any future legal document. One authoritative text
   means no translation discrepancy. Do NOT curate `#privacy` scaffolds in other languages.
-- **The microscope is out of the NOTICE** — a debug instrument, disabled before the public opening,
-  so it is not described to users. **QM's reading, flagged to him: out of the notice is not out of
-  the gate.** Build it gated (§5, row 7) — it costs one kwarg and gives the process control a code
-  backstop. If he overrules, the change is deleting one argument.
+- **The microscope is out of the NOTICE but INSIDE the gate.** RULED by the Captain 2026-07-29,
+  confirming the QM's reading: it is a debug instrument, disabled before the public opening, and so
+  it is not described to users — but it still respects the flag, giving that process control a code
+  backstop. Build it gated (§5, row 7). Not an open question.
 
 ## Build
 

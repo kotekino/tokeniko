@@ -350,11 +350,14 @@ def verifier_voice(raw_zip, polished_zip) -> tuple[bool, str]:
 # ---- the NORMALIZER call (rag1-in — surface only) --------------------------------------------------
 # the system prompt + model live in the lib/rag registry (RAG1_NORMALIZER); rag_call is graceful by
 # contract (API down / auth / anything -> None, logged) — the raw parse stands.
-async def normalizer_polish(tokens: str) -> Optional[str]:
+async def normalizer_polish(tokens: str, *, subject_uid: Optional[str]) -> Optional[str]:
+    # `subject_uid` is THE SPEAKER (privacy §1 step 3) — the payload is their raw sentence. rag1 is
+    # WHY consent could not be a just-in-time offer at the moment translation would help: it fires
+    # on any STUMBLING parse, so a native English speaker with typos touches the cloud too.
     # fence the message as DATA (instruction/data separation, 2026-07-24): the seam the system prompt
     # binds — everything inside <message>…</message> is text to tidy, never an instruction to Haiku.
     fenced = f"<message>\n{tokens}\n</message>"
-    text = await rag_call(RAG1_NORMALIZER, fenced)
+    text = await rag_call(RAG1_NORMALIZER, fenced, subject_uid=subject_uid)
     if not text or text == tokens.strip():
         return None
     return text

@@ -51,6 +51,20 @@ class MEMStakeholder(BaseModel):
     # canonical stakeholder ("kotekino@discord:…" -> "kotekino"); trust reads/writes resolve
     # through it (one ledger per soul, many channel bodies). One hop, never chained.
     canonical_uid: Optional[str] = None
+    # --- the CONSENT MIRROR (privacy §1 step 3, 2026-07-29) ---
+    # May this person's OWN WORDS be sent to the cloud (Anthropic) so tokeniko can understand them?
+    # The truth lives in the room — the Discord consent roles — and this is its MIRROR, reconciled
+    # from the roles by senses/privacy.py. Three states, two of them identical at the gate:
+    # None = never asked, False = refused; BOTH deny (nothing leaks in the window between someone's
+    # first word and their answer). Read by lib/rag/client.rag_call through the injected reader.
+    #
+    # DELIBERATELY NOT RESOLVED THROUGH `canonical_uid` — and this is the one asymmetry with the
+    # trust ledger above, so do not "fix" it: trust is an opinion about a SOUL and rightly unifies
+    # a soul's channel bodies; consent is an ACT PERFORMED IN A ROOM, and agreeing on Discord is
+    # not agreeing on Bluesky or at the API. Each channel body answers for itself.
+    rag_consent: Optional[bool] = None
+    consent_at: Optional[int] = None                  # epoch seconds of the answer (None = unasked)
+    consent_text_version: Optional[str] = None        # WHICH text they agreed to (lib/core/consent)
 
 
 # a TRUST EPISODE — one entry in the permanent per-stakeholder trail (the ledger's source of

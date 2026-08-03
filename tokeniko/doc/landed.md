@@ -2185,3 +2185,75 @@ SURVEY ARC IS COMPLETE)**
   carrier's round trip) · when the mimicry fence is lifted, `mimic_observe` MUST stamp the source
   language or it will seed unlabelled foreign strings into the English shelf. +17 tests. Full gate
   **759 passed, 1 xfailed**.
+
+**§1 step 3 — THE CONSENT GATE (2026-07-29 designed, 2026-08-03 built — the chapter's last brick; §1 is WHOLE)**
+- **The first design in tokeniko whose constraint is ETHICAL rather than logical or geometric**:
+  before a stranger's words may reach a third party, that stranger must have said yes.
+- **Route C — a gated `#privacy` channel** (the author's ruling, after Rules Screening and Discord
+  Onboarding were both argued and rejected). A newcomer sees ONLY `#privacy`; two buttons; **either
+  answer unlocks the server.** Consent is mandated at joining and delivered by *server furniture*,
+  not by tokeniko asking — because **rag1 fires on ANY stumbling parse**, so a native English
+  speaker with typos touches the cloud too, and a just-in-time offer at the moment translation
+  would help was never a real trigger. Rules Screening can only express accept-or-leave (both
+  answers must be valid); Onboarding needs Community enablement and **cannot re-ask existing
+  members**, which collides with «change the text → erase every consent».
+- **Enforcement is a PAYLOAD gate at the one choke point.** `subject_uid` is REQUIRED on `rag_call`
+  with **no default** — the leak-proof property expressed in the signature rather than in a comment:
+  a future instrument cannot be added without its author consciously deciding whose words it
+  carries. The question is not «which instrument is this?» but **«whose words am I about to
+  send?»** — and that framing catches the back door a direction-based rule misses: **the «did you
+  mean…?» ask is classified OUTBOUND yet its payload carries the speaker's own sentence back out.**
+  The honest unit of privacy is the SENTENCE, not the direction of travel.
+- **Three layers, each doing one job**: the Discord role (where the decision lives, user-visible and
+  user-changeable) → the `MEMStakeholder` mirror (what the engine reads — and what makes DMs work at
+  all, since a role is a *guild* property and a DM payload has no guild in it) → `rag_call` (where it
+  bites). The mirror is **self-healing**: a startup sweep reconciles it against the real roles, so a
+  hand-edited role, a missed event, or a restart-window gap repairs itself.
+- **Unasked ≡ denied** (the author's ruling): nothing leaks in the window between someone's first
+  word and their answer. The injected reader's **default denies everything**, and a reader that
+  *raises* denies too — an unwired or broken process is a silent process, never a leaking one.
+- **Consent does NOT resolve through `canonical_uid`** — the one deliberate asymmetry with the trust
+  ledger, recorded in the model comment so it is not "fixed": trust is an opinion about a SOUL and
+  rightly unifies a soul's channel bodies; consent is an ACT PERFORMED IN A ROOM. Leaving the room
+  withdraws it (the record stays — what goes is permission, not history).
+- **Bluesky is OUT of the frame** (the author's ruling, better than the QM's lean): a post is
+  *already published to the world* and we are one reader among thousands — the expectation of
+  privacy was settled by the act of posting. A closed Discord room is the opposite.
+- **The text is ENGLISH ONLY and frozen** (a test pins it, so a future edit fails loudly). One
+  authoritative text = no translation discrepancy. The gap closes itself: an opted-out non-English
+  speaker gets the **curated native admission** — local detector, curated shelf, zero cloud calls —
+  telling them plainly they are not understood, in their own language.
+- **«Allow the translator» → «Allow outside help»** (the author caught it): the consent covers TWO
+  phases, rag1's typo-tidying as well as rag4's translation, so the label named only half of what
+  travels. Both labels name a GAIN, and the pair now sits on one axis — *outside* vs *here*.
+- **The microscope is out of the NOTICE but INSIDE the gate** — a debug instrument, disabled before
+  the public opening and so not described to users, but it respects the flag anyway: a code backstop
+  under a process control.
+- **The audit's honest findings** (three call sites were briefed as *investigations*, and two came
+  back differing from the QM's guess): `/output` has no subject of its own, so it now lets the caller
+  DECLARE one (`?talker=`), while `/input?output=1` gates on the speaker — one function, two
+  consumers, different answers, which is why the argument has no default. The **blog polish** is
+  `subject_uid=None` per the author's ruling («output-to-cloud stays by design»), but the officer
+  surfaced that a TAUGHT theorem's `original` is the teacher's own sentence carried into the draft's
+  lead fact line — deixis-normalized, names scrubbed, DMs excluded, so nothing is attributable, but
+  *"not attributable is not not-theirs"*. Ruled: **leave as is** — the notice already says his
+  published thoughts are his own, and a scrubbed normalized derivation genuinely is one.
+- **The outbound carrier gates on the RECIPIENT for every cloud call it makes**, not per-scaffold:
+  several composed replies embed the listener's words (the ask, a reductio's quoted premises, an
+  anecdote), and auditing every slot of every shelf row would leave a new quoting scaffold free to
+  re-open the door. Over-gating costs a localized reply; under-gating costs the design.
+- **The persistent-view trap, closed**: `timeout=None` + a version-stamped `custom_id` on every
+  component + registration in **`setup_hook`** (the adapter gained that seam — it constructed
+  `discord.Client` directly). The first two fail loudly; the third fails SILENTLY, so it has its own
+  test. Version-stamped ids mean a stale v1 message routes to nothing rather than recording consent
+  to a retired text.
+- **Two live findings from the author configuring the server**, both now guarded in code: tokeniko's
+  own account is **never mirrored** (he had briefly been given the consent roles for channel
+  visibility — and `reconsent_all` strips both roles from every member, which would have made him
+  DEAF on his own server, presenting as an engine bug); and **both roles at once is not an answer**
+  (it reads None, and None denies) rather than an invented tiebreak.
+- +25 tests (the brief asked for 11), including **the signature itself as a test** — `subject_uid` is
+  asserted keyword-only with no default, so nobody can quietly add one later. Full gate **784 passed,
+  1 xfailed**. Runbook: `doc/ref/deploy-body.md` (the server-side steps are the author's hand,
+  including the trap that **admins bypass all channel permissions** — verifying the gate needs a
+  second account with no admin and no roles).

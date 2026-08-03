@@ -38,7 +38,7 @@ class _FakeClient:
 
 def test_text_spec_returns_stripped_text_and_carries_the_spec():
     client = _FakeClient(text="  tidied sentence.  ")
-    out = asyncio.run(rag_call(RAG1_NORMALIZER, "some inptu", client=client))
+    out = asyncio.run(rag_call(RAG1_NORMALIZER, "some inptu", subject_uid=None, client=client))
     assert out == "tidied sentence."
     call = client.messages.calls[0]
     assert call["model"] == RAG1_NORMALIZER.model
@@ -51,16 +51,16 @@ def test_text_spec_returns_stripped_text_and_carries_the_spec():
 def test_schema_spec_returns_parsed_dict_with_output_config():
     payload = {"verdict": "ok", "confidence": 0.9, "severity": "none", "category": "none", "note": ""}
     client = _FakeClient(text=json.dumps(payload))
-    out = asyncio.run(rag_call(RAG3_JUDGE, "SENTENCE:\n...", client=client))
+    out = asyncio.run(rag_call(RAG3_JUDGE, "SENTENCE:\n...", subject_uid=None, client=client))
     assert out == payload
     call = client.messages.calls[0]
     assert call["output_config"]["format"]["schema"] is RAG3_JUDGE.schema
 
 
 def test_failure_returns_none_never_raises():
-    assert asyncio.run(rag_call(RAG1_NORMALIZER, "x", client=_FakeClient(exc=RuntimeError("down")))) is None
-    assert asyncio.run(rag_call(RAG3_JUDGE, "x", client=_FakeClient(text="not json {"))) is None
-    assert asyncio.run(rag_call(RAG1_NORMALIZER, "x", client=_FakeClient(text="   "))) is None
+    assert asyncio.run(rag_call(RAG1_NORMALIZER, "x", subject_uid=None, client=_FakeClient(exc=RuntimeError("down")))) is None
+    assert asyncio.run(rag_call(RAG3_JUDGE, "x", subject_uid=None, client=_FakeClient(text="not json {"))) is None
+    assert asyncio.run(rag_call(RAG1_NORMALIZER, "x", subject_uid=None, client=_FakeClient(text="   "))) is None
 
 
 # ---- json_envelope ------------------------------------------------------------------------------

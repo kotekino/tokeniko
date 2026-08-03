@@ -7,6 +7,7 @@ from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import HTMLResponse
 from dotenv import load_dotenv
 from lib.llc.parser import parser, parser_diagram, parser_init
+from lib.core.consent import install_consent_reader
 from lib.core.io import exchange_channel_key, find_exchange, get_exchange, get_stakeholder, get_tokeniko, init_io, upsert_individual
 from lib.core.models import TKMemoryItemDoc
 from lib.core.evaluation_harness import zip_senses
@@ -152,7 +153,10 @@ def _room_language_write(soul_uid: Optional[str], channel_key: Optional[str],
 # ACCEPT | ASK | DISCARD, or None when a reader simply did not answer (API down / kill-switch —
 # graceful by contract: the raw parse then stands exactly as today, nothing is recorded).
 async def _translation_consensus(tokens: str, talker_entity, addressed: bool) -> tuple:
-    primary, second = await translate_in(tokens)
+    # the SPEAKER's uid gates both readers (privacy §1 step 3): the payload is their sentence,
+    # whole. A denial reads exactly like an unreachable reader — no consensus, so nothing is
+    # claimed and the raw parse stands.
+    primary, second = await translate_in(tokens, subject_uid=talker_entity.uid)
     if primary is None or second is None:
         return None, None, None, "a reader did not answer", (primary, second)
     lang = consensus_language(primary, second)
@@ -176,6 +180,11 @@ async def lifespan(app: FastAPI):
 
     db_client, db_memory_client, ai_client = init_io(uri, db_name, db_name_memory, ollama_host)
     tokeniko = get_tokeniko()
+
+    # THE CONSENT GATE (privacy §1 step 3): wire the Mongo-bound reader into lib/rag. Until this
+    # runs the gate's default DENIES every subject-carrying call — an unwired process is a silent
+    # process, never a leaking one — so this belongs before anything can hear a word.
+    install_consent_reader()
 
     # Salviamo nello stato
     app.state.db_client = db_client
@@ -674,7 +683,11 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
             else:
                 # the ENGLISH is what gets tidied when a translation was accepted (rag1 has no
                 # business reading Italian); otherwise the raw words, exactly as before.
-                polished = await normalizer_polish(normalized_text or tokens)
+                # the SPEAKER's uid gates it (privacy §1 step 3): rag1's payload is their own
+                # sentence. A denial returns None here — the raw parse stands, which is exactly
+                # today's RAG1_DISABLED behavior.
+                polished = await normalizer_polish(normalized_text or tokens,
+                                                   subject_uid=talkerEntity.uid)
             if polished:
                 rec2 = parser(polished, talkerEntity, app.state.tokeniko, app.state.ai_client, addressed=addressed)
                 flat2: tuple[TKLLC, TKZip] = compiler_compile(copy.deepcopy(rec2))
@@ -695,7 +708,11 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
                     rag1_rejection = (note, polished, flat2[1] if flat2 else None)
 
         rawResult = decompiler_raw(flatResult[0]) if flatResult[0] else ''
-        outputResult = await decompiler_decompile(rawResult) if output == 1 else ''
+        # the debug round-trip renders the SPEAKER's own compiled sentence back to English — a
+        # symbolic rendering of someone's words is close enough to verbatim to gate (row 9 of the
+        # privacy audit). Denied -> the raw symbolic render is returned unchanged.
+        outputResult = (await decompiler_decompile(rawResult, subject_uid=talkerEntity.uid)
+                        if output == 1 else '')
 
         res = {
             "original": tokens,
@@ -757,7 +774,11 @@ async def process(tokens: str = Query(..., min_length=3, description="Sentence t
         status = "failed"
     return {"status": status, "data": res}
 
+# the bare decompile surface: an arbitrary raw TKLL string, no conversation around it and no
+# stakeholder in scope. `talker` lets the caller DECLARE whose words the string renders (privacy
+# §1 step 3 — the audit's honest answer for row 9: this endpoint has no subject of its own); the
+# default None is the engineer's LAN-only round trip over a render tokeniko himself produced.
 @app.get("/api/v1/output")
-async def out(tokens: str):
-    res = await decompiler_decompile(tokens)
+async def out(tokens: str, talker: Optional[str] = None):
+    res = await decompiler_decompile(tokens, subject_uid=talker)
     return res

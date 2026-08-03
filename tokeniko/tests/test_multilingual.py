@@ -260,7 +260,7 @@ def test_temperature_reaches_the_wire(monkeypatch):
             return SimpleNamespace(content=[SimpleNamespace(type="text",
                                                             text='{"language":"italian","english":"a cat"}')])
 
-    asyncio.run(rag_call(RAG4_TRANSLATE_IN, "x", client=SimpleNamespace(messages=_FakeMessages())))
+    asyncio.run(rag_call(RAG4_TRANSLATE_IN, "x", subject_uid=None, client=SimpleNamespace(messages=_FakeMessages())))
     assert seen["temperature"] == 1.0
 
 
@@ -276,7 +276,7 @@ def test_readers_are_asked_independently(monkeypatch):
         return {"language": "italian", "english": "a cat is a mammal"}
 
     monkeypatch.setattr(language, "rag_call", fake_rag)
-    primary, second = asyncio.run(language.translate_in("il gatto è un mammifero"))
+    primary, second = asyncio.run(language.translate_in("il gatto è un mammifero", subject_uid=None))
     assert [name for name, _ in asked] == ["rag4-translate-in", "rag4-render-in"]
     assert all("<message>" in user and "il gatto" in user for _, user in asked)
     assert primary.english == second.english == "a cat is a mammal"
@@ -293,7 +293,7 @@ def test_a_dead_reader_is_no_consensus(monkeypatch):
         return None if spec.name == "rag4-render-in" else {"language": "italian", "english": "a cat"}
 
     monkeypatch.setattr(language, "rag_call", half_dead)
-    primary, second = asyncio.run(language.translate_in("il gatto"))
+    primary, second = asyncio.run(language.translate_in("il gatto", subject_uid=None))
     assert primary is not None and second is None
 
 
@@ -683,10 +683,10 @@ def out_env(monkeypatch):
 def _stub_translation(monkeypatch, translated: str, back: str):
     import lib.llc.language as language
 
-    async def fake_out(text, lang):
+    async def fake_out(text, lang, subject_uid=None):
         return translated
 
-    async def fake_back(text):
+    async def fake_back(text, subject_uid=None):
         return back
 
     monkeypatch.setattr(language, "translate_out", fake_out)
@@ -845,7 +845,7 @@ def test_verbatim_acts_are_localized_but_never_polished(out_env, monkeypatch):
     outbound = out_env
     polished = []
 
-    async def fake_polish(raw):
+    async def fake_polish(raw, subject_uid=None):
         polished.append(raw)                      # must never be reached for a VERBATIM act
         return "polished away"
 
@@ -1079,7 +1079,7 @@ def test_a_native_reply_is_never_polished(out_env, monkeypatch):
     outbound = out_env
     polished = []
 
-    async def fake_polish(raw):
+    async def fake_polish(raw, subject_uid=None):
         polished.append(raw)
         return "polished away"
 

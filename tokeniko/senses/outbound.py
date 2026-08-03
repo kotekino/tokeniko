@@ -46,10 +46,10 @@ _POLISH_MIN_CHARS = int(os.getenv("SENSES_VOICE_POLISH_MIN_CHARS", "25"))
 # ---- the rag2-out voice gate (compose 2.0 slice 3) ---------------------------------------------------
 # polish + verify one composed reply; returns the text to ship (the polish ONLY when the compiler
 # consensus holds — every other path is the raw, verbatim). Never raises.
-async def _polish(raw: str) -> str:
+async def _polish(raw: str, subject_uid: Optional[str]) -> str:
     if not rag_enabled("RAG2_OUT_DISABLED") or len(raw) < _POLISH_MIN_CHARS:
         return raw
-    polished = await rag_call(RAG2_OUT, raw)
+    polished = await rag_call(RAG2_OUT, raw, subject_uid=subject_uid)
     polished = (polished or "").strip()
     if not polished or polished == raw:
         return raw
@@ -116,6 +116,15 @@ def _composed_lang(payload: Optional[dict]) -> Optional[str]:
 async def _localize(english: str, target_uid: Optional[str], channel_id: Optional[str],
                     native: Optional[str] = None) -> str:
     from lib.llc.language import back_translate, translate_out, translator_enabled
+    # THE BACK DOOR, and why this carrier gates on the RECIPIENT for every cloud call it makes
+    # (privacy §1 step 3). Everything here is classified outbound — tokeniko's own speech — but
+    # several composed replies embed the listener's own words: the «did you mean: …?» ask offers
+    # their sentence back verbatim, a reductio quotes the premises they taught, an anecdote and a
+    # belief-naming speakup quote sentences someone once said. Deciding per-scaffold would mean
+    # auditing every slot of every shelf row, and a new quoting scaffold would silently open the
+    # door again. So the whole path carries `target_uid`: over-gating costs an opted-out person a
+    # localized reply (they get the English, or their room's native scaffold, which needs no
+    # cloud); under-gating costs the entire design. The tie-break is the brief's own.
     if native:
         # the NO-OP (§1 step 2b): the scaffold shelf already spoke this room's language, so the
         # round trip has nothing to do — zero cloud calls, zero latency, and the curated native
@@ -127,10 +136,10 @@ async def _localize(english: str, target_uid: Optional[str], channel_id: Optiona
     lang = await asyncio.to_thread(_room_language, target_uid, channel_id)
     if lang is None:
         return english
-    translated = await translate_out(english, lang)
+    translated = await translate_out(english, lang, subject_uid=target_uid)
     if not translated or translated == english:
         return english
-    back = await back_translate(translated)
+    back = await back_translate(translated, subject_uid=target_uid)
     if not back:
         logger.info("[outbound] rag4-out round trip broke (no back-translation) — english ships: %r",
                     english)
@@ -152,7 +161,7 @@ async def _localize(english: str, target_uid: Optional[str], channel_id: Optiona
 # and the behavior is byte-identical to before the multilingual step.
 async def _voice_out(raw: str, target_uid: Optional[str] = None,
                      channel_id: Optional[str] = None, native: Optional[str] = None) -> str:
-    return await _localize(await _polish(raw), target_uid, channel_id, native)
+    return await _localize(await _polish(raw, target_uid), target_uid, channel_id, native)
 
 # tokeniko's own stakeholder id (the sourceId of his recorded speech), resolved lazily once.
 _self_id: Optional[str] = None

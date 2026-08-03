@@ -77,7 +77,7 @@ _GOOD = {"verdict": "mismatch", "confidence": 0.9, "severity": "high",
 
 
 def test_judge_returns_the_validated_verdict():
-    out = asyncio.run(microscope.judge("s", "d", client=_FakeClient(text=json.dumps(_GOOD))))
+    out = asyncio.run(microscope.judge("s", "d", subject_uid=None, client=_FakeClient(text=json.dumps(_GOOD))))
     assert out["verdict"] == "mismatch" and out["category"] == "operator-flattening"
     from lib.rag import RAG3_JUDGE
     assert out["model"] == RAG3_JUDGE.model
@@ -85,7 +85,7 @@ def test_judge_returns_the_validated_verdict():
 
 def test_judge_clamps_confidence():
     payload = dict(_GOOD, confidence=7.5)
-    out = asyncio.run(microscope.judge("s", "d", client=_FakeClient(text=json.dumps(payload))))
+    out = asyncio.run(microscope.judge("s", "d", subject_uid=None, client=_FakeClient(text=json.dumps(payload))))
     assert out["confidence"] == 1.0
 
 
@@ -96,7 +96,7 @@ def test_judge_clamps_confidence():
                           "severity": None, "category": None, "note": None})),
 ])
 def test_judge_failure_returns_none_never_raises(bad):
-    assert asyncio.run(microscope.judge("s", "d", client=_FakeClient(**bad))) is None
+    assert asyncio.run(microscope.judge("s", "d", subject_uid=None, client=_FakeClient(**bad))) is None
 
 
 # ---- the pass (sandbox) -----------------------------------------------------------------------
@@ -128,12 +128,34 @@ def _mk_item(original, source_id):
     return item
 
 
-def test_pass_judges_only_others_inputs_and_dedups(_io, clean_microscope):
+# the microscope is INSIDE the consent gate (privacy §1 step 3, the Captain's ruling 2026-07-29):
+# its payload opens with the speaker's sentence verbatim, so the judge only runs for a speaker who
+# allowed it. The instrument is deliberately absent from the consent NOTICE — it is a debug tool,
+# disabled before the public opening — but the flag is a code backstop on that process control.
+# This fixture gives the judged item a speaker who said yes; the denial side is test_consent's.
+@pytest.fixture()
+def consenting_speaker(_io):
+    from lib.core.consent import install_consent_reader, record_consent
+    from lib.core.memory import MEMChannels
+    from lib.core.models import TKMemoryStakeholdersDoc
+    from lib.rag import set_consent_reader
+    uid = "rag3-parlante@discord:7001"
+    TKMemoryStakeholdersDoc.get_motor_collection().delete_many({"uid": uid})
+    sh = TKMemoryStakeholdersDoc(uid=uid, name="rag3-parlante", isMe=False,
+                                 channel=MEMChannels.DISCORD, contextKey="discord:7001").save()
+    record_consent(uid, True, name="rag3-parlante")
+    install_consent_reader()
+    yield sh
+    set_consent_reader(None)
+    TKMemoryStakeholdersDoc.get_motor_collection().delete_many({"uid": uid})
+
+
+def test_pass_judges_only_others_inputs_and_dedups(_io, clean_microscope, consenting_speaker):
     from lib.core.io import get_tokeniko
     from lib.core.models import TKZipDebugDoc
     me = str(get_tokeniko().id)
     _mk_item("rag3-test self talk", me)                       # self: never judged (inputs-only)
-    other = _mk_item("rag3-test a coin has value", "someone-else")
+    other = _mk_item("rag3-test a coin has value", str(consenting_speaker.id))
 
     fake = _FakeClient(text=json.dumps(dict(_GOOD, verdict="ok", severity=None, category=None)))
     n = asyncio.run(microscope.microscope_pass(client=fake, batch=10))
@@ -151,6 +173,6 @@ def test_judge_maps_sentinels_to_none():
     # the schema carries no null unions (the API rejects enum-vs-type-array) — "none"/"" come back
     # as sentinels and must land as real Nones in the entry
     payload = {"verdict": "ok", "confidence": 0.95, "severity": "none", "category": "none", "note": ""}
-    out = asyncio.run(microscope.judge("s", "d", client=_FakeClient(text=json.dumps(payload))))
+    out = asyncio.run(microscope.judge("s", "d", subject_uid=None, client=_FakeClient(text=json.dumps(payload))))
     assert out["verdict"] == "ok"
     assert out["severity"] is None and out["category"] is None and out["note"] is None
