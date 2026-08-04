@@ -13,3 +13,4 @@ __pycache__/
 
 # secrets — never commit (env files hold tokens / DB URIs)
 .env
+ci/.DS_Store
