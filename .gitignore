@@ -14,3 +14,8 @@ __pycache__/
 # secrets — never commit (env files hold tokens / DB URIs)
 .env
 ci/.DS_Store
+
+# the body (scripts/body/): the LaunchAgents' log destination, and the machine-local address of
+# the mini. Both are per-machine facts, not code.
+/tokeniko/logs/
+/scripts/body/body.conf

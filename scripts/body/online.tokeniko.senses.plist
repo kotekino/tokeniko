@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  online.tokeniko.senses — the connectors daemon: Discord + ATProto/Bluesky, tokeniko's I/O to
+  the outside world.
+
+  Installed by the Captain's hand:
+      cp scripts/body/online.tokeniko.senses.plist ~/Library/LaunchAgents/
+      launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/online.tokeniko.senses.plist
+
+  The paths below are ABSOLUTE and hardcode the username and the repo location. The mini must use
+  the SAME username and the SAME repo path, or these three plists need regenerating (and so does
+  docker-compose.yml, whose volume paths are absolute too).
+
+  NOTE FOR THE REHEARSAL: this agent SPEAKS. Keep SENSES_DELIVER_DRYRUN=1 in .env until the body
+  is meant to be heard.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>online.tokeniko.senses</string>
+
+    <!-- the wrapper, never `python -m senses.main` directly: launchd has no dependency ordering and
+         init_io dies on an unreachable Mongo. run_service.sh polls first, then execs — so the PID
+         launchd supervises is the real service. -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/renzosala/Develop/personal/tokeniko/scripts/body/run_service.sh</string>
+        <string>senses</string>
+    </array>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- the whole unattended story: a dropped Discord gateway that takes the process with it comes
+         back by itself. A body that stops listening while nobody is watching is the failure mode
+         this key exists to prevent. -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- do not let a genuinely broken config (a revoked DISCORD_TOKEN, a missing venv) spin a tight
+         crash loop writing gigabytes of log; 30s between attempts is still "immediately" for a body. -->
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko</string>
+
+    <key>StandardOutPath</key>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko/logs/senses.out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko/logs/senses.err.log</string>
+
+    <!-- MINIMAL, and NEVER a secret: the wrapper sources .env itself (DISCORD_TOKEN and the playbot
+         tokens live there and are never named in a plist, which is world-readable). This is only
+         the PATH a launchd session does not inherit from a login shell. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    </dict>
+
+    <!-- ProcessType IS DELIBERATELY ABSENT. Setting it to Background invites launchd's CPU and I/O
+         throttling, and the mind must run at full speed on its own machine. Do not "helpfully"
+         add it. (Runbook §1.2.) -->
+</dict>
+</plist>

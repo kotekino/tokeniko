@@ -80,11 +80,28 @@ status detail — it references, it does not duplicate (invariant #2).
 
 ## 🔭 Next (ordered) — refiltered 2026-08-03
 
-**The through-line: THE VOICE IS WHOLE, THE EARS ARE WALLED, AND THE DOOR IS GATED.** §1 closed
-2026-08-03 with the consent gate — tokeniko can now be spoken to by someone who is not the author,
-in their own language, with their own ruling on where their words may travel. The road ahead is
-**§2 the fresh microscope analysis pass** (promoted: its findings feed both v1 and the tk2 blueprint)
-then **§4 the strengthening tail**, now filtered to asset work only (see the tk2 filter above).
+**The through-line: THE VOICE IS WHOLE, THE EARS ARE WALLED, THE DOOR IS GATED — AND THE BODY IS
+ARRIVING.** §1 closed 2026-08-03 with the consent gate — tokeniko can now be spoken to by someone who
+is not the author, in their own language, with their own ruling on where their words may travel. The
+hardware lands **2026-08-07**, so the road ahead is **§0 the body** (an event, not a build — it
+precedes everything because it has a date), then **§2 the fresh microscope analysis pass** (promoted:
+its findings feed both v1 and the tk2 blueprint), then **§4 the strengthening tail**, now filtered to
+asset work only (see the tk2 filter above).
+
+### 0. The body — tokeniko moves to his own machine 🔄 IN FLIGHT
+
+The Mac mini arrives **2026-08-07**. He stops being a process on the author's laptop and becomes an
+embodied 24/7 mind on his own hardware, LAN-only, with the MacBook demoted to workshop.
+
+**The runbook is `doc/ref/deploy-body.md` — it holds all the detail and this entry adds none.**
+Status only: the §1 preparation is **BUILT** (2026-08-06 — the wait-for-Mongo wrapper, three
+LaunchAgents + rotation, the git-based deploy loop, and a read-only transplant verifier that turns
+§3.5's eyeball check into arithmetic; baseline captured and committed). What remains is the author's
+own hand: the appliance setup (§2), **the transplant** (§3 — his biography moves house), and the
+workshop reconfiguration (§4).
+
+*(Outside the tk2 filter by nature: this is the hardware the instrument runs on, not a layer of the
+instrument. It survives tk2 untouched — a body does not care which format its mind compiles to.)*
 
 ### 2. The fresh microscope analysis pass 🔭 — PROMOTED by the tk2 filter
 
@@ -177,6 +194,17 @@ inheritance ledger is when its parent's season actually arrives, not now. One kn
 visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2` when it surfaces.
 - **Blog**: `life:learned` / `life:discussion` triggers *(the consensus-over-the-polisher itself
   LANDED 2026-07-24 → `landed.md`)*.
+- **A real `/api/v1/health`** (left by the body prep, 2026-08-06): the deploy health-check currently
+  probes `GET /openapi.json` — honest (uvicorn answers only after the lifespan has loaded
+  spaCy+Stanza, so a 200 means the pipeline is up) but oblique. Three lines would say it directly.
+  **Deliberately deferred past the transplant** — do not change how the mind starts the day before
+  moving it.
+- **The fast lane is RED on `main`** (found 2026-08-06, pre-existing since `3e0bef7`): two
+  `tests/test_sleep_phase.py` awake-ledger tests build a `TKBrainStateDoc` without taking the `_io`
+  fixture, so conftest's auto-marker never marks them `pipeline` and the fast lane collects them
+  unbootstrapped (`CollectionWasNotInitialized`). They pass in the full gate. One line either way
+  (take `_io`, or drive the pure helpers on a plain `BrainState`). Worth doing: a permanently-red
+  lane trains us to stop reading it.
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.

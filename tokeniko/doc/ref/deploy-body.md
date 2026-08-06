@@ -68,10 +68,25 @@ knowingly — it is today's proven path, and roadmap §4.10 (delta-load) would s
 
 ## 1. 🔨 Prepared before the mini arrives
 
+> **BUILT 2026-08-06** — items 1–3 exist, plus a scripted verifier for §3.5. Everything lives in
+> `scripts/body/`, with the exact install/rehearsal commands in `scripts/body/README.md`. Nothing is
+> installed or running: `cp`ing the plists, the `sudo` for the rotation rule and the rehearsal
+> itself are the Captain's hand.
+>
+> | | file |
+> |---|---|
+> | the wrapper | `scripts/body/run_service.sh` |
+> | the agents | `scripts/body/online.tokeniko.{api,brain,senses}.plist` (labels `online.tokeniko.*`) |
+> | log rotation | `scripts/body/newsyslog-tokeniko.conf` → `/etc/newsyslog.d/tokeniko.conf` |
+> | the deploy loop | `scripts/body/deploy.sh` (`--dry-run` reads it without touching the body) |
+> | §3.5, scripted | `scripts/body/verify_transplant.py` + `scripts/body/baseline-macbook-2026-08-06.json` |
+> | the commands | `scripts/body/README.md` |
+
 1. **A wait-for-Mongo wrapper** (`scripts/body/run_service.sh`): sources `.env`, polls Mongo until it
    answers, then `exec`s the service. **launchd has no dependency ordering** and `init_io` dies if
    Mongo is not up — this is the gate that makes an unattended boot deterministic. One script, three
-   services (argument: `api` | `brain` | `senses`).
+   services (argument: `api` | `brain` | `senses`). ✅ built. On a bounded timeout (~5 min) it exits
+   non-zero **on purpose**, so `KeepAlive` retries rather than a shell hanging forever.
 2. **Three LaunchAgent plists** (`scripts/body/*.plist` → installed to `~/Library/LaunchAgents/`):
    - `RunAtLoad: true` + **`KeepAlive: true`** (a crash restarts itself — the unattended story);
    - `StandardOutPath` / `StandardErrorPath` to `logs/`, plus a **`newsyslog.d` rule** so a mind
@@ -79,10 +94,14 @@ knowingly — it is today's proven path, and roadmap §4.10 (delta-load) would s
    - **do NOT set `ProcessType: Background`** — that invites launchd's CPU/IO throttling; leave it
      standard so the mind runs at full speed;
    - `WorkingDirectory` = the package dir, `EnvironmentVariables` minimal (the wrapper sources `.env`).
-3. **The deploy script** (`scripts/body/deploy.sh`) — see §5.
+   ✅ built, `plutil -lint` clean. Two details the list above did not carry: the rotation rule covers
+   **six** files (three services × stdout/stderr), and `logs/` must be **created by hand before the
+   first bootstrap** — launchd opens the log files but does not create their directory.
+3. **The deploy script** (`scripts/body/deploy.sh`) — see §5. ✅ built.
 4. ✅ **Rehearse on the MacBook**: install the plists here first (pointing at the local Mongo) and
    confirm all three come up on their own, restart when killed, and log where expected. Everything
-   except the hardware can be proven before the box lands.
+   except the hardware can be proven before the box lands. **Still to do — the Captain's hand**; the
+   sequence is written out step by step in `scripts/body/README.md`.
 
 ---
 
@@ -126,9 +145,14 @@ knowingly — it is today's proven path, and roadmap §4.10 (delta-load) would s
    `rsync -aH --info=progress2 atlas/ <mini>:<repo>/atlas/`  (9.1 GB)
 4. On the mini: `.env` in place, `docker compose up -d`, and the volume paths pointing at the new
    `atlas/` — **with the JEDI hostname untouched**.
-5. ✅ **Verify before deleting anything**:
+5. ✅ **Verify before deleting anything** — **scripted**: `scripts/body/verify_transplant.py`
+   (read-only, raw pymongo, incapable of writing). Capture the baseline on the MacBook *immediately
+   before* step 1's `docker compose down`, then on the mini run `--compare <baseline>`; a non-zero
+   exit gates step 6. It checks exactly:
    - collection counts match per database (`tokeniko`, `tokeniko_mem`, `tokeniko_mem_test`);
-   - **`$vectorSearch` still answers** — the truest proof `mongot` survived the move;
+   - **`$vectorSearch` still answers** — the truest proof `mongot` survived the move. Self-proving:
+     one dictionary row is queried with **its own** vector and must come back as its own nearest
+     neighbour at ~1.0, through the same `vector_index` the mind uses;
    - `brain_state` carries his real birth stamp (**2026-07-09 06:21:37Z**) and the memory timeseries
      reaches today.
 6. Only then: 🧑‍✈️ reclaim the MacBook's 9.1 GB and uninstall Docker Desktop there.
