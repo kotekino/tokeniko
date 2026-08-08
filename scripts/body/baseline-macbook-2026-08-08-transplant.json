@@ -1,0 +1,196 @@
+{
+  "captured_at": "2026-08-08T06:51:21Z",
+  "captured_on": "Renzos-MacBook-Pro.local",
+  "databases": {
+    "tokeniko": {
+      "collections": {
+        "base": {
+          "count": 2925,
+          "search_indexes": [
+            {
+              "fields": [
+                {
+                  "numDimensions": 2925,
+                  "path": "vector",
+                  "similarity": "cosine",
+                  "type": "vector"
+                }
+              ],
+              "name": "vector_index",
+              "queryable": true,
+              "status": "READY",
+              "type": "vectorSearch"
+            }
+          ]
+        },
+        "derived_relations": {
+          "count": 627
+        },
+        "derived_rules": {
+          "count": 206
+        },
+        "dictionary": {
+          "count": 197580,
+          "search_indexes": [
+            {
+              "fields": [
+                {
+                  "numDimensions": 2925,
+                  "path": "vector",
+                  "similarity": "cosine",
+                  "type": "vector"
+                }
+              ],
+              "name": "vector_index",
+              "queryable": true,
+              "status": "READY",
+              "type": "vectorSearch"
+            }
+          ]
+        },
+        "markers": {
+          "count": 50,
+          "search_indexes": [
+            {
+              "fields": [
+                {
+                  "numDimensions": 300,
+                  "path": "vector",
+                  "similarity": "cosine",
+                  "type": "vector"
+                }
+              ],
+              "name": "vector_index",
+              "queryable": true,
+              "status": "READY",
+              "type": "vectorSearch"
+            }
+          ]
+        },
+        "names": {
+          "count": 21975
+        },
+        "places": {
+          "count": 4674701
+        },
+        "properties": {
+          "count": 0
+        },
+        "relations": {
+          "count": 150529
+        }
+      },
+      "present": true
+    },
+    "tokeniko_mem": {
+      "collections": {
+        "actions": {
+          "count": 1418
+        },
+        "axioms": {
+          "count": 75
+        },
+        "behavior_rules": {
+          "count": 30
+        },
+        "brain_state": {
+          "count": 1
+        },
+        "definitions": {
+          "count": 3233
+        },
+        "exchanges": {
+          "count": 4
+        },
+        "ideas": {
+          "count": 1310
+        },
+        "memory": {
+          "count": 748
+        },
+        "reductio_ledger": {
+          "count": 2
+        },
+        "scaffolds": {
+          "count": 186
+        },
+        "stakeholders": {
+          "count": 16
+        },
+        "system.buckets.memory": {
+          "count": 748
+        },
+        "system.views": {
+          "count": 1
+        },
+        "theorems": {
+          "count": 796
+        },
+        "tkzipdebug": {
+          "count": 503
+        },
+        "trust_episodes": {
+          "count": 85
+        }
+      },
+      "present": true
+    },
+    "tokeniko_mem_test": {
+      "collections": {},
+      "present": false
+    }
+  },
+  "databases_on_server": [
+    "admin",
+    "config",
+    "local",
+    "test",
+    "tokeniko",
+    "tokeniko_mem"
+  ],
+  "exact_counts": true,
+  "mongo_nodes": "localhost:27018",
+  "mongo_version": "8.2.6",
+  "probes": {
+    "brain_state": {
+      "asleep_since": 1785729770,
+      "awake_mark": null,
+      "awake_s": 25612.312788248062,
+      "birth_stamp_expected": "2026-07-09T06:21:37Z",
+      "birth_stamp_ok": true,
+      "digest_buffer_size": 6,
+      "last_thinking_at": 1785731835,
+      "last_untangled_kb_at": 1785722932,
+      "last_wondered_kb_at": 1785722932,
+      "last_wondering_at": 1785729768,
+      "ok": true,
+      "source_cursors_size": 7,
+      "wake_at": 1783578097.14024,
+      "wake_at_utc": "2026-07-09T06:21:37Z",
+      "wonder_queue_size": 0,
+      "wondering_window_size": null
+    },
+    "memory_timeseries": {
+      "collection": "memory",
+      "count": 748,
+      "earliest": "2026-07-09T06:23:16Z",
+      "latest": "2026-08-03T04:02:51Z",
+      "ok": true,
+      "time_field": "timestamp"
+    },
+    "vector_search": {
+      "dimensions": 2925,
+      "index": "vector_index",
+      "ok": true,
+      "probe_sense": "between.r.02",
+      "probe_word": "'tween",
+      "top_score": 1.0,
+      "top_word": "'tween"
+    }
+  },
+  "roles": {
+    "kb": "tokeniko",
+    "memory": "tokeniko_mem",
+    "sandbox": "tokeniko_mem_test"
+  }
+}
