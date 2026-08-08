@@ -120,8 +120,15 @@ knowingly — it is today's proven path, and roadmap §4.10 (delta-load) would s
 3. **Docker Desktop**, set to **start at login**, for `tk-atlas` alone. With `restart:
    unless-stopped` in the compose file the database returns whenever Docker does. *(Revisit Colima
    only if Desktop ever blocks unattended startup on a dialog.)*
-4. **The runtime**: Homebrew, `python@3.14` (match the MacBook — currently 3.14.0), the repo cloned,
-   the venv at the **same relative location** (`../.venv` from the package dir), `pip install -e .`.
+4. **The runtime**: Homebrew, `python@3.14` (match the MacBook's MINOR version — a differing patch
+   is fine, same `cp314` wheel ABI), the repo cloned, the venv at the **same relative location**
+   (`../.venv` from the package dir).
+   ⚠️ **Install from the PIN LOCK, not from `pyproject.toml`.** `pyproject.toml` and
+   `requirements.txt` carry **zero version constraints** (18 bare names, not one `==`), so a bare
+   `pip install -e .` resolves whatever is latest that day. If the body's parser stack drifts from
+   the workshop's, the workshop's gate stops proving anything about the body — and the divergence is
+   silent. Install `scripts/body/requirements-lock-<date>.txt` first, then `pip install -e .`
+   (which then only registers the package). Re-lock deliberately and dated; never drift by accident.
 5. **The models** — they are NOT in the repo and must be fetched once:
    `python -m spacy download en_core_web_lg`, and the Stanza English models into
    `~/stanza_resources`. Several GB; do it before the first run, not during it.
