@@ -640,16 +640,38 @@ def cross_item_conflict(clauses_a: list, clauses_b: list) -> Optional[str]:
 # a cheap signature of the ACTIVE knowledge — changes whenever a definition/axiom/theorem is added,
 # archived, or re-created (incl. the brain's own materialize_theorem AND an axiom added via the api,
 # since it is DB-derived and cross-process). Used to invalidate the in-process KB cache below.
-def kb_fingerprint() -> str:
-    def _count_and_max(model):
-        n = model.find({"archived": False}).count()
-        newest = model.find({"archived": False}).sort("-createdAt").limit(1).to_list()
-        mx = newest[0].createdAt if newest else 0
-        return n, mx
+def _count_and_max(model) -> tuple:
+    n = model.find({"archived": False}).count()
+    newest = model.find({"archived": False}).sort("-createdAt").limit(1).to_list()
+    mx = newest[0].createdAt if newest else 0
+    return n, mx
+
+
+# THE TWO-TIER FINGERPRINT (roadmap §4.6, measured 2026-08-09). The signature is split along the
+# line the DATA is split along, because the two halves move at wildly different rates AND weigh
+# wildly different amounts:
+#
+#     definitions   3233 docs   1209.9 MB     the grounding vocabulary — changes when the
+#                                             dictionary grows, i.e. almost never
+#     axioms+theorems  <900 docs   ~176 MB    changes every time he learns anything at all
+#
+# A SINGLE fingerprint over all three meant that minting one theorem invalidated the 1.2 GB of
+# definitions that had not moved — re-fetching ~750 bytes of vocabulary for every byte of new
+# knowledge. In the gate that showed up as 13 theorem-materializing tests costing 62% of the run;
+# in the body it means HE IS SLOWEST EXACTLY WHEN HE IS BEING MOST PRODUCTIVE, which is precisely
+# backwards for a mind whose whole purpose is to derive things.
+#
+# The parts join with ":" into the original format, so the fingerprint string is unchanged.
+def kb_fingerprint_parts() -> tuple[str, str]:
     nd, td = _count_and_max(TKDefinitionDoc)
     na, ta = _count_and_max(TKAxiomDoc)
     nt, tt = _count_and_max(TKTheoremDoc)
-    return f"{nd}:{td}:{na}:{ta}:{nt}:{tt}"
+    return f"{nd}:{td}", f"{na}:{ta}:{nt}:{tt}"
+
+
+def kb_fingerprint() -> str:
+    fp_defs, fp_rest = kb_fingerprint_parts()
+    return f"{fp_defs}:{fp_rest}"
 
 
 # in-process KB cache, keyed by the cheap fingerprint above. _load_active_kb stays PURE (reads only;
@@ -657,25 +679,49 @@ def kb_fingerprint() -> str:
 # persist across ticks — the `relations` WordNet graph is static.
 _kb_cache: Optional[dict] = None
 _kb_cache_fp: Optional[str] = None
+# …and the definitions, cached SEPARATELY under their own half of the fingerprint, so that new
+# knowledge never evicts the vocabulary it was derived with.
+_defs_cache: Optional[tuple] = None
+_defs_cache_fp: Optional[str] = None
+
+
+def kb_cache_clear() -> None:
+    """Drop every KB cache, definitions included — the full reload.
+
+    Setting `_kb_cache`/`_kb_cache_fp` to None by hand (as several call sites do) rebuilds the KB
+    dict but deliberately REUSES the cached definitions: their own fingerprint governs them, and
+    reloading 1.2 GB to pick up an axiom edit is the exact waste §4.6 removes. Use this when the
+    definitions themselves are known to have changed under the fingerprint's feet.
+    """
+    global _kb_cache, _kb_cache_fp, _defs_cache, _defs_cache_fp
+    _kb_cache = _kb_cache_fp = _defs_cache = _defs_cache_fp = None
+
+
+# definitions are full TKZips (single OR multi clause); flatten each into its leaf clauses so the
+# evaluator still grounds against a flat list[TKZipContent]. Both the docs and the flattened leaves
+# are cached: the flattening is over 3233 multi-clause zips and is not cheap either.
+def _load_definitions(fp_defs: str) -> tuple:
+    global _defs_cache, _defs_cache_fp
+    if _defs_cache is not None and _defs_cache_fp == fp_defs:
+        return _defs_cache
+    docs = TKDefinitionDoc.find({"archived": False}).to_list()
+    leaves = [leaf for d in docs if d.zip is not None for leaf in _zip_leaves(d.zip.items)]
+    _defs_cache, _defs_cache_fp = (docs, leaves), fp_defs
+    return _defs_cache
 
 
 def _load_active_kb() -> dict:
     global _kb_cache, _kb_cache_fp
-    fp = kb_fingerprint()
+    fp_defs, fp_rest = kb_fingerprint_parts()
+    fp = f"{fp_defs}:{fp_rest}"
     if _kb_cache is not None and _kb_cache_fp == fp:
         return _kb_cache
 
-    definition_docs = TKDefinitionDoc.find({"archived": False}).to_list()
+    # the expensive half, reused across every knowledge change that left the vocabulary alone
+    definition_docs, definitions = _load_definitions(fp_defs)
+
     axiom_docs = TKAxiomDoc.find({"archived": False}).to_list()
     theorem_docs = TKTheoremDoc.find({"archived": False}).to_list()
-
-    # definitions are now full TKZips (single OR multi clause); flatten each into its leaf
-    # clauses so the evaluator still grounds against a flat list[TKZipContent].
-    definitions = [
-        leaf
-        for d in definition_docs if d.zip is not None
-        for leaf in _zip_leaves(d.zip.items)
-    ]
 
     # the UNIVERSAL EXTRACTOR (step 4): axioms and theorems run through the SAME front door
     # (extract_logic) — the source never gates WHAT is extracted, only the trust attached below.

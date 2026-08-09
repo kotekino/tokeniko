@@ -11,6 +11,14 @@ import pytest
 from lib.llc.compiler import c_untangle
 from lib.llc.compiler.c_untangle import _resolve_subject
 
+# EXPLICITLY pipeline-marked (2026-08-09). conftest auto-marks by `_io` fixture use, which these
+# synthetic-graph tests never touch — but importing `lib.llc.compiler` loads en_core_web_lg at
+# module import time (1.7 s, ~1 GB), and collection imports every test module. Unmarked, this one
+# file made the FAST lane pay the model load it exists to avoid. The marker's own definition is
+# "needs the spaCy/Stanza pipeline OR the Mongo sandbox" — the import needs the former, so this is
+# the marker being accurate, not a test being excused. Coverage is unchanged: the full gate runs it.
+pytestmark = pytest.mark.pipeline
+
 
 # ---- resolver logic on a SYNTHETIC graph (module caches primed; no DB dependency) ---------------
 

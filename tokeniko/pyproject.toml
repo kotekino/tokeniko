@@ -43,9 +43,15 @@ markers = [
 api = "uvicorn api.main:app --reload"
 brain = "python -m brain.main"
 senses = "python -m senses.main"
+# the FULL gate. Since 2026-08-09 (the author's ruling) this is a DEPLOY gate, not a commit gate:
+# scripts/body/deploy.sh runs it ON THE BODY, against the body's own KB, before anything restarts —
+# where a red gate costs zero downtime because the daemons have not been restarted yet. Run it here
+# by hand when you want to; the deploy runs it whether you did or not.
 test = "pytest"
-# the FAST lane (2026-07-18, author's ruling): pure-logic tests only — no model load, no Mongo,
-# runs in seconds. Iterate on this; the FULL gate (`task test`) stays sacred before every commit.
+# the FAST lane (2026-07-18, author's ruling): pure-logic tests only — no model load, no Mongo.
+# 271 tests in ~3s. THIS is the development loop's signal — iterate on it, and when you add a test
+# that needs neither the pipeline nor Mongo, keep it in this lane deliberately: the lane's value is
+# its coverage, and coverage is what makes a 3-second signal worth trusting.
 test-fast = "pytest -m 'not pipeline'"
 
 

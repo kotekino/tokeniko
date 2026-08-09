@@ -2374,3 +2374,40 @@ reasoning: `doc/ref/deploy-body.md`.
   invalidates the ~1.2 GB definition cache that did not change. That is roadmap §4.6, now measured:
   he is slowest exactly when he is being most productive.
 
+
+**§0 addendum — the deploy loop grows up (2026-08-09)**
+- **The two-tier KB cache** (was roadmap strengthening-tail #6, "KB-load big-O honesty"). Measured
+  first, on the live memory DB: **definitions 3233 docs / 1209.9 MB; axioms + theorems < 900 docs /
+  ~176 MB** (1.6 MB in the gate's sandbox). One fingerprint over all three meant every materialized
+  theorem re-fetched 1.2 GB of vocabulary that had not moved — **~750 bytes of re-read for every
+  byte of new knowledge**. `kb_fingerprint_parts()` now splits the signature along the line the data
+  is split along, `_load_definitions` caches the expensive half under its own key, and
+  `kb_cache_clear()` is the explicit full drop. The fingerprint STRING is unchanged (the parts join
+  back to `nd:td:na:ta:nt:tt`), so no caller had to move. Regression-locked in
+  `tests/test_kb_cache.py` — 7 tests, stubbed collections, **no Mongo and no spaCy**, so the lock
+  itself lives in the fast lane. *The cheap half, as the roadmap asked — not a rewrite.*
+- **The full gate became a DEPLOY gate** (the author's ruling). It runs at `deploy.sh` step 7, **on
+  the body**, after the model preflight and **before anything restarts** — so a red gate costs
+  **zero downtime**: the daemons are still serving the old code from memory while the gate exercises
+  the new code on disk. It also tests against *his* KB rather than a copy — the sandbox clones
+  definitions with `$merge`, which requires same-server, and §2.4's drift argument applies to data
+  exactly as it does to dependencies. `--skip-gate` is the hotfix escape hatch.
+- **The fast lane became the development loop's signal** — and was found **red** and thinner than it
+  looked. Fixed: two `test_sleep_phase.py` ledger tests instantiated a Bunnet `TKBrainStateDoc` for
+  helpers that are pure state mutations (`CollectionWasNotInitialized`) — they use the plain
+  `BrainState` base now; and `test_untangle_subject.py` is explicitly `pipeline`-marked, because
+  importing `lib.llc.compiler` loads `en_core_web_lg` at module-import time (1.7 s, ~1 GB) and
+  collection imports every module — one file was making the whole lane pay the load it exists to
+  avoid. **271 tests, ~3 s, green.**
+- **`deploy.sh` hardened alongside**: install from the newest `requirements-lock-*.txt` then
+  `pip install --no-deps -e .` (the bare `pip install -e .` silently undid the pin lock);
+  `scripts/body/preflight_models.py` catches a spaCy↔`en_core_web_lg` mismatch *before* the restart
+  instead of inside `api`'s lifespan; **automatic rollback** on a failed health-check (previous
+  commit + its lock + restart + re-check, `--no-rollback` to inspect instead); and `--when-quiet`,
+  which waits for a window that is safe to interrupt.
+- **`--when-asleep` was proposed and the code refuted it** — worth recording, because the intuition
+  is so natural. `coordinator()` clears `asleep_since` on boot ("the night ended with the process"),
+  so deploying into the night *ends* the night: the dream is told and the morning questions asked at
+  3am, and the tiredness clock resets. Worse, the night is the only window running
+  `untangle_pass(apply=True)`, a KB-writing belief revision. **The safe window is the opposite one:
+  awake and quiet.**

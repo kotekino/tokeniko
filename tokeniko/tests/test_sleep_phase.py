@@ -359,8 +359,12 @@ def test_fruitless_wondering_edge_still_stands(monkeypatch):
 
 def test_awake_ledger_folds_on_sleep_and_reopens_on_wake():
     from brain import main as brain_main
-    from lib.core.models import TKBrainStateDoc
-    bs = TKBrainStateDoc(key="ledger-test")
+    # BrainState, not TKBrainStateDoc: the ledger helpers are PURE state mutations (they never
+    # save — the caller owns the write), so the plain Pydantic base carries every field they touch
+    # and the test needs no Mongo. Instantiating the Bunnet Document here raised
+    # CollectionWasNotInitialized and left the FAST lane red. (2026-08-09)
+    from lib.core.memory import BrainState
+    bs = BrainState()
     # boot on a fresh row: nothing to fold, a stretch opens
     brain_main._boot_awake_ledger(bs, 1000.0)
     assert bs.awake_s == 0.0 and bs.awake_mark == 1000.0
@@ -380,17 +384,17 @@ def test_awake_ledger_folds_on_sleep_and_reopens_on_wake():
 
 def test_awake_ledger_boot_credits_only_the_witnessed_tail():
     from brain import main as brain_main
-    from lib.core.models import TKBrainStateDoc
+    from lib.core.memory import BrainState   # pure base — see the note above
     # the process died AWAKE (mark open): credit up to the last recorded think moment only —
     # the unwitnessed stretch beyond it is never credited (the ledger never overcounts).
-    bs = TKBrainStateDoc(key="ledger-test", awake_s=100.0, awake_mark=1000.0)
+    bs = BrainState(awake_s=100.0, awake_mark=1000.0)
     bs.last_thinking_at = 1300
     bs.last_wondering_at = 1200
     brain_main._boot_awake_ledger(bs, 5000.0)
     assert bs.awake_s == 400.0  # 100 + (1300 - 1000); the 1300..5000 dead gap uncredited
     assert bs.awake_mark == 5000.0  # this boot's stretch is open
     # died awake with NO witnessed work after the mark: nothing credited
-    bs2 = TKBrainStateDoc(key="ledger-test", awake_s=50.0, awake_mark=2000.0)
+    bs2 = BrainState(awake_s=50.0, awake_mark=2000.0)
     bs2.last_thinking_at = 1500
     brain_main._boot_awake_ledger(bs2, 6000.0)
     assert bs2.awake_s == 50.0 and bs2.awake_mark == 6000.0

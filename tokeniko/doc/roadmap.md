@@ -163,14 +163,6 @@ is the strongest evidence the criterion is sound.
    *(The scaffold ROWS are `inherit` either way. The reflex DISPATCH is limit A itself and went
    `→ tk2`; these two ride the existing `social_detect` reflex path, not the behaviour-rule layer.
    Three further protocol candidates parked with the author → `parked.md`.)*
-6. **KB-load big-O honesty** (left by the 2026-07-16 wondering-freeze fix): the harness KB load
-   pulls ALL definitions (~1.2 GB of all-gloss zips) and re-pulls on EVERY fingerprint bump — i.e.
-   after each materialized theorem — blocking the tick for its duration (it gates thinking too, not
-   just wondering). Delta-load, or trim the load to what the evaluator actually reads; pair with
-   watermark-gating kb_wonder's re-saturation (the noted future optimization in `thinking.py`).
-   *(Survives a filter that reads it as "tuning": it is **instrument fitness**. v1's job is now to
-   produce findings, and a loop that stalls on every materialized theorem produces fewer of them.
-   Do the cheap half — the delta-load — not a rewrite.)*
 
 ### Pending follow-ons — tails left by the landed arcs (surface when their time comes) 🔭
 
@@ -185,12 +177,16 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
   spaCy+Stanza, so a 200 means the pipeline is up) but oblique. Three lines would say it directly.
   **Deliberately deferred past the transplant** — do not change how the mind starts the day before
   moving it.
-- **The fast lane is RED on `main`** (found 2026-08-06, pre-existing since `3e0bef7`): two
-  `tests/test_sleep_phase.py` awake-ledger tests build a `TKBrainStateDoc` without taking the `_io`
-  fixture, so conftest's auto-marker never marks them `pipeline` and the fast lane collects them
-  unbootstrapped (`CollectionWasNotInitialized`). They pass in the full gate. One line either way
-  (take `_io`, or drive the pure helpers on a plain `BrainState`). Worth doing: a permanently-red
-  lane trains us to stop reading it.
+- **`test_dry_run_convicts_without_touching` is FLAKY** (found 2026-08-09 while measuring §4.6):
+  three runs of `tests/test_untangler.py` on identical code gave 8-passed / 1-failed / 8-passed. The
+  failure is `entry["doc_id"] != tiered_world["belief"].id` — the untangler convicted the *other*
+  theorem. Prime suspect is the fixture itself: `tiered_world` gives **`belief` and `dependent` the
+  SAME zip** (`compile_zip(_POISON_B)` on both, lines 72 + 79), so anything selecting on geometry
+  has nothing to tell them apart and the tie falls to ordering. Either the conviction must select on
+  provenance (the real discriminator) or the fixture must stop minting geometric twins.
+  **Now load-bearing**: the full gate is a DEPLOY gate, and a flaky gate blocks a deploy at random.
+  It costs a re-run rather than an outage (nothing restarts on red) — but it trains us to re-run on
+  red, which is exactly the habit a blocking gate must not teach.
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.

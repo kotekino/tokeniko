@@ -189,19 +189,54 @@ knowingly — it is today's proven path, and roadmap §4.10 (delta-load) would s
 touches the biography** (code and mind live in different places, a quiet virtue of this architecture).
 
 ```
-scripts/body/deploy.sh            # from the MacBook, once main is green and pushed
+scripts/body/deploy.sh                     # from the MacBook, once main is pushed
+scripts/body/deploy.sh --when-quiet        # …and don't interrupt him mid-sentence
+scripts/body/deploy.sh --dry-run           # read the whole thing without touching the body
 ```
 
 In order:
 1. refuse a dirty or unpushed tree — deploy what is *on origin*, not what is on the desk;
-2. `ssh <mini>`: `git pull --ff-only`;
-3. `pip install -e .` only when dependencies changed;
-4. **restart the three agents**: `launchctl kickstart -k gui/$UID/<label>` (`-k` = kill then
+2. read the body's state (`brain_state` + the action queue) over the LAN;
+3. `--when-quiet`: wait for a window that is safe to interrupt — **awake**, no external message
+   answered for 180 s, nothing queued. It waits *before* touching anything, so a timeout leaves the
+   body completely untouched;
+4. `ssh <mini>`: `git pull --ff-only` (reattaching first, loudly, if a previous rollback left a
+   detached HEAD);
+5. dependencies **from the newest `requirements-lock-*.txt`**, then `pip install --no-deps -e .` so
+   pip cannot undo the pins it just installed (§2.4). Only when the declaration actually moved;
+6. **model preflight** (`scripts/body/preflight_models.py`) — does `en_core_web_lg` still match the
+   installed spaCy? Caught *here*, not inside `api`'s lifespan after the mind is already down;
+7. **the regression gate, on the body** (`--skip-gate` to bypass). See below;
+8. tag the deployed commit;
+9. **restart the three agents**: `launchctl kickstart -k gui/$(id -u)/<label>` (`-k` = kill then
    restart). `tk-atlas` is NOT touched — the database does not restart because code did;
-5. ✅ health-check: the API answers, the brain's heartbeat advanced, and the **Mind Monitor on
-   tokeniko.online shows a fresh beat**.
+10. ✅ health-check: the API answers and `brain_state.awake_mark` **advanced** (proof the *mind*
+    came back, not merely that a process exists) + the **Mind Monitor** shows a fresh beat;
+11. ❗ **automatic rollback** on a failed health-check: back to the previous commit, its lock
+    reinstalled, restarted, re-checked. `--no-rollback` to leave it as it failed, for inspection.
 
-**Rollback**: `git checkout <previous tag>` + the same restart. Tag what you deploy.
+### The gate runs at deploy, on the body (the author's ruling 2026-08-09)
+
+The full gate **left the development loop**. The loop's signal is `task test-fast` — 271 tests,
+~3 s, no models, no Mongo. The full gate runs at step 7 above, and three things make that the right
+place rather than a compromise:
+
+- **A red gate costs zero downtime.** The daemons have not restarted yet; they are still serving the
+  old code from memory while the gate exercises the new code on disk. He never notices.
+- **It tests against his actual knowledge.** The sandbox clones his definitions with `$merge`, which
+  requires *same server* — which is also why running it from the workshop dragged every round trip
+  across the LAN (82 min → 32 min with `zstd`). §2.4's argument about dependencies applies to data:
+  a gate against a *copy* stops proving anything about the body the moment the copy drifts.
+- **The cost lands where it belongs.** The suite only grows. Paying that growth at sparse deploys is
+  right; paying it in the dev loop taxes every iteration forever.
+
+It writes to the `<memory>_test` sandbox only — the biography is never read nor written by the gate.
+
+⚠️ **The honest cost, to be measured on the first run**: the gate loads its own spaCy+Stanza and the
+definition cache *alongside* the live `api` that already holds them, on a 16 GB machine with 8.3 GB
+in Docker. **He will be slow while it runs.** Watch the first one before trusting it unattended.
+
+**Rollback**: automatic (above). A later, deliberate one: `git checkout <tag>` + the same restart.
 
 **Monitoring you already own**: the brain's heartbeat publishes to the public Atlas, so the **Mind
 Monitor is the liveness check** — a stale beat means the body is down. No new tooling.

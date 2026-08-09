@@ -1134,3 +1134,30 @@ a write-path question with a real design fork behind it, and it is the one that 
 anyone but the author can ever teach him anything. Finding 2 rides along — it is one determiner, but
 it makes a correct inference read as broken English on a public channel.
 
+
+
+## 2026-08-09 — MEASURING §4.6, AND WHAT THE MEASUREMENT ACTUALLY FOUND
+
+Two findings, neither of them the one being looked for.
+
+**1. `test_dry_run_convicts_without_touching` is flaky.** Three whole-file runs of
+`tests/test_untangler.py`, two of them on byte-identical code: 8-passed (main) / **1-failed** (§4.6)
+/ 8-passed (§4.6). The assertion that breaks is `entry["doc_id"] == tiered_world["belief"].id` — the
+untangler convicted the *other* theorem. The fixture hands it a coin to flip: `belief` and
+`dependent` are built with the **same zip** (`compile_zip(_POISON_B)` on both), so they are
+geometrically identical and differ only in provenance. Filed → `roadmap.md`.
+
+*The methodological lesson, which cost two five-minute runs:* the first comparison ran the test
+ALONE on main against the WHOLE FILE on the change — and the file's earlier test applies retreats,
+mutating the sandbox before the failing test starts. Two variables, one conclusion, wrong. **When a
+test's neighbours write to the shared sandbox, the only valid comparison is the same unit on both
+sides** — and one run per side proves nothing against a suspected flake.
+
+**2. Wall-clock at this granularity cannot see §4.6.** The same file took 296 s / 290 s / 241 s
+across the three runs — a ±20% spread that swamps the effect being measured. The structural claim is
+what holds and is unit-locked (`tests/test_kb_cache.py`): a new theorem no longer re-fetches the
+1.2 GB of definitions. How much that is worth in practice is a **workload** question, and the honest
+instrument is a fetch COUNTER on a theorem-materializing run, not a stopwatch on wondering-bound
+tests. The tests that carried the original 62% (`test_direct_fact_match`, `test_evaluator`) were
+never the ones measured — `test_untangler` was picked on a guess about `_saturate()` that turned out
+to describe saturation compute, not KB loading.

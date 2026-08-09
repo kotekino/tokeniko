@@ -106,13 +106,15 @@ reduced-participle vs finite-relative-with-nsubj distinction), adjacent to the p
 subject-rebinding work. Would recover the verb bulk (~300 candidates) as clean differentia rules and
 substantially grow the enriched-soak fuel. Promote when the parser voice signal is built.
 
-**Performance (optimize-later)** — the fingerprint KB cache (`_kb_cache`) landed, but every
-materialized theorem changes the fingerprint → the next tick still pays a FULL reload (3233
-definition zips, tens of seconds) — an incremental/delta reload would cut soak tick cost ~10x.
-Dual `en_core_web_lg` load (`parser.nlp` + `c_state.nlp`) → consolidate. *(TKZip binary compaction
-left here for the roadmap 2026-07-14 and RETURNED 2026-08-03 under the tk2 filter — it now lives in
-the `→ tk2` section at the top of this file. The delta-reload half stayed on the road as
-strengthening-tail #6: instrument fitness, not tuning.)*
+**Performance (optimize-later)** — *(the theorem-invalidates-the-vocabulary half is DONE, 2026-08-09:
+the two-tier fingerprint — see `landed.md` §0 addendum. What stays parked is the residue.)* A true
+**delta reload of the definitions themselves** — when the vocabulary really does grow, the whole
+1.2 GB is still re-read — and **trimming the load to what the evaluator actually reads**, paired with
+watermark-gating `kb_wonder`'s re-saturation (the noted future optimization in `thinking.py`). Both
+are now genuinely optimize-later: definitions change rarely, so the pressure that made this urgent is
+gone. Dual `en_core_web_lg` load (`parser.nlp` + `c_state.nlp`) → consolidate. *(TKZip binary
+compaction left here for the roadmap 2026-07-14 and RETURNED 2026-08-03 under the tk2 filter — it now
+lives in the `→ tk2` section at the top of this file.)*
 
 **WSD (deeper refinements)** — contextual WSD for ambiguous heads; co-predication hint (prefer
 attribute-sharing adjective senses); graded attribute-contrariety (no crisp `antonym` edge).
