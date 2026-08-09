@@ -57,9 +57,39 @@ _FIXTURE_AXIOMS = [
 ]
 
 
+# THE ORPHAN SWEEP (2026-08-09 — found by a deploy gate going red on the body).
+# Every fixture that inserts scaffolding sweeps it in TEARDOWN, which is correct and enough for a
+# run that finishes. A run that is INTERRUPTED (ctrl-c, a kill, a crash) never reaches teardown and
+# leaves the sandbox poisoned for every future session — with two failure modes seen for real:
+#
+#   1. `brain_state.key` is UNIQUELY indexed, so an orphan row makes the next session's insert raise
+#      DuplicateKeyError in fixture SETUP — reported as ERROR, on tests that are perfectly fine.
+#   2. `test_sleep_phase.py` and `test_untangler.py` use the SAME sentinel sentences and both delete
+#      by them. An orphan theorem from one is a second document with the same `original` in the
+#      other's world, and the untangler convicts the wrong row — which looks exactly like flakiness,
+#      because the run that exposes it also cleans it up (its teardown deletes by that string).
+#
+# Teardown cannot fix this: the process that should have run it is gone. So the sweep belongs at
+# session START, where an interrupted predecessor can be healed rather than inherited. Scoped to the
+# sandbox and to markers the application itself never writes: the app only ever uses the
+# `singleton` brain_state, and these three sentences exist solely as deliberate fixture absurdities.
+_LITTER_ORIGINALS = ["all animals are minds", "all minds are software", "no software is an animal"]
+
+
+def _sweep_fixture_litter(test) -> None:
+    swept = {
+        "brain_state": test["brain_state"].delete_many({"key": {"$ne": "singleton"}}).deleted_count,
+        "axioms": test["axioms"].delete_many({"original": {"$in": _LITTER_ORIGINALS}}).deleted_count,
+        "theorems": test["theorems"].delete_many({"original": {"$in": _LITTER_ORIGINALS}}).deleted_count,
+    }
+    if any(swept.values()):
+        print(f"\n[conftest] swept orphaned fixture rows from a previous interrupted run: {swept}")
+
+
 def _bootstrap_sandbox(mongo_client_memory, live_mem_db: str, test_mem_db: str, tokeniko, ai):
     live = mongo_client_memory[live_mem_db]
     test = mongo_client_memory[test_mem_db]
+    _sweep_fixture_litter(test)
     # definitions: the grounding vocabulary — clone from live when out of sync (cheap count check)
     n_live, n_test = live["definitions"].count_documents({}), test["definitions"].count_documents({})
     if n_live and n_live != n_test:

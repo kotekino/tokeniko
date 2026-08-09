@@ -2411,3 +2411,28 @@ reasoning: `doc/ref/deploy-body.md`.
   3am, and the tiredness clock resets. Worse, the night is the only window running
   `untangle_pass(apply=True)`, a KB-writing belief revision. **The safe window is the opposite one:
   awake and quiet.**
+
+
+**§0 addendum II — the first real deploy (2026-08-09), which went RED and was better for it**
+- **The rollback ran for real, on the first attempt, exactly as designed**: the gate failed, and the
+  script announced *"nothing was restarted, so he is still up and thinking on the old code — this
+  deploy cost him nothing"*, put the disk back to `b63b5af`, reinstalled that tree's lock, and left
+  the daemons alone. **He stayed awake and mid-conversation throughout.** A green first run would
+  have proven far less.
+- **The gate on the body: 11:15 against 36:19 over the LAN — 3.2×.** Same suite, same data, same
+  machine answering the queries; the only thing removed was 6 ms per round trip. *The gate was never
+  expensive — the LAN was.*
+- **The contention worry was measured and did not materialise**: swapouts **zero**, 39% memory free,
+  load 2.41 on 10 cores, and a wake-from-deep-rest → answer in the **same second** while 818 tests
+  ran beside him. The runbook's ⚠️ "he will be slow while it runs" was wrong and has been replaced
+  with the numbers (§5).
+- **One root cause explained both of the day's mysteries** — and it was ours. A `test_sleep_phase.py`
+  run killed with `pkill` that afternoon skipped its teardown and orphaned two rows in the sandbox.
+  That orphan (a) made the deploy gate ERROR with `DuplicateKeyError` (`brain_state.key` is UNIQUE),
+  and (b) had already made `test_untangler` convict the wrong document — the "flake" filed hours
+  earlier, which was never a flake. Cured by an **orphan sweep at session START** in `conftest.py`:
+  teardown cannot clean up after a process that no longer exists, so the sweep belongs at the start
+  of the next session. Full post-mortem → `doc/ref/test-feedback.md`.
+- **A smaller finding, filed not fixed**: the dependency check matches `tokeniko/pyproject.toml` by
+  path, so a **comment-only** edit triggered a full lock reinstall on the body. Conservative in the
+  right direction, but it should compare the resolved dependency set rather than the file's bytes.

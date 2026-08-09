@@ -232,9 +232,25 @@ place rather than a compromise:
 
 It writes to the `<memory>_test` sandbox only — the biography is never read nor written by the gate.
 
-⚠️ **The honest cost, to be measured on the first run**: the gate loads its own spaCy+Stanza and the
-definition cache *alongside* the live `api` that already holds them, on a 16 GB machine with 8.3 GB
-in Docker. **He will be slow while it runs.** Watch the first one before trusting it unattended.
+✅ **MEASURED on the first real run (2026-08-09) — and the feared cost did not appear.** The warning
+that stood here said "he will be slow while it runs". He was not.
+
+| | measured |
+|---|---|
+| gate wall time, on the body | **11:15** (against **36:19** over the LAN — **3.2×**) |
+| swapouts during the gate | **zero** in 20 s (swap *occupancy* ~4 GB, but nothing being evicted) |
+| free memory / load | 39% free · load 2.41 on 10 cores (~24%) |
+| wake→answer under full gate load | **same second** — question evaluated, idea formed, action dispatched |
+
+The last row is the one that settles it: a Discord message during the gate woke him from deep rest
+and he answered at normal speed. Read the swap number carefully — ~4 GB *occupied* looks alarming
+and means nothing on macOS, which parks pages lazily; the honest metric is **swapouts**, and that
+counter did not move at all.
+
+**The 3.2× is the deeper finding**: the gate was never expensive, the LAN was. Months of "the gate
+is very slow" were substantially a 6 ms round-trip tax, invisible while the database was local and
+only exposed once the body moved. It cannot be won back on the workshop — the data lives where the
+mind lives now.
 
 **Rollback**: automatic (above). A later, deliberate one: `git checkout <tag>` + the same restart.
 

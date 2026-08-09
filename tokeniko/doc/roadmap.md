@@ -177,16 +177,27 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
   spaCy+Stanza, so a 200 means the pipeline is up) but oblique. Three lines would say it directly.
   **Deliberately deferred past the transplant** — do not change how the mind starts the day before
   moving it.
-- **`test_dry_run_convicts_without_touching` is FLAKY** (found 2026-08-09 while measuring §4.6):
-  three runs of `tests/test_untangler.py` on identical code gave 8-passed / 1-failed / 8-passed. The
-  failure is `entry["doc_id"] != tiered_world["belief"].id` — the untangler convicted the *other*
-  theorem. Prime suspect is the fixture itself: `tiered_world` gives **`belief` and `dependent` the
-  SAME zip** (`compile_zip(_POISON_B)` on both, lines 72 + 79), so anything selecting on geometry
-  has nothing to tell them apart and the tie falls to ordering. Either the conviction must select on
-  provenance (the real discriminator) or the fixture must stop minting geometric twins.
-  **Now load-bearing**: the full gate is a DEPLOY gate, and a flaky gate blocks a deploy at random.
-  It costs a re-run rather than an outage (nothing restarts on red) — but it trains us to re-run on
-  red, which is exactly the habit a blocking gate must not teach.
+- **Fixture sentinels are shared across test files, and teardown is the only sweep** (2026-08-09;
+  the immediate orphan hazard is CURED by the conftest session-start sweep → `landed.md`, this is
+  the residue). `test_sleep_phase.py` and `test_untangler.py` declare **identical** `_POISON_A/B/C`
+  sentences and both `delete_many({"original": ...})` on them — so each file's teardown silently
+  deletes the other's rows, they can never run in parallel, and a duplicate `original` makes the
+  untangler convict the wrong document. Two candidate fixes, neither urgent now that orphans are
+  swept: give each file its own sentinels (or import one shared set that only one owner sweeps), and
+  make the untangler's conviction select on **provenance** rather than on anything that two
+  same-`original` rows share. *(The `tiered_world` fixture also gives `belief` and `dependent` the
+  SAME zip, so geometry cannot tell them apart either — same lesson, different level.)*
+- **The dependency check matches by PATH, not by meaning** (found on the first real deploy,
+  2026-08-09): `deploy.sh` step 5 diffs `tokeniko/pyproject.toml`, so a **comment-only** edit
+  triggered a full lock reinstall on the body. Conservative in the safe direction — over-installing
+  beats silent drift (§2.4) — but it should compare the RESOLVED dependency set instead, so docs
+  touches to that file stop costing a reinstall each time.
+- **`deploy.sh` should pre-check untracked collisions before the pull** (same run): the first attempt
+  died on a raw `git pull` error (*"untracked working tree files would be overwritten"*) via `set -e`,
+  with no diagnosis. The manual triage was: are the colliding files byte-identical to the incoming
+  ones? Step 4 should answer that for you and say so — the whole point of the script is that nobody
+  has to do that by hand at 2am. **Cause will recur**: anything created on the body and later
+  committed from the workshop collides the same way (the transplant made three such files).
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.

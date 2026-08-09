@@ -1140,12 +1140,32 @@ it makes a correct inference read as broken English on a public channel.
 
 Two findings, neither of them the one being looked for.
 
-**1. `test_dry_run_convicts_without_touching` is flaky.** Three whole-file runs of
-`tests/test_untangler.py`, two of them on byte-identical code: 8-passed (main) / **1-failed** (§4.6)
-/ 8-passed (§4.6). The assertion that breaks is `entry["doc_id"] == tiered_world["belief"].id` — the
-untangler convicted the *other* theorem. The fixture hands it a coin to flip: `belief` and
-`dependent` are built with the **same zip** (`compile_zip(_POISON_B)` on both), so they are
-geometrically identical and differ only in provenance. Filed → `roadmap.md`.
+**1. ~~`test_dry_run_convicts_without_touching` is flaky.~~ CORRECTED THE SAME DAY — it was not
+flaky, it was CONTAMINATION, and the contaminating act was ours.** Three whole-file runs of
+`tests/test_untangler.py`, two on byte-identical code, gave 8-passed / **1-failed** / 8-passed, and
+"intermittent" was the obvious reading. It was wrong.
+
+Earlier that afternoon a `pytest tests/test_sleep_phase.py` run had been **killed with `pkill`**
+(it was reaching across the LAN mid-conversation). Killed means teardown never ran, and that file's
+fixtures left two orphans in the sandbox: a `brain_state` row keyed `sleep-test`, and a theorem
+`"all minds are software"`. `test_untangler.py` declares the **same** sentinel sentence, so its
+world now held TWO documents with that `original` — and the untangler convicted the orphan.
+
+The proof was in the ObjectIds. The failing assertion read `doc_id == '6a781e02c680…f7'`; the
+orphaned `brain_state` row was `6a781e02c680…f9` — **the same allocation batch, microseconds
+apart**. Both were litter from the killed run.
+
+And the reason it "passed on retry" is the cruellest part: `test_untangler`'s teardown deletes by
+that same shared string, so **the run that exposed the contamination also cleaned it up.** A bug
+that erases its own evidence on the way out reads as flakiness every single time.
+
+*Two lessons, both paid for.* **(a)** Interrupting a test run is not free — it leaves state that
+outlives the process, and on a shared sandbox that state is inherited by everyone afterwards.
+Teardown cannot help; the process that owed it is gone. Cured by a session-START sweep in
+`conftest.py`. **(b)** "Flaky" is a diagnosis, not a description, and it is the most comfortable
+wrong answer available — it explains any inconsistency while requiring no mechanism. Demand the
+mechanism. The same orphan later turned the deploy gate red with `DuplicateKeyError` (`brain_state`
+carries a UNIQUE index on `key`), which is what finally forced the real explanation out.
 
 *The methodological lesson, which cost two five-minute runs:* the first comparison ran the test
 ALONE on main against the WHOLE FILE on the change — and the file's earlier test applies retreats,
