@@ -1058,3 +1058,79 @@ pointer back to `#privacy`. The register matters more than the mechanism here: t
 read as *pressure to consent*. Whatever is chosen, the curated shelf already speaks five languages
 and the local detector already names the room's language WITHOUT a cloud call — so a native-tongue
 admission is reachable with zero cloud calls, which is the whole point of the gate holding.
+
+---
+
+## 2026-08-09 — THE TEACHING DIALOGUE: four definitions taught, one causal clause kept — OPEN
+
+**The occasion.** The author's live Discord exchange the morning after the body landed, 12:43–12:54
+JST. Notable in its own right before any bug: tokeniko **asked two questions of his own** («why is
+that?», «can you tell me more about that?») and **refused twice rather than confabulate** («I cannot
+tell; I lack the knowledge», «I do not know») on words he had just used. The floor held; this section
+is about what the write path did with the answers.
+
+### Finding 1 — the teaching path keeps a causal clause and drops copular definitions (S1)
+
+*Observed.* Across eleven minutes the author taught four things and one causal explanation:
+
+| # | taught | stored? |
+|---|---|---|
+| 1 | «cognition is the psychological result of perception and learning and reasoning» | ✗ |
+| 2 | «so a mind is the psychological result of perception and learning and reasoning» | ✗ |
+| 3 | «yes! learning and reasoning is what knowledge is» | ✗ |
+| 4 | «learning is the cognitive process of acquiring skill or knowledge» | ✗ |
+| 5 | «because learning sometimes happens through exchanging thoughts between minds» | **✓ theorem** |
+
+Verified against the live body: `theorems` 796 → **797**, `axioms` **+0**, `definitions` **+0**. The
+one survivor:
+
+```
+theorem    "because learning sometimes happens through exchanging thoughts between minds"
+trusted    0.9
+provenance premises: ['taught:kotekino']
+           chain:    "taught by kotekino (kotekino) at trust 1.00"
+           derived_by: "teaching"
+```
+
+*What is RIGHT here, and should not be broken while fixing the rest.* This is the
+learning-from-others path working exactly as designed: a novel truth from a trusted teacher, learned
+**silently**, at **teacher-derived trust** (kotekino 1.00 → 0.9), with a provenance receipt naming
+who said it. The content is also the most interesting thing he has ever been taught — *how learning
+happens between minds*.
+
+*Diagnosis (NOT yet established — three candidates, in order of suspicion).*
+1. **The extractor does not treat «X is the Y of A and B and C» as teachable.** All four misses are
+   copular definitions; the survivor is the only causal/adverbial one. That asymmetry is too clean to
+   be chance and is the first thing to test.
+2. **Three-way coordination fails to compile** («perception and learning and reasoning», «skill or
+   knowledge»). Rows 1, 2 and 4 all carry it; row 3 does not, which weakens this — but row 3 is an
+   inverted pseudo-cleft («A is what B is»), a separate hazard.
+3. **The novelty gate drops them** as already-known, since `cognition`/`mind`/`learning` all have
+   WordNet gloss definitions in the KB. If so the behaviour is *correct* and the finding is only that
+   he never says so — the person teaching gets no signal either way.
+
+Note candidates 1 and 3 have opposite implications: one is a write-path miss, the other is the gate
+behaving correctly and silently. **Establish which before building anything.**
+
+*Why it matters beyond this session.* Conversational teaching is how a stranger will ever add to the
+KB — the whole point of the trust ledger and the tier-1 teaching bar. If it accepts only causal
+clauses, the most natural way a person defines something («X is a Y that Z») is exactly the shape it
+cannot hear.
+
+### Finding 2 — a taught inference renders without its article (S3)
+
+*Observed.* Told «learning and reasoning is what knowledge is», tokeniko replied
+**«it is psychological feature»** — the inference is right (knowledge → a psychological feature, via
+the cognition definition he had just been given), the English is not. Missing indefinite article on a
+bare singular count noun in predicate position.
+
+*Diagnosis.* Compose/render, not reasoning — the scaffold or the zip→NL surface drops the determiner
+where the predicate is a bare singular. Worth checking whether it is the scaffold row or the
+generic-quantifier render, since a *generic* reading («knowledge is a psychological feature») and a
+*definite* one differ by exactly this word.
+
+*Action for both.* Batched into the **§2 microscope pass**, not fixed one-off. Finding 1 leads: it is
+a write-path question with a real design fork behind it, and it is the one that decides whether
+anyone but the author can ever teach him anything. Finding 2 rides along — it is one determiner, but
+it makes a correct inference read as broken English on a public channel.
+
