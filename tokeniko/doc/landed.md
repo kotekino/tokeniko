@@ -2436,3 +2436,22 @@ reasoning: `doc/ref/deploy-body.md`.
 - **A smaller finding, filed not fixed**: the dependency check matches `tokeniko/pyproject.toml` by
   path, so a **comment-only** edit triggered a full lock reinstall on the body. Conservative in the
   right direction, but it should compare the resolved dependency set rather than the file's bytes.
+
+- **✅ ARCHIVED — the second attempt went green and the loop is closed** (`c1fd882`, tag
+  `body-20260809-075830`): `818 passed, 1 xfailed in 10:48` → gate GREEN → tag → restart →
+  `API PASS` · `BRAIN PASS (awake_mark 0 -> 1786262984)`. Step 4 detected the previous rollback's
+  detached HEAD and reattached to `main` on its own; the boot log read
+  `[sleep] ☀️ woken by the reboot — the night ended with the process` — the exact line used that
+  morning to argue *against* `--when-asleep`, now observed rather than reasoned. `awake_mark before
+  = 0` is the asleep case working as designed (the mark is None while asleep, and 0 is below any
+  post-boot epoch, so the check holds from either state).
+- **What the arc actually established**, in the author's own summary and with the numbers behind it:
+  **(a)** the gate on the body is **10:48 vs 36:19** over the LAN — the gate was never expensive,
+  the LAN was; **(b)** the machine carries it with room to spare — zero swapouts, 39% free, load
+  2.41 on 10 cores, a wake-from-deep-rest answered in the *same second* under full gate load, and
+  no overhead because it does nothing but be tokeniko; **(c)** the deploy procedure is robust
+  *because* its first real run failed — the rollback is proven, not asserted; **(d)** the author's
+  own proposal — full gate at deploy, fast lane in the loop — is the largest single development
+  speed-up of the project: **36 min → 3 s** for the iteration signal, and it compounded, because
+  moving the gate to the data made the gate itself 3.2× faster. Only (d)'s first half was predicted
+  when he proposed it.

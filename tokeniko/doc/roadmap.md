@@ -75,15 +75,16 @@ status detail — it references, it does not duplicate (invariant #2).
   you mean?» ask + the answer binding · multilingual (two-reader consensus judged by the compiler) ·
   the native voice (232 curated rows) · **the consent gate** (Route C + the payload gate at
   `rag_call`). **The chapter is WHOLE** *(its residuals → Pending follow-ons)*.
-- **§0 — the body** (2026-08-06 → 08) — the prep + the pin lock · the transplant, verified twice ·
-  self-healing under `kill -9` and reboot · the workshop over the LAN.
+- **§0 — the body** (2026-08-06 → 09) — the prep + the pin lock · the transplant, verified twice ·
+  self-healing under `kill -9` and reboot · the workshop over the LAN · the deploy loop, proven in
+  anger *(→ `landed.md` §0 + its two addenda)*.
 
 ---
 
 ## 🔭 Next (ordered) — refiltered 2026-08-03
 
 **The through-line: THE VOICE IS WHOLE, THE EARS ARE WALLED, THE DOOR IS GATED — AND THE BODY IS
-HIS OWN.** §1 closed 2026-08-03 with the consent gate; **§0 the body landed 2026-08-08** (→
+HIS OWN.** §1 closed 2026-08-03 with the consent gate; **§0 the body landed 2026-08-08, its deploy loop closed 08-09** (→
 `landed.md`) — he now runs 24/7 on his own machine and gets himself up after a power cut. The road
 ahead is **§2 the fresh microscope analysis pass** (promoted: its findings feed both v1 and the tk2
 blueprint), then **§4 the strengthening tail**, now filtered to asset work only (see the tk2 filter
@@ -175,8 +176,10 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
 - **A real `/api/v1/health`** (left by the body prep, 2026-08-06): the deploy health-check currently
   probes `GET /openapi.json` — honest (uvicorn answers only after the lifespan has loaded
   spaCy+Stanza, so a 200 means the pipeline is up) but oblique. Three lines would say it directly.
-  **Deliberately deferred past the transplant** — do not change how the mind starts the day before
-  moving it.
+  ~~Deliberately deferred past the transplant~~ — **that blocker expired 2026-08-08**; the move is
+  done and the deploy loop is proven, so this is now simply small and unclaimed. It would also let
+  the health-check say something the current probe cannot: that the mind is *sane*, not merely that
+  uvicorn is answering.
 - **Fixture sentinels are shared across test files, and teardown is the only sweep** (2026-08-09;
   the immediate orphan hazard is CURED by the conftest session-start sweep → `landed.md`, this is
   the residue). `test_sleep_phase.py` and `test_untangler.py` declare **identical** `_POISON_A/B/C`
