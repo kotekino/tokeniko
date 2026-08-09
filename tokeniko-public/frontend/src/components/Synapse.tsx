@@ -11,8 +11,8 @@ interface Props {
 }
 
 /**
- * The synapse device — the CI's brand accent: three nodes, one firing.
- * Used as a divider / bullet. Matches ci/ tokeniko logo synapse exactly.
+ * The synapse device — the brand identity's accent: three nodes, one firing.
+ * Used as a divider / bullet. Matches bi/ tokeniko logo synapse exactly.
  */
 const Synapse: React.FC<Props> = ({
   width = 120,

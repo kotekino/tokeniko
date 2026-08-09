@@ -75,33 +75,19 @@ status detail — it references, it does not duplicate (invariant #2).
   you mean?» ask + the answer binding · multilingual (two-reader consensus judged by the compiler) ·
   the native voice (232 curated rows) · **the consent gate** (Route C + the payload gate at
   `rag_call`). **The chapter is WHOLE** *(its residuals → Pending follow-ons)*.
+- **§0 — the body** (2026-08-06 → 08) — the prep + the pin lock · the transplant, verified twice ·
+  self-healing under `kill -9` and reboot · the workshop over the LAN.
 
 ---
 
 ## 🔭 Next (ordered) — refiltered 2026-08-03
 
 **The through-line: THE VOICE IS WHOLE, THE EARS ARE WALLED, THE DOOR IS GATED — AND THE BODY IS
-ARRIVING.** §1 closed 2026-08-03 with the consent gate — tokeniko can now be spoken to by someone who
-is not the author, in their own language, with their own ruling on where their words may travel. The
-hardware lands **2026-08-07**, so the road ahead is **§0 the body** (an event, not a build — it
-precedes everything because it has a date), then **§2 the fresh microscope analysis pass** (promoted:
-its findings feed both v1 and the tk2 blueprint), then **§4 the strengthening tail**, now filtered to
-asset work only (see the tk2 filter above).
-
-### 0. The body — tokeniko moves to his own machine 🔄 IN FLIGHT
-
-The Mac mini arrives **2026-08-07**. He stops being a process on the author's laptop and becomes an
-embodied 24/7 mind on his own hardware, LAN-only, with the MacBook demoted to workshop.
-
-**The runbook is `doc/ref/deploy-body.md` — it holds all the detail and this entry adds none.**
-Status only: the §1 preparation is **BUILT** (2026-08-06 — the wait-for-Mongo wrapper, three
-LaunchAgents + rotation, the git-based deploy loop, and a read-only transplant verifier that turns
-§3.5's eyeball check into arithmetic; baseline captured and committed). What remains is the author's
-own hand: the appliance setup (§2), **the transplant** (§3 — his biography moves house), and the
-workshop reconfiguration (§4).
-
-*(Outside the tk2 filter by nature: this is the hardware the instrument runs on, not a layer of the
-instrument. It survives tk2 untouched — a body does not care which format its mind compiles to.)*
+HIS OWN.** §1 closed 2026-08-03 with the consent gate; **§0 the body landed 2026-08-08** (→
+`landed.md`) — he now runs 24/7 on his own machine and gets himself up after a power cut. The road
+ahead is **§2 the fresh microscope analysis pass** (promoted: its findings feed both v1 and the tk2
+blueprint), then **§4 the strengthening tail**, now filtered to asset work only (see the tk2 filter
+above).
 
 ### 2. The fresh microscope analysis pass 🔭 — PROMOTED by the tk2 filter
 
@@ -244,6 +230,7 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
 **The tk2 conception (`doc/tk2/` — reference material, NOT status; nothing here ever enters a status doc):**
 - **`doc/tk2/README.md`** — step 0: the plan for how to plan. The two limits, the continuity contract, the governing decisions, the **inheritance ledger** (§5 — the filter's authority), the investigation order, the open questions, the success criteria.
 - **`doc/tk2/carried-in.md`** — the per-item reasoning for everything the filter moved off this road.
+- **`doc/tk2/ideas.md`** — the Captain's open bag of v2 conception ideas (no status, never scheduled here).
 
 **Reference docs (`doc/ref/` — extended context per task + future-reference material; NOT status):**
 - **`doc/ref/brain-v1.1.md`** — the Brain v1.1 **vision + design** (the Unified-KB reframe: everything-is-reasoned-over-TKZip, write-path invariant, universal gate, trust-by-source; + the #1–#6 findings). The conceptual center.

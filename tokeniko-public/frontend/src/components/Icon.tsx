@@ -15,8 +15,8 @@ export type IconName =
   | 'layers';
 
 /**
- * The CI icon set — geometric monoline glyphs on a 24px grid (1.8 stroke,
- * round caps, currentColor ink). Geometry matches ci/ section 04 exactly;
+ * The BI icon set — geometric monoline glyphs on a 24px grid (1.8 stroke,
+ * round caps, currentColor ink). Geometry matches bi/ section 04 exactly;
  * the two filled cores use currentColor so the glyph stays single-colour.
  */
 const PATHS: Record<IconName, string> = {

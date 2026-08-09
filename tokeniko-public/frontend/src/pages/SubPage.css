@@ -109,3 +109,54 @@
   line-height: 1.6;
   list-style: disc;
 }
+
+/* ─── The Colophon's mark (BI 1.1) ────────────────────────────────────────
+   The one place the FULL emblem appears on the site — radar field intact,
+   at a size that can carry it. Both states are in the DOM and cross-fade on
+   the room's tone, so this mark can never disagree with the header's about
+   whether he is awake. Pure CSS: no component knows about sleep. */
+.colophon__mark {
+  margin: 0;
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.colophon__mark-art {
+  position: relative;
+  display: block;
+  width: clamp(200px, 32vw, 280px);
+  flex: 0 0 auto;
+}
+
+.colophon__mark-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.colophon__mark-asleep {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+
+body[data-tone='night'] .colophon__mark-asleep,
+body[data-tone='deep'] .colophon__mark-asleep {
+  opacity: 1;
+}
+
+.colophon__mark figcaption {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+.colophon__mark figcaption p + p {
+  margin-top: var(--space-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .colophon__mark-asleep { transition: none; }
+}

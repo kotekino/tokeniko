@@ -9,7 +9,7 @@
    ════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ─── Palette — names per the brand CI (ci/tokeniko CI.html) ────────────── */
+  /* ─── Palette — names per the brand identity (bi/1.1) ────────────── */
   /* Core · Bakelite neutrals */
   --ink:        #2B2722;   /* Espresso Ink — primary text · outlines */
   --ink-soft:   #4A4339;   /* Ink Soft — secondary text */
@@ -94,6 +94,17 @@
      the CRT's own interior and stay in every tone). Read by MindPanel.css / MindCharts.css. */
   --crt-lift: 0 6px 0 var(--border-ink), 0 18px 40px rgba(43, 39, 34, 0.25);
 
+  /* ── THE EMBLEM (BI 1.1) ────────────────────────────────────────────────
+     The mark's three colours live here, not in LogoMark.tsx, so the header
+     emblem and the footer emblem cannot disagree about whether he is awake
+     (BI 1.1 §02: "switch them together — one awake and one asleep on the
+     same page reads as a bug, not a state"). The night/deep tone blocks
+     re-point field and signal; the paper dots never move, because the mind
+     does not fade — only the signal does. */
+  --lm-field:  #C24E3A;   /* Atomic Coral   — awake  */
+  --lm-dot:    #F4EEDD;   /* Paper          — always */
+  --lm-signal: #F3B52A;   /* Signal Amber   — awake  */
+
   /* Transitions */
   --transition: 160ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 320ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -136,6 +147,10 @@ body[data-tone='deep'] {
   --mint-soft:  #2E3B34;   /* pale tints deepen with the room */
   /* the footer stays what it has always been — the darkest strip on the page — even
      though --ink (its daytime surface) has flipped to parchment for the text. */
+  /* the emblem sleeps with the room: the field drops to Ink Soft and the four
+     terminals go out to Muted Clay. The paper dots are untouched. */
+  --lm-field:   #4B4338;
+  --lm-signal:  #8C806A;
   --footer-bg:  #100D0A;
   /* the footer wordmark matches the header's "tokeniko" at night (both read --ink). */
   --footer-ink: var(--ink);
@@ -161,8 +176,16 @@ body[data-tone='deep'] {
 /* the lamp is turned, not switched: the page background fades between tones.
    (Component surfaces re-tone via the variables — instant, which reads as the
    room's furniture catching up to the light.) */
+@property --lm-field  { syntax: '<color>'; inherits: true; initial-value: #C24E3A; }
+@property --lm-signal { syntax: '<color>'; inherits: true; initial-value: #F3B52A; }
+
 body {
-  transition: background-color 1.8s ease, color 1.8s ease;
+  transition: background-color 1.8s ease, color 1.8s ease,
+              --lm-field 1.8s ease, --lm-signal 1.8s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body { transition: none; }
 }
 
 html {

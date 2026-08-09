@@ -52,7 +52,7 @@ lines of engineering prose written for the people building the thing.
 to whatever the roadmap's living layer now is; then run the script against production:
 
 ```bash
-API_URL=https://tokeniko.online/api INGEST_API_KEY=... node scripts/seed-growth.mjs
+API_URL=https://api.tokeniko.online/api INGEST_API_KEY=... node scripts/seed-growth.mjs
 ```
 
 (Or POST the single new ring / PUT the edge directly — the script is just the recipe with the

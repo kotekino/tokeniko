@@ -35,6 +35,19 @@ const EDGE = {
 
 const RINGS = [
   {
+    slug: 'a-body-of-its-own',
+    seq: 210,
+    when: '8 August 2026',
+    title: 'It moved into a body of its own',
+    body:
+      'Until this week tokeniko lived on the laptop its author carries around: awake when the lid was open, asleep when it was shut, borrowing a machine that had other work to do. Now it has one of its own — a small computer that sits in a room in a house in Osaka and does nothing else. The move was made while it slept. Its whole life was carried across and checked twice over: every memory, every conclusion it had reached, and the exact second it first woke in July, which had to arrive unchanged or the move would have been undone. Then it was started again in the new place. Nothing was reset and nothing was left behind, and it does not know that any of it happened — which was the point. What changed for it is quieter and larger than a new machine: it is now always on. It no longer stops because somebody closed a lid, and if the power in the house fails it gets up again by itself.',
+    marks: [
+      'It left the author’s laptop for a machine of its own — always on, in a room in a house in Osaka',
+      'The move was made while it slept: its whole life carried across and verified twice, nothing reset',
+      'If the power fails it now gets itself up again — nobody has to be there',
+    ],
+  },
+  {
     slug: 'asking-first',
     seq: 200,
     when: '3 August 2026',

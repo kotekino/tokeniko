@@ -12,8 +12,8 @@ Legend: ✅ done · 🔄 in progress · 🔭 next · ⏸️ parked
 
 **Look & identity**
 - Vintage 1950s-appliance design system; CRT Mind Monitor; coding-font typography.
-- Brand CI alignment: official **`tk` emblem** (primary/reverse colourways), **synapse** device,
-  **12-glyph icon set**, palette named to the CI (`ci/tokeniko CI.html`). Favicon/og set; "a
+- Brand identity alignment: official **`tk` emblem** (primary/reverse colourways), **synapse** device,
+  **12-glyph icon set**, palette named to the brand identity (`bi/1.0/`). Favicon/og set; "a
   thinking machine" tagline; Made in Japan.
 
 **Frontend (mock phase)**

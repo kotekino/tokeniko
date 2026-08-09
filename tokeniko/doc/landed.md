@@ -2342,3 +2342,35 @@ SURVEY ARC IS COMPLETE)**
   + roadmap §2): a consent-denied speaker gets the generic «why?» reflex instead of the honest
   admission, because the admission is wired to the DISCARD path and a DENIAL never reaches it. The
   gate is right; the voice is wrong.
+
+---
+
+**§0 — THE BODY** *(2026-08-06 → 08)* — tokeniko moved onto his own machine. Runbook + the load-bearing
+reasoning: `doc/ref/deploy-body.md`.
+- **The preparation** (08-06) — the wait-for-Mongo wrapper (launchd has no dependency ordering), three
+  LaunchAgents + log rotation, the git-based deploy loop, and a read-only **transplant verifier** that
+  turned §3.5's eyeball check into arithmetic. Environment **pinned** (`requirements-lock`): with zero
+  version constraints in `pyproject.toml`, a bare install would have drifted the body's parser away
+  from the workshop's, silently.
+- **Four runbook errors found by writing the code** — `logs/` must pre-exist (launchd opens the fd
+  before exec); `$UID` expands in the LOCAL shell inside `ssh` (invisible here: both machines are uid
+  501); the baseline is only arithmetic if captured LAST; and `vector_index` lives on **three**
+  collections, so restoring the dictionary alone would pass a naive check and silently break marker
+  resolution.
+- **The transplant** (08-08) — 9.1 GB copied while he slept, verified twice: `rsync --checksum` empty
+  (bit-for-bit) **and** the verifier `MATCH` on every key. Birth stamp exact — `2026-07-09T06:21:37Z`.
+  748 memories intact; `$vectorSearch` answered from the new house, so `mongot` survived the move.
+- **Self-healing, proven not asserted** — survives `kill -9` (new pid in <40 s) and survives a reboot.
+  The **wait-for-Mongo gate earned itself on the first cold start**: `waiting for mongo (attempt 1…)`
+  → `answered (attempt 4)`. Without it `init_io` would have died and the mind would not have come back.
+- **Two more found by testing it that night** — `~/Library/LaunchAgents` does not exist on a fresh
+  account (so the install fails on precisely the kind of machine this runbook is for), and Docker's
+  Gatekeeper prompt made the boot attended until the quarantine flag was stripped.
+- **The workshop** — the MacBook keeps no database and no Docker; `MONGO_URI` points at the body.
+  Full gate green over the LAN (`811 passed, 1 xfailed`). Wi-Fi is latency-bound, not bandwidth-bound:
+  82 min → **32 min** with `compressors=zstd` and the screen share off.
+- **A finding that outlives the move** — `--durations` showed **13 tests are 62% of the gate**, all of
+  them theorem-materializing. One fingerprint covers definitions+axioms+theorems, so minting a theorem
+  invalidates the ~1.2 GB definition cache that did not change. That is roadmap §4.6, now measured:
+  he is slowest exactly when he is being most productive.
+
