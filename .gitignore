@@ -19,3 +19,7 @@ ci/.DS_Store
 # the mini. Both are per-machine facts, not code.
 /tokeniko/logs/
 /scripts/body/body.conf
+ci/.DS_Store
+ci/1.0/.DS_Store
+ci/1.0/assets/.DS_Store
+ci/.DS_Store
