@@ -708,7 +708,24 @@ def parser_getMeaning(token: Token, pos: list[str]) -> EntityPayload:
     # adjective sense (rested.a.01 "not tired; refreshed") is never even a candidate. When the
     # participle sits under a copula, try the SURFACE form's adjective senses first —
     # existence-gated: no adjective entry in the dictionary, no behavior change.
-    if token.pos_ == "VERB" and "Part" in token.morph.get("VerbForm") \
+    #
+    # NARROWED TO VBN (§2 microscope, 2026-08-11 — the author's ruling on a measured trade). The gate
+    # read `VerbForm=Part`, which is ALSO true of every present participle, so it caught the whole
+    # progressive family: «the cat is sleeping» compiled dormant.s.02 («lying with head on paws as if
+    # sleeping») as its predicate, «the dog is swimming» liquid.s.01 («filled or brimming with
+    # tears»), «the machine is not thinking» intelligent.s.03. Every case the gate was BUILT for is a
+    # past participle (rested/closed/broken/known/paved/damaged — 9 of 9 in the sweep; tired, gone,
+    # married, confused never reach here at all, stanza tags them ADJ). Measured trade, both
+    # directions counted: 13 everyday progressives fixed (sleeping→sleep.v.01, swimming→swim.v.01,
+    # raining→rain.v.01, thinking→think.v.03, breathing→breathe.v.01, …), 3 predicative idioms LOST
+    # («the water is running», «the engine is running», «the rule is binding» now take the verb
+    # sense), 3 borderline («the sound is deafening», «the sun is blinding», «the pain is lasting»).
+    # NOT fixed either way: an eventive passive («the door is opened by Mari» → open.a.05) — VBN
+    # separates the tense-form, not state-vs-event. The cost is xfailed in test_wsd_curation.py, not
+    # hidden. The VBG reading is undecidable on syntax: the sweep found NO signal (dep, head, morph,
+    # subject animacy/POS, noun-sense presence, constituency NP/VP) that separates a predicate-nominal
+    # gerund from a progressive — «the problem is thinking too much» vs «the machine is not thinking».
+    if token.pos_ == "VERB" and token.tag_ == "VBN" \
             and any(ch.dep_ == "cop" or (ch.dep_ in ("aux", "aux:pass") and ch.lemma_ == "be")
                     for ch in token.children):
         adjCandidates = TKDictionaryDoc.find(
