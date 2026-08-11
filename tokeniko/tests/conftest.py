@@ -125,6 +125,24 @@ def _io():
     return tok, ai
 
 
+# ASK THE PIPELINE, NEVER HARDCODE A SENSE (2026-08-11). This file's own rule is band-asserts —
+# "never an exact `cat.n.01`-style sense (WSD drifts)" — and on 2026-08-11 it drifted ON PURPOSE:
+# §2 curation batch 3 moved `wrong` from wrong.a.02 (contrary to conscience or morality) to
+# incorrect.a.01 (not in conformity with fact or truth), which is the correct reading of «a person is
+# wrong when he says false». Five tests had hardcoded the old string and went red on the DEPLOY gate
+# — the engine was right and the tests were asserting the bug. Where a test genuinely needs the sense
+# as a VALUE (a dict key, a fact it must speak), get it from here: the assertion stays real (it checks
+# the extractor propagates what the compiler picked) and it survives the next curation ruling.
+@pytest.fixture(scope="session")
+def sense_of(compile_zip):
+    from lib.core.kb_extract import _zip_leaves
+
+    def _s(sentence: str, role: str = "predicate", leaf: int = 0):
+        return _zip_leaves(compile_zip(sentence).items)[leaf].senses.get(role)
+
+    return _s
+
+
 @pytest.fixture(scope="session")
 def compile_zip(_io):
     tok, ai = _io

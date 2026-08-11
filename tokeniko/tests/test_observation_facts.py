@@ -88,7 +88,7 @@ def test_native_matches_compiled_shape(compile_zip):
 
 # ---- end to end: the taught rule FIRES on the observation ---------------------------------------------
 
-def test_taught_rule_fires_on_observation(compile_zip):
+def test_taught_rule_fires_on_observation(compile_zip, sense_of):
     # the acceptance case the seam exists for: teach the rule, know the membership, OBSERVE the
     # falsehood -> the chainer derives «wrong» with the observation in the premises
     rule_doc = _doc(compile_zip("a person is wrong if he says false"),
@@ -102,7 +102,7 @@ def test_taught_rule_fires_on_observation(compile_zip):
     obs_facts = extract_facts([_doc(obs_zip, "TestLiar said false", "obs-theorem")])
     derived, chains = evaluator_forwardChain(
         None, "liar@test:obs", rules, lambda s: [], [membership] + obs_facts)
-    wrong = {d["predicate"]: d for d in derived}.get("wrong.a.02")
+    wrong = {d["predicate"]: d for d in derived}.get(sense_of("a person is wrong"))
     assert wrong is not None
     assert "obs-theorem" in wrong["premises"]               # the observation is a premise
     assert "rule-obs" in wrong["premises"]

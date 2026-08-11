@@ -25,25 +25,25 @@ def _class_conditioned(rules):
 
 # ---- extraction shapes -----------------------------------------------------------------------------
 
-def test_reteach_sentence_extracts_the_rule(compile_zip):
+def test_reteach_sentence_extracts_the_rule(compile_zip, sense_of):
     # THE acceptance case: «a person is wrong if he says false» becomes a usable chainer rule
     ccs = _class_conditioned(_rules_of(compile_zip, "a person is wrong if he says false"))
     assert len(ccs) == 1
     r = ccs[0]
     assert r["cond_class"] == "person.n.01"      # "he" coreference-resolved to the class
-    assert r["concl_pred"] == "wrong.a.02"
+    assert r["concl_pred"] == sense_of("a person is wrong")   # never hardcoded — see conftest
     assert r["cond_pred"]                        # the say-predicate
     assert len(r["cond_extra"]) == 1             # the «false» THAT complement rides as a conjunct
     assert r["strength"] == "generic"            # a taught conditional is defeasible
 
 
-def test_fronted_variant_inherits_the_subject(compile_zip):
+def test_fronted_variant_inherits_the_subject(compile_zip, sense_of):
     # «if a person says false, he is wrong» loses its cataphoric "he" — the consequent inherits
     # the antecedent's class (conditionals share subjects by default)
     ccs = _class_conditioned(_rules_of(compile_zip, "if a person says false, he is wrong"))
     assert len(ccs) == 1
     assert ccs[0]["cond_class"] == "person.n.01"
-    assert ccs[0]["concl_pred"] == "wrong.a.02"
+    assert ccs[0]["concl_pred"] == sense_of("a person is wrong")
 
 
 def test_single_predicate_conditional(compile_zip):
@@ -53,12 +53,12 @@ def test_single_predicate_conditional(compile_zip):
     assert ccs[0]["cond_extra"] == []
 
 
-def test_cause_pair_same_subject_extracts(compile_zip):
+def test_cause_pair_same_subject_extracts(compile_zip, sense_of):
     # the M2 `cause` fuel line: a same-class-subject reason pair is a defeasible rule
     ccs = _class_conditioned(_rules_of(compile_zip, "a person is wrong because he lies"))
     assert len(ccs) == 1
     assert ccs[0]["cond_class"] == "person.n.01"
-    assert ccs[0]["concl_pred"] == "wrong.a.02"
+    assert ccs[0]["concl_pred"] == sense_of("a person is wrong")
 
 
 def test_anecdote_never_generalizes(compile_zip):
@@ -126,9 +126,9 @@ def test_cond_extra_all_must_hold():
 
 # ---- end to end: teach the rule, know the fact, derive the verdict ----------------------------------
 
-def test_end_to_end_taught_conditional_fires(compile_zip):
+def test_end_to_end_taught_conditional_fires(compile_zip, sense_of):
     rules = _rules_of(compile_zip, "a person is wrong if he lies")
     r = _class_conditioned(rules)[0]
     facts = [_MEMBER, {**_LIES, "predicate": r["cond_pred"]}]  # the fact speaks the rule's sense
     out = _derived_preds(rules, facts)
-    assert "wrong.a.02" in out
+    assert sense_of("a person is wrong") in out   # never hardcoded — see conftest
