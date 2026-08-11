@@ -83,6 +83,15 @@ BATCH = [
     ("make",       "v", "make.v.03"),        # «I made improvements» = cause to be, not «engage in»
     ("want",       "v", "desire.v.01"),      # «I wanted to be polite» = desire, not «have need of»
     ("person",     "n", "person.n.01"),      # a human being, not «a human body including clothing»
+
+    # ---- BATCH 4 (§2 gerunds, 2026-08-11) -------------------------------------------------------
+    # The `-ing` nominalization cluster: a gerund used as a bare predicate nominal («computing is
+    # not thinking») reads as the ACTIVITY, but WordNet's frequency order hands over the FIELD of
+    # study. Distinct from the VBG tagging problem in the same cluster (a `preferred` flag cannot
+    # reach a noun sense the parser never puts in the candidate pool) — this entry only fixes the
+    # words that DO arrive tagged NOUN.
+    ("computing",  "n", "calculation.n.01"),  # «the procedure of calculating» — the activity, not
+                                              # computer_science.n.01, the branch of engineering
 ]
 
 

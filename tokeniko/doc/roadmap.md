@@ -92,11 +92,34 @@ above).
 
 ### 2. The fresh microscope analysis pass 🔭 — PROMOTED by the tk2 filter
 
-The `addressed` flip (2026-07-17) sealed the analyzed generations; the fresh corpus = the
-2026-07-17 play + premiere + the day's new instruments (incl. the ears' own `ears-hallucination`
-rejection leads), judged on current code. **The analysis pass itself is the remaining item** — its
-previously-known leads are all closed (→ `landed.md`; the identity-blindness audit map stays in
-`doc/ref/notes.md`).
+**IN FLIGHT since 2026-08-10 — 113 leads → 68.** The corpus is `tkzipdebug` 2026-07-17 → 08-09
+(sealed by the `addressed` flip), 553 rows of which 275 were unaddressed and only **113 `mismatch`**
+were real leads — the other 159 are journeys rag3 judged fine. Clustered, triaged under the tk2
+filter, and worked in order of severity × count × cheapness. Closed so far → `landed.md`:
+**C3 wrong-sense** (43 → 5: curation batch 3 + the gloss-frequency bar), **C2 the plain-text
+vocative**, **C1 the ears answering «what are you?»** (already fixed, flag flipped), and the
+participle over-fire the sweep found on the way.
+
+**THE METHOD LESSON, learned the hard way and binding for the rest of the pass:** `addressed=false`
+does NOT mean "still broken" — it means nobody flipped the flag, and 12 of the 113 were already fixed
+by later commits. Neither does a date: C2's leads all pre-date its 08-03 fix AND were still fully
+reproducible, because that fix only ever covered Discord `<@id>` markup. **Only a REPLAY against
+current code closes a lead.** Date-check to form the hypothesis, replay to settle it, and flip the
+flag only on what the replay proved.
+
+**Still open (68), by cluster:** C4/C5 wrong-structure 21 (the author's ruling stands — fix the
+EXTRACTION now, record the operator FOLDING as a tk2 requirement) · C8 the 20 `ears-hallucination`
+rows, which are rag1 correctly REFUSING and therefore not bugs but the parser-coverage corpus tk2
+wants · C7/C9 dropped-content 8 · C6 missed-negation 5 («I am not» compiles as an affirmation) ·
+5 wrong-sense residues (three are `-ing` nominalizations — the gerund is tagged VERB so the noun
+sense is unreachable by any flag; one is the identity bridge) · 4 old singletons.
+
+**And a bar that cannot be raised by rule:** the gerund-vs-progressive reading is NOT syntactically
+separable on this pipeline's output — 95 sentences, every candidate signal (dep label, head, morph,
+subject animacy, subject-is-itself-a-gerund, object presence, constituency bracket) killed by a
+counter-example in ordinary English («learning is happening» is progressive; «my goal is learning
+japanese» is nominal *with* an object). Any real cure is semantic, or the reading stops being treated
+as decidable. → a tk2 requirement, not a v1 patch.
 
 **Why it rose rather than fell (2026-08-03):** its output is FINDINGS, and findings are exactly what
 tk2's format must be designed against — every case where the pipeline mis-reads a real sentence is

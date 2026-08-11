@@ -1181,3 +1181,48 @@ instrument is a fetch COUNTER on a theorem-materializing run, not a stopwatch on
 tests. The tests that carried the original 62% (`test_direct_fact_match`, `test_evaluator`) were
 never the ones measured — `test_untangler` was picked on a guess about `_saturate()` that turned out
 to describe saturation compute, not KB loading.
+
+
+## 2026-08-10 → 11 — §2 THE MICROSCOPE PASS, FIRST WAVE: what the *method* cost
+
+The engineering is in `landed.md`. This entry is for the three times the QM's own reasoning was wrong
+inside two days, because the pattern is reusable and the corrections all came from evidence rather
+than argument.
+
+**1. `addressed=false` is not "still broken".** The pass opened by ranking two clusters first — the
+ears answering «what are you?», and the vocative stealing subjects — both presented as verified, with
+the leaked prompt read straight out of the compiled zip. Both were **already fixed**, by commits from
+07-24 and 08-03. The flag means "nobody flipped it", and 12 of 113 leads were closed work sitting in
+the pile. *Date-check against fix history BEFORE ranking anything.*
+
+**2. …and a date is not proof either.** Having learned (1), the QM then closed C2 on dates alone —
+every lead pre-dated its 08-03 fix. A replay proved it **still fully live**: that fix only ever fired
+on Discord `<@id>` markup, so plain-text address was never covered. Wrong in both directions inside
+one hour. **The rule that survived: date-check to form the hypothesis, REPLAY to settle it, flip the
+flag only on what the replay proved.**
+
+**3. Two clean rules in a row, both refuted.** For the Lesk-beats-curation bug the QM proposed
+«one gloss overlap is noise, two is a pattern» — killed by the suite's OWN `test_lesk_beats_preferred`
+(«served with lemon at DINNER» is also a one-word overlap, and it is real evidence). Second proposal,
+«frequency separates noise from evidence» — killed by measurement: `person` at 2.40% of glosses is
+MORE common than `usually` at 1.95%, and carries meaning. What shipped is therefore a **measured
+compromise with a named cost** (1% bar, `person`/`body` stop counting as gloss evidence), and the
+margins are asserted in a test because `water` sits 0.14 points under the bar with M3's pisces
+residual resting on it.
+
+*The through-line: every clean rule proposed for a messy phenomenon was refuted by a counter-example
+that already existed in the repo or in ordinary English. The suite is a better adversary than
+introspection — `test_lesk_beats_preferred` was waiting the whole time.*
+
+**What delegation added, on the author's call to use the 1st Officier for the mechanical halves.** A
+95-sentence sweep returned a clean **"no separable signal"** for gerund-vs-progressive instead of
+manufacturing a rule to look productive — the single most useful negative result of the pass. The VBN
+trade was quantified (13 fixed / 3 lost / 3 borderline) *before* anyone chose. And it **refused a
+green**: an xfail parameter XPASSed, and rather than accept it the officer found that a trailing full
+stop flips stanza's tag (`binding` JJ→VBG) and rewrote the parameter so the test records the real
+cost. A subagent that reports "I could not find a rule" is worth more than one that finds a fragile
+one.
+
+**Category labels are unreliable as clusters.** `ears-hallucination` (20 leads) is rag1 correctly
+REFUSING — not bugs at all, but exactly the parser-coverage corpus tk2 wants. `missed-mood` (7) was
+one already-fixed bug counted six times. Cluster by root cause, never by the label rag3 assigned.

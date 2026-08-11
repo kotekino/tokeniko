@@ -2455,3 +2455,40 @@ reasoning: `doc/ref/deploy-body.md`.
   speed-up of the project: **36 min → 3 s** for the iteration signal, and it compounded, because
   moving the gate to the data made the gate itself 3.2× faster. Only (d)'s first half was predicted
   when he proposed it.
+
+
+**§2 the microscope pass — first wave (2026-08-10 → 11): 113 leads → 68**
+- **The corpus, sized honestly.** 553 `tkzipdebug` rows · 275 unaddressed · but only **113
+  `mismatch`** are leads (159 are journeys rag3 judged FINE). Clustered into 10 root causes; the
+  category labels turned out to be poor guides — `ears-hallucination` (20) is rag1 correctly
+  REFUSING, and `missed-mood` (7) was **one already-fixed bug counted six times**.
+- **C1 — the ears answered «what are you?» and the answer became the speaker's words.** rag1 was
+  asked to normalize and instead answered *about itself*: the compiled zip was its own system prompt
+  (`normalizer.n.01` + `tidy.v.01` + `change.v.01 … without`) bound to **kotekino as subject** and
+  `mood=statement`. **Already cured** by the 07-24 mood gate (`58531b1`), which the code comment
+  documents with this very specimen; all 6 leads pre-date it, replay confirms `dubitative=1.0`,
+  `wh=PREDICATE`. Flag flipped, notes attached.
+- **C3 — 43 wrong-sense → 5.** Curation batch 3 (21 rulings; `right`→correct, `gold`→the metal,
+  `think`→cogitate, `property`→attribute) + **gloss-frequency weighting**: Lesk now ignores gloss
+  words in >1% of the 197,580 glosses, so `usually` stops deciding senses while `water`/`food`/
+  `mammal`/`dinner` still count. Batch 4 adds `computing`→`calculation.n.01`. 32 flags live.
+- **C2 — a plain-text «tokeniko …» stopped stealing the subject** (`_parser_leadingVocativeRetry`, at
+  the parser so every channel inherits it). The separator is measured, not guessed: the POS of the
+  token AFTER his name.
+- **The participle over-fire**, found while sweeping something else: «the cat is sleeping» was
+  compiling `dormant.s.02` («lying with head on paws as if sleeping»). Gate narrowed to VBN on a
+  named 4:1 trade.
+- **THE METHOD, which cost the most and is worth the most.** Three of the QM's own positions were
+  refuted inside the pass, each by evidence rather than argument: (1) ranking C1/C2 first without
+  date-checking against fix history — both were already closed; (2) closing C2 on those dates alone —
+  a replay proved it still live, because the 08-03 fix only covered Discord markup; (3) two clean WSD
+  rules in a row («one overlap is noise», then «frequency separates noise from evidence») — the first
+  killed by the suite's own `test_lesk_beats_preferred` («served with lemon at DINNER» is also a
+  one-word overlap), the second by measurement (`person` 2.40% is MORE common than `usually` 1.95%).
+  **The standing rule that came out of it: date-check to form the hypothesis, REPLAY to settle it.**
+- **Delegation worked.** The 1st Officier ran the mechanical halves — a 95-sentence separability sweep
+  that returned a clean, valuable **"no separable signal"** rather than manufacturing a rule; the
+  VBN trade quantified 13-fixed / 3-lost before anyone chose; the C2 separator table. It also
+  refused a green: an xfail parameter XPASSed, and instead of accepting it the officer found that a
+  trailing **full stop** flips stanza's tag (`binding` JJ→VBG) and fixed the test to record the real
+  cost.
