@@ -235,6 +235,16 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
   by Mari» → `open.a.05`, «the book was written by Mari» → `written.a.01`. VBN separates tense-FORM,
   not state-vs-event, so the narrowing neither fixed nor worsened them. A tighter gate could exclude
   an `obl:agent`/`aux:pass` shape. No test covers them yet.
+- **STANDING STEP for every future curation batch** (learned the expensive way, 2026-08-11): a
+  `preferred` ruling is a behaviour change with a repo-wide blast radius, because anything that READS
+  a sense can assert it. Before deploying a batch, grep the suite for every DISPLACED sense —
+  `grep -rn "wrong.a.02\|think.v.01\|property.n.01" tests/` — and de-hardcode any compiled-sense
+  assertion through the `sense_of` conftest fixture. Batch 3 moved 21 lemmas; the fast lane and the
+  WSD files were green, and the DEPLOY GATE caught 5 tests in `test_conditional_rules` /
+  `test_observation_facts` that had frozen in `wrong.a.02` — the file about «a person is wrong if he
+  says false», i.e. the exact sentence family the batch had moved. Ten seconds of grep would have
+  found all five. *(The engine was right and the tests were asserting the bug — and they were fragile
+  only because they broke conftest's own band-assert rule: never an exact `cat.n.01`-style sense.)*
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.
