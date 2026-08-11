@@ -287,6 +287,31 @@ migrations to v1, not a successor, and it should be executed that way.
   the Captain changes them out loud, never by inference.
 - **Documents live here.** Anything referenced by the blueprint gets a file in `doc/tk2/`.
 
+### The requirements method (the author's, 2026-08-11 — it started as an experiment and worked)
+
+**One component per folder. Two kinds of file in each.**
+
+```
+doc/tk2/<component>/YYYYMMDDHHMM_notes.md   the dialogue that produced the thinking, dated, kept
+doc/tk2/<component>/requirements.md         SUPER synthetic — what the design must respect
+```
+
+Opened: `tkzip/` · `rules/`. The notes accumulate one file per session; `requirements.md` is the
+single living distillation.
+
+**How the dialogue is run, because the FORM is doing the work.** Strictly one-line turns, Socratic,
+author leads. The author's reasoning for the constraint: both parties talk too much — he from bias,
+the QM from having more references to reach for — and brevity strips the references away, forcing
+(a) strictly on-topic, no detours, (b) super-logical. Observed effect after the first session: short
+turns force a POSITION per turn instead of an enumeration of options, which is what let three of the
+QM's positions be refuted inside the same session (a second permitted-vs-possible axis collapsed to
+one by «forbidden by whom?»; an ACT reading of the zip dropped as merely semantic; computability
+corrected to comparability). A long answer would have hidden all three inside hedges.
+
+**Why it matters beyond tidiness:** with the requirements complete per component, *designing* tk2 is
+nearly mechanical and *implementing* it is more mechanical still. The thinking is the expensive part,
+so it is the part that gets the dated files.
+
 ---
 
 *Opened 2026-07-31. Step 0 by the QM, from the session that argued hunch 21 into a keystone.* 🜂
