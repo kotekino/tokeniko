@@ -140,3 +140,97 @@ def test_an_addressed_question_keeps_its_gap(compile_zip, leaves):
 def test_other_addressed_statements_keep_their_subjects(compile_zip, leaves, raw, expected_subject):
     leaf = leaves(compile_zip(_decode(raw)))[0]
     assert leaf.senses.get("subject") == expected_subject
+
+
+# ---- THE PLAIN-TEXT HALF (§2 cluster C2, 2026-08-11) -------------------------------------------
+# The adapter above only ever sees the `<@id>` markup. Typing his name as plain text — the normal
+# thing in a DM, and shorter than an @mention — walked straight into the original theft, so
+# «tokeniko a sheep loves rain» still compiled to (tokeniko love rain) with the sheep GONE. That
+# repair is per-transport (ATProto and the planned console inherit nothing), so the plain-text half
+# lives at the PARSER — one funnel for every channel and for the brain: `_parser_leadingVocativeRetry`,
+# a third sibling to the degenerate-parse and inverted-question recoveries, same contract (rewrite +
+# re-parse + verify, never dep surgery).
+#
+# It fires on ONE measured signal: the token after the name. A DETERMINER/quantifier means the theft
+# is happening; an AUX or a finite VERB means the name is the SUBJECT and the comma must stay out —
+# «tokeniko is a machine that thinks» is in the corpus, and the prior art above already measured what
+# an unconditional comma costs («hellen, is a machine» loses its subject). Both directions are
+# asserted below on COMPILED STRUCTURE, and the one shape no signal separates is xfailed, not hidden.
+
+@pytest.mark.parametrize("heard,expected_subject", [
+    ("tokeniko a sheep loves rain", "sheep.n.01"),          # the live report, 2026-08-11
+    ("tokeniko the cat is a mammal", "cat.n.01"),
+    ("tokeniko every bird has feathers", "bird.n.01"),
+    ("tokeniko all minds are machines", "mind.n.01"),
+    ("TOKENIKO the cat is a mammal", "cat.n.01"),            # people capitalize; the gate does not care
+])
+def test_a_plain_text_address_keeps_its_subject(compile_zip, leaves, heard, expected_subject):
+    lvs = leaves(compile_zip(heard))
+    assert len(lvs) == 1
+    leaf = lvs[0]
+    assert leaf.senses.get("subject") == expected_subject
+    # the theft's signature is gone: nothing in the clause is bound to his identity
+    assert "tokeniko" not in (leaf.identities or {}).values()
+
+
+def test_the_quantifier_survives_a_plain_text_address(compile_zip, leaves):
+    # the mention half lost the universal with the subject; the plain-text half must not either
+    leaf = leaves(compile_zip("tokeniko every bird has feathers"))[0]
+    assert leaf.senses.get("subject") == "bird.n.01"
+    assert leaf.quantifier == TKQuantifier.UNIVERSAL
+
+
+@pytest.mark.parametrize("heard", [
+    "tokeniko is a machine",
+    "tokeniko is a machine that thinks",
+    "tokeniko is my creator",
+    "tokeniko is not a person",
+    "tokeniko thinks",
+    "tokeniko has a body",
+    "tokeniko loves rain",
+    "tokeniko knows the answer",
+])
+def test_him_as_the_subject_is_never_rewritten(compile_zip, leaves, heard):
+    """THE GUARD, and the reason the repair is gated on the next token rather than on the name.
+
+    A leading «tokeniko» is often a genuine SUBJECT — statements about him are how he is taught who
+    he is. Measured before the fix went in: inserting the comma regardless costs the subject in 5 of
+    these 8 («tokeniko, is my creator» → no subject at all), which is the same harm the mention half
+    measured on «hellen, is a machine». So a finite verb or auxiliary after the name means HANDS OFF,
+    and what must hold here is that he is still the one being talked ABOUT."""
+    leaf = leaves(compile_zip(heard))[0]
+    assert "tokeniko" in (leaf.identities or {}).values()
+
+
+@pytest.mark.parametrize("heard,expected_subject", [
+    ("tokeniko what is a cat", "cat.n.01"),      # stanza already tags the name `discourse` here
+    ("tokeniko my cat is dead", "cat.n.01"),
+])
+def test_an_address_that_already_parsed_right_is_left_alone(compile_zip, leaves, heard,
+                                                            expected_subject):
+    # the third condition: the name must currently OCCUPY a predication role for the repair to run —
+    # a wh-question and a possessive-headed subject were never stolen, so nothing is rewritten.
+    leaf = leaves(compile_zip(heard))[0]
+    assert leaf.senses.get("subject") == expected_subject
+
+
+def test_another_name_stays_out_of_scope(compile_zip, leaves):
+    # the repair keys on HIS OWN name (the parser already holds the identity), exactly as the adapter
+    # keys on his own id — «hellen a sheep loves rain» never suffered the theft and is untouched.
+    leaf = leaves(compile_zip("hellen a sheep loves rain"))[0]
+    assert leaf.senses.get("subject") == "sheep.n.01"
+    assert "tokeniko" not in (leaf.identities or {}).values()
+
+
+@pytest.mark.xfail(reason="THE RESIDUE, named. An aux-fronted polar question addressed to him — "
+                          "«tokeniko is the sky blue?» — keeps the theft, because its next token is "
+                          "the same «is» that opens «tokeniko is a machine»: no signal separates the "
+                          "two, and inserting the comma there is where the measured harm lives. "
+                          "Curing it needs the inversion test (two constituents after the copula), "
+                          "not a tag read. Sibling shape «tokeniko are all minds machines?» is a "
+                          "SEPARATE parse bug — the comma does not cure it either (the subject is "
+                          "lost with or without one).", strict=False)
+def test_an_aux_fronted_polar_question_addressed_to_him(compile_zip, leaves):
+    leaf = leaves(compile_zip("tokeniko is the sky blue?"))[0]
+    assert leaf.senses.get("subject") == "sky.n.01"
+    assert "tokeniko" not in (leaf.identities or {}).values()

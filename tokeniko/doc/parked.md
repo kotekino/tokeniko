@@ -106,6 +106,16 @@ reduced-participle vs finite-relative-with-nsubj distinction), adjacent to the p
 subject-rebinding work. Would recover the verb bulk (~300 candidates) as clean differentia rules and
 substantially grow the enriched-soak fuel. Promote when the parser voice signal is built.
 
+**Vocative stripping is split across two discriminators (parked 2026-08-11, the author's ruling).**
+`lib/core/deixis.py::strip_vocative` cleans a leading vocative off the stored `original` at
+materialization (5 call sites in `brain/thinking.py`) and its discriminator is the COMMA — by
+deliberate, evidence-based design. The §2 fix taught the PARSER a better one: the part-of-speech of
+the token after his name (AUX/finite-verb ⇒ he is the subject, hands off; determiner ⇒ the vocative
+is stealing the subject). So the compile is now repaired for plain-text address while `original`
+still carries the wart — and `original` is what feeds theorem dedup keys and the blog polish. Two
+discriminators for one question, the weaker one on the user-visible path. Unifying them is a design
+question, not a patch; promote when the dedup key or a published digest actually shows the wart.
+
 **Performance (optimize-later)** — *(the theorem-invalidates-the-vocabulary half is DONE, 2026-08-09:
 the two-tier fingerprint — see `landed.md` §0 addendum. What stays parked is the residue.)* A true
 **delta reload of the definitions themselves** — when the vocabulary really does grow, the whole

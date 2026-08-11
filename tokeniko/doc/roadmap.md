@@ -201,6 +201,17 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
   ones? Step 4 should answer that for you and say so — the whole point of the script is that nobody
   has to do that by hand at 2am. **Cause will recur**: anything created on the body and later
   committed from the workshop collides the same way (the transplant made three such files).
+- **Three vocative/parse residues the §2 C2 fix does not reach** (2026-08-11, each measured):
+  «tokeniko is the sky blue?» keeps the stolen subject — its next token is the same `is` that opens
+  «tokeniko is a machine», which is exactly where an unconditional comma does harm, so curing it
+  needs an INVERSION test (two constituents after the copula) rather than a tag read;
+  «tokeniko are all minds machines?» is a SEPARATE parse bug (the comma never fixed it either — the
+  subject is lost with or without); «tokeniko does a cat think?» emits a spurious `tokeniko|do.v.03`
+  leaf beside the correct clause — a stray leaf, milder than a stolen subject.
+- **Eventive passives read as states** (2026-08-11, left by the VBN narrowing): «the door is opened
+  by Mari» → `open.a.05`, «the book was written by Mari» → `written.a.01`. VBN separates tense-FORM,
+  not state-vs-event, so the narrowing neither fixed nor worsened them. A tighter gate could exclude
+  an `obl:agent`/`aux:pass` shape. No test covers them yet.
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.

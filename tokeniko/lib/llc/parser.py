@@ -1227,6 +1227,55 @@ def _parser_invertedQuestionRetry(doc, text: str):
         return retry
     return doc
 
+# the LEADING-VOCATIVE recovery (§2 cluster C2, 2026-08-11) — the PLAIN-TEXT half of the
+# mention-vocative bug. The Discord adapter restores the comma a human would have typed when the
+# wire carried a `<@id>` mention (lib/discord/client._decode_mentions, 2026-08-03), but someone
+# typing his name as plain text — the normal thing in a DM, and shorter than an @mention — sends the
+# theft straight through: «tokeniko a sheep loves rain» compiled to (tokeniko love rain), the sheep
+# GONE. That repair is per-transport and ATProto (plus the planned console) inherits nothing from it,
+# so this one sits at the parser, the single funnel every channel and the brain share.
+#
+# THE SEPARATOR, measured over 28 sentences (a leading «tokeniko» is sometimes a genuine SUBJECT —
+# «tokeniko is a machine that thinks» is in the corpus): the token AFTER the name. Every
+# subject-reading in the sweep continues with a finite verb or auxiliary (is/thinks/has/loves/can/
+# was/will) and every address-reading that the theft actually damages continues with a DETERMINER or
+# a quantifier («a sheep», «the cat», «every bird», «all minds»). So an AUX/VERB next token means
+# HANDS OFF — which is also what the prior art demands: a comma inserted before a finite verb is
+# actively HARMFUL («hellen, is a machine» loses its subject where «hellen is a machine» compiles
+# clean), and the same harm is measurable on him (5 of 12 subject-readings lose their subject if the
+# comma goes in regardless). The address-readings that already compile correctly — «tokeniko what is
+# a cat», «tokeniko my cat is dead» (name tagged `discourse`) — are left alone by the third
+# condition: the name must currently OCCUPY a predication role, i.e. the theft must be happening.
+#
+# Known residue, deliberately not chased (no signal separates it): an aux-fronted polar question
+# «tokeniko is the sky blue?» keeps the theft, because its next token is the same «is» that opens
+# «tokeniko is a machine». Repairing that needs the inversion test (two constituents after the
+# copula), not a tag. «tokeniko are all minds machines?» is a SEPARATE parse bug — the comma does
+# not cure it either (the subject is lost with or without).
+#
+# Same contract as its two siblings above: rewrite + re-parse + VERIFY, never in-place dep surgery.
+# Returns the text it actually used so the later retries rewrite from the repaired string.
+def _parser_leadingVocativeRetry(doc, text: str):
+    name = (getattr(_tokeniko, "name", "") or "").lower()
+    if not name or len(doc) < 3 or doc[0].text.lower() != name:
+        return doc, text
+    nxt = doc[1]
+    if nxt.is_punct or nxt.pos_ in ("AUX", "VERB"):
+        return doc, text                    # the human punctuated it, or the name is the SUBJECT
+    if doc[0].dep_ not in ("nsubj", "nsubj:pass", "obj", "root"):
+        return doc, text                    # already read as an address (discourse/vocative)
+    cut = doc[0].idx + len(doc[0].text)
+    rewritten = f"{text[:cut]},{text[cut:]}"
+    retry = nlp_stanza(rewritten)
+    root = next((t for t in retry if t.dep_ == "root"), None)
+    if root is None:
+        return doc, text
+    # accepted only if the repair RETURNS THE STOLEN SUBJECT: a real nominal subject that is not him
+    if any(c.dep_ in ("nsubj", "nsubj:pass") and c.pos_ in ("NOUN", "PROPN", "PRON")
+           and c.text.lower() != name for c in root.children):
+        return retry, rewritten
+    return doc, text
+
 # --------------------------------------------------------------
 # MAIN entry point to parse an input text
 # --------------------------------------------------------------
@@ -1253,8 +1302,11 @@ def parser(tokens: str, talker: MEMStakeholder, tokeniko: MEMStakeholder, contex
     # Default True: DMs, direct API calls, seeds and tests keep the old behavior unchanged.
     _addressed = addressed
 
-    # spacy parse (+ the verbless-NP do-support retry and the inverted-question recovery, above)
-    doc = _parser_degenerateRetry(nlp_stanza(tokens), tokens)
+    # spacy parse (+ the leading-vocative, verbless-NP do-support and inverted-question recoveries,
+    # above). The vocative repair runs FIRST and hands its rewritten string on, so the two retries
+    # after it rewrite from the repaired sentence rather than dropping the restored comma.
+    doc, tokens = _parser_leadingVocativeRetry(nlp_stanza(tokens), tokens)
+    doc = _parser_degenerateRetry(doc, tokens)
     doc = _parser_invertedQuestionRetry(doc, tokens)
 
     # get all tokens
