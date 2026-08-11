@@ -42,6 +42,47 @@ BATCH = [
                                              # the fragment when the text supports it — «a bit of
                                              # cake». is_a unit_of_measurement.n.01 already in the
                                              # graph, so the definition grounds TRUE)
+
+    # ---- BATCH 3 (the §2 microscope pass, 2026-08-10) -------------------------------------------
+    # Harvested from the 43 `wrong-sense` leads in tkzipdebug (corpus 2026-07-17 → 08-09, i.e. all
+    # POST-M3 and confirmed live by replay: «you are right!» still picks the direction of the sun).
+    # The pattern is the same one M3 named — WordNet's corpus-frequency order contradicts the plain
+    # conversational reading — and the lead counts show how concentrated it is: five words carry
+    # half the cluster. Candidate pools span BOTH adjective codes ("ADJ": ["a","s"] in TKPosMapper),
+    # so a ruling reaches a satellite sense from a head one and vice versa.
+    ("right",      "a", "correct.a.01"),     # 6 LEADS. «you are right!» → the side of the body
+                                             # toward the east. The single worst offender in the pass.
+    ("property",   "n", "property.n.02"),    # 5 leads. «more than one property» = an attribute, not
+                                             # a possession — and he reasons ABOUT properties, so
+                                             # the ownership sense poisons the differentia rules.
+    ("gold",       "n", "gold.n.03"),        # 4 leads. the metal, not «coins made of gold»
+    ("think",      "v", "think.v.03"),       # 4 leads. cogitate — not «judge or regard». The wrong
+                                             # one needs a complement, so «a machine thinks» limps.
+    ("wrong",      "a", "incorrect.a.01"),   # 2 leads. mistaken, not «contrary to conscience»
+    ("curious",    "a", "curious.a.02"),     # 2 leads. inquisitive, not «deviating from the usual»
+    ("learning",   "n", "learning.n.01"),    # 2 leads. the process — not «profound scholarly
+                                             # knowledge». He is BUILT to learn; the noun matters.
+    ("base",       "v", "establish.v.08"),   # 2 leads. «based on past experience» = founded on,
+                                             # not «situate as a center of operations»
+    ("value",      "n", "value.n.02"),       # 2 leads. worth, not a computed numerical quantity
+    ("wake",       "v", "wake_up.v.02"),     # 2 leads. «you woke up» is the transition, not the
+                                             # stative «be awake» — and he wakes every day
+    ("opposite",   "s", "opposite.s.03"),    # 2 leads. «the other one of a complementary pair» —
+                                             # the antonymic reading, not «directly across, facing»
+    ("trust",      "n", "reliance.n.01"),    # «what trust is» → the fiduciary property sense. NB:
+                                             # reliance.n.01 glosses as «certainty based on past
+                                             # experience», which is VERBATIM what he was taught on
+                                             # 2026-08-09 — the curated pick and the KB now agree.
+    ("cute",       "s", "cunning.s.01"),     # attractive by smallness/prettiness, not «contrived»
+    ("sure",       "a", "certain.a.02"),     # «I'm sure» = confident, not «physically secure»
+    ("thought",    "n", "idea.n.01"),        # «a nice thought» is one mental content, not the
+                                             # organized beliefs of a period or group
+    ("lot",        "n", "batch.n.02"),       # «a lot of notions» is a quantity, not a plot of land
+    ("nice",       "a", "nice.a.01"),        # pleasant — not «socially or conventionally correct»
+    ("salutation", "n", "greeting.n.01"),    # a spoken greeting, not the opening line of a LETTER
+    ("make",       "v", "make.v.03"),        # «I made improvements» = cause to be, not «engage in»
+    ("want",       "v", "desire.v.01"),      # «I wanted to be polite» = desire, not «have need of»
+    ("person",     "n", "person.n.01"),      # a human being, not «a human body including clothing»
 ]
 
 

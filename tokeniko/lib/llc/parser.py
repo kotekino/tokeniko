@@ -10,6 +10,7 @@ import spacy_stanza
 import numpy as np
 from lib.core.tk import EntityPayload, TKAux, TKClause, TKClauseType, TKFullProperty, TKMarker, TKFullEntity, TKDictionary, TKGeneric, TKMetaEntity, TKName, TKNumber, TKOperator, TKPlace, TKPronoun, TKQuantifier, TKStatement, TKStatements, TKWhRole
 import re
+import logging
 from lib.core.models import TKDictionaryDoc, TKPlaceDoc, TKMemoryStakeholdersDoc
 from lib.core.places import place_type_sense
 from lib.core.mappers import TKPosMapper
@@ -70,6 +71,14 @@ def parser_init():
         
         # spacy standard
         nlp = spacy.load(_SPACY_MODEL)
+
+    # warm the gloss-frequency set here: it is one projected scan of the dictionary, and paying it at
+    # startup (where it is visible in the log) beats paying it inside the first sentence someone says.
+    try:
+        _gloss_common_words()
+    except Exception:
+        logging.getLogger("tokeniko").exception(
+            "[wsd] the gloss-frequency set could not be derived — Lesk falls back to unweighted overlap")
 
 # --------------------------------------------------------------
 # utils
@@ -393,6 +402,67 @@ def _parser_knownIndividualByName(name: str, talker: MEMStakeholder) -> TKName |
 # --------------------------------------------------------------
 _WSD_CONTENT_POS = {"NOUN", "VERB", "ADJ", "ADV", "PROPN"}  # spaCy POS that carry context
 
+# GLOSS-FREQUENCY WEIGHTING (the author's ruling, §2 microscope pass 2026-08-10).
+# Lesk counts a bare set intersection, so every shared word weighs the same — and the two sides are
+# filtered ASYMMETRICALLY: the context drops stopwords, the gloss does not. The measured consequence,
+# on the live dictionary (197,580 glosses):
+#
+#     usually     3845 glosses (1.95%)   <- decided a sense, and outranked a curated human ruling
+#     clothing     287 glosses (0.15%)
+#     mammal       152 glosses (0.08%)   <- M3's canonical evidence word
+#     dinner        27 glosses (0.01%)   <- a single-word overlap that SHOULD win
+#
+# «polite people USUALLY say hello» matched person.n.02 «a human body (USUALLY including the
+# clothing)» on one word and beat person.n.01's curated «a human being». «the squid was served with
+# lemon at DINNER» matched squid.n.01 on one word too — and that one is real evidence. So the
+# discriminator is NOT the count (both are 1); it is how much the shared word narrows anything. This
+# is the textbook Lesk correction, and the first thing tried here — a minimum overlap COUNT — was
+# refuted by `test_lesk_beats_preferred` before it reached a commit.
+#
+# Nothing is hardwired: the set is DERIVED from the dictionary itself (the source of truth) and cached
+# per process, exactly as c_untangle caches its senses/parents lookups. The only constant is the bar.
+# CALIBRATED, not guessed (2026-08-10). Frequency does NOT cleanly separate noise from evidence —
+# `person` (2.40%) is MORE common than `usually` (1.95%) and carries real meaning, so no bar can drop
+# one and keep the other. 1.0% is the measured compromise: it drops `usually`/`especially` (the words
+# that decided senses on nothing) and 34 more, while keeping every evidence word the M3 suite rests on
+# — water 0.86%, food 0.56%, mammal 0.08%, dinner 0.01%. The price paid knowingly: `person` and `body`
+# stop counting as gloss evidence. The M3 tests are the arbiter, not this comment.
+_GLOSS_DF_MAX = 0.01
+_gloss_common: set | None = None
+
+
+def _gloss_words(definition: str) -> set:
+    # the gloss tokeniser, shared by the frequency scan and the overlap so they cannot disagree
+    return {w for w in (t.strip(".,;:()'\"`") for t in (definition or "").lower().split())
+            if len(w) > 2 and w.isalpha()}
+
+
+def _gloss_common_words() -> set:
+    """Words too common across glosses to carry evidence. Derived once per process."""
+    global _gloss_common
+    if _gloss_common is not None:
+        return _gloss_common
+    from collections import Counter
+    try:
+        coll = TKDictionaryDoc.get_motor_collection()
+        counts: Counter = Counter()
+        total = 0
+        for row in coll.find({}, {"definition": 1}):  # projected: never pulls the 2925-dim vectors
+            total += 1
+            counts.update(_gloss_words(row.get("definition")))
+    except Exception:
+        # DEGRADE, never raise: an unreachable dictionary must not take the parser down mid-sentence.
+        # Unweighted overlap is the pre-2026-08-10 behaviour — worse, but not broken.
+        logging.getLogger("tokeniko").exception("[wsd] gloss-frequency scan failed — overlap unweighted")
+        _gloss_common = set()
+        return _gloss_common
+    cutoff = total * _GLOSS_DF_MAX
+    _gloss_common = {w for w, n in counts.items() if n > cutoff}
+    logging.getLogger("tokeniko").info(
+        "[wsd] gloss-frequency set derived: %d words above %.2f%% of %d glosses",
+        len(_gloss_common), _GLOSS_DF_MAX * 100, total)
+    return _gloss_common
+
 # the centroid may override the frequency prior ONLY when it is confident: its top cosine must clear
 # this absolute floor AND beat the runner-up of a different sense by this margin. otherwise a weak /
 # ambiguous centroid (the "cat is a plant" failure: the sparse explicit vectors confidently mis-rank
@@ -498,7 +568,7 @@ def _wsd_centroid(token: Token) -> np.ndarray | None:
 def _wsd_lesk(definition: str, doc, query: Token | None = None) -> int:
     if not definition:
         return 0
-    glossWords = {w for w in (t.strip(".,;:()'\"`") for t in definition.lower().split()) if len(w) > 2 and w.isalpha()}
+    glossWords = _gloss_words(definition) - _gloss_common_words()
     exclude = {query.lemma_.lower(), query.text.lower()} if query is not None else set()
     ctx = {t.lemma_.lower() for t in doc
            if t.pos_ in _WSD_CONTENT_POS and not t.is_stop} - exclude

@@ -137,3 +137,68 @@ def test_live_preferred_bit(compile_zip, _io):
     if not _flag_live("bit", "n", "bit.n.06"):
         pytest.skip("curate_prefer_senses --apply not run yet (operator-gated)")
     assert "bit.n.06" in _all_senses(compile_zip("a coin stores bits"))
+
+
+# ---- BATCH 3 + THE LESK BAR (§2 microscope pass, 2026-08-10) ---------------------------------------
+# The pass found 43 `wrong-sense` leads in the 2026-07-17→08-09 corpus — all POST-M3, and confirmed
+# live by replay («you are right!» still picked the direction of the sun). 21 lemmas were curated;
+# the two that did NOT flip exposed a second mechanism, locked below.
+
+@pytest.mark.parametrize("word,pos,sense,sentence", [
+    ("right",    "a", "correct.a.01",    "you are right!"),                       # 6 leads
+    ("property", "n", "property.n.02",   "every thing that exists have more than one property"),
+    ("gold",     "n", "gold.n.03",       "gold is shiny"),
+    ("think",    "v", "think.v.03",      "a software sometimes thinks"),
+    ("wrong",    "a", "incorrect.a.01",  "a person is wrong when he says false"),
+    ("value",    "n", "value.n.02",      "a coin has value"),
+    ("wake",     "v", "wake_up.v.02",    "you were asleep but now you woke up"),
+    ("opposite", "s", "opposite.s.03",   "some properties are opposite"),
+    ("base",     "v", "establish.v.08",  "trust is certainty based on past experience"),
+    ("trust",    "n", "reliance.n.01",   "tokeniko, do you know what trust is?"),
+])
+def test_live_preferred_batch3(compile_zip, _io, word, pos, sense, sentence):
+    if not _flag_live(word, pos, sense):
+        pytest.skip("curate_prefer_senses --apply not run yet (operator-gated)")
+    assert sense in _all_senses(compile_zip(sentence))
+
+
+# ---- GLOSS-FREQUENCY WEIGHTING (§2 microscope pass, 2026-08-10) ------------------------------------
+# Lesk counted a bare set intersection, so every shared word weighed the same — and the two sides were
+# filtered ASYMMETRICALLY (the context drops stopwords, the gloss did not). One match on `usually` beat
+# a curated human ruling. The FIRST attempted cure was a minimum overlap COUNT, and
+# `test_lesk_beats_preferred` above refuted it: «served with lemon at DINNER» is ALSO a one-word
+# overlap, and that one is real evidence. The discriminator is informativeness, not count.
+
+def test_gloss_frequency_set_drops_noise_and_keeps_evidence(_io):
+    """The CALIBRATION, locked. Frequency does not separate noise from evidence cleanly — `person`
+    (2.40%) is more common than `usually` (1.95%) and carries meaning — so 1.0% is a measured
+    compromise, and these are the words it must land on either side of. Margins are tight on purpose:
+    `water` sits 0.14 points under the bar and M3's pisces residual rests on it, so anyone moving this
+    constant should see exactly what they are risking."""
+    from lib.llc.parser import _gloss_common_words
+    common = _gloss_common_words()
+    for noise in ("usually", "especially"):          # 1.95%, 2.62% — decided senses on nothing
+        assert noise in common, f"{noise} must not count as evidence"
+    for evidence in ("water", "food", "mammal", "dinner", "clothing", "polite"):
+        assert evidence not in common, f"{evidence} is evidence and must survive the bar"
+
+
+def test_live_person_survives_the_usually_overlap(compile_zip, _io):
+    # THE SPECIMEN: «a human body (USUALLY including the clothing)» outscored the curated «a human
+    # being» on the single word `usually`, and Lesk returns before the curated rung is consulted.
+    if not _flag_live("person", "n", "person.n.01"):
+        pytest.skip("curate_prefer_senses --apply not run yet (operator-gated)")
+    senses = _all_senses(compile_zip("because polite people usually say hello when they meet someone"))
+    assert "person.n.01" in senses and "person.n.02" not in senses
+
+
+@pytest.mark.xfail(reason="Lesk false friend, not a frequency problem: `correct` is as rare as "
+                          "`mammal` (0.07% vs 0.08%) so it survives any frequency bar, but "
+                          "decent.s.01's «socially or conventionally correct» is a different SENSE "
+                          "of the word than the speaker's. Sense-blindness is intrinsic to Lesk; "
+                          "only a sense-aware method would catch it. Input is also degenerate — two "
+                          "interjections, no proposition. Filed, deliberately not chased.",
+                   strict=False)
+def test_live_nice_is_not_socially_correct(compile_zip, _io):
+    senses = _all_senses(compile_zip("nice! correct!"))
+    assert "nice.a.01" in senses and "decent.s.01" not in senses
