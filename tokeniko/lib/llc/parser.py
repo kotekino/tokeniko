@@ -575,7 +575,16 @@ def _wsd_lesk(definition: str, doc, query: Token | None = None) -> int:
     return len(glossWords & ctx)
 
 # choose the best sense among candidates (the dictionary docs for token's lemma+POS, >=1)
-def parser_disambiguateSense(token: Token, candidates: list[TKDictionaryDoc]) -> TKDictionaryDoc:
+#
+# rank_prior (2026-08-12, the property surface): the dictionary rows for a (word,pos) are STORED in
+# WordNet's per-word synset order, i.e. the real frequency ranking FOR THAT WORD — row 0 is the plain
+# reading (big->large.a.01, hard->difficult.a.01, burnt->burned.s.03 «ruined by overcooking»,
+# dog->dog.n.01). `_wsd_mostFrequent` throws that ranking away and rebuilds a proxy from the SENSE
+# NUMBER, which is numbered per synset-lemma and has nothing to do with the query word's ranking
+# (burnt: rank 0 is burned.s.03, while the proxy takes burned.s.01). With rank_prior the last rung
+# reads the ranking that is actually there instead of guessing at it.
+def parser_disambiguateSense(token: Token, candidates: list[TKDictionaryDoc],
+                             rank_prior: bool = False) -> TKDictionaryDoc:
     if len(candidates) == 1:
         return candidates[0]
 
@@ -617,19 +626,54 @@ def parser_disambiguateSense(token: Token, candidates: list[TKDictionaryDoc]) ->
     # FREQUENCY PRIOR (default): no clear Lesk winner and no confident centroid -> the most-frequent
     # sense (smallest sense number, query-word lemma preferred), NOT an arbitrary candidates[0] nor a
     # low-confidence centroid guess. TODO Phase-5: [eval:ambiguous] -> [tokeniko:ask]
+    if rank_prior:
+        return candidates[0]
     return _wsd_mostFrequent(token, candidates)
 
 def parser_getPropertyMeaning(token: Token, pos: list[str]) -> EntityPayload:
 
     tkMeaning = None
 
+    # PARTICIPIO PRENOMINALE (2026-08-12): un VBN sotto amod e AGGETTIVALE — «a USED car», «the
+    # WRITTEN word», «the DAMAGED machine» — ma stanza lo lemmatizza al verbo dinamico, quindi solo
+    # il pool verbale viene mai consultato e il modificatore compila use.v.01 «put into service».
+    # E' la DEP a separare i due, non il tag: la riduzione relativa POSTNOMINALE, che resta davvero
+    # verbale, prende acl («the car USED by Mari», «the machine DAMAGED by the storm» — 12 su 12 nel
+    # censimento), mentre nessun VBN+amod misurato ha una lettura verbale. Il congiunto coordinato
+    # entra con dep=conj sotto la testa amod («the used AND ABUSED car»): senza di lui i due
+    # modificatori dello stesso sintagma si spaccherebbero, uno aggettivo e uno verbo.
+    # Existence-gated sulla forma di SUPERFICIE: niente riga a/s, nessun cambio di comportamento.
+    if token.tag_ == "VBN" and (token.dep_ == "amod"
+                                or (token.dep_ == "conj" and token.head.dep_ == "amod")):
+        adjCandidates = TKDictionaryDoc.find(
+            {"word": token.text.lower(), "pos": {"$in": ["a", "s"]}}).to_list()
+        if adjCandidates:
+            chosen = parser_disambiguateSense(token, adjCandidates, rank_prior=True)
+            return TKDictionary(**chosen.model_dump(exclude={"id"}))
+
     # should be in the dictionary (exclude auxiliaries, pronouns)
     doc_result: TKDictionary = None
     if len(pos) > 0 and token.pos_ != "NUM" and token.pos_ != 'PROPN' and token.pos_ != 'PRON':
-        # search in dictionary
+        # search in dictionary — gather the candidate senses across ALL the mapped POS buckets and
+        # pick by context (WSD), exactly as the entity path does.
+        #
+        # THE LADDER IS *NOT* WIRED HERE — HELD, deliberately, the author's ruling 2026-08-12.
+        # This `find_one` has no context, no frequency prior and NO ORDER GUARANTEE (the M3 hazard
+        # that made find_one("whale") answer giant.n.04, the PERSON), so it looks like an obvious
+        # bug. It was measured, and routing the modifier surface through parser_disambiguateSense
+        # came back a NET REGRESSION: 21 fixed / 12 broken over a 105-sentence census, because a
+        # modifier's whole context is its head noun plus one predicate — too thin for the ladder's
+        # own rungs. Lesk wins uniquely on an incidental gloss word («the woman with the dog» ->
+        # frump.n.01 «a dull unattractive unpleasant girl or woman», on "woman"); the centroid is
+        # confident-wrong (car.n.03, the airship compartment, at 0.652); and a curated `preferred`
+        # flag is CONTEXT-FREE, so batch 3's right/a -> correct.a.01 — right for «you are right!» —
+        # makes «the right hand» mean the error-free hand. What find_one accidentally gets right is
+        # the ROW ORDER: the dictionary stores a (word,pos)'s rows in WordNet's per-word frequency
+        # ranking, and rank 0 is the plain reading in nearly every case. See doc/roadmap.md for the
+        # open item; the fix needs a modifier-shaped ladder, not this one.
         for p in pos:
-            doc_result = TKDictionaryDoc.find_one({"word": token.lemma_, "pos": p}).run()
-            if doc_result: break
+            if not doc_result:
+                doc_result = TKDictionaryDoc.find_one({"word": token.lemma_, "pos": p}).run()
 
         # TITLE-CASE OOV guard (strays 2026-07-16, mirrors parser_getMeaning): a capitalized OOV
         # property token is almost surely a proper noun the tagger missed — never nearest-match it
