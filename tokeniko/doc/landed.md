@@ -2511,3 +2511,18 @@ reasoning: `doc/ref/deploy-body.md`.
 - **26 tk1 scripts repaired** — the `scripts/` split left every one computing `../tokeniko/.env` from
   `scripts/tk1/`. A MOVE refactor is silent on anything that derives a path from `__file__`: imports
   keep working, tools stop, and nothing in the gate covers `scripts/`.
+
+- **The invented `cause=reason`** (2026-08-12) — negating a complement turned it into a REASON.
+  A complement's marker slot is empty, so the advmod fallback collected `not` as the subordinating
+  marker, the anchors mapped the negation particle onto its nearest neighbour `because`, and
+  `_stamp_cause` stamped a causal link on a clause that had none — while destroying the CCOMP typing
+  (one bug, two microscope symptoms). The fallback now has an ADMITTING GATE with two halves,
+  neither sufficient alone: `WRB` for the wh-subordinators (not in the table — they arrive by
+  proximity) and `anchor_is_exact` for the conclusive connectives (RB, not WRB — `so`/`therefore`
+  live in the table deliberately since M2). `anchor_resolve` is demoted to confirmation: nearest-
+  anchor never gates again. 25-adverb frame: 25 clean, 0 stamped, from 14 mis-collected and 10
+  stamping. **The cost of learning this was one red test run** — WRB alone evicted the conclusives
+  and «I think, therefore I exist» lost its link.
+- **A comment that asserted a property the code did not have** was deleted with it: «content adverbs
+  like "very" resolve OTHER and pass» — `very` resolved CONSECUTIVE and was collected. That claim is
+  *why* the bug survived: anyone reading the block would conclude the case was handled.
