@@ -245,6 +245,31 @@ visible: the **trust-gated tkzip lane** is format-coupled and will read `→ tk2
   says false», i.e. the exact sentence family the batch had moved. Ten seconds of grep would have
   found all five. *(The engine was right and the tests were asserting the bug — and they were fragile
   only because they broke conftest's own band-assert rule: never an exact `cat.n.01`-style sense.)*
+- **The modifier surface bypasses the WSD ladder — HELD, not fixed** (measured 2026-08-12, the
+  author's ruling). `parser_getPropertyMeaning` resolves every `amod`/`advmod`/`nmod`/`compound` with
+  a bare `find_one` — no context, no prior, **no order guarantee** (the M3 hazard that made
+  `find_one("whale")` answer `giant.n.04`). It looks like an obvious bug and routing it through
+  `parser_disambiguateSense` was measured a **NET REGRESSION: 21 fixed / 12 broken** over 105
+  sentences, because a modifier's whole context is its head noun plus one predicate — too thin for
+  the ladder's rungs. Three named causes, each worth its own thought: **Lesk** wins uniquely on an
+  incidental gloss word («the woman with the dog» → `frump.n.01` «a dull unattractive unpleasant girl
+  or woman», on *woman*); the **centroid** is confident-wrong (`car.n.03`, the airship compartment,
+  at 0.652); and a **curated flag is CONTEXT-FREE** — batch 3's `right/a → correct.a.01`, right for
+  «you are right!», makes «the right hand» the error-free hand. What `find_one` accidentally gets
+  right is the ROW ORDER (WordNet's per-word frequency ranking; rank 0 is the plain reading), which
+  `_wsd_mostFrequent` discards and rebuilds wrong — hence the `rank_prior` kwarg the gate now uses.
+  **A modifier-shaped ladder is the real item**: a Lesk floor for thin contexts, and context-scoped
+  curation. Batch 5 already carries three rulings (`sharp`, `car`, `opened`) aimed at this path; they
+  are inert until it lands.
+- **The compound-participle bucket** (2026-08-12): «the running water» → `run.n.05` *(American
+  football)*, «a flying machine» → `fly.n.01` *(the insect)*, «a sleeping cat» → `sleeping.n.01`.
+  Tagged `NOUN/NN dep=compound`, so no participle gate reaches them, and the NOUN pool holds no
+  modifier reading — `run.n.05` genuinely is WordNet's rank 0 for "running". Only routing them to the
+  a/s pool can fix it. Also here: «the deceased person» → `aforesaid.s.01`, fabricated by the spaCy
+  vector fallback, and «the stolen bike», silently mute (no rows in any POS).
+- **A coordinated modifier resolves and is then DROPPED** (2026-08-12): «the used and abused car»
+  resolves `abused` correctly through the new gate, but only `subject_mod0` reaches the compiled
+  leaf. Compiler-side, one layer below the gate → belongs with the dropped-content cluster.
 - **Trust-ledger-movement digests** (the digest machinery's explicit scope fence, 2026-07-21):
   «my opinion of X shifted twice today» batches like the rest — once the rule/teacher digests
   have lived a while.

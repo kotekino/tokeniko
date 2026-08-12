@@ -2492,3 +2492,22 @@ reasoning: `doc/ref/deploy-body.md`.
   refused a green: an xfail parameter XPASSed, and instead of accepting it the officer found that a
   trailing **full stop** flips stanza's tag (`binding` JJ→VBG) and fixed the test to record the real
   cost.
+
+- **The prenominal participle gate + batch 5** (2026-08-12) — «a used car» stopped meaning «put into
+  service». The separator is the DEP, not the tag: a genuinely verbal prenominal is a postnominal
+  reduced relative and takes `acl` (12/12), while no VBN+`amod` measured has a verbal reading — zero
+  counter-examples in a 40-sentence attack batch. 39 fixed / 8 broken, 4 of the 8 repaired by batch 5
+  (40 `preferred` flags live). Found from the OTHER ROOM: tk2's dictionary-review flagged the
+  `left`/`leave` inflection collision, which turned out contained on the tk1 side — but this sat
+  underneath it, and the microscope was structurally blind to it because nobody had ever said «a used
+  car» to him. *The corpus only finds what people actually said.*
+- **`rank_prior`** — the officer's discovery while measuring: the dictionary stores a (word,pos)'s
+  rows in WordNet's **per-word frequency ranking**, and `_wsd_mostFrequent` discards it to rebuild a
+  proxy from two rules that both destroy it («prefer own-lemma» drops `large.a.01` from `big`'s pool;
+  «smallest sense number» is per-synset, so `burnt` rank 0 is `burned.s.03` while the proxy takes
+  `burned.s.01`). The much-maligned `find_one` was accidentally reading the true ranking. Default
+  `False`, so the entity path is byte-identical — proved by compiling all 446 test sentence literals
+  before and after: **non-modifier role changes = 0**.
+- **26 tk1 scripts repaired** — the `scripts/` split left every one computing `../tokeniko/.env` from
+  `scripts/tk1/`. A MOVE refactor is silent on anything that derives a path from `__file__`: imports
+  keep working, tools stop, and nothing in the gate covers `scripts/`.
