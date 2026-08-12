@@ -14,3 +14,4 @@
 10. **Capability ≠ understanding.** «Known but not enacted» must be representable — and it becomes a request.
 11. **The floor is not KB**: logic · body constraint · the problem-solving drive. HOW he solves is KB; THAT he must is not.
 12. **The body is the only extensible floor** — fixed at any moment, growable over time, and only through someone else.
+13. **Rule matching is sign-gated by R** (propagated from dictionary-review req. 19, 2026-08-12): a trigger matched by cosine alone would fire «arrive» on «leave» (D reads them +0.738); the dual read applies wherever a rule meets a situation.

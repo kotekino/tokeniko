@@ -27,7 +27,7 @@
 
 ## OPEN at close — what the next session inherits
 
-- **Sense-split seam**: dimensions stop at POS; senses stay in the dictionary layer (QM lean, unruled).
+- **Sense-split seam**: dimensions stop at POS; senses stay in the dictionary layer (QM lean, unruled) — CONSTRAINED by tkzip req. 9: whatever the ruling, senses must stay distinguishable in the dictionary layer, since a wrong verb sense is a wrong action.
 - **`land.n~land.v`**: down-weight `derivational` — the one bar miss no addition can fix (16).
 - **Full membership repair** with POS-aware lemma matching (15, 21) — mechanized, awaiting the real base build.
 - **The D threshold**: `walk~run` reads 0.205 in R (troponym siblings, no direct edge) — whether manner-siblinghood should be R-stated or D-carried is undecided.
