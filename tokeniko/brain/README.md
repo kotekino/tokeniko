@@ -269,7 +269,7 @@ The data: `MEMBehaviorRule` → `TKBehaviorRuleDoc` (the `behavior_rules` collec
 (the hardwired vocabulary), and `MEMIdea.action_token` (the reflex carried from the matched rule).
 `priorities_phase` now **consumes the dispatch** (pending ideas sorted **urge-desc**, the highest-urge
 candidate handled first; keep → `dispatch_action`). Seed the default personality with
-`scripts/seed_behavior_rules.py` (dry-run default; `--apply` operator-gated).
+`scripts/tk1/seed_behavior_rules.py` (dry-run default; `--apply` operator-gated).
 
 **Parked doors:** the **collapse arbitration** (choosing among *multiple kept* candidates of one
 trigger, not just handling them one-per-tick) and the **actions-as-data** future (externalizing

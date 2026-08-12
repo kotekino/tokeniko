@@ -187,7 +187,7 @@ class TKBehaviorRuleDoc(MEMBehaviorRule, Document):
 
 
 # scaffolds: the voice's curated sentence shapes (compose 2.0 slice 1) — the behavior_rules move
-# applied to HOW he speaks. Seeded by scripts/seed_scaffolds.py; learned rows are the arc's tail.
+# applied to HOW he speaks. Seeded by scripts/tk1/seed_scaffolds.py; learned rows are the arc's tail.
 class TKScaffoldDoc(MEMScaffold, Document):
     category: Annotated[str, Indexed()] = ""  # non-unique index (many scaffolds per category = the shelf)
     class Settings:

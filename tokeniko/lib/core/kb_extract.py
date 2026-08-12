@@ -118,7 +118,7 @@ def _pos(sense: str) -> str:
 # ================================================================================================
 # DIFFERENTIA → universal PROPERTY RULES (definitions-as-rules, step 5). Mine "an X is a <genus> that
 # <differentia>" into the rule "all X <differentia>", gated STRICTLY (a false rule poisons every
-# subclass it fires on). The gate, validated in the step-5.1 dry-run (scripts/probe_differentia.py):
+# subclass it fires on). The gate, validated in the step-5.1 dry-run (scripts/tk1/probe_differentia.py):
 #   ABSTRACT genus  — genus under abstraction.n.06 (not physical_entity) -> the differentia describes
 #                     the BEARER, not X ("an ability is the QUALITY of being able to PERFORM").
 #   NOUN differentia — a genus-disjunction alt ("a structure OR object") / appositive -> noise.
@@ -795,7 +795,7 @@ def extract_logic(docs, source: str, parents) -> dict:
 # negated cond, noun appositive, object-less verb, circularity) is REJECTED whole. The genus rides
 # EVERY branch as a class-condition — it is what defuses the nested-disjunction trap ("transports
 # goods → vehicle" is false; "conveyance ∧ transports goods → vehicle" is what the gloss says).
-# Gate policy + 0.3 trust settled with the author on the step-4 dry-run (scripts/probe_sufficiency.py,
+# Gate policy + 0.3 trust settled with the author on the step-4 dry-run (scripts/tk1/probe_sufficiency.py,
 # which calls THIS extractor — ruler and writer share one gate).
 # ================================================================================================
 _SUFF_TAINT = "?TAINT?"

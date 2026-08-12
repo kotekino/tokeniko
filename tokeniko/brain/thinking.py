@@ -707,7 +707,7 @@ def materialize_theorem(result: EvaluatorResult, item: TKMemoryItemDoc, derived_
 
 # THE DREAM (§0 slice 3, the author's ruling): the untangler's report is how he tells the blog he
 # had a DREAM — «while I slept, I untangled something: I no longer believe X, and here is why».
-# Called by scripts/untangle.py after an --apply pass with convictions. The provenance gate holds
+# Called by scripts/tk1/untangle.py after an --apply pass with convictions. The provenance gate holds
 # in the dream too: only POSTABLE retractions are narrated (a DM-taught premise never dreams
 # publicly); all excluded -> no dream idea at all (he keeps that night to himself). Significance
 # is flat-high (an ENCOUNTER-style rare event: a belief revision during sleep is personal by

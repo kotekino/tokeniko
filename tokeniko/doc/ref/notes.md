@@ -81,13 +81,13 @@ the negation cases) and confirm clean, recoverable structure.
 Seed memory from WordNet so the inference engine has edges to chain over. Two complementary harvesters
 (see brainstorm "Knowledge bootstrap"):
 
-- **1a — Structured relations → atomic triples (no NL). ✅ DONE.** `scripts/relations.py` harvested
+- **1a — Structured relations → atomic triples (no NL). ✅ DONE.** `scripts/tk1/relations.py` harvested
   **150,529** sense-scoped triples (`is_a`, `part_of`, `antonym`, `entails`, `attribute`, `similar_to`)
   over all 117,659 WordNet synsets into the `relations` collection (app KB `:27018`). Direct edges
   only; transitive closure (is_a chains, branch-disjointness) computed at query time. Verified:
   `cat → … → animal` vs `lettuce → … → plant` diverge under `organism` (disjointness derivable). The
   reliable taxonomic skeleton, parser-free.
-- **1b — Glosses → atomic property facts. ✅ NOUNS DONE / verbs+adj deferred.** `scripts/glosses.py`
+- **1b — Glosses → atomic property facts. ✅ NOUNS DONE / verbs+adj deferred.** `scripts/tk1/glosses.py`
   (strict/academic: function-word + informal filtered, gloss-cleaned, POS-framed, routed by clause
   count) ingested **~928 definitions + ~1,140 axioms** from the base-word **noun** senses (7 edge-case
   compiler errors skipped, ~0.34%). **Verbs/adjectives deferred:** the "to X is to …" / "X means …"
@@ -281,8 +281,8 @@ layer (its confidence travels with the verdict), never by the logic (always soun
 ### Empirical findings (verified live this session)
 
 - **The dictionary is an explicit, interpretable semantic** (not a black-box embedding): `TKBaseDoc`
-  = 2925 Oxford-3000 axes (`scripts/base.py`); `TKDictionaryDoc` = Moby Word List projected **per
-  sense** through WordNet against those axes (`scripts/dictionary.py`, ~197k sense-vectors). All
+  = 2925 Oxford-3000 axes (`scripts/tk1/base.py`); `TKDictionaryDoc` = Moby Word List projected **per
+  sense** through WordNet against those axes (`scripts/tk1/dictionary.py`, ~197k sense-vectors). All
   meaning comes from the WordNet projection; Moby supplies only the token list. See memory
   `dictionary-semantics` for the full provenance.
 - **Pairwise cosine encodes relatedness, not opposition.** Measured: antonyms are NOT opposite —

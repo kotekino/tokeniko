@@ -138,7 +138,7 @@ class MEMZipDebug(BaseModel):
     timestamp: int = Field(default_factory=lambda: int(time.time()))
     # triage bookkeeping (2026-07-17): True once a feedback-analysis pass consumed this lead —
     # each analysis samples addressed=False only, so the corpus under the glass is always fresh.
-    # (scripts/microscope_mark_addressed.py stamps a whole generation after its analysis lands.)
+    # (scripts/tk1/microscope_mark_addressed.py stamps a whole generation after its analysis lands.)
     addressed: bool = Field(default=False)
 
 

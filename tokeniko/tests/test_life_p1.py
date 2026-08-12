@@ -5,7 +5,7 @@ that ACTUALLY MOVES spawns life:encounter; "DM never public" gates postability a
 materialization site (and the wondering premise-AND cascades the taint); tokeniko:post plans on
 the PUBLIC channel, broadcast (target None), feasible iff it carries its material.
 
-Calibration under test (rule urges from scripts/seed_behavior_rules.py, act threshold 0.5):
+Calibration under test (rule urges from scripts/tk1/seed_behavior_rules.py, act threshold 0.5):
   life:theorem @ 0.65 — plain sig 0.7 -> 0.455 silent; taught/multi-hop sig 0.8 -> 0.52 posts.
   life:encounter @ 0.7 — flat sig 0.9 -> 0.63 posts.
 """
@@ -21,7 +21,7 @@ from lib.core.tkzip import TKZip, TKZipItem, TKZipContent
 _TEACHER = "life-p1-hellen@discord:11"
 _SPEAKER = "life-p1-john@discord:12"
 
-# the seeded personality rows (mirror scripts/seed_behavior_rules.py — the calibration under test)
+# the seeded personality rows (mirror scripts/tk1/seed_behavior_rules.py — the calibration under test)
 _THEOREM_RULE_URGE = 0.65
 _ENCOUNTER_RULE_URGE = 0.7
 

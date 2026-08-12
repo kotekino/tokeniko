@@ -91,7 +91,7 @@ def _leaves(items):
 
 
 # the SUBJECT-side untangle decision (step 5, the chat-zombie antidote for runtime axioms — the
-# definitions get exact gloss-pinning instead, scripts/pin_definition_senses.py). Mirror of
+# definitions get exact gloss-pinning instead, scripts/tk1/pin_definition_senses.py). Mirror of
 # _resolve_genus: override the subject sense ONLY when it is NOT a bedrock descendant of the genus
 # AND another sense of the same subject WORD is — so a demonstrable mis-sense snaps to the sense the
 # graph already vouches for, while a genuine NEW edge ("a human is a person": no sense of "human"

@@ -10,8 +10,8 @@ rejects a logical truth) · S1 = wrong answer/action, identifiable cause, well-f
 right-by-luck / fragile / inconsistent across equivalents · S3 = cosmetic / mood-marker / graceful
 degradation.
 
-**Reproduce.** `scripts/fragility_batch.py` (the categorized probe matrix + injector, `prepare=0` = raw
-neuro-symbolic core, no Ollama pre-filter) → `scripts/trace_fragility.py` (category-aware retrospective
+**Reproduce.** `scripts/tk1/fragility_batch.py` (the categorized probe matrix + injector, `prepare=0` = raw
+neuro-symbolic core, no Ollama pre-filter) → `scripts/tk1/trace_fragility.py` (category-aware retrospective
 tracer: re-runs each stored zip for the rationale, joins ideas/actions, bins by component × severity).
 Start `api` + `brain`, wipe `memory`/`ideas`/`actions` (raw pymongo — the timeseries `.find().delete()`
 is a no-op), inject, wait for full drain (per-speaker cursors caught up — NOT a premature lull), trace.
@@ -57,7 +57,7 @@ genus head is collection-of, not is_a). Left as honest 0.3 beliefs (auditable, r
 
 Wiped `memory`/`ideas`/`actions`/`theorems` to **KB-only** (axioms/definitions/behavior_rules +
 stakeholders kept), then ran the brain unprompted. It re-derived its self-knowledge from the KB alone.
-Full structured account via **`scripts/soak_report.py <brain_log>`** (the new soak analyzer: performance
+Full structured account via **`scripts/tk1/soak_report.py <brain_log>`** (the new soak analyzer: performance
 · results · churn/convergence · errors-by-layer · DB integrity · expected-coverage · verdict).
 
 ### Result — CLEAN (the consolidation held; the loop lives)
@@ -308,7 +308,7 @@ wait; cross-channel identity (Discord-renzo ≠ kotekino to him) is now a live d
 ## Session 2026-07-11 — senses C live: the channel, the ladder, the first discretion
 
 C landed (`3e5993d`) and was live-validated the same hour in `#english` with the playbot puppets
-(`scripts/playground_bots.py`, John + Hellen). Four ladder specimens — one scalar, four manners:
+(`scripts/tk1/playground_bots.py`, John + Hellen). Four ladder specimens — one scalar, four manners:
 
 **L1 — ambient question → answered.** John (no addressing): «is a cat an animal?» → perceived
 directedness=0.6 → `eval:question→answer` urge 0.9, effective **0.54 ≥ 0.5** → «yes», threaded
@@ -573,7 +573,7 @@ diagnosis probe: thinker was a JUDGE gloss-hallucination (n.02 IS the plain read
 now gets the grounded glossary); partridge already healed by the frequency-prior guard; shiny =
 two stacked selection bugs (first-POS-bucket break hid all satellite senses + Lesk credited the
 gloss for mentioning the query word itself); rested = passive-participle routing; bit.n.06 = the
-one true coverage gap (curated, `scripts/curate_add_senses.py`). See `landed.md`. NEW LEAD en
+one true coverage gap (curated, `scripts/tk1/curate_add_senses.py`). See `landed.md`. NEW LEAD en
 route: «a coin STORES bits» resolves store→shop.n.01 — a POS/parse miss, tracked.)*
 
 **D — dropped content (4 leads, HIGH — the sleeper find).** «you live in Japan» LOST "in Japan"

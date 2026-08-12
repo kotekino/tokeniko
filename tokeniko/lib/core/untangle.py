@@ -15,7 +15,7 @@
 # teachers; the ledger + reconcile machinery handles it when the daemons wake). Zero revisable
 # -> a CONSTITUTION-level tension: flagged loudly, only the author's hand may move.
 #
-# Designed from day one as a tool HE runs while the daemons sleep (scripts/untangle.py is the
+# Designed from day one as a tool HE runs while the daemons sleep (scripts/tk1/untangle.py is the
 # CLI; dry-run default). The sleep phase gains its second duty: memory consolidation AND belief
 # hygiene — and its public voice is the DREAM report (brain/thinking.spawn_dream -> the blog).
 # --------------------------------------------------------------

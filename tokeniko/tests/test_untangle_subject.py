@@ -1,6 +1,6 @@
 """The graph-constrained SUBJECT untangle (step 5 — the runtime mirror of the genus untangle).
 
-A definition's subject gets EXACT gloss-pinning (scripts/pin_definition_senses.py); a runtime AXIOM
+A definition's subject gets EXACT gloss-pinning (scripts/tk1/pin_definition_senses.py); a runtime AXIOM
 has no gloss to pin, so the compiler snaps a demonstrably mis-sensed copular subject to the sense of
 the same word that bedrock already places under the genus — and ONLY then. A genuine new edge
 ("a human is a person" — the author's bridging axiom) has no graph-consistent candidate and must
