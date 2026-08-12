@@ -23,7 +23,7 @@ import sys
 import copy
 
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko", ".env"))
 
 import nltk
 from nltk.corpus import wordnet as wn

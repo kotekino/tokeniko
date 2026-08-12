@@ -23,7 +23,7 @@ import sys
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko", ".env"))
 
 # ---- the curation batch: (word, pos, preferred synset key) — the author's per-word rulings ------
 BATCH = [
@@ -92,6 +92,33 @@ BATCH = [
     # words that DO arrive tagged NOUN.
     ("computing",  "n", "calculation.n.01"),  # «the procedure of calculating» — the activity, not
                                               # computer_science.n.01, the branch of engineering
+
+    # ---- BATCH 5 (the modifier surface, 2026-08-12) — PROPOSED, awaiting the author's ruling -----
+    # Residue of the property-path repair (the WSD ladder replacing the bare find_one, + the
+    # prenominal-participle gate). These are WSD PICKS, not pool holes: in every row below the right
+    # sense IS in the candidate pool and the ladder walks past it, so a `preferred` flag reaches it.
+    # NB the pos code is the TARGET ROW's own — the script matches (word,pos) exactly, while the
+    # ladder pools 'a' and 's' together, so an 's' ruling still reaches an 'a' query.
+    ("used",       "s", "secondhand.s.02"),  # «a USED car» = previously owned, not used.a.01
+                                             # «employed in accomplishing something» (which is just
+                                             # the verb reading wearing an adjective coat)
+    ("canned",     "s", "canned.s.02"),      # «CANNED soup» = sealed in a can, not «recorded for
+                                             # broadcast» (the canned-laughter sense)
+    ("sealed",     "a", "sealed.a.02"),      # «a SEALED envelope» = closed with a seal, not
+                                             # «established irrevocably» (a sealed fate)
+    ("drawn",      "s", "drawn.s.02"),       # «the DRAWN curtain» = pulled shut — the gloss is
+                                             # verbatim; rank 0 is careworn.s.01, an exhausted FACE
+    ("opened",     "s", "opened.s.01"),      # «the OPENED door» = made open, not open.a.05
+                                             # «used of mouth or eyes»
+    ("beaten",     "s", "beaten.s.01"),      # «the BEATEN path» = much trodden, not beaten.a.01
+                                             # «formed or made thin by hammering» (metalwork)
+    ("sharp",      "a", "sharp.a.09"),       # «a SHARP knife» = made by a thin edge, suitable for
+                                             # cutting; rank 0 is crisp.s.01, «clearly defined»
+    ("car",        "n", "car.n.01"),         # the motor vehicle. Not a frequency problem — rank 0
+                                             # is already right — but the context centroid overrode
+                                             # it at 0.652 in «a CAR door» and picked car.n.03, the
+                                             # compartment slung under an AIRSHIP. Curated outranks
+                                             # the centroid, which is exactly the lever for this.
 ]
 
 

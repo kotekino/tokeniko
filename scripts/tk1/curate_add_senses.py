@@ -26,7 +26,7 @@ from nltk.corpus import wordnet as wn
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko", ".env"))
 
 # ---- the curation batch: (word, canonical synset key) -------------------------------------------
 BATCH = [
