@@ -102,6 +102,24 @@ def _lemmas_in_base(text: str) -> set[str]:
     return out
 
 
+def gloss_names_word(text: str, word: str) -> str | None:
+    """`_lemmas_in_base`'s matching, aimed at ONE target word instead of the whole base set — returns
+    the surface token that named it, or None. Needed by stage 4 because a curation target may be a
+    dimension without being a Jurassic base word (`swallow`, `runway`), which `_lemmas_in_base`
+    filters out by construction."""
+    word = word.lower()
+    for tok in _TOKEN.findall(text.lower()):
+        if len(tok) < 2 or tok in STOP:
+            continue
+        if tok == word:
+            return tok
+        for pos in ("v", "n", "a", "r"):
+            lem = wn.morphy(tok, pos)
+            if lem == word:
+                return tok
+    return None
+
+
 def synsets_for(word: str, mode: str | None = None):
     """The senses that speak for a base word. `primary` = first synset per POS, which is exactly
     what the Jurassic build used; `all` = the full sense list."""

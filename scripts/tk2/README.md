@@ -32,6 +32,10 @@ python scripts/tk2/tk2.py near sleep.v
 python scripts/tk2/tk2.py rel eat.v food.n
 python scripts/tk2/tk2.py opposite leave
 python scripts/tk2/tk2.py effect eat
+
+# 6. definitional curation — PROPOSALS ONLY, the Captain approves by eye (stage 4)
+python scripts/tk2/tk2_curate.py propose
+python scripts/tk2/tk2_curate.py simulate
 ```
 
 Iterating means editing **`tk2_config.py` only** — seeds, relation weights, the bar — or passing
@@ -49,6 +53,7 @@ Iterating means editing **`tk2_config.py` only** — seeds, relation weights, th
 | `tk2_probe.py` | stage 3 — scores the bar, Jurassic base vs candidate runs |
 | `tk2_build2.py` | stage 2b — the TWO-matrix base (R relational + D distributional) over one key space |
 | `tk2.py` | the CLI over the two-matrix base — `near` / `rel` / `opposite` / `effect` / `bar` |
+| `tk2_curate.py` | stage 4 — mines definitions for ANALYTIC edges (requirement 20). Proposes, simulates, never writes R |
 
 ## Sandbox collections (`tokeniko_tk2`)
 
@@ -59,6 +64,9 @@ Iterating means editing **`tk2_config.py` only** — seeds, relation weights, th
 - `base_relational` / `base_distributional` — the two-matrix base: same shape as `base_candidate`,
   keyed on `base` instead of `run`. **R** is named WordNet edges only (signed, ~1.0% dense); **D** is
   gloss overlap only (unsigned, ~24% dense). One key space, one dimension order, both.
+- `curation_proposals` — stage 4's pending proposals: `{pid, src_key, dst_key, proposed_rel, weight,
+  evidence, gloss_sense, status}`. The ONLY collection `propose`/`simulate` write to; `base_relational`
+  is reached exclusively by `approve --i-am-the-captain`.
 - `base2_manifest` — the shared manifest of a two-matrix base: the ordered key list, the two weight
   dicts, the density stats, the wup decision, and `added_words` — every dimension the membership
   repair introduced, declared rather than smuggled (requirement 15).
@@ -85,3 +93,22 @@ The membership repair (`tk2_config.BASE2_ADDED_WORDS`) adds `want`, `swallow`, `
 `negation` as dimensions — words the bar names that the Jurassic 2925 lacks. It is a legitimate
 prototype move **only because it is declared**: the builder writes each one into the manifest's
 `added_words`, so no result can quietly rest on a word that was smuggled in.
+
+## Stage 4 — definitional curation (requirement 20), and the dual read (requirement 19)
+
+A manual edge may enter R only when it is **analytic** — stated in a definition — never when it is
+contingent; sayings, slang and context-bound readings are knowledge, and knowledge lives in the KB.
+Definitions are **cross-referenced**: `sleep`'s gloss is «be asleep» and never mentions a bed, while
+`bed`'s is «a piece of furniture that provides a place to sleep» — so the edge is minted from
+whichever side speaks, and it is **directed**, `bed.n -> sleep.v`.
+
+`tk2_curate.py propose` mines, prints the table, and stores pending rows. It never writes a cell.
+`simulate` applies the pending proposals to an **in-memory** copy of R and re-scores the bar.
+`approve` is the only path to `base_relational` and refuses to run without `--i-am-the-captain`:
+analytic-vs-contingent is exactly the call a miner cannot make, so the guard is the mechanism the
+ruling needs, not ceremony.
+
+Requirement 19 rides along in `tk2.py bar` and in the simulation: a verdict reads **both** the
+**cell** («is there a stated relation, and of what sign?») and the **cosine** («do their worlds
+overlap?»). They are printed side by side and never blended — an absent cell is `MUTE`, an
+abstention rather than a zero, and where the two reads disagree the disagreement is the finding.

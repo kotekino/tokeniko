@@ -239,8 +239,10 @@ def cmd_opposite(base: Base2, args):
 # 4. effect — what the verb ENTAILS or CAUSES. Expected mostly empty, and that IS the answer.
 # ------------------------------------------------------------------------------------------------
 
-FORWARD_EFFECT = ("entails", "causes")
-REVERSE_EFFECT = ("entailed_by", "caused_by")
+# `state_of` reads hungry.a -> eat.v («the state attached to eating»), so seen FROM the verb the
+# state that follows it sits on the RECIPROCAL cell — widened per the Captain's ruling 2026-08-12.
+FORWARD_EFFECT = ("entails", "causes", "state_of_reciprocal")
+REVERSE_EFFECT = ("entailed_by", "caused_by", "state_of")
 
 
 def cmd_effect(base: Base2, args):
@@ -277,12 +279,82 @@ def cmd_effect(base: Base2, args):
 # ------------------------------------------------------------------------------------------------
 
 
+def _cell(w):
+    return f"{w:+.2f}" if w is not None else "  —  "
+
+
+def _dual_read_table(scores, cells):
+    """REQUIREMENT 19 — a verdict reads BOTH numbers.
+
+    The CELL answers «is there a STATED relation between these two, and of what sign?». The COSINE
+    answers «do their worlds overlap?». They are different questions and they are allowed to give
+    different answers: a pair can carry a strong stated relation and still share almost no row mass
+    (one directed cell out of a dozen), and a pair can share a lot of mass with nothing stated
+    between them at all. Folding the two into one score is the Jurassic sin in miniature, so nothing
+    below is averaged, blended or scored jointly — where the reads disagree, the disagreement is
+    printed as the finding it is.
+    """
+    print(f"\n=== the bar, DUAL READ (requirement 19) — R cosine · R cell · D cosine ===")
+    print(f"  {'pair':<24} {'exp':<5} {'R cosine':<16} {'R cell a->b':>11} {'b->a':>7}  "
+          f"{'cell':<6} {'relation':<14} {'D cosine':<9}")
+    print(f"  {'-'*24} {'-'*5} {'-'*16} {'-'*11} {'-'*7}  {'-'*6} {'-'*14} {'-'*9}")
+
+    disagreements, mutes = [], []
+    ok_cos = ok_cell = n_cell = 0
+    for a, b, e, why in CFG.PAIRS:
+        pair = (a, b, e, why)
+        vR, vD = scores["R"][pair], scores["D"][pair]
+        fwd, rev, rel = cells.get(pair, (None, None, None))
+        w = fwd if fwd is not None else rev            # the stated relation, whichever way it runs
+        vc, vk, note = P.dual_read(vR, w, e)
+
+        if vc:
+            ok_cos += 1
+        if vk is not P.MUTE:
+            n_cell += 1
+            if vk:
+                ok_cell += 1
+
+        cos_s = f"{vR:+7.3f} {'ok ' if vc else 'MISS'}" if vR is not None else "    n/a     "
+        colc = GREEN if vc else RED
+        kmark = "MUTE" if vk is P.MUTE else ("ok " if vk else "MISS")
+        colk = DIM if vk is P.MUTE else (GREEN if vk else RED)
+        d_s = f"{vD:+7.3f}" if vD is not None else "   n/a "
+        print(f"  {a+' ~ '+b:<24} {e:<5} {colc}{cos_s:<16}{OFF} {_cell(fwd):>11} {_cell(rev):>7}  "
+              f"{colk}{kmark:<6}{OFF} {DIM}{(rel or '—'):<14}{OFF} {d_s}")
+
+        if note.startswith("DISAGREE"):
+            disagreements.append((a, b, e, note))
+        elif vk is P.MUTE:
+            mutes.append((a, b, e, vc))
+
+    print(f"\n  cosine read: {ok_cos}/{len(CFG.PAIRS)} on the right side of the bar")
+    print(f"  cell read:   {ok_cell}/{n_cell} of the pairs R actually speaks about "
+          f"({len(CFG.PAIRS)-n_cell} mute — R states no relation, which is an ABSTENTION, "
+          f"not a score of zero)")
+
+    print(f"\n  {BOLD}where the two reads DISAGREE{OFF} — printed, never reconciled into one number")
+    if disagreements:
+        for a, b, e, note in disagreements:
+            print(f"    {a:>10} ~ {b:<10} {e:4s}  {note}")
+    else:
+        print(f"    (none — on every pair R speaks about, the cell and the cosine agree)")
+
+    print(f"  {BOLD}where R is MUTE{OFF} — no stated relation, so only the cosine spoke")
+    for a, b, e, vc in mutes:
+        print(f"    {a:>10} ~ {b:<10} {e:4s}  cosine {'ok ' if vc else 'MISS'}  "
+              f"{DIM}— the cell has nothing to say; a NEAR here is carried by shared mass alone{OFF}")
+    if not mutes:
+        print(f"    (none)")
+
+
 def cmd_bar(base: Base2, args):
     print(f"bar: NEAR >= {CFG.NEAR_FLOOR}   FAR <= {CFG.FAR_CEILING}   pairs: {len(CFG.PAIRS)}   "
           f"base '{base.base}' ({len(base.keys)} dims)")
 
     scores = {"R": {}, "D": {}}
     rels = {"R": {}, "D": {}}
+    cells = {}                      # pair -> (fwd, rev, rel) on R, requirement 19's other half
     for a, b, e, why in CFG.PAIRS:
         pair = (a, b, e, why)
         for which in ("R", "D"):
@@ -291,14 +363,22 @@ def cmd_bar(base: Base2, args):
             if not ka or not kb:
                 scores[which][pair] = None
                 rels[which][pair] = f"missing:{a if not ka else b}"
+                if which == "R":
+                    cells[pair] = (None, None, None)
                 continue
             ka, kb = ka[0], kb[0]
             scores[which][pair] = cos(base, which, ka, kb)
-            edge = edge_of(base, which, ka, kb) or edge_of(base, which, kb, ka)
+            fwd, rev = edge_of(base, which, ka, kb), edge_of(base, which, kb, ka)
+            edge = fwd or rev
             rels[which][pair] = edge["rel"] if edge else "—"
+            if which == "R":
+                cells[pair] = (fwd["w"] if fwd else None, rev["w"] if rev else None,
+                               edge["rel"] if edge else None)
 
     for which in ("R", "D"):
         P.report(f"{which} — {LABEL[which]}", scores[which], rels[which])
+
+    _dual_read_table(scores, cells)
 
     # the side-by-side that is the actual point: where does the choice of matrix flip the verdict?
     print(f"\n=== where the matrix choice FLIPS the verdict ===")

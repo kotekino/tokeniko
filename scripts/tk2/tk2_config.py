@@ -218,3 +218,101 @@ REQUIRE_LOCAL_ORDER = True
 
 # the bar's own words are seeds too (defined above, resolved here now that PAIRS exists)
 SEEDS = SEEDS + [w for w in _bar_words() if w not in SEEDS]
+
+
+# ------------------------------------------------------------------------------------------------
+# STAGE 3b — REQUIREMENT 19: THE DUAL READ  (the Captain's ruling, 2026-08-12)
+# ------------------------------------------------------------------------------------------------
+
+# A verdict reads BOTH numbers, and they answer two different questions:
+#   the CELL   — «is there a STATED relation between these two, and of what sign?»
+#   the COSINE — «do their worlds overlap?»
+# Collapsing them into one score is the Jurassic sin in miniature, so the bar keeps them apart and
+# prints the disagreement out loud when the two reads differ.
+
+CELL_NEAR_FLOOR = 0.30    # a stated positive cell at least this strong SATISFIES a NEAR expectation
+CELL_FAR_CEILING = 0.15   # a stated positive cell above this VIOLATES a FAR expectation
+# A negative cell always satisfies FAR (opposition is farness, stated). An absent cell is MUTE — not
+# a pass and not a miss: R declining to speak. Mute counts as ok for FAR (nothing pulls them
+# together) and is reported as an abstention for NEAR, never silently scored as a failure of value.
+
+
+# ------------------------------------------------------------------------------------------------
+# STAGE 4 — DEFINITIONAL CURATION  (requirement 20, the Captain's ruling of 2026-08-12)
+# ------------------------------------------------------------------------------------------------
+
+# The ruling: a manual edge may enter R only when it is ANALYTIC — stated in a definition — never
+# when contingent (sayings, slang, context-bound readings: those belong to the KB, which is where
+# consequence is learned, requirement 5).
+#
+# And definitions are CROSS-REFERENCED. `sleep`'s gloss («be asleep») never mentions a bed; `bed`'s
+# gloss («a piece of furniture that provides a place to sleep») names sleeping outright. The edge is
+# minted from whichever side's definition actually speaks, and it is DIRECTED: bed.n -> sleep.v.
+
+# The pairs the miner runs on by default: the four the bar misses that curation is supposed to
+# address. This is NOT the bar — PAIRS above is never edited to fit a result (requirement 12); this
+# is only the miner's default worklist, and `--pairs` overrides it for a one-off.
+CURATION_TARGET_PAIRS = [
+    ("sleep.v", "bed.n"),     # the cross-reference case: only bed's gloss speaks
+    ("sleep.v", "tired.a"),   # the honest test: can a definition close the effect axis at all?
+    ("eat.v",   "hungry.a"),  # predicted closable — hungry's gloss names eating
+    ("land.n",  "land.v"),    # the FAR miss: does a definitional edge help, or deepen the merge?
+]
+
+# THE CLOSED SET of curated relation names, with the weight each proposal carries. Closed on
+# purpose: a curator who may invent a relation name per edge is writing prose, not a matrix. Every
+# one of these is a relation a DEFINITION can state; none of them is a similarity score.
+CURATED_WEIGHTS = {
+    "used_for":  0.80,   # X's gloss states X's PURPOSE is Y            (bed -> sleep)
+    "site_of":   0.70,   # X's gloss states X is the PLACE where Y happens
+    "involves":  0.75,   # X's gloss names Y as a PARTICIPANT of X      (eat -> food)
+    "entails":   0.80,   # X's gloss states Y necessarily happens when X does  (same name as the
+                         #   WordNet edge on purpose: same claim, different provenance)
+    "causes":    0.85,   # X's gloss states X brings Y about
+    "state_of":  0.80,   # X's gloss states X is the CONDITION attached to Y  (hungry -> eat)
+}
+CURATED_RELATIONS = tuple(CURATED_WEIGHTS)
+
+# How the miner GUESSES which of the six a gloss is stating. A guess, not a claim: every proposal is
+# pending until the Captain's eye relabels or rejects it. Cues are tried in this order, so a gloss
+# that is both purposive and locative («provides a place to sleep») reads as purpose — which is how
+# the Captain himself quoted it («a piece of furniture ... for sleeping»).
+CURATION_CUES = [
+    ("causes",   ("cause", "causes", "make", "makes", "bring", "brings", "result", "results", "produce")),
+    ("used_for", ("for", "used", "use", "provides", "provide", "designed", "intended", "serves", "so")),
+    ("site_of",  ("place", "where", "area", "surface", "room", "space", "site", "location")),
+]
+# ...and when no cue fires, the POS pair decides. `involves` is the weakest and the default: it
+# claims only «the definition names it», which is the one thing the miner actually observed.
+CURATION_POS_DEFAULT = {
+    ("a", "v"): "state_of",   # an adjective's gloss naming an act names the condition around it
+    ("a", "n"): "state_of",
+    ("v", "v"): "entails",    # a verb defined through another verb states what the act consists of
+    ("n", "v"): "used_for",
+    ("v", "n"): "involves",
+    ("n", "n"): "involves",
+}
+
+# A definition naming its own headword under a different POS («land: the land on which real estate
+# is located») is SELF-REFERENCE, not a stated relation between two concepts. Mining it would mint
+# land.n -> land.v out of a tautology — precisely the over-merge requirement 16 already measured.
+CURATION_SKIP_SELF_REFERENCE = True
+
+# The sandbox collection the proposals live in. base_relational is NEVER written by this stage.
+CURATION_COLLECTION = "curation_proposals"
+
+# THE RECIPROCAL CELL — the Captain's ruling of 2026-08-12: «agree on the reciprocal 0.60, approve
+# both edges». Measured before the ruling: a curated edge written one-way only moves sleep.v~bed.n
+# to 0.217 and eat.v~hungry.a to 0.193, both under the 0.30 NEAR floor — the stated-relation read
+# passes while the cosine read still misses. A weaker back-reference at 0.60 carries them to 0.353
+# and 0.329, closing BOTH reads. The value is not invented: it is exactly the convention R already
+# uses for the WordNet edges it mines (`entails` 0.80 / `entailed_by` 0.60, `causes` 0.85 /
+# `caused_by` 0.60), so a curated edge is shaped like the edges it sits beside.
+CURATED_RECIPROCAL_WEIGHT = 0.60
+
+# The reverse cell is tagged rather than renamed. Inventing an English inverse for each of the six
+# (`involved_in`? `site_for`?) would double the closed set without making a second claim — the
+# relation is ONE relation, stored asymmetrically. The suffix is derived mechanically so it cannot
+# drift, and it keeps the reverse cell from reading as the forward one: `sleep.v -> bed.n` prints
+# `used_for_reciprocal`, never `used_for`, which would say sleep is used for a bed.
+CURATED_RECIPROCAL_SUFFIX = "_reciprocal"

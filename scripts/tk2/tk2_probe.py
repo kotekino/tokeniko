@@ -54,6 +54,52 @@ def verdict(val, expect):
     return val <= CFG.FAR_CEILING
 
 
+# ------------------------------------------------------------------------------------------------
+# REQUIREMENT 19 — THE DUAL READ. The cell and the cosine answer two different questions, and the
+# bar reads BOTH. Kept here rather than in tk2.py so the simulation in tk2_curate.py scores a
+# proposal with exactly the same logic the bar uses — a simulated verdict that used its own rules
+# would be measuring the rules, not the proposal.
+# ------------------------------------------------------------------------------------------------
+
+MUTE = "MUTE"          # R declines to speak: no cell in either direction. Not a pass, not a miss.
+
+
+def cell_verdict(w, expect):
+    """(verdict, why) for the DIRECT cell. `w` is the signed weight of the stated relation, or None.
+
+    NEAR wants a stated positive relation; a negative one is R asserting the opposite of what the bar
+    expects, which is a violation rather than a weak score.
+    FAR is satisfied by opposition (a negative cell IS stated farness) and by silence — but silence is
+    reported as MUTE, never dressed up as agreement.
+    """
+    if w is None:
+        return (True, "mute — R states no relation") if expect == "FAR" else (MUTE, "mute — R states no relation")
+    if expect == "NEAR":
+        if w < 0:
+            return False, f"stated OPPOSITION ({w:+.2f}) where the bar expects NEAR"
+        return (True, "stated relation") if w >= CFG.CELL_NEAR_FLOOR else (False, f"stated but weak ({w:+.2f})")
+    if w < 0:
+        return True, "opposition stated"
+    return (False, f"stated relation ({w:+.2f}) where the bar expects FAR") if w > CFG.CELL_FAR_CEILING \
+        else (True, f"stated but negligible ({w:+.2f})")
+
+
+def dual_read(cos_val, cell_w, expect):
+    """(cosine verdict, cell verdict, agreement note). The two are never folded into one score —
+    where they disagree the disagreement IS the finding, and it gets printed."""
+    vc = verdict(cos_val, expect)
+    vk, why = cell_verdict(cell_w, expect)
+    if vk is MUTE:
+        note = f"cosine {'ok' if vc else 'MISS'} / cell MUTE — no stated relation to agree or disagree with"
+    elif vc is None:
+        note = "unscorable"
+    elif vc == vk:
+        note = ""
+    else:
+        note = (f"DISAGREE — cosine says {'ok' if vc else 'MISS'}, cell says {'ok' if vk else 'MISS'}: {why}")
+    return vc, vk, note
+
+
 def local_order(scores):
     """Absolute thresholds drift between runs; the ORDER should not. Every NEAR pair must out-score
     every FAR pair that shares a word with it."""
