@@ -21,7 +21,7 @@ from functools import cmp_to_key
 import textacy
 from word2number import w2n
 from lib.core.memory import MEMContext, MEMStakeholder
-from lib.llc.anchors import anchor_resolve, anchor_whType, anchor_quantifier
+from lib.llc.anchors import anchor_resolve, anchor_whType, anchor_quantifier, anchor_is_exact
 
 # --- INIZIO PATCH PYTORCH ---
 import torch
@@ -232,9 +232,36 @@ def parser_parseSubordinate(token: Token, quotes: list[tuple[list[Token], list[T
     if marker is None:
         # stanza parses wh-subordinators ("...WHEN he says false", "...WHERE you live") as advmod,
         # not mark — the storm-sequel flattening: no marker -> dep-label fallback -> ADVCL -> AND.
-        # accept an advmod child as the marker ONLY when the anchors recognize it as a subordinate
-        # type (semantic catch, no fixed list; content adverbs like "very" resolve OTHER and pass).
+        # accept an advmod child as the marker only if one of TWO admitting halves lets it in — the
+        # WRB tag, or exact membership in the subordinate-types anchor table — and only then does
+        # anchor_resolve CONFIRM the type. The resolver is never the gate.
+        #
+        # SERVONO ENTRAMBE LE META', NESSUNA BASTA DA SOLA (2026-08-12, misurato):
+        #   · WRB da sola perde i CONCLUSIVI: `so`/`therefore`/`thus`/`hence`/`consequently` sono
+        #     RB, non WRB («I think, THEREFORE I exist» -> therefore:RB/advmod). Sono in tabella di
+        #     proposito — vedi il blocco M2 in anchors.py:184 — ed e' proprio questo fallback che
+        #     devono attraversare. Toglierla ha fatto rosso test_causal.py, due test.
+        #   · la TABELLA da sola perde i wh: `where`/`how`/`why`/`whenever` NON sono voci di
+        #     tabella (ci arrivano per vicinanza semantica); solo il tag WRB li ammette. E' il tag,
+        #     non PronType, a essere affidabile: una relativa da PronType=Rel («the place WHERE I
+        #     live») e resterebbe fuori da un cancello su PronType.
+        # Chi un giorno vorra' togliere una delle due meta' trovi qui il controesempio, non in un test.
+        #
+        # PERCHE' NON GLI ANCHOR DA SOLI. Il commento originale affermava che «gli avverbi di
+        # contenuto come "very" risolvono OTHER e passano oltre»: MISURATO, e' FALSO — `very`
+        # risolve CONSECUTIVE, `now`/`always`/`just`/`too` pure, `never`/`already`/`only` risolvono
+        # CAUSAL. La categoria `subordinate_types` NON HA un floor efficace per le parole funzionali:
+        # essendo nearest-anchor su spaCy, ogni avverbio atterra comunque su QUALCHE ancora. Quel
+        # fatto resta vero — questo percorso semplicemente non lo raggiunge piu'.
+        # Il danno che ne usciva: lo slot marker di un complemento e' VUOTO («I think you are
+        # sleeping» — nessun case/mark), quindi il fallback raccoglieva `not` come marcatore, gli
+        # anchor lo mappavano sul vicino piu' prossimo `because`, la clausola si tipizzava CAUSAL e
+        # _stamp_cause timbrava `reason` su un COMPLEMENTO. Doppio danno: un legame causale inventato
+        # — che alimenta l'estrattore di regole condizionali, e una regola inventata GENERALIZZA — e
+        # la perdita della tipizzazione CCOMP (il complemento non si ripiegava piu' come THAT sotto
+        # l'attitudine). 14 avverbi su 25 venivano raccolti cosi', 10 con timbro di causa.
         marker = next((s for s in childrenTokens if s.dep_ == "advmod"
+                       and (s.tag_ == "WRB" or anchor_is_exact(s.lemma_, "subordinate_types"))
                        and anchor_resolve(s.lemma_, "subordinate_types") != TKClauseType.OTHER), None)
     if marker and marker.has_vector: 
         tkMarker = TKMarker(dep=marker.dep_, word=marker.lemma_, vector=marker.vector, parent_dep=token.dep_)

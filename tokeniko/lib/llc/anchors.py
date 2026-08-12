@@ -509,6 +509,18 @@ def anchor_is(lemma: str, category: str) -> bool:
     return key in cat.table
 
 
+# membership ESATTA nella tabella di una categoria: SOLO la voce curata, mai il nearest-anchor e mai
+# un vettore. Serve a chi deve chiedere «questa parola e' nella tabella?» come CANCELLO, tenendo il
+# resolver semantico come conferma successiva (parser_parseSubordinate, 2026-08-12): una categoria
+# SEMANTIC risponde comunque QUALCOSA a qualunque parola, quindi non puo' fare da cancello.
+# Case-folded esattamente come anchor_resolve. Totale e muta: categoria o parola sconosciuta -> False.
+def anchor_is_exact(word: str, category: str) -> bool:
+    cat = _REGISTRY.get(category)
+    if cat is None:
+        return False
+    return ((word or "").strip().lower()) in cat.table
+
+
 # ------------------------------------------------------------------------------------------------
 # Quantifier (closed-class determiners -> TKQuantifier)
 # EXACT only — quantifiers are closed-class function words; a fuzzy match would be unsafe ("all" must
