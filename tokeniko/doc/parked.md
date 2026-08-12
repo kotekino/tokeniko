@@ -15,6 +15,56 @@
 
 ## → tk2 — carried into the blueprint (moved off `roadmap.md` 2026-08-03)
 
+### The second wave — moved 2026-08-12 by the sharpened filter
+
+*The author's blade: **what makes v1 better and bug-free is welcome; NEW FEATURES go to tk2.** A
+repair keeps the empirical instrument fit; a new capability built in v1 is built twice. This emptied
+`roadmap.md` §4 to a single item. Per-item reasoning: `doc/tk2/carried-in.md`.*
+
+**Vocabulary growth** (hunches 1+2) `→ tk2` — OOV → a staging dictionary entry · the typo-ALIAS table
+· definitional triangulation (a trusted definition's zip matched against known ones → a graded link
+at the definition's trust, never a hard `=`). The DICTIONARY it grows is `inherit untouched`, so
+every row would cross the bridge — but the *machinery that mints rows* is new capability, and tk2
+should own how its vocabulary expands from the start.
+
+**Ingestion-time differentia** `→ tk2` — differentia extraction wired at definition INGESTION. The
+extractor exists and stays; making ingestion enrich automatically is a new capability, and it changes
+WHEN the KB grows, which is a blueprint decision.
+
+**KB growing OUTWARD — tier-1 synthetic learning** `→ tk2` — learned axioms vs derived theorems, the
+analytic/synthetic cut. Design + open forks: `doc/ref/kb-growing-outward.md`. **The largest item that
+was ever on the road**, and an entire new learning mode: exactly what should be designed against
+tk2's format rather than retrofitted onto v1's.
+
+**Etiquette — the PROTOCOL half** (hunch 8) `→ tk2` — repair initiation («what?», «huh?» — the
+inbound mirror of his own did-you-mean, which he has no channel for) and farewell / channel-close
+(«bye»; the exchange window closes only by TIMEOUT today). *Its 2026-08-03 argument for staying was
+that the mention-vocative bug proved protocol is structural — but that BUG is fixed (2026-08-11), and
+what remains is two new behaviours.* The DISPATCH half and all of REGISTER were already here; the
+whole of etiquette now sits in one place.
+
+**Trust-ledger-movement digests** `→ tk2` — «my opinion of X shifted twice today» batching like the
+rest. A new digest kind.
+
+**Trust-ledger consumers** `→ tk2` — the trust-gated tkzip lane (format-coupled, was always destined
+here) · attitude-report unwrapping (events / facts-as-axioms) · tier-1 teaching by an EARNED-trust
+stranger (Hellen is 4 kickers from the bar). All new capability on top of a ledger that works.
+
+**Contrast as default-expectation fuel** `→ tk2` — wondering reads a contrast-flagged «X but Y» as a
+hint at a background generic «X normally ¬Y», then corroborates or asks. **The flag is live and
+stays; only the CONSUMER moves** — v1 keeps producing the evidence tk2 will read.
+
+**«I picked up a way of speaking from X»** `→ tk2` — a transmission voice for a consolidated learned
+scaffold. The scaffold rows are `inherit`; the voice that announces them is new.
+
+**Blog `life:learned` / `life:discussion` triggers** `→ tk2` — new outbound triggers on a channel
+that already works.
+
+**The possessive-relation carrier** `→ tk2` — «kotekino is MY creator», the creator-of-ME bond. A new
+relation carrier, split out of the complement-family follow-on (whose other half — verify xcomp→THAT
+— is a check and stays on the road).
+
+
 **TKZip binary compaction + the zip-native renderer** `→ tk2` — the zip becomes an actual packed
 vector; the JSON is the human projection. **The author's own worked example of the filter**: the
 format changes substantially in tk2, so this is optimization of a thing being replaced — partial

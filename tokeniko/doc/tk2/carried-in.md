@@ -89,6 +89,40 @@ question**, converging with hunch 20's event-magnitude design (*an event is a de
 a fact is a payload*). Deciding the tier inside v1's format would decide it twice, and the better
 frame — magnitude as resistance to consolidation — only exists on the tk2 side.
 
+## The second wave — the sharpened blade (2026-08-12)
+
+The 08-03 criterion was **asset vs machinery**. It worked, but it needed a reading each time: is a
+staging-dictionary minter an asset (it makes dictionary rows) or machinery (it is code that mints)?
+The author supplied the simpler blade:
+
+> **What makes v1 better and BUG-FREE is welcome. NEW FEATURES go to tk2.**
+
+The two are consistent — this one is just faster to apply, and it decides the cases the first blade
+left ambiguous. The reasoning underneath: **v1's remaining job is to be the empirical instrument**
+(the README's own thesis), and a repair keeps it fit. A new capability built here is built twice —
+once against a format we are replacing, once properly.
+
+**What moved:** vocabulary growth · ingestion-time differentia · KB growing outward · etiquette
+(protocol) · trust-ledger-movement digests · trust-ledger consumers · contrast-as-expectation fuel ·
+the learned-scaffold transmission voice · the blog `life:*` triggers · the possessive-relation
+carrier. All ten → `parked.md`, second-wave section.
+
+**What the blade does NOT touch, and this is the point:** every bug on the road stays — the §2
+microscope and its whole residue, the anchor adoption audit (the resolver exists and is used
+inconsistently: a repair), the deploy tooling, the multilingual residuals (defects in a SHIPPED
+feature), and the biography rulings (data maintenance, the author's hand, never a feature).
+
+**One consequence, stated plainly:** §4 went from five items to one, and the road ahead is now the
+microscope, the anchor audit, and a list of bugs. **tk1 stops growing today.** That is not a gap —
+it is the moment the instrument becomes only an instrument, which is what this whole document has
+been arguing toward since 08-03.
+
+**A test for the next borderline case.** Ask: *if tk2 never happened, would this be a bug report?*
+Yes → it stays. No → it is a feature, and features are tk2's. The contrast-flag split is the model:
+the FLAG is live and stays (v1 keeps producing evidence), only the CONSUMER moved.
+
+---
+
 ## How to use this document
 
 When an item's time comes, it does **not** get promoted back to `roadmap.md`. It gets picked up
