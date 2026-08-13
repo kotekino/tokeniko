@@ -16,9 +16,11 @@ material**, exempt from the status-doc invariants exactly as `doc/ref/notes.md` 
 - **v1 continues unchanged.** It is not frozen, not deprecated, not a museum. It remains the
   empirical instrument: every limit it hits is a finding, and findings are the fuel of this
   directory. A tk2 that stops v1 has destroyed its own source of evidence.
-- **This phase costs conversation and documents, not implementation.** No officer is dispatched
-  against anything in here until the blueprint is fixed and a scope is cut from it. Cost is a design
-  constraint.
+- **This phase costs conversation and documents, not implementation.** No officer is dispatched to
+  *build tk2* until the blueprint is fixed and a scope is cut from it. Cost is a design constraint.
+  *(Amended 2026-08-12, the «verify instead of guessing» ruling: officers MAY be dispatched to build
+  **instruments** — code/drafts/tests that settle a doubt and thereby DEFINE a requirement, sandboxed
+  to `tokeniko_tk2`. The prohibition is on building the product, not on measuring the design.)*
 - **Parking is free.** If attention moves elsewhere, this directory sits still and loses nothing.
 
 Origin: hunch 21 of `doc/ref/captain-hunches.md`, opened and argued 2026-07-31.
@@ -177,32 +179,41 @@ The central deliverable of the blueprint: a component-by-component decision, **i
 rebuild**, each with its reason. Anything marked *rebuild* must justify why migration is impossible,
 because rebuilding is how a second system quietly becomes a rewrite.
 
-The initial lean — a starting position to be argued, not a conclusion:
+The initial lean (2026-07-31) — a starting position to be argued, not a conclusion. **Where a
+component session has since closed, its `requirements.md` is authoritative and the lean below is
+history**; rows overtaken so far are annotated:
 
 | Component | Lean | Why |
 |---|---|---|
-| Dictionary + 2925 base vectors | **inherit** untouched | the expensive, curated, irreplaceable asset |
+| Dictionary + 2925 base vectors | ~~**inherit** untouched~~ → **rebuild the base, inherit the curation** | OVERTAKEN 2026-08-12: the two-matrix base (R stated · D topical, POS-split keys) replaces the Jurassic squared matrix; what is inherited is the curated *senses* and the lexicon, not the old geometry |
 | Anchor resolver + anchor sets | **inherit** | orthogonal to the format |
-| Parser (spaCy/Stanza → AST) | **inherit**, retune | the surface layer does not change |
+| Parser (spaCy/Stanza → AST) | **inherit**, retune | the surface layer does not change — but it now emits sense slots OPEN (WSD moved to the evaluator, 2026-08-13) |
 | Curated senses, scaffolds, behaviour seeds | **inherit** | curation is the costly part, not the code |
 | TKZip format | **rebuild** | this *is* limit B |
 | Compiler zip section | **rebuild** | follows the format |
-| Evaluator comparison / grounding | **rebuild** | follows the format |
+| Evaluator comparison / grounding | **rebuild** | follows the format — and it grows: the KB's door, absorbing WSD (brain req. 7) |
 | Logic kernel (consistency, operators) | **inherit** | invariant by charter |
 | Forward chainer | **inherit**, generalize | already fires rules to a fixpoint |
 | Behaviour / dispatch | **rebuild** | this *is* limit A |
-| Brain phases (thinking/priorities/actions/sleep) | **inherit** | the orchestration is not implicated |
-| API, senses, adapters, Mongo | **inherit** untouched | already correct and cheap |
+| Brain phases (thinking/priorities/actions/sleep) | ~~**inherit**~~ → **rebuild the orchestrator, keep the phase idea** | OVERTAKEN 2026-08-13: the compensator half dies into the dual read; phases become kb reweighting (dna only knows they exist); the loop survives as dna, the how becomes rows |
+| API, senses, adapters, Mongo | **inherit** the senses/adapters; the tier is its own session | the everything-is-rows ruling (2026-08-13) makes the body an interpreter of the db — datatier/body/data-modeling get their own conception sessions (register #11–13) |
 | Stored memory documents | **migrate** | §2's translation |
 
 **The signal to watch:** if the finished ledger says *rebuild everything*, the design is not
 converging on the existing foundation and the premise should be challenged before a line is written.
-The lean above says the opposite — that the reachable work is a format change plus a behaviour layer,
-with the costly assets carried across intact.
+The lean above still says the opposite — the overtaken rows moved toward rebuild, but the costly
+assets (curation, logic kernel, chainer, senses) are still carried across intact.
 
 ---
 
 ## 6. The order of investigation
+
+> **Superseded as the operating order (2026-08-13)** by the components register + «the road to the
+> build» in §9: requirements per component → project (epics) → plan (tasks + briefings) → build
+> (the officer cluster, with proof slices between epics). The steps below remain valid as
+> *instruments inside their sessions* — the fifty-sentence drill belongs to the tkzip session, the
+> state representation to rules/brain, valence to the heart session — but the sequence itself is no
+> longer what we follow.
 
 1. **The fifty-sentence table drill.** Drive fifty sentences by hand through the draft table —
    including the awkward ones: nested attitudes, `source`, secondary predication, two quantifiers,
@@ -296,8 +307,8 @@ doc/tk2/<component>/YYYYMMDDHHMM_notes.md   the dialogue that produced the think
 doc/tk2/<component>/requirements.md         SUPER synthetic — what the design must respect
 ```
 
-Opened: `tkzip/` · `rules/`. The notes accumulate one file per session; `requirements.md` is the
-single living distillation.
+The opened folders and their statuses live in **the components register** below. The notes accumulate
+one file per session; `requirements.md` is the single living distillation.
 
 **How the dialogue is run, because the FORM is doing the work.** Strictly one-line turns, Socratic,
 author leads. The author's reasoning for the constraint: both parties talk too much — he from bias,
@@ -311,6 +322,56 @@ corrected to comparability). A long answer would have hidden all three inside he
 **Why it matters beyond tidiness:** with the requirements complete per component, *designing* tk2 is
 nearly mechanical and *implementing* it is more mechanical still. The thinking is the expensive part,
 so it is the part that gets the dated files.
+
+### The components register (closed 2026-08-13)
+
+The full list of tk2 components, in order of foundationality — each gets its folder and its
+requirements when its session comes. Sixteen, and the list is **closed** (extending it takes a new
+argument, not a new whim). One convention per row: **(`folder` · status · done_date)** — the folder
+holds the item's requirements regardless of status; status ∈ todo | ongoing | done; done_date is the
+close date if done, else null.
+
+| # | Component | One line | Folder | Status | Done |
+|---|---|---|---|---|---|
+| 1 | **dictionary** | the two-matrix base (R stated · D topical) + the senses over it | `dictionary/` | done | 2026-08-12 |
+| 2 | **tkzip** | the fixed-size format — one shape, three readings | `tkzip/` | ongoing | null |
+| 3 | **rules** | behaviour as zips, urge collapse, the three action categories | `rules/` | done | 2026-08-11 |
+| 4 | **brain** | orchestrator of inner actions; the loop is dna, the how is kb | `brain/` | done | 2026-08-13 |
+| 5 | **heart** | the emotional reward family — empathy as machinery, attachment as kb (seed chapter in `brain/requirements.md` until its session) | `heart/` | todo | null |
+| 6 | **evaluator** | the KB's door — truth, WSD, the math of the operators; the one mandatory rung | `evaluator/` | todo | null |
+| 7 | **parser/compiler** | ONE station: surface language → tkzip, sense slots left open | `parser-compiler/` | todo | null |
+| 8 | **rag-in/rag-out** | the rag abstraction — typo repair, translation, rephrasing in; polish out | `rag/` | todo | null |
+| 9 | **micro-nn** | the instinct framework: blackbox micro-deciders over iterated thresholds, fenced below rules | `micro-nn/` | todo | null |
+| 10 | **senses** | the connectors — his I/O to the outside world | `senses/` | todo | null |
+| 11 | **data-modeling** | schemas and entities — WHAT the rows are (absorbs mem-as-data; retrieval *policy* is brain's) | `data-modeling/` | todo | null |
+| 12 | **datatier** | the IO abstraction — HOW rows move | `datatier/` | todo | null |
+| 13 | **body** | the interpreter of the db: boot cache, slow-tick refresh, migrations, deploy | `body/` | todo | null |
+| 14 | **stack** | which modules, components, tech | `stack/` | todo | null |
+| 15 | **tooling** | the workshop — instruments, curation, migration scripts, observability; since dev IS writing db, this is where development happens | `tooling/` | todo | null |
+| 16 | **website** | tokeniko.online, the public window — one-way publish, never a sense | `website/` | todo | null |
+
+Status calls worth their reasons: **tkzip is ongoing**, not done — the compound / double-geometry
+layer («another layer, we'll talk later about», 2026-08-12) is a chapter of the format still to be
+held. **rules is done** — the 2026-08-11 session was argued to conclusion; #13 was propagation from
+the dictionary, not a reopening. Open items inside a done component's requirements do not reopen it —
+done means the conception session closed, exactly as dictionary carries its OPEN-at-close list.
+
+### The road to the build (agreed 2026-08-13)
+
+Four phases, strictly in order, with one standing amendment:
+
+1. **Requirements** — finish the sixteen sessions above; reconciliation ritual at every close
+   (dictionary → tkzip → rules → … — each new set is audited against its roots).
+2. **The project** — each component expands into a well-defined subproject; the macro-roadmap of
+   EPICS, with dependencies and build order.
+3. **The plan** — every epic broken into tasks, each task with its officer briefing.
+4. **The build** — a cluster of first-officiers executes the plan.
+
+**The amendment (QM's, agreed):** the cluster never runs open-loop. Between epics, **vertical proof
+slices** — one sentence driven end-to-end (parser → zip → evaluator → brain → say) as early as the
+dependencies allow — because requirements prove seams on paper, but only an instrument proves them in
+the wild, and a wrong seam found at epic 12 costs the cluster. Each slice lands under the Captain's
+eye before the next stretch.
 
 ---
 

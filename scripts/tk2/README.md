@@ -1,4 +1,4 @@
-# scripts/tk2 — the dictionary-review instrument
+# scripts/tk2 — the dictionary instrument (né dictionary-review)
 
 The tokeniko-2 blueprint's first **measuring** tool. Conception lives in `tokeniko/doc/tk2/`; this
 directory is what settles the doubts that conception raises — the Captain's ruling of 2026-08-12:

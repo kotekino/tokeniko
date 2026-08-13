@@ -2,7 +2,7 @@
 
 *What the format must respect. One line each. Evidence lives in the dated `_notes.md` beside this.*
 
-1. **Fixed size.** Comparability in O(1) by the DUAL READ — cosine + stated cell, both O(1) — is the thesis; variable size trades it for graph matching. *(Amended 2026-08-12: cosine alone cannot state opposition — antonyms sit CLOSE in the topical geometry; see dictionary-review req. 19 and the map.)*
+1. **Fixed size.** Comparability in O(1) by the DUAL READ — cosine + stated cell, both O(1) — is the thesis; variable size trades it for graph matching. *(Amended 2026-08-12: cosine alone cannot state opposition — antonyms sit CLOSE in the topical geometry; see dictionary req. 19 and the map.)*
 2. **Every slot carries a BINDING STATE.** Unbound ≠ 0. Unknown is a variable, never a falsehood.
 3. **One shape, three readings** — all bound = assertion · one unbound = question · unresolved = equation.
 4. **Storable with variables still open.** An unfinished thought is a first-class memory.

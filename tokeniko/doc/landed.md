@@ -2497,7 +2497,7 @@ reasoning: `doc/ref/deploy-body.md`.
   service». The separator is the DEP, not the tag: a genuinely verbal prenominal is a postnominal
   reduced relative and takes `acl` (12/12), while no VBN+`amod` measured has a verbal reading — zero
   counter-examples in a 40-sentence attack batch. 39 fixed / 8 broken, 4 of the 8 repaired by batch 5
-  (40 `preferred` flags live). Found from the OTHER ROOM: tk2's dictionary-review flagged the
+  (40 `preferred` flags live). Found from the OTHER ROOM: tk2's dictionary session (then «dictionary-review») flagged the
   `left`/`leave` inflection collision, which turned out contained on the tk1 side — but this sat
   underneath it, and the microscope was structurally blind to it because nobody had ever said «a used
   car» to him. *The corpus only finds what people actually said.*
