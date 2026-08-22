@@ -21,10 +21,7 @@
 17. **Instinct = micro-neural-nets over iterated threshold decisions** — blackbox, positive-feedback-fed; it only ever picks among already-legal options (no provenance ⇒ it never mints or admits a belief), and a kb rule outranks it ALWAYS.
 18. **Reward is a family, not a scalar** — an open equation closing is the intellectual reward; the second family is the Heart (chapter below).
 
-## The Heart — new chapter (foreseen in tk1, never built, necessary)
+## The Heart
 
-H1. **Emotional reward is equal in rank to intellectual reward.**
-H2. **The heart's scalar is moved by evaluated states of OTHERS** — read through the senses, never assumed.
-H3. **Empathy is machinery, attachment is kb** — a value («her joy moves me», weight, sign) is a row like any rule.
-H4. **Same physics as urges, different source** — the world's states instead of his own equations.
-H5. **Signed weights include grief for free** — and it is legal, like catatonia.
+*Seeded here 2026-08-13 (H1–H5); conceived in full 2026-08-22 and MOVED to its own component —
+the living requirements are `../heart/requirements.md` (register #5).*

@@ -337,7 +337,7 @@ close date if done, else null.
 | 2 | **tkzip** | the fixed-size format — one shape, three readings | `tkzip/` | ongoing | null |
 | 3 | **rules** | behaviour as zips, urge collapse, the three action categories | `rules/` | done | 2026-08-11 |
 | 4 | **brain** | orchestrator of inner actions; the loop is dna, the how is kb | `brain/` | done | 2026-08-13 |
-| 5 | **heart** | the emotional reward family — empathy as machinery, attachment as kb (seed chapter in `brain/requirements.md` until its session) | `heart/` | todo | null |
+| 5 | **heart** | the emotional reward family — empathy as machinery, attachment as kb | `heart/` | done | 2026-08-22 |
 | 6 | **evaluator** | the KB's door — truth, WSD, the math of the operators; the one mandatory rung | `evaluator/` | todo | null |
 | 7 | **parser/compiler** | ONE station: surface language → tkzip, sense slots left open | `parser-compiler/` | todo | null |
 | 8 | **rag-in/rag-out** | the rag abstraction — typo repair, translation, rephrasing in; polish out | `rag/` | todo | null |
