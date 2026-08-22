@@ -334,7 +334,7 @@ close date if done, else null.
 | # | Component | One line | Folder | Status | Done |
 |---|---|---|---|---|---|
 | 1 | **dictionary** | the two-matrix base (R stated · D topical) + the senses over it | `dictionary/` | done | 2026-08-12 |
-| 2 | **tkzip** | the fixed-size format — one shape, three readings | `tkzip/` | ongoing | null |
+| 2 | **tkzip** | the fixed-size format — one shape, three readings | `tkzip/` | done | 2026-08-22 |
 | 3 | **rules** | behaviour as zips, urge collapse, the three action categories | `rules/` | done | 2026-08-11 |
 | 4 | **brain** | orchestrator of inner actions; the loop is dna, the how is kb | `brain/` | done | 2026-08-13 |
 | 5 | **heart** | the emotional reward family — empathy as machinery, attachment as kb | `heart/` | done | 2026-08-22 |
@@ -350,11 +350,12 @@ close date if done, else null.
 | 15 | **tooling** | the workshop — instruments, curation, migration scripts, observability; since dev IS writing db, this is where development happens | `tooling/` | todo | null |
 | 16 | **website** | tokeniko.online, the public window — one-way publish, never a sense | `website/` | todo | null |
 
-Status calls worth their reasons: **tkzip is ongoing**, not done — the compound / double-geometry
-layer («another layer, we'll talk later about», 2026-08-12) is a chapter of the format still to be
-held. **rules is done** — the 2026-08-11 session was argued to conclusion; #13 was propagation from
-the dictionary, not a reopening. Open items inside a done component's requirements do not reopen it —
-done means the conception session closed, exactly as dictionary carries its OPEN-at-close list.
+Status calls worth their reasons: **tkzip closed 2026-08-22** — the compound / double-geometry layer
+(deferred twice on 08-12) was held as its own chapter (reqs 12–17: composition not centroid, the
+figurative sphere, crystallization, epoch-stamped points, one law both floors). **rules is done** —
+the 2026-08-11 session was argued to conclusion; #13 was propagation from the dictionary, not a
+reopening. Open items inside a done component's requirements do not reopen it — done means the
+conception session closed, exactly as dictionary carries its OPEN-at-close list.
 
 ### The road to the build (agreed 2026-08-13)
 

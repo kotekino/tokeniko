@@ -13,3 +13,9 @@
 9. **Verb senses are load-bearing** — a wrong verb sense is a wrong action, not a wrong word.
 10. **Sense selection should be derived, not ordered.** No hardcoded ladder: the sense that keeps the KB consistent wins.
 11. **A role stores the D-side geometry and consults R through its sense key** (ruling 2026-08-12): retrieval is topical cosine over cached vectors; stated relations — sign, entailment, cause — are read from R at evaluation via the sense the role already carries. The sense-bridge survives intact.
+12. **The compound's point is a TRANSFORMED COMPOSITION, never a centroid** — the roles' D-vectors composed through the operators; negation and binding MOVE the point («land on the runway» ≠ «land on the opposite»).
+13. **The derived layer is the figurative sphere** — analogy, metaphor, rhetoric: a separate, context-shaped, deliberately DYNAMIC layer above the fixed base.
+14. **A micro-nn shapes the figurative layer** — experience and jargon keep it moving; it PROPOSES the reading, the evaluator admits it (the instinct fence holds here too).
+15. **Stable figures CRYSTALLIZE into KB rows** — a dead metaphor becomes vocabulary; instinct is the dynamic front, settled figures become inspectable knowledge.
+16. **Derived points are stored EPOCH-STAMPED beside the zip** — cosine finds over the stored index, the found few are recomputed at use; the sleep phase re-derives stale points lazily, never a full recompute.
+17. **The dual read recurs at the compound floor** — derived-cosine plays D, KB rows play R: geometry proposes, stated knowledge gates — one law at both floors.
