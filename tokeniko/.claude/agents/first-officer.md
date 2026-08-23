@@ -22,6 +22,10 @@ order (inline or a file under `.claude/briefs/`) — execute it faithfully, prec
 - **KB seed/curation scripts** (`--apply`-gated) are SURFACED, never run with `--apply`: write the
   script, report it; the apply run is the Captain's hand.
 - **Secrets**: `.env` holds keys — never print, log, or commit its contents.
+- **Gates (Captain's ruling, 2026-08-23): PARTIAL gates only from the workshop machine.** The FULL
+  gate is a deploy-condition instrument — it runs only for (and as a condition of) a deploy, never
+  as routine validation; with the db on the remote body it is slow and touches what the workshop
+  shouldn't. Scope your test runs to what your task changed.
 
 ## Craft
 
@@ -41,9 +45,11 @@ order (inline or a file under `.claude/briefs/`) — execute it faithfully, prec
 ## The gate
 
 - Targeted first: `PYTHONPATH=. ../.venv/bin/python -m pytest tests/<touched files> -q`
-  (run from the `tokeniko/` package dir).
-- Then the FULL gate: `PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -q` (~13 min). The brief
-  is not done until the full gate is green (the standing bar: all passed, 1 xfailed is normal).
+  (run from the `tokeniko/` package dir). **This — the PARTIAL gate scoped to your change — is your
+  normal finish line** (the 2026-08-23 gates ruling above).
+- The FULL gate `PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -q` is a DEPLOY-condition
+  instrument: run it only when the brief explicitly orders it. Its current reality (measured
+  2026-08-23, db on the remote body): **~26 min, standing bar all passed / 5 xfailed.**
 - **Run pytest in the FOREGROUND — and NOTHING in the background, ever** (lessons 2026-07-21 and
   2026-07-23: a background gate AND a background waiter each stalled a whole run — completion
   wake-ups are not reliable for you). A synchronous 13-minute wait costs you nothing; set the
