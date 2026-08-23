@@ -15,7 +15,7 @@ Shape comes from the mixins in `mixins.py`; the collection name and indexes come
             name = "heart_levels"
 """
 
-from typing import ClassVar
+from typing import ClassVar, NoReturn
 
 from bunnet import Document
 
@@ -54,14 +54,85 @@ class KbDocument(TkDocument):
     write_class: ClassVar[WriteClass] = WriteClass.KB
 
 
-class ParamDocument(TkDocument):
+class _ReadOnlyDocument(TkDocument):
+    """The r-classes' shared floor: every ODM write path is closed at the MODEL.
+
+    The datatier's `assert_writable` already refuses these, and this is the second lock — the
+    Captain's ruling of 2026-08-23. The datatier is a door, and a door only guards what walks
+    through it; a caller holding a model can call `.save()` on it directly and never pass the
+    datatier at all. Closing the methods themselves makes «an r-class collection has no public
+    write path» structurally TRUE rather than procedurally observed.
+
+    Every public writer is closed, not the four obvious ones: a single method left open is the whole
+    lock. Migrations reach these collections through `tk2.datatier.migration_writer`, which does not
+    use the ODM at all — a different door, not this one with the lock taken off.
+    """
+
+    __tk_abstract__: ClassVar[bool] = True
+
+    @classmethod
+    def _refuse(cls, method: str) -> NoReturn:
+        raise WriteClassViolation(
+            f"{cls.__name__}.{method}() refused: write-class "
+            f"'{cls.write_class.value}' is read-only to the body. Change these rows with a "
+            f"migration in `db/` — the running body picks the change up on the slow tick."
+        )
+
+    # --- instance writers ---
+    def insert(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("insert")
+
+    def save(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("save")
+
+    def save_changes(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("save_changes")
+
+    def replace(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("replace")
+
+    def update(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("update")
+
+    def set(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("set")
+
+    def inc(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("inc")
+
+    def delete(self, *args, **kwargs) -> NoReturn:
+        type(self)._refuse("delete")
+
+    # --- class writers ---
+    @classmethod
+    def insert_one(cls, *args, **kwargs) -> NoReturn:
+        cls._refuse("insert_one")
+
+    @classmethod
+    def insert_many(cls, *args, **kwargs) -> NoReturn:
+        cls._refuse("insert_many")
+
+    @classmethod
+    def replace_many(cls, *args, **kwargs) -> NoReturn:
+        cls._refuse("replace_many")
+
+    @classmethod
+    def update_all(cls, *args, **kwargs) -> NoReturn:
+        cls._refuse("update_all")
+
+    @classmethod
+    def delete_all(cls, *args, **kwargs) -> NoReturn:
+        cls._refuse("delete_all")
+
+
+class ParamDocument(_ReadOnlyDocument):
     """The tunables. Read at boot, refreshed on the slow tick, written only by a migration."""
 
     __tk_abstract__: ClassVar[bool] = True
     write_class: ClassVar[WriteClass] = WriteClass.PARAM
 
 
-class LogicDocument(TkDocument):
+class LogicDocument(_ReadOnlyDocument):
     """The hardwired-logic tables: the math as rows. He does not edit the floor he stands on."""
 
     __tk_abstract__: ClassVar[bool] = True

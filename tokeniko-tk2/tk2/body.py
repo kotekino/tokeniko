@@ -29,7 +29,7 @@ def _logging_setup() -> None:
 def boot() -> None:
     """Everything the body needs before its first tick. Empty by construction until there is a
     datatier to boot [T3]."""
-    _log.info("boot — db=%s (no connection yet: the datatier lands in T3)", TK2_BODY_DB)
+    _log.info("boot — db=%s (not opened yet: the loop is wired to the datatier in T5)", TK2_BODY_DB)
 
 
 def tick(n: int) -> None:

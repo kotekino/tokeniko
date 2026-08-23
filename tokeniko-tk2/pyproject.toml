@@ -30,6 +30,10 @@ dev = ["pytest"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "mongo: needs a live local MongoDB (runs against the sandbox test db, dropped afterwards)",
+]
 
 [tool.taskipy.tasks]
 # The body. One process for now; the mind / surface / connectors split (body req. 6) arrives with
