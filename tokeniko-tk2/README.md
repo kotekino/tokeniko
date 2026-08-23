@@ -52,11 +52,33 @@ it — a body cannot drift onto the biography by forgetting.
 From this directory, in the project's virtualenv (`../.venv`):
 
 ```
-pip install -e .     # editable install of the `tk2` package
-task body            # boot, tick, exit
+pip install -e .                 # editable install of the `tk2` package
+python tools/migrate.py --list   # what is applied, what is pending
+python tools/migrate.py          # create the world (and apply anything new)
+task body                        # boot, then tick until stopped
+task test                        # the unit checks
 ```
 
-`task body` is `python -m tk2.body`. Today it boots, ticks once and exits clean — the keel floats
-before anything is built on it. The r-tables it will load at boot, and the slow tick that reconciles
-them so a parameter edit lands live without a restart (body req. 4), arrive with the datatier and the
-first migration.
+**Migrate before you boot.** The body is an interpreter of the db: with no rows there is nothing to
+interpret, and it will say so and keep ticking rather than invent defaults.
+
+`task body` is `python -m tk2.body`. It boots against `tokeniko_tk2_body`, loads the r-tier into the
+cache, and ticks until SIGTERM or SIGINT — it finishes the tick it is in and then stops. `--max-ticks
+N` bounds a run; `--db NAME` points it elsewhere, subject to the guard.
+
+**The property to watch**: edit a parameter with a migration while the body is running, and it lands
+on the next slow tick with no restart (datatier req. 3, body req. 4). That is what makes him fixed at
+any moment and grown only through someone else's hands (body req. 5) — and it is the E0 gate:
+
+```
+tick 12 — dictionary.layer.epoch=0 · tick every 5s · refresh every 60s
+slow tick — r-cache refreshed from the db
+tick 13 — dictionary.layer.epoch=1 · tick every 5s · refresh every 60s
+```
+
+## Deploys are migrations
+
+Numbered scripts in `db/`, applied by `tools/migrate.py`, recorded in a `migrations` collection.
+They are the **only** writer of the `param` and `logic` tiers — the body has no write path to those
+at all, at either the datatier or the model. An applied migration is immutable: its checksum is
+recorded, and the fix for a wrong one is always a new one.

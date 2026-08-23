@@ -121,6 +121,18 @@ def test_is_timeseries_reads_the_model(clean_db):
     assert traps.is_timeseries(TKb) is False
 
 
+def test_the_collection_really_is_a_timeseries_in_mongo(clean_db):
+    """The model says timeseries; this asserts the DATABASE agrees.
+
+    Without it, a test that dropped the collection earlier in the session would have it silently
+    re-created as an ordinary collection by the next insert — and every timeseries test above would
+    keep passing while testing nothing of the sort.
+    """
+    kinds = {d["name"]: d.get("type") for d in clean_db.list_collections()}
+    assert kinds.get(TSeries.Settings.name) == "timeseries"
+    assert kinds.get(TKb.Settings.name) == "collection"
+
+
 # ------------------------------------------------------------------------------------------------
 # the write-class, asked every time
 # ------------------------------------------------------------------------------------------------

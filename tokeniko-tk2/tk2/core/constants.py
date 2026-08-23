@@ -46,3 +46,13 @@ PARAM_VALUE_FIELD = "value"
 # because the cache has to be able to read the db before it can read its own settings.
 RCACHE_INTERVAL_PARAM = "datatier.rcache.refresh_seconds"
 RCACHE_INTERVAL_DEFAULT = 60
+
+# The loop's own cadence. dna: the loop's EXISTENCE and its cpu-bound timing are hardwired, the HOW
+# is kb (brain req. 8) — so the interval is a row while the fact that there is a loop is not.
+BODY_TICK_PARAM = "body.loop.tick_seconds"
+BODY_TICK_DEFAULT = 5
+
+# The derived/figurative layer's version counter. A derived point stamped below this is STALE and
+# the sleep phase re-derives it lazily (tkzip req. 16). One authoritative place to read it from —
+# the T4 ruling deliberately left the scope to the caller, and this is the caller's source.
+DICTIONARY_EPOCH_PARAM = "dictionary.layer.epoch"

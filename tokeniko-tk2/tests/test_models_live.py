@@ -26,7 +26,7 @@ from tk2.core.models import (
 from tk2.core.write_class import WriteClassViolation
 from tk2.datatier import boot_datatier, traps
 from tk2.datatier.migration_writer import MigrationWriter
-from tests.anatomy import canonical_anatomy
+from tests.seed import anatomy_rows
 
 pytestmark = pytest.mark.mongo
 
@@ -45,7 +45,7 @@ def world(test_db):
 def seeded(world):
     """...with the anatomy in place, as migration 0001 will leave it."""
     db, cache = world
-    MigrationWriter(db).insert_many(HeartAnatomyDoc, canonical_anatomy())
+    MigrationWriter(db).insert_many(HeartAnatomyDoc, anatomy_rows())
     cache.load()
     return db, cache
 

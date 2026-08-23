@@ -3,12 +3,7 @@
 *The concise mirror of `plan.md` — where we are, what's ahead. One item, one status; done moves to
 `landed.md`. ⚑ = vertical proof slice under the Captain's eye.*
 
-## E0 — the keel
-- [ ] repo scaffold (package beside docs, stack per requirements)
-- [ ] write-class schema (kb rw · params r · logic r)
-- [ ] datatier core (bunnet wrapped, guard standard, r-cache + slow tick)
-- [ ] new-organ collections, shaped empty
-- [ ] migration runner (first migration creates the world)
+## E0 — the keel ✅ 2026-08-23 — see `landed.md`
 
 ## E1 — the dictionary at scale
 - [ ] full-lexicon closure (seed policy, depth cut revisited)

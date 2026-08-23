@@ -8,7 +8,7 @@ import pytest
 
 from tk2.core.models import AnatomyIncoherent, HeartAnatomy, HeartAnatomyDoc, UnknownPole
 from tk2.datatier.migration_writer import shape_of
-from tests.anatomy import canonical_anatomy
+from tests.seed import anatomy_rows
 
 
 def _anatomy(rows: list[dict]) -> HeartAnatomy:
@@ -19,7 +19,7 @@ def _anatomy(rows: list[dict]) -> HeartAnatomy:
 
 @pytest.fixture
 def heart() -> HeartAnatomy:
-    return _anatomy(canonical_anatomy())
+    return _anatomy(anatomy_rows())
 
 
 # ------------------------------------------------------------------------------------------------
