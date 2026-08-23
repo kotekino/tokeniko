@@ -340,7 +340,7 @@ close date if done, else null.
 | 5 | **heart** | the emotional reward family — empathy as machinery, attachment as kb | `heart/` | done | 2026-08-22 |
 | 6 | **evaluator** | the KB's door — truth, WSD, the math of the operators; the one mandatory rung | `evaluator/` | done | 2026-08-23 |
 | 7 | **parser/compiler** | ONE station: surface language → tkzip, sense slots left open | `parser-compiler/` | todo | null |
-| 8 | **rag-in/rag-out** | the rag abstraction — typo repair, translation, rephrasing in; polish out | `rag/` | todo | null |
+| 8 | **rag-in/rag-out** | the rag abstraction — typo repair, translation, rephrasing in; polish out | `rag/` | done | 2026-08-23 |
 | 9 | **micro-nn** | the instinct framework: blackbox micro-deciders over iterated thresholds, fenced below rules | `micro-nn/` | todo | null |
 | 10 | **senses** | the connectors — his I/O to the outside world | `senses/` | done | 2026-08-23 |
 | 11 | **data-modeling** | schemas and entities — WHAT the rows are (absorbs mem-as-data; retrieval *policy* is brain's) | `data-modeling/` | todo | null |
