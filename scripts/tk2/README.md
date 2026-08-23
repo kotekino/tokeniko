@@ -1,6 +1,6 @@
 # scripts/tk2 — the dictionary instrument (né dictionary-review)
 
-The tokeniko-2 blueprint's first **measuring** tool. Conception lives in `tokeniko/doc/tk2/`; this
+The tokeniko-2 blueprint's first **measuring** tool. Conception lives in `tokeniko-tk2/docs/` (moved 2026-08-23 from `tokeniko/doc/tk2/`); this
 directory is what settles the doubts that conception raises — the Captain's ruling of 2026-08-12:
 *verify instead of guessing; code, drafts and tests are allowed as instruments for DEFINING
 requirements.*

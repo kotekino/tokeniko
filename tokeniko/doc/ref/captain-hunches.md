@@ -574,7 +574,7 @@ step7) we look at him changing his behavior, if the environment persuade him tha
 I know, this is an atomic bomb and need A LOT of refinement and challange, but this is what I see in his future. QM, what do you think?
 
 > — Q (2026-07-31): argued to a keystone, and **graduated out of this notebook into its own
-> directory**: `doc/tk2/README.md` is step 0 — the plan for how to plan. It is NOT on the roadmap and
+> directory**: `doc/tk2/README.md` (now `tokeniko-tk2/docs/README.md`) is step 0 — the plan for how to plan. It is NOT on the roadmap and
 > carries no status (reference material, exempt from the invariants, like `notes.md`). Three things
 > the argument moved: **(a)** «B causes A» is false — A is caused by the absence of a first-class
 > STATE for rules to be evaluated against (hunch 20), though B remains the right *build order*,

@@ -6,9 +6,9 @@
 >
 > **`→ tk2` tags (2026-08-03).** An item tagged `→ tk2` is parked for a *structural* reason, not a
 > scheduling one: the layer it touches is marked **rebuild** in the inheritance ledger
-> (`doc/tk2/README.md` §5), so building it in v1 means building it twice. These do **not** get
+> (`../tokeniko-tk2/docs/README.md` §5), so building it in v1 means building it twice. These do **not** get
 > promoted back here when "their time comes" — their time comes inside the blueprint. The status
-> lives in this file; the design reasoning lives in **`doc/tk2/carried-in.md`** (reference, exempt
+> lives in this file; the design reasoning lives in **`../tokeniko-tk2/docs/carried-in.md`** (reference, exempt
 > from the status invariants — a pointer, never a copy).
 
 ---
@@ -19,7 +19,7 @@
 
 *The author's blade: **what makes v1 better and bug-free is welcome; NEW FEATURES go to tk2.** A
 repair keeps the empirical instrument fit; a new capability built in v1 is built twice. This emptied
-`roadmap.md` §4 to a single item. Per-item reasoning: `doc/tk2/carried-in.md`.*
+`roadmap.md` §4 to a single item. Per-item reasoning: `../tokeniko-tk2/docs/carried-in.md`.*
 
 **Vocabulary growth** (hunches 1+2) `→ tk2` — OOV → a staging dictionary entry · the typo-ALIAS table
 · definitional triangulation (a trusted definition's zip matched against known ones → a graded link

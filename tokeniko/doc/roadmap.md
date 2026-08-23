@@ -9,11 +9,11 @@
 Legend: 🔄 in progress · 🔭 next · ✅ done  ·  *(done → `landed.md` · parked → `parked.md`)*
 
 > **⚠️ THE tk2 FILTER (author's ruling, 2026-08-03) — read before adding anything here.** Since
-> `doc/tk2/` opened, this road is filtered by ONE criterion: **work that builds an ASSET migrates to
+> `doc/tk2/` opened (now `../tokeniko-tk2/docs/`), this road is filtered by ONE criterion: **work that builds an ASSET migrates to
 > tokeniko 2; work that builds MACHINERY gets rebuilt there.** Assets = the dictionary, curated
 > senses/scaffolds, the KB, the anchors, findings, tests. Machinery = anything coupled to the TKZip
-> format or to hardwired behaviour (the two limits — `doc/tk2/README.md` §1). Before an item enters
-> this file, run it through the inheritance ledger (`doc/tk2/README.md` §5): if the layer it touches
+> format or to hardwired behaviour (the two limits — `../tokeniko-tk2/docs/README.md` §1). Before an item enters
+> this file, run it through the inheritance ledger (`../tokeniko-tk2/docs/README.md` §5): if the layer it touches
 > is marked *rebuild*, it belongs in `parked.md` tagged `→ tk2`, not here.
 >
 > **SHARPENED 2026-08-12 (the author):** the filter now has a second, simpler blade — **what makes v1
@@ -22,7 +22,7 @@ Legend: 🔄 in progress · 🔭 next · ✅ done  ·  *(done → `landed.md` ·
 > brain/behaviour follow-ons. **v1 is NOT frozen** — it
 > remains the empirical instrument, and work that keeps it fit for that job (or that produces
 > findings) stays on the road even when it looks like tuning. The carried-in reasoning, per item, is
-> `doc/tk2/carried-in.md`.
+> `../tokeniko-tk2/docs/carried-in.md`.
 
 ---
 
@@ -74,7 +74,7 @@ progressive; «my goal is learning japanese» is nominal *with* an object). Sema
 *Emptied 2026-08-12 by the author's sharpened filter (see the header): **repairs keep the instrument
 fit and stay; NEW CAPABILITY goes to tk2**. Vocabulary growth · ingestion-time differentia · KB
 growing outward · etiquette-protocol all → `parked.md` tagged `→ tk2`, reasoning in
-`doc/tk2/carried-in.md`. What survives is the one item that fixes something already built.*
+`../tokeniko-tk2/docs/carried-in.md`. What survives is the one item that fixes something already built.*
 
 1. **Anchor adoption audit** (hunch 4) — consumer BYPASSES still routed around the resolver
    (`compiler_implicationOperands`, `_SUBJECT_CONTROL_VERBS`) · the exact-membership mop-up · floor
@@ -150,10 +150,10 @@ UNFILTERED (the honest moment to run one through the inheritance ledger is when 
 - **`doc/landed.md`** — what's done (the history).
 - **`doc/parked.md`** — the icebox (deferred ideas + known gaps).
 
-**The tk2 conception (`doc/tk2/` — reference material, NOT status; nothing here ever enters a status doc):**
-- **`doc/tk2/README.md`** — step 0: the plan for how to plan. The two limits, the continuity contract, the governing decisions, the **inheritance ledger** (§5 — the filter's authority), the investigation order, the open questions, the success criteria.
-- **`doc/tk2/carried-in.md`** — the per-item reasoning for everything the filter moved off this road.
-- **`doc/tk2/ideas.md`** — the Captain's open bag of v2 conception ideas (no status, never scheduled here).
+**The tk2 conception (`../tokeniko-tk2/docs/` — reference material, NOT status; nothing here ever enters a status doc):**
+- **`../tokeniko-tk2/docs/README.md`** — step 0: the plan for how to plan. The two limits, the continuity contract, the governing decisions, the **inheritance ledger** (§5 — the filter's authority), the investigation order, the open questions, the success criteria.
+- **`../tokeniko-tk2/docs/carried-in.md`** — the per-item reasoning for everything the filter moved off this road.
+- **`../tokeniko-tk2/docs/ideas.md`** — the Captain's open bag of v2 conception ideas (no status, never scheduled here).
 
 **Reference docs (`doc/ref/` — extended context per task + future-reference material; NOT status):**
 - **`doc/ref/brain-v1.1.md`** — the Brain v1.1 **vision + design** (the Unified-KB reframe: everything-is-reasoned-over-TKZip, write-path invariant, universal gate, trust-by-source; + the #1–#6 findings). The conceptual center.
