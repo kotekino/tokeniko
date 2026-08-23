@@ -23,10 +23,19 @@ dependencies = [
     "python-dotenv",
 ]
 
+# pytest is not on the closed runtime list above and does not belong on it: the body never imports
+# it. Same split tk1 uses.
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.taskipy.tasks]
 # The body. One process for now; the mind / surface / connectors split (body req. 6) arrives with
 # its own tasks when there is something to separate.
 body = "python -m tk2.body"
+test = "pytest"
 
 [tool.setuptools.packages.find]
 where = ["."]
