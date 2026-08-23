@@ -339,16 +339,16 @@ close date if done, else null.
 | 4 | **brain** | orchestrator of inner actions; the loop is dna, the how is kb | `brain/` | done | 2026-08-13 |
 | 5 | **heart** | the emotional reward family — empathy as machinery, attachment as kb | `heart/` | done | 2026-08-22 |
 | 6 | **evaluator** | the KB's door — truth, WSD, the math of the operators; the one mandatory rung | `evaluator/` | done | 2026-08-23 |
-| 7 | **parser/compiler** | ONE station: surface language → tkzip, sense slots left open | `parser-compiler/` | todo | null |
+| 7 | **parser/compiler** | ONE station: surface language → tkzip, sense slots left open | `parser-compiler/` | done | 2026-08-23 |
 | 8 | **rag-in/rag-out** | the rag abstraction — typo repair, translation, rephrasing in; polish out | `rag/` | done | 2026-08-23 |
 | 9 | **micro-nn** | the instinct framework: blackbox micro-deciders over iterated thresholds, fenced below rules | `micro-nn/` | done | 2026-08-23 |
 | 10 | **senses** | the connectors — his I/O to the outside world | `senses/` | done | 2026-08-23 |
-| 11 | **data-modeling** | schemas and entities — WHAT the rows are (absorbs mem-as-data; retrieval *policy* is brain's) | `data-modeling/` | todo | null |
-| 12 | **datatier** | the IO abstraction — HOW rows move | `datatier/` | todo | null |
-| 13 | **body** | the interpreter of the db: boot cache, slow-tick refresh, migrations, deploy | `body/` | todo | null |
-| 14 | **stack** | which modules, components, tech | `stack/` | todo | null |
-| 15 | **tooling** | the workshop — instruments, curation, migration scripts, observability; since dev IS writing db, this is where development happens | `tooling/` | todo | null |
-| 16 | **website** | tokeniko.online, the public window — one-way publish, never a sense | `website/` | todo | null |
+| 11 | **data-modeling** | schemas and entities — WHAT the rows are (absorbs mem-as-data; retrieval *policy* is brain's) | `data-modeling/` | done | 2026-08-23 |
+| 12 | **datatier** | the IO abstraction — HOW rows move | `datatier/` | done | 2026-08-23 |
+| 13 | **body** | the interpreter of the db: boot cache, slow-tick refresh, migrations, deploy | `body/` | done | 2026-08-23 |
+| 14 | **stack** | which modules, components, tech | `stack/` | done | 2026-08-23 |
+| 15 | **tooling** | the workshop — instruments, curation, migration scripts, observability; since dev IS writing db, this is where development happens | `tooling/` | done | 2026-08-23 |
+| 16 | **website** | tokeniko.online, the public window — one-way publish, never a sense | `website/` | done | 2026-08-23 |
 
 Status calls worth their reasons: **tkzip closed 2026-08-22** — the compound / double-geometry layer
 (deferred twice on 08-12) was held as its own chapter (reqs 12–17: composition not centroid, the
@@ -358,6 +358,12 @@ reopening. Open items inside a done component's requirements do not reopen it �
 conception session closed, exactly as dictionary carries its OPEN-at-close list.
 
 ### The road to the build (agreed 2026-08-13)
+
+> **2026-08-23: PHASE 1 IS COMPLETE — sixteen of sixteen closed.** The last true conception was
+> parser/compiler; the final six (data-modeling → website) closed as *distillation sessions* on the
+> author's ruling — tk1's proven shape plus the adaptations already ruled, no new decisions. **Next:
+> phase 2, the project** — each component expands into its subproject, the macro-roadmap of epics
+> with dependencies and build order.
 
 Four phases, strictly in order, with one standing amendment:
 
