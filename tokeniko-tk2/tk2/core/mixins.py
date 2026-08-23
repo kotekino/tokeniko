@@ -80,6 +80,25 @@ def now_seconds() -> int:
     return int(time.time())
 
 
+class Updated(BaseModel):
+    """When the row last CHANGED. Same representation as `created_at`, different question.
+
+    Added in T4, when the heart's tables made the gap obvious: a level row is created once and
+    rewritten forever, so `created_at` alone answers «when did this pole start existing», which
+    nobody asks, and cannot answer «when did he last feel this», which is the whole point.
+
+    Carried BESIDE `Timestamped`, not instead of it. Both stamps are meaningful on a long-lived
+    state row, and collapsing them would lose the row's age — which the temperament tier, whose
+    whole subject is drift over a lifetime, is going to want.
+
+    The writer sets it; nothing here can enforce that, because a pydantic default only fires at
+    construction. The datatier's writers are the place to make it automatic if we ever want it to
+    be, and that is a decision for whoever needs it first.
+    """
+
+    updated_at: int = Field(default_factory=now_seconds)
+
+
 class Timestamped(BaseModel):
     """When the row was written. INT SECONDS since the unix epoch — never a datetime.
 
