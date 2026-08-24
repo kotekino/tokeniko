@@ -33,6 +33,7 @@ testpaths = ["tests"]
 pythonpath = ["."]
 markers = [
     "mongo: needs a live local MongoDB (runs against the sandbox test db, dropped afterwards)",
+    "wordnet: needs nltk and the local WordNet corpus (the pure engine is tested without either)",
 ]
 
 [tool.taskipy.tasks]
