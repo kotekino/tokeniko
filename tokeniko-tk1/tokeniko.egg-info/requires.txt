@@ -16,3 +16,8 @@ ollama
 taskipy
 word2number
 sacremoses
+discord.py
+anthropic
+
+[dev]
+pytest

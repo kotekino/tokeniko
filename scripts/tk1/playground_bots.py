@@ -33,7 +33,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(Path(__file__).resolve().parents[1] / "tokeniko" / ".env")
+load_dotenv(Path(__file__).resolve().parents[1] / "tokeniko-tk1" / ".env")
 
 _API = "https://discord.com/api/v10"
 _PREFIX, _SUFFIX = "PLAYBOT_", "_TOKEN"

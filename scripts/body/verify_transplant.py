@@ -41,7 +41,7 @@ from pymongo.uri_parser import parse_uri
 
 # the package dir is two levels up from scripts/body/ ... plus the package name.
 _REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_PKG_DIR = os.path.join(_REPO_ROOT, "tokeniko")
+_PKG_DIR = os.path.join(_REPO_ROOT, "tokeniko-tk1")
 sys.path.insert(0, _PKG_DIR)
 
 from lib.core.models import _VECTOR_INDEX  # noqa: E402  (path is set above)

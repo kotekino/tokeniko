@@ -23,7 +23,7 @@ import sys
 from dotenv import load_dotenv
 from pymongo import MongoClient
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko-tk1", ".env"))
 
 # ---- the curation batch: (word, pos, preferred synset key) — the author's per-word rulings ------
 BATCH = [

@@ -223,7 +223,7 @@ def cmd_opposite(base: Base2, args):
     word = C.split_key(args.word)[0]
     try:
         import os
-        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko"))
+        sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko-tk1"))
         from lib.core.io import init_io
         from lib.llc.utils import utils_antonyms
         init_io()

@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 # The body's `.env` lives in the tk1 package directory — one .env for the whole project, as the
 # instruments already assume. From here that is three levels up: tk2/core/ -> tk2/ -> tokeniko-tk2/.
 _HERE = os.path.dirname(os.path.abspath(__file__))
-ENV_PATH = os.path.normpath(os.path.join(_HERE, "..", "..", "..", "tokeniko", ".env"))
+ENV_PATH = os.path.normpath(os.path.join(_HERE, "..", "..", "..", "tokeniko-tk1", ".env"))
 
 load_dotenv(ENV_PATH)
 

@@ -25,9 +25,9 @@ import re
 import sys
 from collections import Counter
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tokeniko"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tokeniko-tk1"))
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko-tk1", ".env"))
 
 from nltk.corpus import wordnet as wn
 

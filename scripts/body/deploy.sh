@@ -35,7 +35,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd -P)"
-PKG_DIR="${REPO_ROOT}/tokeniko"
+PKG_DIR="${REPO_ROOT}/tokeniko-tk1"
 VENV_PY="${REPO_ROOT}/.venv/bin/python"
 CONF_FILE="${SCRIPT_DIR}/body.conf"
 
@@ -310,21 +310,21 @@ install_deps() {
   dependencies freely, because a silent drift from the workshop is worse than a failed deploy (§2.4)."
     log "    installing from ${lock}"
     remote "cd ${BODY_REPO} && .venv/bin/pip install --require-virtualenv --quiet -r ${lock}"
-    remote "cd ${BODY_REPO}/tokeniko && ../.venv/bin/pip install --require-virtualenv --quiet --no-deps -e ."
+    remote "cd ${BODY_REPO}/tokeniko-tk1 && ../.venv/bin/pip install --require-virtualenv --quiet --no-deps -e ."
 }
 
 log "5. dependencies"
 DEPS_TOUCHED=0
 if [ "${DRY_RUN}" -eq 1 ]; then
-    remote "cd ${BODY_REPO} && git diff --name-only <OLD> <NEW> -- tokeniko/pyproject.toml tokeniko/requirements.txt 'scripts/body/requirements-lock-*.txt'"
+    remote "cd ${BODY_REPO} && git diff --name-only <OLD> <NEW> -- tokeniko-tk1/pyproject.toml tokeniko-tk1/requirements.txt 'scripts/body/requirements-lock-*.txt'"
     remote "cd ${BODY_REPO} && ls -1 scripts/body/requirements-lock-*.txt | sort | tail -1"
     remote "cd ${BODY_REPO} && .venv/bin/pip install --require-virtualenv --quiet -r <newest lock>"
-    remote "cd ${BODY_REPO}/tokeniko && ../.venv/bin/pip install --require-virtualenv --quiet --no-deps -e ."
+    remote "cd ${BODY_REPO}/tokeniko-tk1 && ../.venv/bin/pip install --require-virtualenv --quiet --no-deps -e ."
     printf '        (the installs run only when the diff above is non-empty)\n'
 elif [ "${OLD_SHA}" = "${NEW_SHA}" ]; then
     log "    the body was already on this commit — nothing to reinstall"
 else
-    DEP_DIFF="$(remote "cd ${BODY_REPO} && git diff --name-only ${OLD_SHA} ${NEW_SHA} -- tokeniko/pyproject.toml tokeniko/requirements.txt 'scripts/body/requirements-lock-*.txt'")"
+    DEP_DIFF="$(remote "cd ${BODY_REPO} && git diff --name-only ${OLD_SHA} ${NEW_SHA} -- tokeniko-tk1/pyproject.toml tokeniko-tk1/requirements.txt 'scripts/body/requirements-lock-*.txt'")"
     if [ -n "${DEP_DIFF}" ]; then
         printf '%s\n' "${DEP_DIFF}" | sed 's/^/        /'
         log "    the dependency declaration moved (above) — reinstalling from the lock"
@@ -379,7 +379,7 @@ fi
 # ==================================================================================================
 log "7. the regression gate (on the body, before anything restarts)"
 if [ "${RUN_GATE}" -eq 1 ]; then
-    if ! remote "cd ${BODY_REPO}/tokeniko && PYTHONPATH=. ../.venv/bin/python -m pytest -q"; then
+    if ! remote "cd ${BODY_REPO}/tokeniko-tk1 && PYTHONPATH=. ../.venv/bin/python -m pytest -q"; then
         printf '\n'
         warn "THE GATE IS RED on ${NEW_SHA:0:12} — nothing was restarted, so he is still up and"
         warn "thinking on the old code. This deploy cost him nothing."
@@ -460,7 +460,7 @@ health_check() {
     return "${failures}"
 }
 
-BODY_LOGS="${BODY_REPO}/tokeniko/logs"
+BODY_LOGS="${BODY_REPO}/tokeniko-tk1/logs"
 
 if [ "${DRY_RUN}" -eq 1 ]; then
     log "9. restart the agents (tk-atlas is NOT touched)"

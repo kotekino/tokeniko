@@ -10,7 +10,7 @@
 import os, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PKG = os.path.join(HERE, "..", "tokeniko")
+PKG = os.path.join(HERE, "..", "tokeniko-tk1")
 sys.path.insert(0, PKG)
 sys.path.insert(0, HERE)  # so `from fragility_batch import BATCH` resolves (same dir)
 from dotenv import load_dotenv

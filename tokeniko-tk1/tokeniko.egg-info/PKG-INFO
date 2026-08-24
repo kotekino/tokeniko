@@ -20,3 +20,7 @@ Requires-Dist: ollama
 Requires-Dist: taskipy
 Requires-Dist: word2number
 Requires-Dist: sacremoses
+Requires-Dist: discord.py
+Requires-Dist: anthropic
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"

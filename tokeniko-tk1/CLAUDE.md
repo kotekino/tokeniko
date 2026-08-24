@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Tokeniko is a **neuro-symbolic NLP engine** that compiles a natural-language sentence into a fixed-size mathematical representation ("the zip") that can be stored in MongoDB as permanent, queryable, geometrically-comparable memory. It combines symbolic parsing (POS tagging, dependency parsing, formal logical operators) with sub-symbolic fuzzy-logic vector fusion (NumPy). See `README.md` for the conceptual overview of the compilation flow.
 
-Note: the git repository root is the **parent** directory (`../`), which also holds `scripts/` (one-off scripts, split `tk1/` · `tk2/` · `body/` — see below), `atlas/` (local MongoDB data volumes), `data/`, `doc/`, and `tokeniko-public/` (the public website — a self-contained Node/React sibling project, **not** part of the Python package; cloud-deployed against a public MongoDB Atlas — see the topology note below). This directory (`tokeniko/`) is the installable Python package and the FastAPI app.
+Note: the git repository root is the **parent** directory (`../`), which also holds `scripts/` (one-off scripts, split `tk1/` · `tk2/` · `body/` — see below), `atlas/` (local MongoDB data volumes), `data/`, `doc/`, and `tokeniko-public/` (the public website — a self-contained Node/React sibling project, **not** part of the Python package; cloud-deployed against a public MongoDB Atlas — see the topology note below). This directory (`tokeniko-tk1/`, formerly `tokeniko/` — renamed 2026-08-24) is the installable Python package and the FastAPI app.
 
 ## Commands
 

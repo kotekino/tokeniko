@@ -17,8 +17,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tokeniko"))
-load_dotenv(Path(__file__).resolve().parents[1] / "tokeniko" / ".env")
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tokeniko-tk1"))
+load_dotenv(Path(__file__).resolve().parents[1] / "tokeniko-tk1" / ".env")
 
 from lib.core.io import init_io  # noqa: E402
 

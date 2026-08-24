@@ -21,7 +21,7 @@
 import os
 import sys
 
-PKG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tokeniko")
+PKG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tokeniko-tk1")
 sys.path.insert(0, PKG)
 from dotenv import load_dotenv
 load_dotenv(os.path.join(PKG, ".env"))

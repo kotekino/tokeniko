@@ -38,12 +38,12 @@
     <integer>30</integer>
 
     <key>WorkingDirectory</key>
-    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko</string>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1</string>
 
     <key>StandardOutPath</key>
-    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko/logs/api.out.log</string>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/logs/api.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko/logs/api.err.log</string>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/logs/api.err.log</string>
 
     <!-- MINIMAL, and NEVER a secret: the wrapper sources .env itself. This is only the PATH a
          launchd session does not inherit from a login shell. -->

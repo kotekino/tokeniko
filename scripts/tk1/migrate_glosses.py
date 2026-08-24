@@ -32,7 +32,7 @@ import datetime
 
 # make the package importable when run from the repo root
 _HERE = os.path.dirname(os.path.abspath(__file__))
-_PKG = os.path.join(_HERE, "..", "tokeniko")
+_PKG = os.path.join(_HERE, "..", "tokeniko-tk1")
 sys.path.insert(0, _PKG)
 
 from dotenv import load_dotenv

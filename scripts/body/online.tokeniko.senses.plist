@@ -44,12 +44,12 @@
     <integer>30</integer>
 
     <key>WorkingDirectory</key>
-    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko</string>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1</string>
 
     <key>StandardOutPath</key>
-    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko/logs/senses.out.log</string>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/logs/senses.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko/logs/senses.err.log</string>
+    <string>/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/logs/senses.err.log</string>
 
     <!-- MINIMAL, and NEVER a secret: the wrapper sources .env itself (DISCORD_TOKEN and the playbot
          tokens live there and are never named in a plist, which is world-readable). This is only

@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 # the body's .env lives in the package dir, not the repo root — load it here, before the first
 # os.getenv below, so these scripts run from any working directory.
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko-tk1", ".env"))
 
 # ------------------------------------------------------------------------------------------------
 # databases — read-only on the body, writes ONLY to the tk2 sandbox

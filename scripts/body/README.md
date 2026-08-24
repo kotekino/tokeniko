@@ -29,7 +29,7 @@ The log directory must exist **before** the agents start — launchd opens the l
 will not create the folder:
 
 ```sh
-mkdir -p /Users/renzosala/Develop/personal/tokeniko/tokeniko/logs
+mkdir -p /Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/logs
 ```
 
 Then, per agent:
@@ -78,7 +78,7 @@ here, so the agents will find their Mongo.
 
 ```sh
 # 0. the log directory
-mkdir -p /Users/renzosala/Develop/personal/tokeniko/tokeniko/logs
+mkdir -p /Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/logs
 
 # 1. install and start all three
 cd /Users/renzosala/Develop/personal/tokeniko

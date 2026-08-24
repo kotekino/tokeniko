@@ -364,7 +364,7 @@ conception session closed, exactly as dictionary carries its OPEN-at-close list.
 > author's ruling — tk1's proven shape plus the adaptations already ruled, no new decisions.
 > **Phases 2+3 are WRITTEN, fused deliberately: the execution plan lives in `plan.md`** (epics,
 > dependencies, tasks — briefs cut at dispatch time), mirrored concisely in `roadmap.md`, with
-> `landed.md` as the ratchet. The docs also moved home the same day: `tokeniko/doc/tk2/` →
+> `landed.md` as the ratchet. The docs also moved home the same day: `tokeniko/doc/tk2/` (now `tokeniko-tk1/`) →
 > `tokeniko-tk2/docs/` — this project's own root, phase 4's code will grow beside it.
 
 Four phases, strictly in order, with one standing amendment:

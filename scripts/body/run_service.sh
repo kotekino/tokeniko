@@ -29,7 +29,7 @@ readonly LOG_EVERY=10              # sparse logging: attempt 1, then every Nth (
 # resolved from the script's own location, so cwd is irrelevant (launchd's cwd is not ours).
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd -- "${SCRIPT_DIR}/../.." && pwd -P)"
-PKG_DIR="${REPO_ROOT}/tokeniko"
+PKG_DIR="${REPO_ROOT}/tokeniko-tk1"
 VENV_BIN="${REPO_ROOT}/.venv/bin"
 ENV_FILE="${PKG_DIR}/.env"
 

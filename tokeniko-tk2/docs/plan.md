@@ -316,6 +316,6 @@ the window — and the register's sixteen requirements files each read true agai
 ## What deliberately stays OUT of this plan
 
 - **v1's remaining road** (microscope residue, anchor audit, bug list) — the asset track, tracked in
-  `tokeniko/doc/roadmap.md`, never here. tk1 stops growing; it keeps witnessing.
+  `tokeniko-tk1/doc/roadmap.md`, never here. tk1 stops growing; it keeps witnessing.
 - **The multi-body horizon, open-world growth** (captain-hunches) — awareness only.
 - **Anything the register doesn't hold** — the list is closed; extending it takes an argument.

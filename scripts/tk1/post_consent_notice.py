@@ -21,8 +21,8 @@ import sys
 
 from dotenv import load_dotenv
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tokeniko"))
-load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko", ".env"))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "tokeniko-tk1"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "tokeniko-tk1", ".env"))
 
 
 async def main(channel_id: str, apply: bool) -> int:

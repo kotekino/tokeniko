@@ -24,7 +24,7 @@ import copy
 import pytest
 from dotenv import load_dotenv
 
-load_dotenv("/Users/renzosala/Develop/personal/tokeniko/tokeniko/.env")
+load_dotenv("/Users/renzosala/Develop/personal/tokeniko/tokeniko-tk1/.env")
 
 
 # THE TWO LANES (2026-07-18, author's ruling — save the console time): any test that touches the

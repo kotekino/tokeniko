@@ -17,7 +17,7 @@ import os
 import sys
 
 from dotenv import load_dotenv
-load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko", ".env"))
+load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", "tokeniko-tk1", ".env"))
 
 from pymongo import MongoClient
 import nltk
