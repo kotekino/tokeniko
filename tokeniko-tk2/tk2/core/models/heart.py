@@ -18,7 +18,7 @@ tables of the same shape rather than three inventions.
 """
 
 from datetime import datetime
-from typing import Annotated, Iterable, Sequence
+from typing import Annotated, Iterable
 
 from bunnet import Granularity, Indexed, TimeSeriesConfig
 from pydantic import Field

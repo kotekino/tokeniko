@@ -19,7 +19,6 @@ from tk2.core.models.migrations import MigrationDoc
 from tk2.datatier import traps
 from tests.seed import (
     all_poles,
-    anatomy_rows,
     bar_rows,
     param_rows,
     policy_rows,

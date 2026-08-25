@@ -23,7 +23,7 @@ whose namers were never followed) and `one_ring_past` (exactly what they name an
 not have), which turns the cut into something the Captain can look at and rule on.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from tk2.dictionary.config import ClosurePolicy
 from tk2.dictionary.glosses import GlossProvider, definition_in_lexicon
