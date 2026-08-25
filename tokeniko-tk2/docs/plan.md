@@ -138,7 +138,8 @@ curated senses, scaffolds and anchor sets cross intact (inheritance ledger).
 **Answers to:** dictionary reqs (all 21, OPEN list included) · the tk2 instruments' proven laws
 (bar declared before results; provenance per R cell).
 
-**Tasks**
+**Tasks** *(build order revised 2026-08-25: 1 → 4 → the name refusal → 6a → 6b → 2 → 3 → 5, so R
+and D are built once, against a base whose policy is already settled.)*
 1. **Full-lexicon subset closure** — the definition digraph at scale; seed policy; the depth cut
    revisited (the `right`-ring lesson, req 21's sibling).
 2. **R at scale** — all named WordNet relations + the curated-edge pipeline
@@ -153,15 +154,26 @@ curated senses, scaffolds and anchor sets cross intact (inheritance ledger).
    than trusted. The offline suite reads a snapshot pinned by that fingerprint, so the acceptance
    tests keep running without the body. New pairs added only BEFORE runs; the map regenerated as the
    standing visual check.
-6. **The policy becomes rows** (standing law, category 2 — added 2026-08-25). The seeds, the closure
-   cuts, the bar and the relation weights leave `config.py` for a `dictionary_policy` logic collection,
-   written through the migration door and fingerprinted into the build manifest. The seeds are
-   **grown generated-then-curated** — candidates proposed from resource centrality + the bar + tk1's
-   own biography vocabulary, the closure they produce simulated, the Captain approving — never typed
-   longer. **`max_size` is ruled in the same breath**: 400 was arbitrary and the base already
-   overshoots it to 1,357 (a ring lands whole or not at all), so the seed set and the size cut are
-   one decision measured together, not two guesses. `POS_ORDER` travels with them by test 2 (it is
-   WordNet's answer, not the key grammar) — confirmed at dispatch.
+6. **The policy becomes rows** (standing law, category 2 — added 2026-08-25), **split in two and
+   moved AHEAD of R and D** (Captain, 2026-08-25: a seed ruling that changes membership would
+   otherwise force the matrices to be built twice):
+   - **6a — the mechanism, code only.** A `dictionary_policy` logic collection through the migration
+     door; the bar as **epoch-stamped, append-mostly rows** carrying their `why` verbatim; the
+     manifest gaining the policy and bar version+fingerprint a build was measured against; an offline
+     snapshot pinned by fingerprint so the acceptance suite still runs without the body. Today's
+     values migrate across VERBATIM — a value edited here would corrupt the comparison 6b is about
+     to make. `DictionaryConfig` stays the pure value object, now constructed FROM ROWS; the
+     dictionary package keeps its purity (rows arrive injected, same seam as the gloss provider).
+   - **6b — the Captain's ruling.** Seeds **grown generated-then-curated** (candidates proposed from
+     resource centrality + the bar + tk1's own biography vocabulary, the closure each produces
+     simulated, the Captain approving — never typed longer), **with `max_size` ruled in the same
+     breath**: 400 was arbitrary and the base overshoots it regardless (a ring lands whole or not at
+     all), so the seed set and the size cut are ONE decision measured together. **The pronouns are
+     curated IN**: WordNet has none — `me`, `you`, `it`, `who` are all name-only spellings there — so
+     `SEEDS_IDENTITY` cannot be satisfied by mining and the resource cannot be the only source.
+     **`POS_ORDER` travels with the policy rows** by test 2 — it is WordNet's answer, not the key
+     grammar (the Captain ruled it 2026-08-25; what stays in code is that a key IS word-plus-POS,
+     never which parts of speech exist).
 
 **Done when:** the full base builds reproducibly from scripts; bar green on both reads; the policy
 the build used is readable as rows and recorded in its manifest; the Captain has walked the map

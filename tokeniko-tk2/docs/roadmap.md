@@ -14,10 +14,11 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 ## E1 — the dictionary at scale
 - [x] closure engine (keys as law, ring boundary visible, policy fingerprinted) — `34e43c8`
 - [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
-- [ ] proper-noun/abbreviation refusal (`or`=Oregon out of the base)
+- [x] proper-noun/abbreviation refusal (`or`=Oregon out of the base) — `1e7cad3`
+- [ ] policy as rows — the mechanism (collection, bar ledger, manifest, offline snapshot)
+- [ ] policy as rows — the ruling (seeds generated-then-curated + `max_size` + pronouns curated in)
 - [ ] R at scale + curation pipeline (Captain's hand on approve)
 - [ ] D at scale (derivational down-weight DECIDED, membership repair)
-- [ ] policy as rows: seeds generated-then-curated + the bar + `max_size` ruled with them
 - [ ] the bar grown + map regenerated + the live build (E1 gate)
 
 ## E2 — the format (tkzip v2)

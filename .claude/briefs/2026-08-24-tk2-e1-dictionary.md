@@ -44,11 +44,19 @@ Two tasks join this epic from that ruling:
 - **T2b — the proper-noun/abbreviation refusal** (option C; dispatched 2026-08-25). A reading whose
   senses are all proper nouns/instances/abbreviations is refused at BOTH membership and mining, by a
   semantic criterion and never a typed exclusion list.
+- **T4b SPLIT IN TWO and moved AHEAD of T3/T4** (Captain, 2026-08-25 — a seed ruling that moves
+  membership would otherwise force R and D to be built twice). **T4b-i** = the mechanism, code only,
+  values migrated verbatim (dispatched 2026-08-25). **T4b-ii** = the Captain's ruling: seeds grown
+  generated-then-curated, `max_size` ruled with them, the pronouns curated IN (WordNet has none —
+  `me`/`you`/`it`/`who` are name-only spellings there, so `SEEDS_IDENTITY` cannot be mined).
+  Build order for the rest of the epic: T4b-i → T4b-ii → T3 (R) → T4 (D) → T5 (bar + live build).
 - **T4b — the policy becomes rows.** Seeds, closure cuts, the bar and the relation weights leave
   `config.py` for a `dictionary_policy` logic collection through the migration door, fingerprinted
   into the manifest. Seeds grown by proposal + simulation + the Captain's approval; **`max_size`
   ruled in the same breath** (400 was arbitrary — the base overshoots it to 1,357 because a ring
-  lands whole); `POS_ORDER` travels with them (it is WordNet's answer, not the key grammar). The bar
+  lands whole); **`POS_ORDER` travels with them** — ruled by the Captain 2026-08-25: it is WordNet's answer, not
+  the key grammar (what stays in `keys.py` is that a key IS word-plus-POS, never which parts of
+  speech exist). The bar
   rows are epoch-stamped and append-mostly, each build recording the bar version + fingerprint it was
   measured against, and the offline suite reads a snapshot pinned by that fingerprint so acceptance
   tests still run without the body. Not to be touched before its own dispatch.
