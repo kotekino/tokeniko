@@ -33,3 +33,25 @@ def all_poles() -> list[str]:
 
 def sphere_poles() -> list[str]:
     return list(migration(1).SPHERE_POLES)
+
+
+# ------------------------------------------------------------------------------------------------
+# 0003 — the dictionary's policy, as rows
+# ------------------------------------------------------------------------------------------------
+#
+# Same argument as the anatomy's: the values are the migration's, so the tests read the migration.
+# Here it buys something extra — the row constants are readable with NO database and no WordNet, so
+# the load-bearing regression (these rows still fingerprint to the base T2b measured) runs offline.
+
+
+def policy_rows() -> list[dict]:
+    return [dict(row) for row in migration(3).POLICY_ROWS]
+
+
+def bar_rows() -> list[dict]:
+    return [dict(row) for row in migration(3).BAR_ROWS]
+
+
+def declared_config():
+    """The policy 0003 writes, as the object `config.py` used to hold."""
+    return migration(3).DECLARED

@@ -72,13 +72,33 @@ def test_the_named_collections_are_all_present():
         "derived_points",
         "micro_nn_weights",
         "channel_registers",
+        "dictionary_policy",
+        "dictionary_bar",
     }
 
 
 def test_the_architecture_is_rows_not_code():
-    """The Captain's seam: even invariant data is r-rows. Both the heart's anatomy and the micro-nn
-    declarations are `logic` — changing either is a migration, never a new binary."""
-    assert {m.Settings.name for m in LOGIC_MODELS} == {"heart_anatomy", "micro_nn_instances"}
+    """The Captain's seam: even invariant data is r-rows. The heart's anatomy and the micro-nn
+    declarations are ARCHITECTURE; the dictionary's policy and bar are CURATION (the standing law of
+    2026-08-25). Both kinds are `logic` — changing either is a migration, never a new binary."""
+    assert {m.Settings.name for m in LOGIC_MODELS} == {
+        "heart_anatomy",
+        "micro_nn_instances",
+        "dictionary_policy",
+        "dictionary_bar",
+    }
+
+
+def test_a_ledger_is_not_registered_with_the_body():
+    """`dictionary_builds` follows `MigrationDoc`: a table the body is the SUBJECT of, never the
+    reader of. Registering it would put a growing append-only ledger into the r-cache, which
+    snapshots every registered r-collection whole on every slow tick. It is `logic` all the same, so
+    no collection in the database escapes the write-class seam."""
+    from tk2.core.models import LEDGER_MODELS
+
+    assert [m.Settings.name for m in LEDGER_MODELS] == ["dictionary_builds"]
+    assert all(m.write_class is WriteClass.LOGIC for m in LEDGER_MODELS)
+    assert not set(LEDGER_MODELS) & set(ALL_MODELS)
 
 
 # ------------------------------------------------------------------------------------------------

@@ -10,7 +10,10 @@ function words. The two are computed separately and reported separately so the f
 «closed» and «sensitive» is MEASURED rather than assumed.
 
 Everything here is a pure function over a graph or over an injected `GlossProvider`. No resource, no
-database, no policy of its own — the policy arrives as a `ClosurePolicy`.
+database, no policy of its own — the policy arrives as a `ClosurePolicy`, and since T4b it arrives
+REQUIRED. It used to be optional with a default-constructed fallback, which was a policy of its own
+wearing a keyword argument's clothes: a run that forgot to pass one measured under numbers nobody
+declared and the manifest could not have known.
 
 THE DEPTH CUT AND ITS RING. `seed_closure` expands `max_depth` times, so the LAST layer it admits is
 never itself expanded. That is what the review's `right` was: `left` entered on the last layer, and
@@ -35,7 +38,7 @@ Digraph = dict[str, set[str]]
 
 def build_digraph(
     provider: GlossProvider,
-    policy: ClosurePolicy | None = None,
+    policy: ClosurePolicy,
     progress=None,
 ) -> Digraph:
     """One node per lexicon word, edges to the lexicon words its definition names.
@@ -47,7 +50,6 @@ def build_digraph(
     definition names words, and which sense of them it means is precisely what the geometry is being
     built to decide.
     """
-    policy = policy or ClosurePolicy()
     words = tuple(provider.lexicon())
     lexicon = frozenset(words)
     stops = provider.stopwords()
@@ -196,7 +198,7 @@ class SeedClosure:
         return tuple(sorted(out))
 
 
-def seed_closure(graph: Digraph, seeds, policy: ClosurePolicy | None = None) -> SeedClosure:
+def seed_closure(graph: Digraph, seeds, policy: ClosurePolicy) -> SeedClosure:
     """Expand the seeds through the definition digraph, `max_depth` rings, capped at `max_size`.
 
     The size cap admits a whole ring or none of it. Trimming a ring alphabetically would make
@@ -204,7 +206,6 @@ def seed_closure(graph: Digraph, seeds, policy: ClosurePolicy | None = None) -> 
     that hits the cap says so (`stopped == "size"`) and the answer is a different policy, not a
     smaller alphabet.
     """
-    policy = policy or ClosurePolicy()
     seeds = list(dict.fromkeys(seeds))
     frontier = {s for s in seeds if s in graph}
     missing = tuple(s for s in seeds if s not in graph)
@@ -246,12 +247,11 @@ def _has_unfollowed_edges(graph: Digraph, frontier, seen) -> bool:
     return any(t not in seen for w in frontier for t in graph.get(w, ()))
 
 
-def per_seed_cost(graph: Digraph, seeds, policy: ClosurePolicy | None = None) -> list[tuple[str, int | None]]:
+def per_seed_cost(graph: Digraph, seeds, policy: ClosurePolicy) -> list[tuple[str, int | None]]:
     """The QM's counter, quantified per seed: function words close cheaply, `eat` pulls in the world.
 
     `None` means the seed is not a lexicon word at all — a membership question, not a cost one.
     """
-    policy = policy or ClosurePolicy()
     uncapped = ClosurePolicy(max_depth=policy.max_depth, max_size=10_000, senses=policy.senses)
     rows: list[tuple[str, int | None]] = []
     for seed in seeds:

@@ -1,0 +1,151 @@
+{
+  "source": "tokeniko_tk2_body_test",
+  "version": 1,
+  "fingerprint": "5ff0a29a0eff04dcca708ebf57f65580b3a97183d8a18de53b70211f2f80d510",
+  "pairs": [
+    {
+      "version": 1,
+      "position": 0,
+      "a": "eat.v",
+      "b": "food.n",
+      "verdict": "NEAR",
+      "why": "the Captain's line: eat and food are geometrically similar, do not lose it"
+    },
+    {
+      "version": 1,
+      "position": 1,
+      "a": "drink.v",
+      "b": "water.n",
+      "verdict": "NEAR",
+      "why": "same shape, second witness"
+    },
+    {
+      "version": 1,
+      "position": 2,
+      "a": "sleep.v",
+      "b": "bed.n",
+      "verdict": "NEAR",
+      "why": "the «land on your bed» -> sleep chain has to have a hook"
+    },
+    {
+      "version": 1,
+      "position": 3,
+      "a": "eat.v",
+      "b": "hungry.a",
+      "verdict": "NEAR",
+      "why": "the effect is already NAMEABLE in the 2925 — a wrong-VALUE test, not a missing-axis test"
+    },
+    {
+      "version": 1,
+      "position": 4,
+      "a": "sleep.v",
+      "b": "tired.a",
+      "verdict": "NEAR",
+      "why": "same: effect nameable in base"
+    },
+    {
+      "version": 1,
+      "position": 5,
+      "a": "kill.v",
+      "b": "die.v",
+      "verdict": "NEAR",
+      "why": "pure `causes` edge — unreachable without the unmined relations"
+    },
+    {
+      "version": 1,
+      "position": 6,
+      "a": "eat.v",
+      "b": "swallow.v",
+      "verdict": "NEAR",
+      "why": "pure `entails` edge"
+    },
+    {
+      "version": 1,
+      "position": 7,
+      "a": "cause.n",
+      "b": "cause.v",
+      "verdict": "NEAR",
+      "why": "similar, and the base cannot even ask the question today"
+    },
+    {
+      "version": 1,
+      "position": 8,
+      "a": "land.n",
+      "b": "land.v",
+      "verdict": "FAR",
+      "why": "ground vs. touching down — the collapse that costs us"
+    },
+    {
+      "version": 1,
+      "position": 9,
+      "a": "state.n",
+      "b": "state.v",
+      "verdict": "FAR",
+      "why": "condition vs. to say"
+    },
+    {
+      "version": 1,
+      "position": 10,
+      "a": "want.v",
+      "b": "need.v",
+      "verdict": "NEAR",
+      "why": "action selection reads these"
+    },
+    {
+      "version": 1,
+      "position": 11,
+      "a": "want.v",
+      "b": "refuse.v",
+      "verdict": "FAR",
+      "why": "opposite volitional polarity"
+    },
+    {
+      "version": 1,
+      "position": 12,
+      "a": "arrive.v",
+      "b": "leave.v",
+      "verdict": "FAR",
+      "why": "opposite endpoints of the same motion"
+    },
+    {
+      "version": 1,
+      "position": 13,
+      "a": "walk.v",
+      "b": "run.v",
+      "verdict": "NEAR",
+      "why": "manner siblings"
+    },
+    {
+      "version": 1,
+      "position": 14,
+      "a": "enter.v",
+      "b": "leave.v",
+      "verdict": "FAR",
+      "why": "opposite direction"
+    },
+    {
+      "version": 1,
+      "position": 15,
+      "a": "eat.v",
+      "b": "arrive.v",
+      "verdict": "FAR",
+      "why": "control — density must not smear everything together"
+    },
+    {
+      "version": 1,
+      "position": 16,
+      "a": "bed.n",
+      "b": "cause.n",
+      "verdict": "FAR",
+      "why": "control"
+    },
+    {
+      "version": 1,
+      "position": 17,
+      "a": "tired.a",
+      "b": "runway.n",
+      "verdict": "FAR",
+      "why": "control"
+    }
+  ]
+}

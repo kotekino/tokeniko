@@ -145,7 +145,15 @@ and D are built once, against a base whose policy is already settled.)*
 2. **R at scale** — all named WordNet relations + the curated-edge pipeline
    (propose/simulate/approve, reciprocal 0.60, analytic-only, the Captain's hand on approve).
 3. **D at scale** — gloss overlap over POS-split keys; derivational down-weight DECIDED here (the
-   land.n~land.v OPEN item); membership repair with POS-aware lemmas.
+   land.n~land.v OPEN item); membership repair with POS-aware lemmas. **Two questions parked here by
+   the Captain, 2026-08-25:** (a) **the sense mode** — the closure mines `senses="primary"`, so for
+   every polysemous word the edges come from whichever sense WordNet ordered first, and that is
+   frequently not the sense that made the word frequent (`small` = «the slender part of the back»,
+   `large` = «a garment size», `plant` = «buildings for industrial labor», `state` = «the territory
+   occupied by…»); measure `senses="all"` against edges, base size and the bar before ruling.
+   (b) **high-frequency dimensions** — after the name refusal the residual gloss-overlap floor is
+   real function words (`in` 27% of base rows, `be` 14%, `by` 14%, `as` 10%), which is a WEIGHTING
+   question (IDF-shaped down-weight), not a membership one.
 4. **Inflection-collision fix** — req 21 proper (`left`/leave, `use.v`/`used.v`): lemma-normalize at
    gloss-mining time.
 5. **The bar, grown** — the 18-pair bar becomes a curated regression suite **as rows** (standing
@@ -164,11 +172,27 @@ and D are built once, against a base whose policy is already settled.)*
      values migrate across VERBATIM — a value edited here would corrupt the comparison 6b is about
      to make. `DictionaryConfig` stays the pure value object, now constructed FROM ROWS; the
      dictionary package keeps its purity (rows arrive injected, same seam as the gloss provider).
-   - **6b — the Captain's ruling.** Seeds **grown generated-then-curated** (candidates proposed from
+   - **6b — the Captain's ruling.** *Proposal measured 2026-08-25, ahead of the mechanism:*
+     **purpose ∪ structure** — purpose = the declared families (in-scope-by-construction), structure
+     = the definitional core by in-degree over the whole digraph (`manner person act form cause
+     quality resemble consist characterize property unit shape result process position substance`).
+     Purpose alone closes at 913 words and stops on DEPTH, not size; the union scales smoothly
+     (top-50 → 1,651 words · **top-100 → 2,181 words / 3,188 keys, the QM's recommendation** ·
+     top-200 → 2,995 · top-400 → 3,773). **Two rots the ranking exposes:** six of the top hundred are
+     inflection artifacts ranked by grammar (`used being are made lacking marked` — `are`'s gloss is
+     «a unit of surface area equal to 100 square meters»), which a de-inflection guard fixes; and the
+     function words cannot be fixed at all — `in` is #1 with 14,408 in-edges and means *inch*, `at`
+     is #19 and means *the Lao kip*. Frequency earned by grammar, meaning supplied by a homograph.
+     **Like the pronouns, function words are curated IN or left out — never mined by frequency.**
+     Seeds **grown generated-then-curated** (candidates proposed from
      resource centrality + the bar + tk1's own biography vocabulary, the closure each produces
      simulated, the Captain approving — never typed longer), **with `max_size` ruled in the same
      breath**: 400 was arbitrary and the base overshoots it regardless (a ring lands whole or not at
-     all), so the seed set and the size cut are ONE decision measured together. **The pronouns are
+     all), so the seed set and the size cut are ONE decision measured together — and the measurement
+     already says **`max_size` should stop being a design knob**: every candidate configuration
+     overshoots it and WHICH ring gets truncated is arbitrary (the top-50 union under the 400 cap
+     lands at 471 words and loses `right`; lift the cap and the same seeds give 1,651 and keep it).
+     The depth cut is the policy; the size cut becomes a safety rail set far above any intended base. **The pronouns are
      curated IN**: WordNet has none — `me`, `you`, `it`, `who` are all name-only spellings there — so
      `SEEDS_IDENTITY` cannot be satisfied by mining and the resource cannot be the only source.
      **`POS_ORDER` travels with the policy rows** by test 2 — it is WordNet's answer, not the key

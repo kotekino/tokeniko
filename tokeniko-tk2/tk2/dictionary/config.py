@@ -1,4 +1,4 @@
-"""THE DECLARED POLICY — everything tunable, in one place, hashed before it measures anything.
+"""THE DECLARED POLICY — its SHAPE, and the fingerprint taken over it before it measures anything.
 
 Tooling requirement 4, and the ruling that carries it: policy is declared BEFORE results, hashed
 into the build manifest, and never edited after a measuring run. The prototype held the same idea in
@@ -6,19 +6,27 @@ module-level globals, which a `--depth 3` flag could quietly override without th
 seeing it. Here the policy is a VALUE: a run takes a config object, the manifest records that
 object's fingerprint, and a variant is a different object rather than a mutated global.
 
-What is declared here today is the CLOSURE policy, THE BAR, and the date of the reduction's own
-law (see `REDUCTION_RULES`). The relation weights (R) and the
-gloss-overlap parameters (D) join them when their builders land — a build that has more policy has
-a different fingerprint, which is the mechanism working, not a problem with it.
+**WHAT IS NO LONGER HERE, and why (T4b, the standing law of 2026-08-25).** This module used to
+DECLARE the seeds, the closure cuts and the eighteen bar pairs. They are CURATION — «authorized
+judgment, as complete as we can make it, grown generated-then-curated» — and «a category-2 set
+stated in code is a defect even when its contents are correct». They now live in `dictionary_policy`
+and `dictionary_bar`, arrive through `tk2.dictionary.policy.config_from_rows`, and are fingerprinted
+into the manifest at both levels. What stays here is the SHAPE: what a closure cut IS, what a bar
+pair IS, and how a policy is canonicalised and hashed. Shape is frame; content never is.
 
-Requirement 12 is enforced in code, not by care: the bar's own words are seeds. Run r1 of the
-prototype scored only 12 of 18 pairs because `kill`, `water` and `swallow` were never reached by the
-seed closure — a subset that cannot score its own bar is not a test.
+There is deliberately no `STANDING` any more, and no default for a single declared value. A default
+in code is a second declaration of it, and the day the Captain moves `max_size` in a row, a bare
+`ClosurePolicy()` elsewhere would still be answering 400 — with nothing to say the two disagree.
+Every construction states its policy, or it reads it from the rows.
+
+Requirement 12 is enforced in code, not by care: the bar's own words are seeds (`DictionaryConfig.
+seeds`). Run r1 of the prototype scored only 12 of 18 pairs because `kill`, `water` and `swallow`
+were never reached by the seed closure — a subset that cannot score its own bar is not a test.
 """
 
 import hashlib
 import json
-from dataclasses import asdict, dataclass, field, replace
+from dataclasses import asdict, dataclass, replace
 from typing import Literal
 
 from tk2.dictionary import keys
@@ -39,6 +47,10 @@ Verdict = Literal["NEAR", "FAR"]
 # moved underneath a config that could not see it. A build from before and one from after must not
 # be able to present the same hash. Bump when the reduction's law moves again.
 #
+# It stays in CODE while the seeds and the bar leave, and the standing law is what says so: this
+# names the shape in which a gloss becomes edges at all, it moves only by changing the mining code,
+# and a row could not move it. The seeds are content; this is the grammar the content is read under.
+#
 # The `.2` is not decoration: the law moved TWICE on the 25th (the stop-list ruling in the morning,
 # the name refusal in the afternoon), and a bare date cannot separate two builds a day cannot
 # separate either. A same-day amendment takes the next ordinal.
@@ -46,21 +58,7 @@ REDUCTION_RULES = "2026-08-25.2"
 
 
 # ------------------------------------------------------------------------------------------------
-# the seeds — requirement 8: the sensitive families are in scope BY CONSTRUCTION, not by luck
-# ------------------------------------------------------------------------------------------------
-
-# Closure alone will happily return a clique of function words. These force the verbs that select
-# actions into every subset, whatever the definition digraph happens to feel like doing.
-SEEDS_VOLITIONAL = ("want", "must", "try", "decide", "choose", "need", "wish", "intend", "refuse")
-SEEDS_MOTION = ("go", "come", "walk", "run", "enter", "arrive", "leave", "land", "fall", "move")
-SEEDS_EFFECT = ("eat", "food", "hungry", "sleep", "tired", "bed", "drink", "thirsty")
-SEEDS_IDENTITY = ("me", "you", "not", "negation", "be", "same", "different")
-
-DECLARED_SEEDS = SEEDS_VOLITIONAL + SEEDS_MOTION + SEEDS_EFFECT + SEEDS_IDENTITY
-
-
-# ------------------------------------------------------------------------------------------------
-# THE BAR — declared before anything is built (requirement 12)
+# THE BAR — one expectation, declared before anything is built (requirement 12)
 # ------------------------------------------------------------------------------------------------
 
 
@@ -68,7 +66,10 @@ DECLARED_SEEDS = SEEDS_VOLITIONAL + SEEDS_MOTION + SEEDS_EFFECT + SEEDS_IDENTITY
 class BarPair:
     """One expectation. `a` and `b` are keys or bare words; `why` is the sentence that justified the
     pair when it was declared, kept verbatim because a bar whose reasons are lost is a bar nobody can
-    argue with."""
+    argue with.
+
+    The pairs themselves are rows (`dictionary_bar`) since T4b; this is the shape they are read into.
+    """
 
     a: str
     b: str
@@ -76,38 +77,7 @@ class BarPair:
     why: str
 
 
-# Carried from the review's declaration, unedited. Compounds (`land on the runway`) are layer two
-# and NOT tested here; what IS tested is whether the single words carry enough to make the compound
-# separable later.
-BAR_PAIRS = (
-    # --- the nearnesses we must NOT lose ---
-    BarPair("eat.v", "food.n", "NEAR", "the Captain's line: eat and food are geometrically similar, do not lose it"),
-    BarPair("drink.v", "water.n", "NEAR", "same shape, second witness"),
-    BarPair("sleep.v", "bed.n", "NEAR", "the «land on your bed» -> sleep chain has to have a hook"),
-    # --- the effect axis: what the Jurassic base cannot see ---
-    BarPair("eat.v", "hungry.a", "NEAR", "the effect is already NAMEABLE in the 2925 — a wrong-VALUE test, not a missing-axis test"),
-    BarPair("sleep.v", "tired.a", "NEAR", "same: effect nameable in base"),
-    BarPair("kill.v", "die.v", "NEAR", "pure `causes` edge — unreachable without the unmined relations"),
-    BarPair("eat.v", "swallow.v", "NEAR", "pure `entails` edge"),
-    # --- POS collapse ---
-    BarPair("cause.n", "cause.v", "NEAR", "similar, and the base cannot even ask the question today"),
-    BarPair("land.n", "land.v", "FAR", "ground vs. touching down — the collapse that costs us"),
-    BarPair("state.n", "state.v", "FAR", "condition vs. to say"),
-    # --- the volitional family must be resolvable against each other ---
-    BarPair("want.v", "need.v", "NEAR", "action selection reads these"),
-    BarPair("want.v", "refuse.v", "FAR", "opposite volitional polarity"),
-    # --- motion must not collapse into one blob ---
-    BarPair("arrive.v", "leave.v", "FAR", "opposite endpoints of the same motion"),
-    BarPair("walk.v", "run.v", "NEAR", "manner siblings"),
-    BarPair("enter.v", "leave.v", "FAR", "opposite direction"),
-    # --- controls: things that must stay far, or a denser matrix is just noise ---
-    BarPair("eat.v", "arrive.v", "FAR", "control — density must not smear everything together"),
-    BarPair("bed.n", "cause.n", "FAR", "control"),
-    BarPair("tired.a", "runway.n", "FAR", "control"),
-)
-
-
-def bar_words(pairs=BAR_PAIRS) -> tuple[str, ...]:
+def bar_words(pairs) -> tuple[str, ...]:
     """The words the bar names, POS suffix stripped, first-mention order preserved."""
     out: list[str] = []
     for pair in pairs:
@@ -136,15 +106,20 @@ class ClosurePolicy:
 
     `max_size` is the second cut and answers a different question: the QM's stated counter that
     `closed` and `sensitive` would fight — function words close cheaply, `eat` pulls in the world.
+
+    Both are REQUIRED. Their values are curation and live in rows (`kind: "closure"`); a default
+    here would be a second, quieter declaration of a number the Captain moves in the db.
     """
 
-    max_depth: int = 2
-    max_size: int = 400
+    max_depth: int
+    max_size: int
     # Which senses of a word contribute its definition. `primary` = the first synset per POS (what
     # the Jurassic build used); `all` = every sense, denser and noisier.
-    senses: SenseMode = "primary"
-    # Extra seeds beyond the declared families and the bar's own words — a run's own argument, kept
-    # separate from the standing declaration so the standing one stays readable.
+    senses: SenseMode
+    # Extra seeds beyond the declared families and the bar's own words — a run's own argument, and
+    # the one field here that is NOT a row: a standing declaration is what the rows hold, and this
+    # is what a single run says against it. Empty by default because «no argument» is a real
+    # default, not an undeclared value.
     extra_seeds: tuple[str, ...] = ()
 
     def __post_init__(self):
@@ -158,11 +133,16 @@ class ClosurePolicy:
 
 @dataclass(frozen=True, slots=True)
 class DictionaryConfig:
-    """The whole declared policy for one build. Hash it, record the hash, then measure."""
+    """The whole declared policy for one build. Hash it, record the hash, then measure.
 
-    closure: ClosurePolicy = field(default_factory=ClosurePolicy)
-    declared_seeds: tuple[str, ...] = DECLARED_SEEDS
-    bar: tuple[BarPair, ...] = BAR_PAIRS
+    Assembled from rows by `tk2.dictionary.policy.config_from_rows`. Still a plain value object with
+    no database anywhere near it — that is the seam: the rows are somebody else's door, and this is
+    what the engine is handed.
+    """
+
+    closure: ClosurePolicy
+    declared_seeds: tuple[str, ...]
+    bar: tuple[BarPair, ...]
 
     @property
     def seeds(self) -> tuple[str, ...]:
@@ -188,7 +168,14 @@ class DictionaryConfig:
 
     def fingerprint(self) -> str:
         """sha256 over the canonical JSON, sorted keys, no whitespace slack. Two builds with the
-        same fingerprint were measured under the same policy; that is the whole claim."""
+        same fingerprint were measured under the same policy; that is the whole claim.
+
+        NOTE what is deliberately NOT in here: the policy and bar ROW versions. This hashes the
+        policy as the engine received it, and it must keep answering the same hash for the same
+        values however they were assembled — that is what makes «the move to rows changed nothing»
+        a checkable statement rather than a promise. Which rows a build read is recorded beside this
+        in the manifest, by `tk2.dictionary.policy`'s own two fingerprints.
+        """
         blob = json.dumps(self.as_dict(), sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
@@ -196,8 +183,3 @@ class DictionaryConfig:
         """A variant, for the runs that argue with the standing policy. It is a NEW config with a
         new fingerprint — which is the point: a depth-3 run cannot be mistaken for a depth-2 one."""
         return replace(self, closure=replace(self.closure, **changes))
-
-
-# The standing policy. Named so a report can say which config it ran, and so a variant is visibly a
-# variant of something.
-STANDING = DictionaryConfig()

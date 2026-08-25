@@ -48,6 +48,12 @@ markers = [
 body = "python -m tk2.body"
 test = "pytest"
 
+[tool.setuptools.package-data]
+# The acceptance bar's offline snapshot (`tk2/dictionary/bar_snapshot.json`). It ships WITH the
+# package because the acceptance suite has to run where no body is reachable, and a data file the
+# install drops is a suite that only passes near a database.
+"tk2.dictionary" = ["*.json"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["tk2*"]

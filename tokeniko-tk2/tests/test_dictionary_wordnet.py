@@ -18,6 +18,16 @@ from tk2.dictionary.config import ClosurePolicy  # noqa: E402
 pytestmark = pytest.mark.wordnet
 
 
+def small_policy(max_depth: int = 2, max_size: int = 100, senses: str = "primary") -> ClosurePolicy:
+    """The policy these small-lexicon runs measure under, stated rather than defaulted.
+
+    Since T4b the standing values are rows (`db/0003`) and `ClosurePolicy` has no defaults in code —
+    a default would be a second declaration of a number the Captain moves in the db. These worlds
+    are a dozen words wide, so the cap never fires and the depth is the only cut in play.
+    """
+    return ClosurePolicy(max_depth=max_depth, max_size=max_size, senses=senses)
+
+
 @pytest.fixture(scope="module")
 def provider():
     try:
@@ -119,8 +129,8 @@ def test_a_stop_word_that_is_a_dimension_still_speaks_THE_RULING():
     with_in = wn_adapter.WordNetProvider(["eat", "take", "solid", "food", "in"])
     without = wn_adapter.WordNetProvider(["eat", "take", "solid", "food"])
     assert "in" in with_in.stopwords()
-    assert closure.build_digraph(with_in)["eat"] == {"take", "solid", "food", "in"}
-    assert closure.build_digraph(without)["eat"] == {"take", "solid", "food"}
+    assert closure.build_digraph(with_in, small_policy())["eat"] == {"take", "solid", "food", "in"}
+    assert closure.build_digraph(without, small_policy())["eat"] == {"take", "solid", "food"}
 
 
 def test_the_captains_closure_example_cannot_form_on_wordnet_AND_WHY(provider):
@@ -151,10 +161,10 @@ def test_the_captains_closure_example_cannot_form_on_wordnet_AND_WHY(provider):
 
     # `not` and `negation` are real words and behave; the two pronouns are simply not there.
     small = wn_adapter.WordNetProvider(["not", "negation"])
-    graph = closure.build_digraph(small)
+    graph = closure.build_digraph(small, small_policy())
     assert graph["not"] == {"negation"}                 # «negation of a word or group of words»
     assert graph["negation"] == set()                   # names statement, denial, refusal — never `not`
-    assert closure.seed_closure(graph, ("me", "you", "not")).missing == ("me", "you")
+    assert closure.seed_closure(graph, ("me", "you", "not"), small_policy()).missing == ("me", "you")
 
 
 # ------------------------------------------------------------------------------------------------
@@ -309,9 +319,10 @@ def test_a_dimension_asks_wordnet_only_about_its_own_pos(provider):
 def test_the_engine_runs_on_the_real_provider(provider):
     """Small, but it is the seam under test: the pure engine and the real resource, meeting only
     through the protocol."""
-    graph = closure.build_digraph(provider)
+    policy = small_policy(max_depth=1)
+    graph = closure.build_digraph(provider, policy)
     assert graph["eat"] == {"take", "solid", "food"}   # «take in solid food» — `in` is not a word of this base
-    result = closure.seed_closure(graph, ("eat",), ClosurePolicy(max_depth=1))
+    result = closure.seed_closure(graph, ("eat",), policy)
     assert set(result.words) == {"eat", "take", "solid", "food"}
 
 

@@ -17,7 +17,14 @@ from tk2.core.models import (
 )
 from tk2.core.models.migrations import MigrationDoc
 from tk2.datatier import traps
-from tests.seed import all_poles, anatomy_rows, param_rows, sphere_poles
+from tests.seed import (
+    all_poles,
+    anatomy_rows,
+    bar_rows,
+    param_rows,
+    policy_rows,
+    sphere_poles,
+)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -77,7 +84,11 @@ def test_the_checksum_follows_the_file(tmp_path):
 def test_the_real_directory_is_found_by_default():
     """The package finds `db/` beside itself, so the runner works from any working directory."""
     found = migrations.discover()
-    assert [m.label for m in found][:2] == ["0001_create_the_world", "0002_bump_the_dictionary_epoch"]
+    assert [m.label for m in found][:3] == [
+        "0001_create_the_world",
+        "0002_bump_the_dictionary_epoch",
+        "0003_the_dictionary_policy_becomes_rows",
+    ]
 
 
 # ------------------------------------------------------------------------------------------------
@@ -296,3 +307,64 @@ def test_the_body_still_cannot_write_what_the_migration_wrote(created):
         traps.insert(ParamDoc(key="body.sneaks.in", value=1))
     with pytest.raises(WriteClassViolation):
         traps.insert(HeartAnatomyDoc(pole="smugness", targets=["self"]))
+
+
+# ------------------------------------------------------------------------------------------------
+# 0003 puts the dictionary's policy in rows
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0003_creates_the_dictionary_tables_including_the_ledger(created):
+    """The ledger is created here even though it is not in `ALL_MODELS`: a table the body does not
+    read still has to exist before the first build writes its manifest row."""
+    names = set(created.list_collection_names())
+    for name in ("dictionary_policy", "dictionary_bar", "dictionary_builds"):
+        assert name in names, f"{name} was not created"
+
+
+@live
+def test_0003_writes_the_policy_and_the_bar_as_declared(created):
+    stored_policy = list(created["dictionary_policy"].find({}))
+    stored_bar = list(created["dictionary_bar"].find({}))
+
+    assert {(r["kind"], r["name"]) for r in stored_policy} == {
+        (r["kind"], r["name"]) for r in policy_rows()
+    }
+    assert {(r["a"], r["b"], r["verdict"]) for r in stored_bar} == {
+        (r["a"], r["b"], r["verdict"]) for r in bar_rows()
+    }
+    assert {r["version"] for r in stored_policy} == {1}
+    assert {r["version"] for r in stored_bar} == {1}
+    # Epoch-stamped, and live: the two ledger properties that justified moving the bar out of code.
+    assert all(r["created_at"] > 0 for r in stored_bar)
+    assert all(r["retired_at"] is None for r in stored_bar)
+
+
+@live
+def test_the_policy_read_back_from_the_database_is_the_one_that_was_declared(created):
+    """The seam end to end: rows out of mongo, through the pure reader, into the value object the
+    engine takes as an argument — and it fingerprints to what T2b measured."""
+    from tests.test_dictionary_policy import T2B_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored_policy = list(created["dictionary_policy"].find({}))
+    stored_bar = list(created["dictionary_bar"].find({}))
+    config = policy.config_from_rows(stored_policy, stored_bar)
+
+    assert config.fingerprint() == T2B_FINGERPRINT
+    assert policy.policy_version(stored_policy) == 1
+    assert policy.bar_version(stored_bar) == 1
+    assert policy.bar_fingerprint(stored_bar) == policy.bar_snapshot()["fingerprint"]
+
+
+@live
+def test_the_body_cannot_write_the_dictionarys_policy(created):
+    """Curation is authorized judgment, and the authorization is not his. Every one of these tables
+    is `logic`: the migration door writes them, the body reads them."""
+    from tk2.core.models import DictionaryBarDoc, DictionaryBuildDoc, DictionaryPolicyDoc
+    from tk2.core.write_class import WriteClassViolation
+
+    for model in (DictionaryPolicyDoc, DictionaryBarDoc, DictionaryBuildDoc):
+        with pytest.raises(WriteClassViolation):
+            model.insert_one({"whatever": 1})

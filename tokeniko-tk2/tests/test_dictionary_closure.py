@@ -12,6 +12,19 @@ from tk2.dictionary import closure, glosses, keys
 from tk2.dictionary.config import ClosurePolicy
 
 
+def fixture_policy(max_depth: int = 2, max_size: int = 1000, senses: str = "primary", **rest) -> ClosurePolicy:
+    """The sixteen-word world's own policy, stated for every run.
+
+    Since T4b there is no default anywhere in code — the standing values are rows (`db/0003`), and a
+    default here would be a second, quieter declaration of numbers the Captain moves in the db. So
+    each test declares what it measures under, and this helper is that declaration written once:
+    depth 2 to match the standing cut the `right` ring was found at, and a size cap far above
+    sixteen words, because unless a test says otherwise it is measuring the DEPTH cut and a cap that
+    could fire would make its number ambiguous.
+    """
+    return ClosurePolicy(max_depth=max_depth, max_size=max_size, senses=senses, **rest)
+
+
 @pytest.fixture
 def provider():
     return FixtureGlossProvider()
@@ -19,7 +32,7 @@ def provider():
 
 @pytest.fixture
 def graph(provider):
-    return closure.build_digraph(provider)
+    return closure.build_digraph(provider, fixture_policy())
 
 
 # ------------------------------------------------------------------------------------------------
@@ -64,8 +77,8 @@ def test_a_stop_word_that_is_a_lexicon_word_survives_THE_RULING():
     """
     plain = FixtureGlossProvider()
     muted = FixtureGlossProvider(stopwords=plain.stopwords() | {"rest"})
-    assert closure.build_digraph(plain)["sleep"] == {"rest", "bed"}
-    assert closure.build_digraph(muted)["sleep"] == {"rest", "bed"}
+    assert closure.build_digraph(plain, fixture_policy())["sleep"] == {"rest", "bed"}
+    assert closure.build_digraph(muted, fixture_policy())["sleep"] == {"rest", "bed"}
 
 
 def test_a_stop_word_that_is_not_a_lexicon_word_is_still_dropped():
@@ -75,15 +88,15 @@ def test_a_stop_word_that_is_not_a_lexicon_word_is_still_dropped():
     """
     plain = FixtureGlossProvider()
     muted = FixtureGlossProvider(stopwords=plain.stopwords() | {"moves"})
-    assert closure.build_digraph(plain)["direction"] == {"move"}
-    assert closure.build_digraph(muted)["direction"] == set()
+    assert closure.build_digraph(plain, fixture_policy())["direction"] == {"move"}
+    assert closure.build_digraph(muted, fixture_policy())["direction"] == set()
 
 
 def test_the_sense_mode_reaches_the_resource(provider):
     """`work` is silent on its primary sense and names `place` on its second. A build that changed
     `senses` and got the same graph would mean the mode never left the config."""
-    assert closure.build_digraph(provider, ClosurePolicy(senses="primary"))["work"] == set()
-    assert closure.build_digraph(provider, ClosurePolicy(senses="all"))["work"] == {"place"}
+    assert closure.build_digraph(provider, fixture_policy(senses="primary"))["work"] == set()
+    assert closure.build_digraph(provider, fixture_policy(senses="all"))["work"] == {"place"}
 
 
 # ------------------------------------------------------------------------------------------------
@@ -154,7 +167,7 @@ SEEDS = ("sleep", "leave")
 
 
 def test_the_closure_grows_ring_by_ring(graph):
-    result = closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=2))
+    result = closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=2))
     assert result.layers[0] == ("leave", "sleep")
     assert result.layers[1] == ("bed", "go", "place", "rest")
     assert result.layers[2] == ("furniture", "left", "move", "work")
@@ -166,7 +179,7 @@ def test_the_closure_grows_ring_by_ring(graph):
 def test_a_seed_the_lexicon_lacks_is_reported_not_dropped(graph):
     """Requirement 15: membership is a defect too, and a seed that is not a word is the first place
     to look for one. Silence here is how run r1 scored 12 of 18 pairs and nobody knew why."""
-    result = closure.seed_closure(graph, ("sleep", "runway"), ClosurePolicy(max_depth=1))
+    result = closure.seed_closure(graph, ("sleep", "runway"), fixture_policy(max_depth=1))
     assert result.missing == ("runway",)
     assert "runway" not in result.words
 
@@ -175,7 +188,7 @@ def test_the_depth_cut_is_a_parameter(graph):
     """Not a constant. The number is the thing the Captain moves when he disagrees with the boundary
     it draws — so it has to be reachable from the policy and visible in its fingerprint."""
     sizes = [
-        len(closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=d)).words)
+        len(closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=d)).words)
         for d in (0, 1, 2, 3)
     ]
     assert sizes == [2, 6, 10, 12]
@@ -184,7 +197,7 @@ def test_the_depth_cut_is_a_parameter(graph):
 def test_a_closure_that_exhausts_the_graph_says_so(graph):
     """«we stopped» and «there was nothing left» are different facts and `stopped` must not blur
     them: only the first one means a boundary was drawn."""
-    result = closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=9))
+    result = closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=9))
     assert result.stopped == "exhausted"
     assert result.unexpanded == ()
 
@@ -192,7 +205,7 @@ def test_a_closure_that_exhausts_the_graph_says_so(graph):
 def test_the_size_cap_admits_a_whole_ring_or_none_of_it(graph):
     """Trimming a ring alphabetically would make membership depend on spelling. A run that hits the
     cap says `size` and the answer is a different policy, not a smaller alphabet."""
-    result = closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=9, max_size=3))
+    result = closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=9, max_size=3))
     assert result.stopped == "size"
     assert len(result.words) == 6          # the ring that broke the cap came in whole
     assert result.layers[-1] == ("bed", "go", "place", "rest")
@@ -204,7 +217,7 @@ def test_the_size_cap_admits_a_whole_ring_or_none_of_it(graph):
 def test_the_last_ring_is_admitted_but_never_expanded(graph):
     """The depth cut's actual mechanism, stated. `left` is IN the subset and its own definition was
     never followed."""
-    result = closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=2))
+    result = closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=2))
     assert "left" in result.words
     assert result.stopped == "depth"
     assert result.unexpanded == ("furniture", "left", "move", "work")
@@ -214,7 +227,7 @@ def test_right_sits_exactly_one_ring_past_the_cut(graph):
     """THE regression. The Captain found this by looking at the map: `left` inside, `right` outside,
     named only by a word the subset already had. The boundary is allowed to be there — it is not
     allowed to be invisible, so the closure reports its own ring."""
-    result = closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=2))
+    result = closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=2))
     assert "right" not in result.words
     assert result.one_ring_past(graph) == ("direction", "right")
 
@@ -222,7 +235,7 @@ def test_right_sits_exactly_one_ring_past_the_cut(graph):
 def test_one_more_ring_takes_right_in(graph):
     """The cut is the only thing keeping it out — which is what makes it a policy question rather
     than a defect."""
-    result = closure.seed_closure(graph, SEEDS, ClosurePolicy(max_depth=3))
+    result = closure.seed_closure(graph, SEEDS, fixture_policy(max_depth=3))
     assert "right" in result.words
 
 
@@ -272,7 +285,7 @@ def test_both_readings_of_an_ambiguous_token_reach_the_graph():
     """`tool`'s gloss says «an implement that is *used* to do work». `used` is a lexicon word and an
     inflection of one, so the row names both — the same shape as `left`/`leave`, on the other pair.
     """
-    graph = closure.build_digraph(use_used_provider())
+    graph = closure.build_digraph(use_used_provider(), fixture_policy())
     assert graph["tool"] == {"use", "used"}
 
 
@@ -302,13 +315,13 @@ def test_a_name_only_reading_never_becomes_an_edge_OPTION_C():
     provider = name_only_provider()
     assert "or" in provider.lexicon()
     assert glosses.analyses_of("or", provider) == ()
-    assert closure.build_digraph(provider)["state"] == {"region"}
+    assert closure.build_digraph(provider, fixture_policy())["state"] == {"region"}
 
 
 def test_a_refused_word_says_nothing_either_OPTION_C():
     """It has no reading to speak from, so its row is empty — and being silent it can never pull
     Oregon's own definition into the graph from the other side."""
-    graph = closure.build_digraph(name_only_provider())
+    graph = closure.build_digraph(name_only_provider(), fixture_policy())
     assert graph["or"] == set()
     assert graph["me"] == set()
 
@@ -345,7 +358,7 @@ def test_the_refusal_is_not_the_stop_list_returning(provider):
 def test_per_seed_cost_separates_cheap_seeds_from_expensive_ones(graph):
     """The QM's counter, quantified: function words close cheaply, the content words pull in the
     world. Measured rather than assumed — that was the whole point of the instrument."""
-    costs = dict(closure.per_seed_cost(graph, ("not", "sleep", "runway"), ClosurePolicy(max_depth=2)))
+    costs = dict(closure.per_seed_cost(graph, ("not", "sleep", "runway"), fixture_policy(max_depth=2)))
     assert costs["not"] == 2               # not -> negation -> not, and it is done
     assert costs["sleep"] > costs["not"]
     assert costs["runway"] is None         # not a lexicon word: a membership question, not a cost

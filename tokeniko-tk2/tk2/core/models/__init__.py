@@ -8,12 +8,22 @@ Split by organ rather than gathered into one module, because each organ's tables
 that is worth writing once at the top of its file — and because E6/E7 will grow these.
 
 The r-tier holds three kinds of thing, and the difference is worth reading off this list: `params`
-are TUNABLES (param), while `heart_anatomy` and `micro_nn_instances` are ARCHITECTURE (logic) — the
-shape of the organs, expressed as rows so that changing it is a migration rather than a new binary.
+are TUNABLES (param), `heart_anatomy` and `micro_nn_instances` are ARCHITECTURE (logic) — the shape
+of the organs, expressed as rows so that changing it is a migration rather than a new binary — and
+`dictionary_policy` / `dictionary_bar` are CURATION (logic): authorized judgment about the world,
+which the standing law of 2026-08-25 puts in rows precisely because it is never finished.
+
+Beside them, and NOT registered, sit the LEDGERS (`LEDGER_MODELS`, and `MigrationDoc` in its own
+module): tables the body is the subject of rather than the reader of.
 """
 
 from tk2.core.models.channel import ChannelRegisterDoc
 from tk2.core.models.derived import DerivedPointDoc
+from tk2.core.models.dictionary import (
+    DictionaryBarDoc,
+    DictionaryBuildDoc,
+    DictionaryPolicyDoc,
+)
 from tk2.core.models.forecast import ForecastDoc, StakeStatus
 from tk2.core.models.heart import (
     AnatomyIncoherent,
@@ -33,8 +43,10 @@ from tk2.core.models.params import ParamDoc
 PARAM_MODELS = [ParamDoc]
 
 #: The architecture, as rows. Same read path as the tunables, different reason for existing: these
-#: describe what the organs ARE, and a change to one is body growth (body req. 5).
-LOGIC_MODELS = [HeartAnatomyDoc, MicroNnInstanceDoc]
+#: describe what the organs ARE, and a change to one is body growth (body req. 5). Since E1's T4b
+#: the dictionary's CURATION joins them — the seeds, the closure cuts and the acceptance bar are
+#: authorized judgment, and the standing law of 2026-08-25 puts authorized judgment in rows.
+LOGIC_MODELS = [HeartAnatomyDoc, MicroNnInstanceDoc, DictionaryPolicyDoc, DictionaryBarDoc]
 
 #: Everything the r-cache snapshots at boot.
 R_MODELS = PARAM_MODELS + LOGIC_MODELS
@@ -52,18 +64,29 @@ KB_MODELS = [
     ChannelRegisterDoc,
 ]
 
+#: The ledgers: written by a deploy or a build, never interpreted by the body on a tick. NOT in
+#: `ALL_MODELS` for `MigrationDoc`'s reason — registering them would put growing append-only tables
+#: into the r-cache, which snapshots every registered r-collection whole on every slow tick. They
+#: are models so the migration writer can validate their rows, and `logic` so the write-class seam
+#: covers every collection in the database with no exceptions.
+LEDGER_MODELS = [DictionaryBuildDoc]
+
 #: Everything, in the order a reader should meet it: the tunables, the architecture, then the organs.
 ALL_MODELS = R_MODELS + KB_MODELS
 
 __all__ = [
     "ALL_MODELS",
     "KB_MODELS",
+    "LEDGER_MODELS",
     "LOGIC_MODELS",
     "PARAM_MODELS",
     "R_MODELS",
     "AnatomyIncoherent",
     "ChannelRegisterDoc",
     "DerivedPointDoc",
+    "DictionaryBarDoc",
+    "DictionaryBuildDoc",
+    "DictionaryPolicyDoc",
     "EmotionalLogDoc",
     "ForecastDoc",
     "HeartAnatomy",
