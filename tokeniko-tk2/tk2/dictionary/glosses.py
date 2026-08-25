@@ -34,6 +34,20 @@ all nltk stop words and the old order deleted them before the lexicon was ever c
 afterwards (2026-08-25), it still cannot form on WordNet, for a reason no filter owns: `you` is not
 a WordNet lemma at all and WordNet's `me` is the state of Maine. That is a MEMBERSHIP finding — the
 method is sound, the resource cannot supply the vocabulary the method was stated in.
+
+A NAME IS NOT A WORD (the Captain's option C, 2026-08-25). The ruling above bought real function
+words — `not`, `no`, `some`, `other`, `own`, `will`, `very` — and admitted, in the same motion,
+WordNet's case-folded names of the same spellings: `or` = Oregon, `me` = Maine, `an` = Associate in
+Nursing. Measured before the repair, `or` sat on 57.8% of the base's rows, and of every pair of base
+words that shared a gloss word at all, 84.8% shared nothing but these; D is gloss overlap, so its
+loudest signal would have been «both definitions used the word *or*». Measured after, on the same
+six hundred words: 77,242 overlapping pairs became 27,942 and the share fell to 59.1%, the rest of
+it being `in`, `be`, `by` and `as` — real English function words that the ruling admitted on
+purpose, and a separate question. The refusal is a fact about the
+resource and therefore a provider question (`is_name_only`), asked here on every reading a token
+produces. It is NOT the stop list returning through a side door: the stop list is about function
+words, this is about whether a spelling is vocabulary at all, and `not` — a function word and a real
+adverb — survives both.
 """
 
 import re
@@ -104,6 +118,18 @@ class GlossProvider(Protocol):
         lexicon membership: see the module head."""
         ...
 
+    def is_name_only(self, word: str) -> bool:
+        """True when every reading the resource has for this spelling is a NAME — a proper noun, a
+        named instance, an acronym, a chemical symbol — and none of them is a word of the language.
+
+        On the provider and not in here because it is a fact about the RESOURCE, not a rule the
+        reduction could compute: only the lexical source knows that its `or` is Oregon's `OR` and
+        its `me` is Maine's `ME`. What the reduction does with the answer is refuse the reading (see
+        `analyses_of`); a fixture with no names in it answers False to everything and nothing about
+        its behaviour changes.
+        """
+        ...
+
 
 # ------------------------------------------------------------------------------------------------
 # the reduction — a definition rewritten using only lexicon words
@@ -117,19 +143,30 @@ def tokens_of(text: str) -> list[str]:
 
 
 def analyses_of(token: str, provider: GlossProvider) -> tuple[str, ...]:
-    """Every word a surface token could be naming: itself, then its base form under each POS.
+    """Every word a surface token could be naming: itself, then its base form under each POS —
+    minus the readings that are not words at all.
 
     The token itself is included because a word that IS in the lexicon means itself — and because a
     lexicon may hold words the resource has no morphology for at all. It is included, not preferred:
     the whole of requirement 21's repair is that this function returns a SET of readings and no
     caller is allowed to stop at the first one.
+
+    THE NAME REFUSAL (the Captain's option C, 2026-08-25) is applied here, on the readings, and not
+    only at membership. Membership is the caller's — the lexicon is an argument, and a caller may
+    hand in `or` or `me` from somewhere other than `wordnet_lexicon()` (the Jurassic 2925 holds both
+    as function words). If the refusal lived only in the word list, a lemma path would walk `ate`
+    back to Ate the Greek goddess and put her on a row. So the reading is refused where the reading
+    is produced, and a token whose every reading is a name names nothing.
+
+    Morphology itself is untouched: `provider.lemma` still answers `ate -> eat`, and `eat` is a word
+    and survives. The refusal is about what a spelling MEANS, never about how it inflects.
     """
     out = [token]
     for pos in keys.POS_ORDER:
         lemma = provider.lemma(token, pos)
         if lemma and lemma not in out:
             out.append(lemma)
-    return tuple(out)
+    return tuple(word for word in out if not provider.is_name_only(word))
 
 
 def lexicon_words_in(

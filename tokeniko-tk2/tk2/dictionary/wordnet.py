@@ -10,6 +10,14 @@ declared derivation, and either way the word set is an argument the caller must 
 `wordnet_lexicon()` below produces the at-scale one, and it is a helper, not a default — a provider
 that silently defaulted to «all of WordNet» would be a provider that decides the base by omission.
 
+THE CAPITAL IS A FACT ABOUT THE WORD (the Captain's option C, 2026-08-25). nltk's lemma INDEX is
+case-folded — `wn.all_lemma_names()` hands back `oregon`, `me`, `an` — while the synsets themselves
+keep the lexicographer's own spelling: `OR`, `ME`, `AN`. Folding the case invents homographs English
+does not have, and the stop-list ruling then let them into the base as dimensions: `or` meaning
+Oregon landed on 57.8% of the base's rows, which would have made «both definitions used the word
+*or*» D's loudest signal. So this adapter reads the resource's SPELLING, not its index: a synset
+speaks for a word only when it spells that word the way the lexicon does. See `is_name_only`.
+
 nltk is imported at module scope on purpose: importing this module IS the declaration that you want
 the real resource. `tk2.dictionary.__init__` does not import it, so the engine keeps running (and
 keeps being tested) on a fixture with no nltk installed at all.
@@ -71,6 +79,66 @@ def ensure_corpora(download: bool = False) -> None:
 
 
 # ------------------------------------------------------------------------------------------------
+# spelling — the proper-noun / abbreviation refusal
+# ------------------------------------------------------------------------------------------------
+
+
+def _spellings(synset) -> frozenset[str]:
+    """A synset's lemmas AS THE LEXICOGRAPHER WROTE THEM, capitals kept."""
+    return frozenset(lemma.name() for lemma in synset.lemmas())
+
+
+def _folded(synset) -> frozenset[str]:
+    """The same, case-folded — which is what nltk's lemma index answers with, and therefore what
+    every lookup that goes through a lowercased word is really asking about."""
+    return frozenset(name.lower() for name in _spellings(synset))
+
+
+def spelled_synsets(word: str) -> tuple:
+    """The synsets that spell `word` the way the lexicon does — the readings that are the word.
+
+    The lexicon is lower case throughout (`keys.normalize_word`), so this is the test that a synset
+    is about an English WORD rather than about a NAME that happens to fold onto its spelling.
+    """
+    return tuple(s for s in wn.synsets(word) if word in _spellings(s))
+
+
+def folded_synsets(word: str) -> tuple:
+    """Every reading a case-blind lookup reaches — the ones above, plus the ones only case-folding
+    put there. The difference between the two is exactly the junk."""
+    return tuple(s for s in wn.synsets(word) if word in _folded(s))
+
+
+def is_name_only(word: str) -> bool:
+    """THE REFUSAL: the resource knows this spelling only as a NAME, never as a word.
+
+    A name here is what English marks with a capital and does not treat as vocabulary — a proper
+    noun (`Oregon`), a named instance (`Maine`), an acronym or abbreviation (`AN` for Associate in
+    Nursing, `ISN`), a chemical symbol (`Be`, `As`), a taxonomic genus (`Rubus`). WordNet writes all
+    of them capitalised, which is not an orthographic accident: it is the lexicographer stating the
+    category. Case-folding erases the statement, and what is left is a homograph of a function word
+    with a definition about Oregon in it.
+
+    A word is refused only when EVERY reading is a name. `be` keeps its thirteen verb senses and
+    loses beryllium; `in` keeps its adjective and adverb senses and loses indium and Indiana; `or`
+    and `me` and `an` have nothing left and cease to be words of the base at all.
+
+    Measured against the resource (2026-08-25): 14,303 of WordNet's 83,082 single-word lemma names
+    are refused, and their refused readings are `noun.person`, `noun.animal`/`noun.plant` (the Latin
+    genera), `noun.location` — 5,504 of them carry an `instance_hypernym`, which is the resource
+    agreeing by a second, independent route.
+
+    Why the capital and not `instance_hypernyms`: instances are the smaller half of the problem
+    (they miss every acronym and every genus) and they are ALSO wrong at the edges — WordNet marks
+    `earth.n.01`, `sun.n.01` and `moon.n.01` as instances, and a rule built on them would refuse
+    readings of `earth`, `sun` and `moon`. Lexnames are worse: `noun.location` holds `place` and
+    `area` as happily as it holds Klaipeda.
+    """
+    folded = folded_synsets(word)
+    return bool(folded) and not any(word in _spellings(s) for s in folded)
+
+
+# ------------------------------------------------------------------------------------------------
 # the provider
 # ------------------------------------------------------------------------------------------------
 
@@ -89,6 +157,7 @@ class WordNetProvider:
         self._pos_cache: dict[str, tuple[str, ...]] = {}
         self._lemma_cache: dict[tuple[str, str], str | None] = {}
         self._synset_cache: dict[str, tuple] = {}
+        self._name_cache: dict[str, bool] = {}
         self._stopwords = frozenset(nltk_stopwords.words("english"))
 
     # -- the protocol ----------------------------------------------------------------------------
@@ -142,6 +211,15 @@ class WordNetProvider:
     def stopwords(self) -> frozenset[str]:
         return self._stopwords
 
+    def is_name_only(self, word: str) -> bool:
+        """The refusal, memoised — see the module-level `is_name_only` for what it is and why."""
+        word = keys.normalize_word(word)
+        cached = self._name_cache.get(word)
+        if cached is None:
+            cached = not self.lemma_synsets(word) and bool(folded_synsets(word))
+            self._name_cache[word] = cached
+        return cached
+
     # -- beyond the protocol: what the dictionary layer will need --------------------------------
 
     def lemma_synsets(self, word: str) -> tuple:
@@ -156,10 +234,16 @@ class WordNetProvider:
         resource the question directly: does this synset actually contain this word? It also keeps
         `left`'s honest adjective sense — WordNet's `leftover.s.01` lists `left` among its lemmas,
         which is «something left over» being an adjective all along.
+
+        SPELLED, not folded (option C, 2026-08-25). «Contains this word» is asked of the
+        lexicographer's own spelling, so `oregon.n.01` does not contain `or` — it contains `OR` —
+        and `beryllium.n.01` does not contain `be`. This is the single seam where the proper-noun
+        refusal takes effect for everything downstream: the gloss, the POS list, the sense keys and
+        the dimensions all read through here, so none of them can disagree with it.
         """
         cached = self._synset_cache.get(word)
         if cached is None:
-            cached = tuple(s for s in wn.synsets(word) if word in _lemma_names(s))
+            cached = spelled_synsets(word)
             self._synset_cache[word] = cached
         return cached
 
@@ -208,12 +292,6 @@ class WordNetProvider:
         return out
 
 
-def _lemma_names(synset) -> frozenset[str]:
-    """A synset's lemmas as the key convention spells them — lower case, underscores for spaces,
-    which is WordNet's own multiword form."""
-    return frozenset(lemma.name().lower() for lemma in synset.lemmas())
-
-
 # ------------------------------------------------------------------------------------------------
 # the at-scale lexicon
 # ------------------------------------------------------------------------------------------------
@@ -221,11 +299,19 @@ def _lemma_names(synset) -> frozenset[str]:
 
 @lru_cache(maxsize=4)
 def wordnet_lexicon(min_length: int = 2, multiword: bool = False) -> tuple[str, ...]:
-    """Every lemma WordNet knows, sorted — the candidate lexicon for a full-base build.
+    """Every WORD WordNet knows, sorted — the candidate lexicon for a full-base build.
 
     Multiword lemmas (`take_in`, `united_states`) are OUT by default: a compound is the atom of the
     DERIVED space (requirement 6, layer two), and admitting them here would put layer two's atoms
     into layer one's dimensions before the layer exists to hold them.
+
+    NAMES ARE OUT, and that is law rather than a flag (option C, 2026-08-25). `wn.all_lemma_names()`
+    is the case-folded index, so it offers `oregon`, `maine` and `me`, `an`, `or` in the same breath
+    as `eat`; a spelling the resource knows only as a name is not an English word and may not be a
+    dimension. Measured: 14,303 of the 83,082 single-word entries go, and ordinary proper nouns
+    (`america`, `paris`, `kafka`) go with them by design — the base is a vocabulary, not a gazetteer.
+    There is no `names=True` to turn it back on for the same reason there is no un-split key: a
+    switch here would be a second base that no fingerprint could tell from the first.
     """
     ensure_corpora()
     found = set()
@@ -234,5 +320,8 @@ def wordnet_lexicon(min_length: int = 2, multiword: bool = False) -> tuple[str, 
             continue
         if "_" in lemma and not multiword:
             continue
-        found.add(lemma.lower())
+        word = lemma.lower()
+        if is_name_only(word):
+            continue
+        found.add(word)
     return tuple(sorted(found))

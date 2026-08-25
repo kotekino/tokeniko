@@ -7,7 +7,7 @@ the seed closure's two cuts — with THE `right` RING as a named regression.
 
 import pytest
 
-from tests.lexicon_fixture import LEXICON, FixtureGlossProvider, use_used_provider
+from tests.lexicon_fixture import LEXICON, FixtureGlossProvider, name_only_provider, use_used_provider
 from tk2.dictionary import closure, glosses, keys
 from tk2.dictionary.config import ClosurePolicy
 
@@ -283,6 +283,58 @@ def test_the_key_convention_is_asked_for_dimensions_not_the_resource(provider):
     raw = keys.keys_for_word("left", provider.parts_of_speech("left"))
     minted = keys.keys_for_word("left", glosses.dimension_parts_of_speech("left", provider))
     assert "left.v" in raw and "left.v" not in minted
+
+
+# --- OPTION C: a name is not a word, refused at the reading (T2b, 2026-08-25) --------------------
+
+
+def test_a_name_only_reading_never_becomes_an_edge_OPTION_C():
+    """The junction the whole task is about. `state`'s definition says «the condition of a region,
+    OR a place in the union», and `or` is a lexicon word of this world — handed in, not inferred.
+    Under the stop-list ruling alone it would name Oregon, which is what put `or` on 57.8% of the
+    real base's rows and made «both definitions used the word *or*» D's loudest signal.
+
+    Note where the refusal is NOT: `or` is still a member of the lexicon this provider was given.
+    The reduction refuses the READING, so a caller who hands in a name-only word from somewhere else
+    (the Jurassic 2925 holds `or` and `me` as function words) cannot smuggle it back in by a lemma
+    path.
+    """
+    provider = name_only_provider()
+    assert "or" in provider.lexicon()
+    assert glosses.analyses_of("or", provider) == ()
+    assert closure.build_digraph(provider)["state"] == {"region"}
+
+
+def test_a_refused_word_says_nothing_either_OPTION_C():
+    """It has no reading to speak from, so its row is empty — and being silent it can never pull
+    Oregon's own definition into the graph from the other side."""
+    graph = closure.build_digraph(name_only_provider())
+    assert graph["or"] == set()
+    assert graph["me"] == set()
+
+
+def test_only_the_name_reading_is_refused_not_the_word_OPTION_C():
+    """`be` is the case that decides whether this is a refusal or a purge. WordNet lists `be` as a
+    noun because of beryllium's symbol `Be`; the noun goes, the fourteen verb senses stay, and `be`
+    remains a word of the base. A rule that dropped the whole spelling would have deleted the copula
+    to be rid of a chemical symbol."""
+    provider = name_only_provider()
+    assert provider.is_name_only("be") is False
+    assert provider.is_name_only("or") is True
+    assert provider.parts_of_speech("be") == ("v",)
+    assert glosses.dimensions_of(provider.lexicon(), provider) == [
+        "be.v", "exist.v", "region.n", "state.n", "state.v",
+    ]
+
+
+def test_the_refusal_is_not_the_stop_list_returning(provider):
+    """Two different laws, and it matters that they stay two. The stop list is about function words
+    in text and yields to membership (the Captain's ruling); this is about whether a spelling is
+    vocabulary at all. The sixteen-word world declares no names, so nothing in it is refused —
+    including `not` and `me`, which the real resource treats very differently from each other."""
+    assert provider.is_name_only("not") is False
+    assert provider.is_name_only("me") is False
+    assert glosses.analyses_of("me", provider) == ("me",)
 
 
 # ------------------------------------------------------------------------------------------------

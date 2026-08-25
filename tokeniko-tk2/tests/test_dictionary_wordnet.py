@@ -12,7 +12,7 @@ import pytest
 
 wn_adapter = pytest.importorskip("tk2.dictionary.wordnet", reason="nltk is not installed")
 
-from tk2.dictionary import closure, keys  # noqa: E402
+from tk2.dictionary import closure, glosses, keys  # noqa: E402
 from tk2.dictionary.config import ClosurePolicy  # noqa: E402
 
 pytestmark = pytest.mark.wordnet
@@ -124,34 +124,140 @@ def test_a_stop_word_that_is_a_dimension_still_speaks_THE_RULING():
 
 
 def test_the_captains_closure_example_cannot_form_on_wordnet_AND_WHY(provider):
-    """Measured 2026-08-25, because the answer moved and the old reason is no longer the reason.
+    """Measured 2026-08-25, twice, because the answer moved twice and the old reasons are no longer
+    the reason.
 
     His example is me -> not you | you -> not me | not -> negation | negation -> not. The stop list
-    was blamed for it (`me`, `you`, `not` and `be` are all nltk stop words) and the ruling has now
-    taken that objection away. It still cannot form, for two facts about the RESOURCE:
+    was blamed for it first (`me`, `you`, `not` and `be` are all nltk stop words) and the membership
+    ruling took that objection away. What replaced it was WordNet's `me` — the state of Maine — and
+    with option C that reading is refused as the name it is, which takes `me` out of the lexicon
+    entirely. So the reason is now ONE fact, and it is the cleanest of the three:
 
-      - `you` is not a WordNet lemma at all. It has no synsets, so it is not in the 83,082-word
-        lexicon and the closure reports it as a missing seed rather than a word it declined to
-        reach. WordNet has no pronouns to speak of.
-      - WordNet's `me` is the state of Maine, `be` is beryllium, `or` is Oregon. The lemma inventory
-        answers a function word with whatever proper noun or chemical symbol is spelled that way.
+        WORDNET HAS NO PRONOUNS. Not `you`, not `me`, not `it`, not `who` — every one of those
+        spellings is either absent or an acronym (`IT` the discipline, `WHO` the agency).
 
     The example is a statement of the METHOD (definitions written in the lexicon's own words close
     on themselves), and the method is sound; what WordNet cannot supply is the vocabulary it was
-    stated in.
+    stated in. That is a MEMBERSHIP finding for whoever chooses the base's seeds, not a defect of
+    the engine — which is why the closure reports both as missing rather than quietly skipping them.
     """
     stops = provider.stopwords()
     assert {"me", "you", "not", "be"} <= stops          # the list still says so
-    assert "you" not in wn_adapter.wordnet_lexicon()    # no synsets: not a word of the base at all
-    # `you` cannot be a member of a WordNet-derived lexicon, so the world his example needs is
-    # already impossible; what the other three do is the rest of the answer.
-    small = wn_adapter.WordNetProvider(["me", "not", "negation"])
-    assert small.gloss("me") == "a state in New England"
+    lexicon = wn_adapter.wordnet_lexicon()
+    for pronoun in ("you", "me", "it", "who"):
+        assert pronoun not in lexicon
+    assert wn_adapter.folded_synsets("you") == ()       # no synsets at all
+    assert wn_adapter.is_name_only("me") is True        # one synset, and it is Maine
+
+    # `not` and `negation` are real words and behave; the two pronouns are simply not there.
+    small = wn_adapter.WordNetProvider(["not", "negation"])
     graph = closure.build_digraph(small)
-    assert graph["me"] == set()
     assert graph["not"] == {"negation"}                 # «negation of a word or group of words»
     assert graph["negation"] == set()                   # names statement, denial, refusal — never `not`
-    assert closure.seed_closure(graph, ("me", "you")).missing == ("you",)
+    assert closure.seed_closure(graph, ("me", "you", "not")).missing == ("me", "you")
+
+
+# ------------------------------------------------------------------------------------------------
+# OPTION C (2026-08-25): a name is not a word
+# ------------------------------------------------------------------------------------------------
+
+
+def test_the_capital_is_the_resources_own_statement_OPTION_C():
+    """The fact the whole refusal rests on. nltk's lemma INDEX is case-folded, so `wn.synsets("or")`
+    hands back Oregon; the SYNSETS keep the lexicographer's spelling, and it is `OR`. Folding the
+    case invented a homograph English does not have, and the stop-list ruling then let it into the
+    base as a dimension.
+
+    Both facts are asserted together on purpose: the criterion is not «`or` is a bad word», it is
+    «the resource never spells this reading the way the lexicon does».
+    """
+    assert [s.name() for s in wn_adapter.folded_synsets("or")] == ["oregon.n.01", "operating_room.n.01"]
+    assert wn_adapter.spelled_synsets("or") == ()
+    spellings = {l.name() for s in wn_adapter.folded_synsets("or") for l in s.lemmas()}
+    assert "OR" in spellings and "or" not in spellings
+    assert wn_adapter.is_name_only("or") is True
+
+
+def test_a_name_only_spelling_is_not_a_word_of_the_base_OPTION_C():
+    """Membership, the first of the two places the refusal lands. These five were dimensions of the
+    T2 base: `or` = Oregon, `me` = Maine, `an` = Associate in Nursing, `it` = information
+    technology, `who` = the World Health Organization. `or` alone was named by 57.8% of the base's
+    rows — D is gloss overlap, so its loudest signal would have been «both definitions used the word
+    *or*»."""
+    lexicon = wn_adapter.wordnet_lexicon()
+    for name in ("or", "me", "an", "it", "who", "isn", "shan", "america", "paris", "kafka"):
+        assert name not in lexicon, f"{name} is a name, not a word"
+    # Magnitude, not a fixed count — it drifts with the corpus. Measured 2026-08-25: 83,082 lemma
+    # names in, 68,779 words out; 14,303 refused.
+    assert 60_000 < len(lexicon) < 75_000
+
+
+def test_only_the_name_reading_goes_when_the_word_is_real_OPTION_C():
+    """The case that decides whether this is a refusal or a purge. A word is removed only when EVERY
+    reading is a name, and where one reading is real the word stays and loses the dimension the name
+    was occupying:
+
+      - `be` keeps thirteen verb senses and loses `be.n`, which was beryllium's symbol `Be`;
+      - `in` keeps its adjective and adverb senses AND `inch` (WordNet spells that abbreviation in
+        lower case, so it is not refused) and loses indium `In` and Indiana `IN`;
+      - `as` keeps the adverb and loses arsenic `As` and American Samoa `AS`.
+
+    A rule that dropped the whole spelling would have deleted the copula to be rid of a chemical
+    symbol.
+    """
+    provider = wn_adapter.WordNetProvider(["be", "in", "as"])
+    assert provider.is_name_only("be") is False
+    assert provider.parts_of_speech("be") == ("v",)
+    assert "beryllium" not in provider.gloss("be", "all")
+    assert [s.name() for s in wn_adapter.folded_synsets("be")
+            if s not in wn_adapter.spelled_synsets("be")] == ["beryllium.n.01"]
+    assert provider.parts_of_speech("in") == ("n", "a", "r")
+    assert provider.parts_of_speech("as") == ("r",)
+
+
+def test_the_membership_rulings_win_survives_the_refusal_OPTION_C():
+    """The containment. The stop-list ruling was made to buy real function-word dimensions, and the
+    refusal must not take them back — these nine are members with the same dimensions they had after
+    T2. `not` is the sharpest of them: a function word, an nltk stop word, and a perfectly real
+    adverb, so it passes both laws for two different reasons."""
+    lexicon = wn_adapter.wordnet_lexicon()
+    provider = wn_adapter.WordNetProvider(lexicon)
+    expected = {
+        "not": ("r",), "no": ("n", "a", "r"), "some": ("a", "r"), "other": ("a",),
+        "own": ("v", "a"), "will": ("n", "v"), "very": ("a", "r"), "same": ("a",),
+        "different": ("a",),
+    }
+    for word, dims in expected.items():
+        assert word in lexicon, f"the ruling's win must survive: {word}"
+        assert glosses.dimension_parts_of_speech(word, provider) == dims
+
+
+def test_the_capital_beats_the_instance_flag_AND_HERE_IS_WHY():
+    """Why the criterion is the lexicographer's spelling and not `instance_hypernyms`, stated as the
+    counter-example that killed the alternative: WordNet marks `earth.n.01`, `sun.n.01` and
+    `moon.n.01` as INSTANCES of their hypernyms. A refusal built on that flag would start refusing
+    readings of `earth`, `sun` and `moon` — while still missing every acronym (`AN`, `ISN`) and every
+    Latin genus, which carry no instance flag at all.
+
+    The two agree where it matters, which is the point: 5,504 of the 14,303 refused words carry an
+    instance hypernym, so the flag is a second, independent witness to the same judgement — just not
+    a usable criterion on its own.
+    """
+    for word in ("earth", "sun", "moon"):
+        assert wn_adapter.wn.synset(f"{word}.n.01").instance_hypernyms()
+        assert word in wn_adapter.wordnet_lexicon()
+    assert wn_adapter.is_name_only("an") is True
+    assert not wn_adapter.wn.synset("associate_in_nursing.n.01").instance_hypernyms()
+
+
+def test_morphology_is_untouched_by_the_refusal_OPTION_C():
+    """The refusal is about what a spelling MEANS, never about how it inflects. `ate` is a name-only
+    spelling — WordNet's `Ate` is the Greek goddess of infatuation — and a gloss saying «ate» must
+    still reach `eat`, which is a word and survives. Only the goddess is refused."""
+    provider = wn_adapter.WordNetProvider(["eat", "ate"])
+    assert wn_adapter.is_name_only("ate") is True
+    assert provider.lemma("ate", "v") == "eat"          # morphy answers exactly as before
+    assert glosses.analyses_of("ate", provider) == ("eat",)
 
 
 # ------------------------------------------------------------------------------------------------

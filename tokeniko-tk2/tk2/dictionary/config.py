@@ -31,13 +31,18 @@ Verdict = Literal["NEAR", "FAR"]
 # the reduction's law, dated
 # ------------------------------------------------------------------------------------------------
 
-# NOT a knob — there is no other setting, and the two decisions behind this date are law: gloss
-# mining keeps every POS-aware reading of a token (requirement 21) and the stop list yields to
-# lexicon membership (the Captain's ruling). It is hashed anyway, because the fingerprint's claim is
+# NOT a knob — there is no other setting, and the three decisions behind this date are law: gloss
+# mining keeps every POS-aware reading of a token (requirement 21), the stop list yields to lexicon
+# membership (the Captain's ruling), and a reading the resource knows only as a NAME is refused at
+# membership and at mining alike (option C). It is hashed anyway, because the fingerprint's claim is
 # that two builds sharing it were measured under the same policy, and on 2026-08-25 the mining law
-# moved underneath a config that could not see it. A build from before that date and one from after
-# must not be able to present the same hash. Bump the date when the reduction's law moves again.
-REDUCTION_RULES = "2026-08-25"
+# moved underneath a config that could not see it. A build from before and one from after must not
+# be able to present the same hash. Bump when the reduction's law moves again.
+#
+# The `.2` is not decoration: the law moved TWICE on the 25th (the stop-list ruling in the morning,
+# the name refusal in the afternoon), and a bare date cannot separate two builds a day cannot
+# separate either. A same-day amendment takes the next ordinal.
+REDUCTION_RULES = "2026-08-25.2"
 
 
 # ------------------------------------------------------------------------------------------------

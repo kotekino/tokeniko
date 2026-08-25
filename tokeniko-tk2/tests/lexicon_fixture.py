@@ -22,6 +22,13 @@ to get right and the real lexicon is far too big to check by eye:
      (which was only ever a second name for `leave.v`) cannot be minted. `USE_USED` below is the
      same disease in its second reported form.
 
+  4. THE NAME REFUSAL, the Captain's option C (2026-08-25, T2b) — `NAME_ONLY` at the foot of this
+     file, in its own six-word world for the same reason `USE_USED` has one. WordNet's `or` is
+     Oregon's `OR` and its `me` is Maine's `ME`; a lexicon built from the case-folded lemma index
+     admits both as if they were function words, and `or` then landed on 57.8% of the real base's
+     rows. That world is where the engine has to refuse a reading it was HANDED — its lexicon
+     contains `or` and `me` on purpose.
+
 The resource this fixture imitates is DELIBERATELY over-generous about parts of speech, exactly as
 WordNet is: `PARTS_OF_SPEECH` lists `left` as a verb because `wn.synsets("left")` does, having
 walked back to `leave` on its own. The engine, not the table, is what refuses to mint the dimension.
@@ -143,6 +150,7 @@ class FixtureGlossProvider:
         lemmas=None,
         stopwords=STOPWORDS,
         parts_of_speech=None,
+        name_readings=None,
     ):
         self._lexicon = tuple(lexicon)
         self._glosses = dict(GLOSSES if glosses is None else glosses)
@@ -150,17 +158,27 @@ class FixtureGlossProvider:
         self._lemmas = dict(LEMMA_EXCEPTIONS if lemmas is None else lemmas)
         self._stopwords = frozenset(stopwords)
         self._pos = dict(PARTS_OF_SPEECH if parts_of_speech is None else parts_of_speech)
+        self._name_readings = dict(name_readings or {})
 
     def lexicon(self):
         return self._lexicon
 
     def gloss(self, word, senses="primary"):
+        """A refused reading does not speak. The real adapter gets this for free — its gloss is
+        built from the synsets the word is spelled in — and the fixture has to state it, because a
+        world whose refused words still had definitions would test the filter and not the seam."""
+        if self.is_name_only(word):
+            return ""
         if senses == "all" and word in self._glosses_all:
             return self._glosses_all[word]
         return self._glosses.get(word, "")
 
     def parts_of_speech(self, word):
-        return self._pos.get(word, ())
+        """What the resource reports, MINUS the readings that are names. WordNet's `be` is listed as
+        a noun because of beryllium; reporting that noun would mint `be.n`, a dimension whose whole
+        content is a chemical symbol."""
+        names = self._name_readings.get(word, ())
+        return tuple(p for p in self._pos.get(word, ()) if p not in names)
 
     def lemma(self, token, pos):
         """morphy's shape: an exception first, otherwise the token itself if the resource lists it
@@ -181,6 +199,14 @@ class FixtureGlossProvider:
 
     def stopwords(self):
         return self._stopwords
+
+    def is_name_only(self, word):
+        """Every reading this world has for the spelling is a name. Declared per POS in
+        `name_readings` rather than derived, because the fixture has no synsets to read a capital
+        off — it imitates the answer, the adapter measures it."""
+        listed = self._pos.get(word, ())
+        names = self._name_readings.get(word, ())
+        return bool(listed) and all(p in names for p in listed)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -212,4 +238,62 @@ def use_used_provider():
         glosses_all={},
         lemmas=USE_USED_LEMMAS,
         parts_of_speech=USE_USED_POS,
+    )
+
+
+# ------------------------------------------------------------------------------------------------
+# a third world: the name that is not a word — the Captain's option C (T2b, 2026-08-25)
+# ------------------------------------------------------------------------------------------------
+
+# Apart from the sixteen-word world for the same reason `USE_USED` is: it exists to prove two things
+# and folding it in would cost every hand-checked layer above its checkability.
+#
+# The shape is WordNet's own, verified against the corpus 2026-08-25. `or` has two readings and both
+# are the spelling `OR` (Oregon, and a hospital's operating room); `me` has one and it is `ME`, the
+# state of Maine; `be` has fourteen verb readings that are the English verb and one noun reading
+# that is `Be`, beryllium's symbol. Two different outcomes have to follow from that, and this world
+# holds both:
+#
+#   - `or` and `me` cease to be words. Not because a filter deleted them — because the resource has
+#     no reading of those spellings that is a word, and the lexicon HERE still contains them, which
+#     is the point: membership is the caller's, the refusal is the resource's.
+#   - `be` stays a word and loses one dimension. `be.n` was beryllium wearing a copula's spelling.
+NAME_ONLY_LEXICON = ("be", "exist", "state", "region", "or", "me")
+NAME_ONLY_GLOSSES = {
+    "be": "to exist in a state",
+    "exist": "to be",
+    # The token `or` sits in a real definition, where it always does — the junction that put Oregon
+    # on more than half the base's rows.
+    "state": "the condition of a region, or a place in the union",
+    "region": "an area of a state",
+    # Declared and never spoken: the provider returns "" for a word whose every reading is a name.
+    # Written down anyway, because a fixture that simply omitted them would prove nothing.
+    "or": "a state in the northwestern union",
+    "me": "a state in the northeast",
+}
+NAME_ONLY_POS = {
+    "be": ("n", "v"),
+    "exist": ("v",),
+    "state": ("n", "v"),
+    "region": ("n",),
+    "or": ("n",),
+    "me": ("n",),
+}
+# Which of those readings are NAMES. The real adapter reads this off the lexicographer's capital;
+# the fixture declares it, because a table has no orthography to consult.
+NAME_ONLY_NAME_READINGS = {
+    "be": ("n",),
+    "or": ("n",),
+    "me": ("n",),
+}
+
+
+def name_only_provider():
+    return FixtureGlossProvider(
+        lexicon=NAME_ONLY_LEXICON,
+        glosses=NAME_ONLY_GLOSSES,
+        glosses_all={},
+        lemmas={},
+        parts_of_speech=NAME_ONLY_POS,
+        name_readings=NAME_ONLY_NAME_READINGS,
     )
