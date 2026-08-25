@@ -3,14 +3,22 @@
 *The concise mirror of `plan.md` — where we are, what's ahead. One item, one status; done moves to
 `landed.md`. ⚑ = vertical proof slice under the Captain's eye.*
 
+*Standing law since 2026-08-25 (`plan.md`, before the epics): a closed set is **frame** (code — the
+shape in which things are stated, revisable only by migration), **curation** (db rows,
+generated-then-curated, recorded in the manifest — the bar included), or **open** (geometry with a
+nearest-anchor fallback — never a list). Empirical is knowledge, however certain: a closed
+grammatical class is KB, not frame. E3 pays the first real bill.*
+
 ## E0 — the keel ✅ 2026-08-23 — see `landed.md`
 
 ## E1 — the dictionary at scale
-- [ ] full-lexicon closure (seed policy, depth cut revisited)
+- [x] closure engine (keys as law, ring boundary visible, policy fingerprinted) — `34e43c8`
+- [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
+- [ ] proper-noun/abbreviation refusal (`or`=Oregon out of the base)
 - [ ] R at scale + curation pipeline (Captain's hand on approve)
 - [ ] D at scale (derivational down-weight DECIDED, membership repair)
-- [ ] inflection-collision fix (req 21)
-- [ ] the bar grown + map regenerated
+- [ ] policy as rows: seeds generated-then-curated + the bar + `max_size` ruled with them
+- [ ] the bar grown + map regenerated + the live build (E1 gate)
 
 ## E2 — the format (tkzip v2)
 - [ ] role inventory (VerbNet ref; source; part/determination split)

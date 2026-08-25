@@ -13,6 +13,69 @@ advance (they'd stale). The standing laws apply throughout: sandbox until go-liv
 `--apply`-class writes are the Captain's hand, commits on his yes, the biography is sacred, policy
 declared before results.
 
+---
+
+## STANDING LAW — where a closed set may live *(the Captain's ruling, 2026-08-25)*
+
+Hand-picked lists in code are how load-bearing knowledge hides. Everything-is-rows already said so
+for the KB; this states the test that decides it in every other case, existing and future. Before
+writing an enumerated set, name which of the three it is — and if the answer is 3, it is not a set at
+all.
+
+**1 — FRAME.** Not «what we are sure of» — *the shape in which anything can be stated at all*: the
+key grammar (a key is a word plus a part of speech), the write-class taxonomy, the guard and the db
+whitelist, the logic floor. Stays in **code**, and moves only by migration under the Captain's hand.
+It must pass BOTH tests:
+
+  1. *Does changing it change the SHAPE of rows, keys or operations — or only their content?*
+     Shape is frame; content never is.
+  2. *Could evidence revise it?* If yes it is empirical, and **empirical is knowledge** — however
+     certain we are today. A closed grammatical class (the pronouns of English, the wh-words) feels
+     like law and is not: it is a contingent fact about one language, dialect-varying and revisable,
+     and this being is meant to LEARN language rather than be issued it.
+
+**2 — CURATION.** Authorized judgment: the dictionary seeds, the relation weights, the closure cuts,
+thresholds, rosters — **and the acceptance bar**. Lives in the **db**, maintainable there, and it
+must be **as complete as we can make it**; since completeness is reached iteratively, the medium has
+to be the one that supports iteration. Three obligations come with it: the build manifest records
+the set it used and its fingerprint, incompleteness is visible rather than implied, and it grows
+**generated-then-curated** (propose → simulate → the Captain approves), never typed by hand until it
+looks long enough.
+
+  *Why the bar is not an exception* — the first draft of this law kept `BAR_PAIRS` in code, on the
+  argument that a bar editable after seeing the results is not a bar. The Captain dissolved it: that
+  threat model needs a team with an incentive to move the goalposts, and there is no team — only him,
+  the QM, and (when the behaviour layer allows) tokeniko. The property actually wanted was never the
+  medium but **the ledger**: bar rows epoch-stamped and append-mostly, every build recording the bar
+  version and fingerprint it was measured against. That makes «was this pair declared before the
+  run?» machine-checkable, where git made it only human-checkable. And eighteen pairs is a draft:
+  each discovered failure should add one.
+
+**3 — OPEN.** Which words are near, which sense a gloss meant, which behaviour fires, whether a verb
+takes a subject-control reading. **Never a list, in code or in rows** — geometry decides, with a
+small anchor set and a nearest-anchor fallback so nothing can be missed (the semantic catch). A
+hand list here is a bug wearing a shortcut's clothes: it is right for the words someone thought of
+and silently wrong for every other.
+
+**A category-2 set stated in code is a defect even when its contents are correct** — that is what the
+dictionary's `SEEDS_*` were, and E1 moves them.
+
+**What the 2026-08-25 audit found.** E0's model layer is clean: it already argues its own categories
+— `OutputKind` states why it is frame and what would move it, `reward_source` is a string because the
+roster grows, the channel registers are learned rows. In the dictionary, the seeds, the closure cuts,
+**the bar**, and — when they land — the relation weights are category 2, and E1 moves them; test 2
+also catches `POS_ORDER`, which is WordNet's answer rather than the grammar itself, so it travels
+with the policy rows (confirmed with the Captain at that task's dispatch). **The concentration is in
+tk1's LLC layer** (~40 hand lists in `lib/llc/constants.py` and its neighbours): the grammatical
+classes (pronouns, wh-words, quantifiers) are **KB, not frame** — rows, with geometry answering what
+the rows do not cover; the weights (`_CONTENT_WEIGHTS`, `_ITEM_WEIGHTS`, `_ATTITUDE_DEFAULT`) are
+category 2; and the content lists (`_SUBJECT_CONTROL_VERBS`, `_COMPARISON_AFFIRMATIVE`,
+`_IMPLICATION_VERBS`, `_ROOM_WORDS`) are category 3 wearing a list's clothes. **E2/E3 rebuild that
+layer and may not port them as written** — that is the law's first real bill, and it is priced there,
+not here.
+
+---
+
 **The amendment is structural:** between epics run **vertical proof slices** — one sentence driven
 end-to-end as early as dependencies allow, landing under the Captain's eye before the next stretch.
 Three are planned (PS1 after E4, PS2 after E7, PS3 after E8); more may be cut in if a seam smells.
@@ -84,11 +147,25 @@ curated senses, scaffolds and anchor sets cross intact (inheritance ledger).
    land.n~land.v OPEN item); membership repair with POS-aware lemmas.
 4. **Inflection-collision fix** — req 21 proper (`left`/leave, `use.v`/`used.v`): lemma-normalize at
    gloss-mining time.
-5. **The bar, grown** — the 18-pair bar becomes a curated regression suite; new pairs added only
-   BEFORE runs; the map regenerated as the standing visual check.
+5. **The bar, grown** — the 18-pair bar becomes a curated regression suite **as rows** (standing
+   law, category 2): epoch-stamped, append-mostly, every build recording the bar version and
+   fingerprint it was measured against, so «declared before the run» is machine-checkable rather
+   than trusted. The offline suite reads a snapshot pinned by that fingerprint, so the acceptance
+   tests keep running without the body. New pairs added only BEFORE runs; the map regenerated as the
+   standing visual check.
+6. **The policy becomes rows** (standing law, category 2 — added 2026-08-25). The seeds, the closure
+   cuts, the bar and the relation weights leave `config.py` for a `dictionary_policy` logic collection,
+   written through the migration door and fingerprinted into the build manifest. The seeds are
+   **grown generated-then-curated** — candidates proposed from resource centrality + the bar + tk1's
+   own biography vocabulary, the closure they produce simulated, the Captain approving — never typed
+   longer. **`max_size` is ruled in the same breath**: 400 was arbitrary and the base already
+   overshoots it to 1,357 (a ring lands whole or not at all), so the seed set and the size cut are
+   one decision measured together, not two guesses. `POS_ORDER` travels with them by test 2 (it is
+   WordNet's answer, not the key grammar) — confirmed at dispatch.
 
-**Done when:** the full base builds reproducibly from scripts; bar green on both reads; the Captain
-has walked the map without finding a new `left`.
+**Done when:** the full base builds reproducibly from scripts; bar green on both reads; the policy
+the build used is readable as rows and recorded in its manifest; the Captain has walked the map
+without finding a new `left`.
 
 ---
 
@@ -123,7 +200,10 @@ after freeze are migrations, not edits).
 ## E3 — The station *(parser/compiler, one lib)*
 
 **Goal:** surface → tkzip → surface, one pure bidirectional library. tk1's AST/LLC die as
-interfaces.
+interfaces — **and its ~40 hand lists die with them**: the standing law above prices this epic's
+first bill, so every ported set arrives as rows (the grammatical classes and the weights alike — they
+are knowledge, not frame) or as geometry with a nearest-anchor fallback (the content lists). A list
+copied across as written is a rebuild that inherited the defect.
 
 **Answers to:** parser-compiler reqs 1–10 · rag reqs (the in-fence) · senses req 7 (dumb ear feeds
 it).

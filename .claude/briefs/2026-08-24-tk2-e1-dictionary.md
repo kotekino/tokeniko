@@ -28,6 +28,31 @@ under depth-2: 83,082 lemmas → 1,135 words → 1,863 keys; zero multi-word clo
   This belongs in the mining layer (`glosses.py`) and the change must be visible in the policy
   fingerprint if it is a policy knob.
 
+## Standing law added 2026-08-25 — where a closed set may live
+
+`plan.md` now carries it before the epics (read it there); it binds this epic immediately.
+**FRAME** → code: the shape in which anything can be stated (the key grammar, the write classes, the
+guard, the logic floor), moved only by migration. It must pass both tests — does a change alter the
+SHAPE of rows/keys/operations rather than their content, and could evidence revise it? Anything
+empirical is knowledge however certain we are. **CURATION** → db rows, grown generated-then-curated,
+recorded in the build manifest: the seeds, the closure cuts, **the acceptance bar**, and **the
+relation weights you write in T3 — they land as rows from the start, never as a table in
+`config.py`**. **OPEN** → geometry with a nearest-anchor fallback, never a list at all.
+
+Two tasks join this epic from that ruling:
+
+- **T2b — the proper-noun/abbreviation refusal** (option C; dispatched 2026-08-25). A reading whose
+  senses are all proper nouns/instances/abbreviations is refused at BOTH membership and mining, by a
+  semantic criterion and never a typed exclusion list.
+- **T4b — the policy becomes rows.** Seeds, closure cuts, the bar and the relation weights leave
+  `config.py` for a `dictionary_policy` logic collection through the migration door, fingerprinted
+  into the manifest. Seeds grown by proposal + simulation + the Captain's approval; **`max_size`
+  ruled in the same breath** (400 was arbitrary — the base overshoots it to 1,357 because a ring
+  lands whole); `POS_ORDER` travels with them (it is WordNet's answer, not the key grammar). The bar
+  rows are epoch-stamped and append-mostly, each build recording the bar version + fingerprint it was
+  measured against, and the offline suite reads a snapshot pinned by that fingerprint so acceptance
+  tests still run without the body. Not to be touched before its own dispatch.
+
 ## Read first
 
 1. `tokeniko-tk2/docs/plan.md` § E1 — your scope.
