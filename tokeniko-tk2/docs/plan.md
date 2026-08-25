@@ -57,6 +57,24 @@ small anchor set and a nearest-anchor fallback so nothing can be missed (the sem
 hand list here is a bug wearing a shortcut's clothes: it is right for the words someone thought of
 and silently wrong for every other.
 
+**A SECOND LAW, ruled 2026-08-25 — content is defined, structure is compiled.** Content words are
+DEFINED: they earn a dimension in the dictionary. Function words are COMPILED: they become structure
+in the zip — roles, quantifiers, moods, negation, binding — and never need a vector at all. A
+pronoun is indexical (`me` means whoever is speaking), so it is resolved to an ENTITY at parse time
+and the dictionary is never asked; the self-model is carried by `kotekino` and `tokeniko` as named
+individuals (uid + type-centroid), not by a pronoun's dimension. This kills the `in` = *inch* /
+`at` = *the Lao kip* class of defect at the root rather than by filtering: a function word never asks
+the dictionary a question. The concept keeps its dimension where one exists — `not` compiles,
+**`negation`** is a word he can reason about.
+
+**A closed class is typed, not flat.** The one KB collection that replaces tk1's four code lists
+(`_ANAPHORIC_PRONOUNS`, `_QUANTIFIER_*`, `_WH_*`, `_RELATIVE_PRONOUNS`) carries a TYPE per row,
+because "pronoun" is three jobs: **referential** (I, you, them, himself → an entity resolved from
+context) · **quantificational** (somebody, nobody, everyone → a quantifier, not a referent) ·
+**interrogative/relative** (who, what, whose → an unbound variable + question mood). Prepositions
+join it as role markers. Curated and exhaustive — English's closed classes are genuinely finite.
+An unresolvable `they` stays legal: unbound variable, low confidence, the brain may ask.
+
 **A category-2 set stated in code is a defect even when its contents are correct** — that is what the
 dictionary's `SEEDS_*` were, and E1 moves them.
 
@@ -183,7 +201,22 @@ and D are built once, against a base whose policy is already settled.)*
      «a unit of surface area equal to 100 square meters»), which a de-inflection guard fixes; and the
      function words cannot be fixed at all — `in` is #1 with 14,408 in-edges and means *inch*, `at`
      is #19 and means *the Lao kip*. Frequency earned by grammar, meaning supplied by a homograph.
-     **Like the pronouns, function words are curated IN or left out — never mined by frequency.**
+     **Superseded the same day by the second standing law:** function words and pronouns are neither
+     mined NOR curated in — they are COMPILED (see «content is defined, structure is compiled»
+     above). So the whole `in/at/by/as/on/through/over/up/but` head of the ranking is excluded by
+     PRINCIPLE, not by a guard, and `me`/`you` leave `SEEDS_IDENTITY` because they were never
+     dictionary business: a pronoun resolves to an entity before the dictionary is consulted.
+     `not` goes with them (pure structure) while **`negation` stays** — the concept he reasons
+     about. The de-inflection guard is still needed for `used/being/are/made/lacking/marked`.
+     **RULED 2026-08-25 (all five, on measured numbers):** `max_size` = **25,000, a safety rail**
+     (the depth cut is the policy — under the old 400 cap, k=50 gave a base of 588 words, SMALLER
+     than seeding nothing structural at all, because the cap deletes a whole ring instead of
+     trimming) · **k = 200** → 3,095 words / 4,445 keys, bar 23/23 · `must`/`need` keep **both** the
+     closed-class row and the dimension (a row is about a FORM's structural job, membership is about
+     a READING) · `one` excluded as a pronoun while `two` is a candidate — **accepted** as consistent
+     · degree and `-ly` adverbs stay **content** (`especially`, `usually`, `very` keep dimensions;
+     revisit only if the zip grows a degree operator at E2). Policy v2 lands as migration 0005;
+     v1 stays where it is — the collection is a ledger, not an edit.
      Seeds **grown generated-then-curated** (candidates proposed from
      resource centrality + the bar + tk1's own biography vocabulary, the closure each produces
      simulated, the Captain approving — never typed longer), **with `max_size` ruled in the same
@@ -245,6 +278,11 @@ copied across as written is a rebuild that inherited the defect.
 it).
 
 **Tasks**
+0. **The closed classes as typed KB rows** — ONE collection replacing tk1's four code lists, each row
+   carrying its type and its compiled meaning: referential (→ entity, resolved from context) ·
+   quantificational (→ quantifier) · interrogative/relative (→ unbound variable + question mood) ·
+   prepositions (→ role markers). Curated and exhaustive. It is born earlier if E1 needs it to
+   exclude function words from its seed ranking — one table, two consumers.
 1. **Skeleton adapter** — stanza behind the lib boundary, swappable (req 2); the torch-load patch
    and model-loading quirks contained in the adapter.
 2. **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an

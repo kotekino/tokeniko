@@ -72,9 +72,12 @@ class DictionaryPolicyDoc(LogicDocument, Timestamped):
     #: and None says so rather than a `True` that means nothing.
     value: Any = None
 
-    #: The group the entry was declared in, when its declaration was grouped: the seed families
-    #: (volitional · motion · effect · identity), which say WHY those words are seeded and would be
-    #: lost if the rows were a flat word list.
+    #: The group the entry was declared in, when its declaration was grouped — for a seed, the
+    #: SOURCE that argued for it, which would be lost if the rows were a flat word list: one of
+    #: requirement 8's purpose families (volitional · motion · effect · identity), which say what
+    #: this being must be able to think about, or `structure` (policy v2 onward), which says the
+    #: resource cannot define anything without the word. They are approved under different eyes, so
+    #: a seed that could not name its source could not later be retired under either.
     family: str | None = None
 
     #: Declared order within (version, kind). Load-bearing for seeds: the seed list is a statement,

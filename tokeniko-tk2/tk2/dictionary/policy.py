@@ -41,6 +41,12 @@ Row = Mapping[str, Any]
 #: which of the declared families put it there.
 KIND_SEED = "seed"
 
+#: The `family` of a seed the RESOURCE argued for: the definitional core, by in-degree over the
+#: definition digraph. Named here rather than in the migration that first wrote it because it is
+#: read — a caller that wants the PURPOSE half of a policy (the seed proposal does, every time it
+#: re-argues the structural half) has to be able to say which half is which.
+FAMILY_STRUCTURE = "structure"
+
 #: One closure cut. `name` is the `ClosurePolicy` field, `value` is what it is set to.
 KIND_CLOSURE = "closure"
 
@@ -85,9 +91,30 @@ def policy_version(rows: Iterable[Row]) -> int:
     return versions.pop()
 
 
+def latest_version(rows: Iterable[Row]) -> list[Row]:
+    """The rows of the NEWEST version present, for a caller holding the whole table.
+
+    `policy_version` refuses a mixed set on purpose — a build reads one version — so choosing which
+    one is a separate and explicit act, and this is it. Since 0005 the collection really does hold
+    two versions: v1 is not history to be cleaned up, it is what a manifest row recording v1 still
+    points at.
+    """
+    rows = list(rows)
+    if not rows:
+        raise PolicyRowsInvalid("no policy rows at all — there is no version to select.")
+    newest = max(r["version"] for r in rows)
+    return [r for r in rows if r["version"] == newest]
+
+
+def seed_rows(rows: Iterable[Row]) -> list[Row]:
+    """The seed rows themselves, in declared order — for a caller that needs more than the word:
+    which source argued for it (`family`) and what was written down about it (`note`)."""
+    return _of_kind(rows, KIND_SEED)
+
+
 def seeds_from_rows(rows: Iterable[Row]) -> tuple[str, ...]:
     """The declared seeds, in declared order. Requirement 8's families, as they were written down."""
-    return tuple(row["name"] for row in _of_kind(rows, KIND_SEED))
+    return tuple(row["name"] for row in seed_rows(rows))
 
 
 def closure_from_rows(rows: Iterable[Row], extra_seeds: tuple[str, ...] = ()) -> ClosurePolicy:

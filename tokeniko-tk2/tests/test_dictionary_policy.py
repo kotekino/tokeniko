@@ -12,13 +12,25 @@ Three things under test, in the order they matter:
      and both fingerprints move when what they cover moves.
   3. THE SNAPSHOT CANNOT DRIFT. Reading it verifies its own pin offline; a live check asserts it
      against the database's rows whenever a database is reachable.
+  4. THE RULING IS IN THE ROWS. Migration 0005's version 2 — purpose ∪ structure, the size cap
+     demoted to a rail — with version 1 still reading back as what T2b measured beside it. That the
+     200 structural seeds really are the ranking's top 200 needs the whole digraph and is checked
+     next door, in `tests/test_dictionary_proposal.py`.
 """
 
 import json
 
 import pytest
 
-from tests.seed import bar_rows, declared_config, policy_rows
+from tests.seed import (
+    bar_rows,
+    closed_class_forms,
+    declared_config,
+    policy_rows,
+    policy_rows_v2,
+    ruled_config,
+    structural_seeds,
+)
 from tk2.dictionary import policy
 from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
 
@@ -333,3 +345,133 @@ def test_the_snapshot_matches_the_database(clean_db):
 
     stored = list(clean_db[DictionaryBarDoc.Settings.name].find({}))
     assert policy.bar_fingerprint(stored) == policy.bar_snapshot()["fingerprint"]
+
+
+# ------------------------------------------------------------------------------------------------
+# 4 — policy v2: the Captain's ruling, as rows
+# ------------------------------------------------------------------------------------------------
+#
+# Offline, like section 1 and for the same reason: what is under test is a set of VALUES crossing a
+# medium. The one thing NOT checked here is that the 200 structural seeds really are the ranking's
+# top 200 — that needs the whole 68,779-word digraph and nltk's corpus, so it is a `wordnet` test
+# (`tests/test_dictionary_proposal.py`) and `tools/propose_seeds.py --verify` re-runs it beside the
+# base it produces.
+
+#: The fingerprint of policy v2 — purpose ∪ structure(top 200), the cap at 25,000, bar v1 unchanged.
+#: Written down here for T2B_FINGERPRINT's reason: it is what a build's manifest will record, and a
+#: constant a reader can find is worth more than one derived from the thing under test.
+RULED_FINGERPRINT = "90f51226938d29b7b2a46dba40f06b4aa1bf2b50c6959543795536292501a50e"
+
+
+def test_the_ruled_policy_is_purpose_union_structure():
+    """The whole of the 2026-08-25 ruling in one assertion: two sources, one set, 224 rows because
+    seven words were argued for twice."""
+    config = policy.config_from_rows(policy_rows_v2(), bar_rows())
+    assert config == ruled_config()
+    assert config.fingerprint() == RULED_FINGERPRINT
+    assert len(config.declared_seeds) == 224
+    assert len(config.seeds) == 228          # the declared 224, plus the bar's own words
+    assert config.closure == ClosurePolicy(max_depth=2, max_size=25_000, senses="primary")
+
+
+def test_the_identity_family_kept_the_concepts_and_lost_the_function_words():
+    """The second standing law, as values. `me` and `you` resolve to an ENTITY before the dictionary
+    is consulted; `not` and `be` compile. What stays is what each of them is ABOUT."""
+    seeds = {r["name"]: r for r in policy_rows_v2() if r["kind"] == policy.KIND_SEED}
+    identity = [r["name"] for r in policy_rows_v2() if r.get("family") == "identity"]
+    assert identity == ["negation", "being", "same", "different"]
+    for gone in ("me", "you", "not", "be"):
+        assert seeds.get(gone) is None or seeds[gone]["family"] != "identity"
+
+
+def test_every_seed_row_names_the_source_that_argued_for_it():
+    """Purpose and structure are approved under different eyes, so a seed that could not say which
+    one put it there could not later be retired under either."""
+    seeds = [r for r in policy_rows_v2() if r["kind"] == policy.KIND_SEED]
+    assert {r["family"] for r in seeds} == {
+        "volitional", "motion", "effect", "identity", policy.FAMILY_STRUCTURE
+    }
+    assert all(r["note"].strip() for r in seeds)
+
+    structural = [r for r in seeds if r["family"] == policy.FAMILY_STRUCTURE]
+    assert len(structural) == 193, "200 minus the seven purpose already claimed"
+    # The rank and the in-degree travel in the note, because «structure argued for this» means
+    # exactly «this many definitions name it» and a rank alone would hide that.
+    by_word = {r["name"]: r for r in seeds}
+    assert "#1 of the cleaned in-degree ranking, named by 4,044" in by_word["use"]["note"]
+    assert "requirement 8" in by_word["want"]["note"]
+
+
+def test_a_word_both_sources_argued_for_keeps_both_arguments():
+    """`land` is a motion seed AND #197 of the ranking. One row — the unique index allows no other
+    answer — so the purpose family wins the column and the structural rank goes in the note."""
+    by_word = {r["name"]: r for r in policy_rows_v2() if r["kind"] == policy.KIND_SEED}
+    assert by_word["land"]["family"] == "motion"
+    assert "#197" in by_word["land"]["note"]
+
+    both = [w for w, _rank, _degree in structural_seeds() if by_word[w]["family"] != policy.FAMILY_STRUCTURE]
+    assert both == ["leave", "move", "food", "same", "come", "different", "land"]
+    names = [r["name"] for r in policy_rows_v2() if r["kind"] == policy.KIND_SEED]
+    assert len(names) == len(set(names)), "one form, one row — the unique index would say so louder"
+
+
+def test_the_structural_seeds_are_a_ranking_and_read_back_as_one():
+    """The rows are in rank order and the in-degrees never rise, which is what «top 200» means. A
+    list that had been re-sorted, hand-edited or partly re-derived would fail here."""
+    seeds = structural_seeds()
+    assert len(seeds) == 200
+    assert [rank for _word, rank, _degree in seeds] == list(range(1, 201))
+    degrees = [degree for _word, _rank, degree in seeds]
+    assert degrees == sorted(degrees, reverse=True)
+    assert seeds[0] == ("use", 1, 4044)
+    assert seeds[-1] == ("sexual", 200, 240)
+
+    declared = policy.seeds_from_rows(policy_rows_v2())
+    assert all(word in declared for word, _rank, _degree in seeds)
+
+
+def test_no_structural_seed_is_a_closed_class_form():
+    """The exclusion by PRINCIPLE, checked on the OUTPUT rather than on the intention: `in` heads the
+    raw ranking with 14,408 in-edges and means *inch*, and the one thing that must never happen is
+    that a function word arrives as a dimension after all."""
+    forms = set(closed_class_forms())
+    assert not [word for word, _rank, _degree in structural_seeds() if word in forms]
+
+
+def test_the_size_cap_row_says_it_is_no_longer_a_design_knob():
+    """The ruling's reasoning has to survive in the medium the rows have for it, or the next reader
+    meets 25,000 with nothing to tell him why it is not a number to tune."""
+    cuts = {r["name"]: r for r in policy_rows_v2() if r["kind"] == policy.KIND_CLOSURE}
+    assert cuts["max_size"]["value"] == 25_000
+    note = cuts["max_size"]["note"]
+    assert "NOT A DESIGN KNOB" in note
+    assert "588" in note and "50" in note, "the measurement that demoted it travels with it"
+    assert "THE POLICY" in cuts["max_depth"]["note"], "the depth cut is what was left in charge"
+
+
+def test_version_1_is_not_touched_by_version_2():
+    """`dictionary_policy` is a LEDGER. v1 still rebuilds the policy T2b measured, with v2 declared
+    beside it — which is the only thing that keeps an old manifest row meaningful."""
+    assert policy.policy_version(policy_rows()) == 1
+    assert policy.policy_version(policy_rows_v2()) == 2
+    assert policy.config_from_rows(policy_rows(), bar_rows()).fingerprint() == T2B_FINGERPRINT
+    assert policy.policy_fingerprint(policy_rows()) != policy.policy_fingerprint(policy_rows_v2())
+
+
+def test_the_newest_version_is_selected_explicitly_and_never_guessed():
+    """What a tool reading the whole table has to do. `policy_version` refuses a mixed set; choosing
+    is a separate, named act, so nothing can drift into measuring a superseded policy by accident."""
+    both = policy_rows() + policy_rows_v2()
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.policy_version(both)
+    assert policy.policy_version(policy.latest_version(both)) == 2
+    assert policy.latest_version(policy_rows()) == policy_rows()
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.latest_version([])
+
+
+def test_the_bar_did_not_move_with_the_seeds():
+    """v2 is measured against the same eighteen pairs. The bar is append-mostly and a policy ruling
+    is not an occasion to quietly re-declare the expectation the ruling will be judged by."""
+    assert ruled_config().bar == policy.snapshot_bar()
+    assert len(ruled_config().bar) == 18

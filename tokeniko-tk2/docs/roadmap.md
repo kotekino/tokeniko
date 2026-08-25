@@ -15,8 +15,8 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [x] closure engine (keys as law, ring boundary visible, policy fingerprinted) — `34e43c8`
 - [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
 - [x] proper-noun/abbreviation refusal (`or`=Oregon out of the base) — `1e7cad3`
-- [ ] policy as rows — the mechanism (collection, bar ledger, manifest, offline snapshot)
-- [ ] policy as rows — the ruling (seeds generated-then-curated + `max_size` + pronouns curated in)
+- [x] policy as rows — the mechanism (collection, bar ledger, manifest, offline snapshot) — `e480ccd`
+- [ ] policy as rows — the ruling: k=200, rail 25,000, closed classes as typed KB rows (in flight)
 - [ ] R at scale + curation pipeline (Captain's hand on approve)
 - [ ] D at scale (derivational down-weight DECIDED, membership repair)
 - [ ] the bar grown + map regenerated + the live build (E1 gate)

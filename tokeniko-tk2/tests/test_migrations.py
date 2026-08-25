@@ -20,8 +20,11 @@ from tk2.datatier import traps
 from tests.seed import (
     all_poles,
     bar_rows,
+    closed_class_forms,
+    closed_class_rows,
     param_rows,
     policy_rows,
+    policy_rows_v2,
     sphere_poles,
 )
 
@@ -83,10 +86,11 @@ def test_the_checksum_follows_the_file(tmp_path):
 def test_the_real_directory_is_found_by_default():
     """The package finds `db/` beside itself, so the runner works from any working directory."""
     found = migrations.discover()
-    assert [m.label for m in found][:3] == [
+    assert [m.label for m in found][:4] == [
         "0001_create_the_world",
         "0002_bump_the_dictionary_epoch",
         "0003_the_dictionary_policy_becomes_rows",
+        "0004_the_closed_classes_become_rows",
     ]
 
 
@@ -324,7 +328,10 @@ def test_0003_creates_the_dictionary_tables_including_the_ledger(created):
 
 @live
 def test_0003_writes_the_policy_and_the_bar_as_declared(created):
-    stored_policy = list(created["dictionary_policy"].find({}))
+    """VERSION-EXPLICIT since 0005, and that is the table working rather than the test bending: the
+    collection holds v1 AND v2, a v1 manifest row still has to point at something readable, and a
+    query that named no version would be asking «the policy» of a ledger that holds two."""
+    stored_policy = [r for r in created["dictionary_policy"].find({}) if r["version"] == 1]
     stored_bar = list(created["dictionary_bar"].find({}))
 
     assert {(r["kind"], r["name"]) for r in stored_policy} == {
@@ -343,11 +350,13 @@ def test_0003_writes_the_policy_and_the_bar_as_declared(created):
 @live
 def test_the_policy_read_back_from_the_database_is_the_one_that_was_declared(created):
     """The seam end to end: rows out of mongo, through the pure reader, into the value object the
-    engine takes as an argument — and it fingerprints to what T2b measured."""
+    engine takes as an argument — and version 1 still fingerprints to what T2b measured, with 0005
+    applied on top of it. THAT is the ledger's promise: a recorded hash keeps naming the policy the
+    build that recorded it really ran."""
     from tests.test_dictionary_policy import T2B_FINGERPRINT
     from tk2.dictionary import policy
 
-    stored_policy = list(created["dictionary_policy"].find({}))
+    stored_policy = [r for r in created["dictionary_policy"].find({}) if r["version"] == 1]
     stored_bar = list(created["dictionary_bar"].find({}))
     config = policy.config_from_rows(stored_policy, stored_bar)
 
@@ -355,6 +364,56 @@ def test_the_policy_read_back_from_the_database_is_the_one_that_was_declared(cre
     assert policy.policy_version(stored_policy) == 1
     assert policy.bar_version(stored_bar) == 1
     assert policy.bar_fingerprint(stored_bar) == policy.bar_snapshot()["fingerprint"]
+
+
+@live
+def test_reading_the_policy_without_naming_a_version_is_refused(created):
+    """The other half of the same lesson, as behaviour rather than as care: the whole table read at
+    once is not a policy, and `policy_version` says so instead of picking one."""
+    from tk2.dictionary import policy
+
+    stored = list(created["dictionary_policy"].find({}))
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.policy_version(stored)
+    assert policy.policy_version(policy.latest_version(stored)) == 2
+
+
+# ------------------------------------------------------------------------------------------------
+# 0004 puts English's closed classes in rows
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0004_writes_the_closed_classes_as_declared(created):
+    """One table replacing tk1's four hand lists, and E1's exclusion set at the same time."""
+    stored = list(created["closed_classes"].find({}))
+    declared = closed_class_rows()
+
+    assert {(r["form"], r["word_class"], r["role"]) for r in stored} == {
+        (r["form"], r["word_class"], r["role"]) for r in declared
+    }
+    assert {r["version"] for r in stored} == {1}
+    # E3's column is empty by construction — what a form compiles TO is a tkzip question.
+    assert all(r["compiled"] == {} for r in stored)
+
+
+@live
+def test_the_closed_classes_read_back_as_the_exclusion_set(created):
+    """What `tools/propose_seeds.py` reads when a body is reachable: the same forms it would have
+    read off the migration file, so a proposal measured before the apply and one measured after are
+    the same measurement."""
+    stored = list(created["closed_classes"].find({}))
+    assert {r["form"] for r in stored if " " not in r["form"]} == set(closed_class_forms())
+
+
+@live
+def test_the_body_cannot_write_the_closed_classes(created):
+    """A contingent fact about one language, and still not his to edit: it arrives by migration."""
+    from tk2.core.models import ClosedClassDoc
+    from tk2.core.write_class import WriteClassViolation
+
+    with pytest.raises(WriteClassViolation):
+        ClosedClassDoc.insert_one({"form": "sneak"})
 
 
 @live
@@ -367,3 +426,55 @@ def test_the_body_cannot_write_the_dictionarys_policy(created):
     for model in (DictionaryPolicyDoc, DictionaryBarDoc, DictionaryBuildDoc):
         with pytest.raises(WriteClassViolation):
             model.insert_one({"whatever": 1})
+
+
+# ------------------------------------------------------------------------------------------------
+# 0005 rules the seeds and demotes the size cap
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0005_writes_policy_version_2_beside_version_1_and_not_over_it(created):
+    """A ledger, not an edit. Both versions are in the table afterwards, and v1 is untouched — the
+    one property that makes an old manifest row mean anything at all."""
+    stored = list(created["dictionary_policy"].find({}))
+    v1 = [r for r in stored if r["version"] == 1]
+    v2 = [r for r in stored if r["version"] == 2]
+
+    assert {r["version"] for r in stored} == {1, 2}
+    assert len(v1) == len(policy_rows())
+    assert len(v2) == len(policy_rows_v2())
+    assert {(r["kind"], r["name"]) for r in v2} == {(r["kind"], r["name"]) for r in policy_rows_v2()}
+    # The bar did not move with it: it is a separate, append-mostly table and v2 is measured against
+    # the same eighteen pairs.
+    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+
+
+@live
+def test_the_ruled_policy_reads_back_as_the_one_the_captain_ruled(created):
+    """The seam again, at version 2: rows out of mongo, through the pure reader, and the closure
+    cuts and seed count are the ones the ruling names."""
+    from tests.test_dictionary_policy import RULED_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    stored_bar = list(created["dictionary_bar"].find({}))
+    config = policy.config_from_rows(stored, stored_bar)
+
+    assert policy.policy_version(stored) == 2
+    assert config.closure.max_size == 25_000
+    assert config.closure.max_depth == 2
+    assert config.fingerprint() == RULED_FINGERPRINT
+
+
+@live
+def test_a_seed_cannot_hold_two_rows_in_one_version(created):
+    """The unique index, on the case that would really have hit it: `land` is a purpose seed AND
+    #197 of the structural ranking, and a union that wrote it twice would have failed here."""
+    from pymongo.errors import DuplicateKeyError
+
+    with pytest.raises(DuplicateKeyError):
+        created["dictionary_policy"].insert_one(
+            {"version": 2, "kind": "seed", "name": "land", "value": None,
+             "family": "structure", "position": 999, "note": "", "created_at": 1}
+        )

@@ -74,18 +74,21 @@ def test_the_named_collections_are_all_present():
         "channel_registers",
         "dictionary_policy",
         "dictionary_bar",
+        "closed_classes",
     }
 
 
 def test_the_architecture_is_rows_not_code():
     """The Captain's seam: even invariant data is r-rows. The heart's anatomy and the micro-nn
-    declarations are ARCHITECTURE; the dictionary's policy and bar are CURATION (the standing law of
-    2026-08-25). Both kinds are `logic` — changing either is a migration, never a new binary."""
+    declarations are ARCHITECTURE; the dictionary's policy and bar and English's closed
+    classes are CURATION (the standing law of 2026-08-25). Both kinds are `logic` — changing either
+    is a migration, never a new binary."""
     assert {m.Settings.name for m in LOGIC_MODELS} == {
         "heart_anatomy",
         "micro_nn_instances",
         "dictionary_policy",
         "dictionary_bar",
+        "closed_classes",
     }
 
 
