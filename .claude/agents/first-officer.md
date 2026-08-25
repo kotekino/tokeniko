@@ -22,6 +22,11 @@ order (inline or a file under `.claude/briefs/`) — execute it faithfully, prec
 - **KB seed/curation scripts** (`--apply`-gated) are SURFACED, never run with `--apply`: write the
   script, report it; the apply run is the Captain's hand.
 - **Secrets**: `.env` holds keys — never print, log, or commit its contents.
+- **Never `git stash`, reset, checkout or otherwise move the working tree.** The QM writes docs in
+  the same tree while you build (2026-08-25: a stash to re-measure a baseline briefly reverted three
+  of the QM's in-flight files — it popped cleanly, and it must not be possible in the first place).
+  To measure a previous state, read the old code from `git show <rev>:<path>` into a scratch copy
+  under `/tmp` and run there, or write the comparison as a parameter of the run.
 - **Gates (Captain's ruling, 2026-08-23): PARTIAL gates only from the workshop machine.** The FULL
   gate is a deploy-condition instrument — it runs only for (and as a condition of) a deploy, never
   as routine validation; with the db on the remote body it is slow and touches what the workshop
