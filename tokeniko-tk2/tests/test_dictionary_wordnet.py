@@ -49,9 +49,13 @@ def test_primary_means_the_first_synset_per_pos(provider):
 
 
 def test_the_pos_lists_are_the_ones_the_pos_split_was_measured_on(provider):
+    """`left` is the exception and the exception is requirement 21: WordNet answers `wn.synsets`
+    with all nineteen of `leave`'s verb senses, having walked back through morphy on its own. Since
+    the repair the provider reports only the POS `left` is a base form of, so `left.v` — a duplicate
+    of `leave.v` — is not among the dimensions it costs."""
     assert provider.parts_of_speech("eat") == ("v",)
     assert provider.parts_of_speech("land") == ("n", "v")
-    assert provider.parts_of_speech("left") == ("n", "v", "a", "r")
+    assert provider.parts_of_speech("left") == ("n", "a", "r")
 
 
 def test_the_satellite_adjective_arrives_as_an_adjective(provider):
@@ -67,10 +71,31 @@ def test_morphy_lands_an_inflection_on_its_lemma(provider):
 
 def test_left_is_leaves_participle_and_wordnet_knows_it_REQUIREMENT_21(provider):
     """The whole of requirement 21 in one fact: morphy('left', 'v') is `leave`, and morphy('left',
-    'n') is `left`. Both answers are correct; the defect is that the miner picks by surface form
-    first and so takes the direction every time. `use`/`used` is the same disease."""
-    assert provider.lemmas("left")[0] == "leave"      # verbs are tried first
-    assert "use" in provider.lemmas("used")
+    'n') is `left`. Both answers are correct — which is why the repair asks per POS and keeps both
+    readings, instead of the old «surface form first, then stop» that took the direction every time.
+    `use`/`used` is the same disease: read as a verb, `used` is `use`."""
+    assert provider.lemma("left", "v") == "leave"
+    assert provider.lemma("left", "n") == "left"
+    assert provider.lemmas("left") == ("left", "leave")
+    assert provider.lemma("used", "v") == "use"
+    assert provider.lemma("used", "a") == "used"
+
+
+def test_wordnets_own_senses_are_the_only_ones_a_word_speaks_for_REQUIREMENT_21(provider):
+    """Where the duplicate dimension actually died. `wn.synsets("used")` hands back `use`'s six verb
+    senses; a provider that repeated them would mint `used.v` and give `use.v` a second name — and
+    would write `use`'s definitions into `used`'s row of the definition digraph.
+
+    What survives is `used` the genuine adjective. Note the parallel fact on the other collision:
+    `left`'s adjective sense IS `leftover.s.01`, «not used up» — «something left over» was an
+    adjective all along, and the repair keeps that reading while refusing the verb one.
+    """
+    assert provider.parts_of_speech("used") == ("a",)
+    assert "use" not in provider.gloss("used")
+    assert [s.name() for s in provider.lemma_synsets("used")] == [
+        "used.a.01", "exploited.s.01", "secondhand.s.02",
+    ]
+    assert "leftover.s.01" in [s.name() for s in provider.lemma_synsets("left")]
 
 
 def test_the_lexicon_is_what_was_handed_in(provider):
@@ -79,22 +104,54 @@ def test_the_lexicon_is_what_was_handed_in(provider):
 
 
 # ------------------------------------------------------------------------------------------------
-# THE FINDING: the real stop list eats the Captain's own example
+# THE RULING (2026-08-25): lexicon membership outranks the stop list
 # ------------------------------------------------------------------------------------------------
 
 
-def test_nltks_stop_list_contains_the_words_the_closure_example_is_made_of(provider):
-    """`me`, `you`, `not` and `be` are all nltk stop words, so on the real resource the Captain's
-    closure example (me -> not you | you -> not me | not -> negation) cannot form: its edges are
-    filtered out before the lexicon is consulted.
+def test_a_stop_word_that_is_a_dimension_still_speaks_THE_RULING():
+    """`in` is an nltk stop word AND a WordNet lemma, so where it is a lexicon word it names its
+    dimension. This is the ruling's mechanism on the real resource: 69 of nltk's 198 English stop
+    words are WordNet lemmas, and the list may no longer delete any of them.
 
-    Pinned as a fact, not fixed here — whether the stop list should yield to lexicon membership is a
-    ruling, and the prototype's order (stop words first) is what every measured result so far was
-    produced under.
+    The same provider without `in` in its lexicon still drops the token — because it is not a word
+    of that base, which is the honest reason, not a filter's opinion.
+    """
+    with_in = wn_adapter.WordNetProvider(["eat", "take", "solid", "food", "in"])
+    without = wn_adapter.WordNetProvider(["eat", "take", "solid", "food"])
+    assert "in" in with_in.stopwords()
+    assert closure.build_digraph(with_in)["eat"] == {"take", "solid", "food", "in"}
+    assert closure.build_digraph(without)["eat"] == {"take", "solid", "food"}
+
+
+def test_the_captains_closure_example_cannot_form_on_wordnet_AND_WHY(provider):
+    """Measured 2026-08-25, because the answer moved and the old reason is no longer the reason.
+
+    His example is me -> not you | you -> not me | not -> negation | negation -> not. The stop list
+    was blamed for it (`me`, `you`, `not` and `be` are all nltk stop words) and the ruling has now
+    taken that objection away. It still cannot form, for two facts about the RESOURCE:
+
+      - `you` is not a WordNet lemma at all. It has no synsets, so it is not in the 83,082-word
+        lexicon and the closure reports it as a missing seed rather than a word it declined to
+        reach. WordNet has no pronouns to speak of.
+      - WordNet's `me` is the state of Maine, `be` is beryllium, `or` is Oregon. The lemma inventory
+        answers a function word with whatever proper noun or chemical symbol is spelled that way.
+
+    The example is a statement of the METHOD (definitions written in the lexicon's own words close
+    on themselves), and the method is sound; what WordNet cannot supply is the vocabulary it was
+    stated in.
     """
     stops = provider.stopwords()
-    assert {"me", "you", "not", "be"} <= stops
-    assert "same" in stops and "different" not in stops
+    assert {"me", "you", "not", "be"} <= stops          # the list still says so
+    assert "you" not in wn_adapter.wordnet_lexicon()    # no synsets: not a word of the base at all
+    # `you` cannot be a member of a WordNet-derived lexicon, so the world his example needs is
+    # already impossible; what the other three do is the rest of the answer.
+    small = wn_adapter.WordNetProvider(["me", "not", "negation"])
+    assert small.gloss("me") == "a state in New England"
+    graph = closure.build_digraph(small)
+    assert graph["me"] == set()
+    assert graph["not"] == {"negation"}                 # «negation of a word or group of words»
+    assert graph["negation"] == set()                   # names statement, denial, refusal — never `not`
+    assert closure.seed_closure(graph, ("me", "you")).missing == ("you",)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -103,17 +160,19 @@ def test_nltks_stop_list_contains_the_words_the_closure_example_is_made_of(provi
 
 
 def test_sense_keys_are_word_anchored_because_wordnets_names_are_not(provider):
-    """The argument for the convention, made against the resource: `left`'s verb senses are called
-    `leave.v.01`, `exit.v.01`, `bequeath.v.01` — WordNet names a synset after whichever lemma heads
-    it. Those names do not truncate to `left.v`, and truncation to the base key is the operation the
-    ride-on-the-base architecture performs constantly. So the key is ours and the synset name is
-    kept beside it as provenance."""
+    """The argument for the convention, made against the resource: WordNet names a synset after
+    whichever lemma heads it, so `left`'s fourth noun sense is called `left_field.n.01` and its
+    second adjective sense `leftover.s.01`. Neither truncates to `left.n` or `left.a`, and
+    truncation to the base key is the operation the ride-on-the-base architecture performs
+    constantly. So the key is ours and the synset name is kept beside it as provenance."""
     senses = wn_adapter.WordNetProvider(["left"]).sense_keys("left")
-    verb_senses = [s for s in senses if s["base"] == "left.v"]
-    assert verb_senses[0]["key"] == "left.v.01"
-    assert verb_senses[0]["synset"] == "leave.v.01"
-    assert {s["synset"] for s in verb_senses} & {"exit.v.01", "bequeath.v.01"}
+    named = {s["key"]: s["synset"] for s in senses}
+    assert named["left.n.04"] == "left_field.n.01"
+    assert named["left.a.02"] == "leftover.s.01"
     assert all(keys.base_of(s["key"]) == s["base"] for s in senses)
+    # And the senses that are not this word's at all are gone: `leave.v.01` is `leave`'s key, not a
+    # sense of `left` (requirement 21).
+    assert not any(s["base"] == "left.v" for s in senses)
 
 
 def test_the_sense_numbering_restarts_per_pos(provider):
@@ -123,7 +182,6 @@ def test_the_sense_numbering_restarts_per_pos(provider):
         first_of.setdefault(sense["base"], sense["key"])
     assert first_of == {
         "left.n": "left.n.01",
-        "left.v": "left.v.01",
         "left.a": "left.a.01",
         "left.r": "left.r.01",
     }
@@ -146,7 +204,7 @@ def test_the_engine_runs_on_the_real_provider(provider):
     """Small, but it is the seam under test: the pure engine and the real resource, meeting only
     through the protocol."""
     graph = closure.build_digraph(provider)
-    assert graph["eat"] == {"take", "solid", "food"}   # «take in solid food», `in` dropped as a stop word
+    assert graph["eat"] == {"take", "solid", "food"}   # «take in solid food» — `in` is not a word of this base
     result = closure.seed_closure(graph, ("eat",), ClosurePolicy(max_depth=1))
     assert set(result.words) == {"eat", "take", "solid", "food"}
 

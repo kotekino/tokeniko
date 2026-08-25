@@ -6,7 +6,8 @@ module-level globals, which a `--depth 3` flag could quietly override without th
 seeing it. Here the policy is a VALUE: a run takes a config object, the manifest records that
 object's fingerprint, and a variant is a different object rather than a mutated global.
 
-What is declared here today is the CLOSURE policy and THE BAR. The relation weights (R) and the
+What is declared here today is the CLOSURE policy, THE BAR, and the date of the reduction's own
+law (see `REDUCTION_RULES`). The relation weights (R) and the
 gloss-overlap parameters (D) join them when their builders land — a build that has more policy has
 a different fingerprint, which is the mechanism working, not a problem with it.
 
@@ -24,6 +25,19 @@ from tk2.dictionary import keys
 
 SenseMode = Literal["primary", "all"]
 Verdict = Literal["NEAR", "FAR"]
+
+
+# ------------------------------------------------------------------------------------------------
+# the reduction's law, dated
+# ------------------------------------------------------------------------------------------------
+
+# NOT a knob — there is no other setting, and the two decisions behind this date are law: gloss
+# mining keeps every POS-aware reading of a token (requirement 21) and the stop list yields to
+# lexicon membership (the Captain's ruling). It is hashed anyway, because the fingerprint's claim is
+# that two builds sharing it were measured under the same policy, and on 2026-08-25 the mining law
+# moved underneath a config that could not see it. A build from before that date and one from after
+# must not be able to present the same hash. Bump the date when the reduction's law moves again.
+REDUCTION_RULES = "2026-08-25"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -160,6 +174,7 @@ class DictionaryConfig:
         """The canonical form the fingerprint is taken over — and the form the manifest stores, so a
         later reader can diff two builds' policies instead of trusting two hashes to differ."""
         return {
+            "reduction_rules": REDUCTION_RULES,
             "closure": asdict(self.closure),
             "declared_seeds": list(self.declared_seeds),
             "seeds": list(self.seeds),

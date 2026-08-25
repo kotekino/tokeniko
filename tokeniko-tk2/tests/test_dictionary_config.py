@@ -2,6 +2,7 @@
 
 import pytest
 
+from tk2.dictionary import config as config_module
 from tk2.dictionary.config import STANDING, BarPair, ClosurePolicy, DictionaryConfig, bar_words
 
 
@@ -50,6 +51,22 @@ def test_the_canonical_form_carries_the_policy_itself_not_only_its_hash():
     assert blob["closure"]["max_depth"] == 2
     assert blob["bar"][0]["a"] == "eat.v"
     assert "why" in blob["bar"][0], "a bar pair's reason is part of the declaration"
+
+
+def test_the_reductions_own_law_is_inside_the_fingerprint():
+    """The gap this closes: on 2026-08-25 the mining law moved (requirement 21's repair, and the
+    ruling that lexicon membership outranks the stop list) without one field of the config moving
+    with it — so two builds measured under different reductions could have presented the same hash
+    and the manifest would have sworn they were comparable."""
+    blob = STANDING.as_dict()
+    assert blob["reduction_rules"] == config_module.REDUCTION_RULES
+    before = STANDING.fingerprint()
+    config_module.REDUCTION_RULES = "1999-01-01"
+    try:
+        assert STANDING.fingerprint() != before
+    finally:
+        config_module.REDUCTION_RULES = blob["reduction_rules"]
+    assert STANDING.fingerprint() == before
 
 
 def test_extra_seeds_are_a_runs_own_argument():

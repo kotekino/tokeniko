@@ -27,10 +27,15 @@ from tk2.dictionary import keys
 # rather than nltk's own LookupError, which is forty lines of ASCII art.
 REQUIRED_CORPORA = ("wordnet", "omw-1.4", "stopwords")
 
-# The order morphy is tried in. Verbs first: a gloss is written in verbs and the inflected forms that
-# need lemmatising are overwhelmingly verbal («takes in solid food»). The prototype's order, kept —
-# it decides which lemma wins for an ambiguous surface form, so changing it changes the base.
-MORPHY_ORDER = ("v", "n", "a", "r")
+# No morphy ORDER lives here any more, and it is worth saying why rather than leaving the absence to
+# be re-filled. The prototype had one (verbs first) because the miner took the first lemma that was
+# a lexicon word and stopped, so the order decided which reading became the base. Since requirement
+# 21's repair nothing picks a winner among a token's readings: the reduction walks the whole POS
+# alphabet (`keys.POS_ORDER`) and keeps them all.
+
+# A cache sentinel: `lemma()` answers None for «not that part of speech at all», which is a real
+# answer and has to be cacheable as one.
+_UNCACHED = object()
 
 
 class CorpusMissing(RuntimeError):
@@ -82,7 +87,8 @@ class WordNetProvider:
         self._lexicon = tuple(dict.fromkeys(keys.normalize_word(w) for w in lexicon))
         self._gloss_cache: dict[tuple[str, str], str] = {}
         self._pos_cache: dict[str, tuple[str, ...]] = {}
-        self._lemma_cache: dict[str, tuple[str, ...]] = {}
+        self._lemma_cache: dict[tuple[str, str], str | None] = {}
+        self._synset_cache: dict[str, tuple] = {}
         self._stopwords = frozenset(nltk_stopwords.words("english"))
 
     # -- the protocol ----------------------------------------------------------------------------
@@ -100,10 +106,12 @@ class WordNetProvider:
         return cached
 
     def parts_of_speech(self, word: str) -> tuple[str, ...]:
+        """The POS the word is a BASE FORM of — read off `lemma_synsets`, so it can never disagree
+        with the senses this provider is willing to speak about."""
         cached = self._pos_cache.get(word)
         if cached is None:
             found: list[str] = []
-            for synset in wn.synsets(word):
+            for synset in self.lemma_synsets(word):
                 pos = keys.normalize_pos(synset.pos())
                 if pos not in found:
                     found.append(pos)
@@ -111,33 +119,54 @@ class WordNetProvider:
             self._pos_cache[word] = cached
         return cached
 
-    def lemmas(self, token: str) -> tuple[str, ...]:
-        """The base forms morphy can reach, in `MORPHY_ORDER`, deduplicated.
-
-        This is the surface of requirement 21. Today it answers per-token and the caller takes the
-        first hit that is a lexicon word — which is how «something *left* over» reached `left` the
-        direction instead of `leave`. The POS-aware repair lands here.
-        """
-        cached = self._lemma_cache.get(token)
-        if cached is None:
-            found: list[str] = []
-            for pos in MORPHY_ORDER:
-                lemma = wn.morphy(token, pos)
-                if lemma and lemma not in found:
-                    found.append(lemma)
-            cached = tuple(found)
-            self._lemma_cache[token] = cached
+    def lemma(self, token: str, pos: str) -> str | None:
+        """morphy, one part of speech at a time — `left` read as a verb is `leave`, read as a noun
+        it is `left`, and requirement 21 is about the difference."""
+        pos = keys.normalize_pos(pos)
+        cached = self._lemma_cache.get((token, pos), _UNCACHED)
+        if cached is _UNCACHED:
+            cached = wn.morphy(token, pos)
+            self._lemma_cache[(token, pos)] = cached
         return cached
+
+    def lemmas(self, token: str) -> tuple[str, ...]:
+        """Every base form morphy reaches, over the POS alphabet, deduplicated. Not a ranking: the
+        reduction takes them all."""
+        found: list[str] = []
+        for pos in keys.POS_ORDER:
+            lemma = self.lemma(token, pos)
+            if lemma and lemma not in found:
+                found.append(lemma)
+        return tuple(found)
 
     def stopwords(self) -> frozenset[str]:
         return self._stopwords
 
     # -- beyond the protocol: what the dictionary layer will need --------------------------------
 
+    def lemma_synsets(self, word: str) -> tuple:
+        """The synsets the word is a LEMMA of — never the ones it only reaches by inflection.
+
+        `wn.synsets` runs morphy for you, so it answers `used` with all six of `use`'s verb senses
+        and `left` with all nineteen of `leave`'s. Convenient for a search box, ruinous for a
+        dimension: those senses are another word's key, and mining them here is exactly how `used.v`
+        and `left.v` were minted — duplicate dimensions of `use.v` and `leave.v` (requirement 21).
+
+        The test is lemma membership rather than `morphy(word, pos) == word` because it asks the
+        resource the question directly: does this synset actually contain this word? It also keeps
+        `left`'s honest adjective sense — WordNet's `leftover.s.01` lists `left` among its lemmas,
+        which is «something left over» being an adjective all along.
+        """
+        cached = self._synset_cache.get(word)
+        if cached is None:
+            cached = tuple(s for s in wn.synsets(word) if word in _lemma_names(s))
+            self._synset_cache[word] = cached
+        return cached
+
     def synsets(self, word: str, senses: str = "primary"):
         """The senses that speak for a word. `primary` = the first synset per POS, which is exactly
         what the Jurassic build used; `all` = the full sense list, denser and noisier."""
-        found = wn.synsets(word)
+        found = self.lemma_synsets(word)
         if senses == "all":
             return found
         seen, keep = set(), []
@@ -151,7 +180,7 @@ class WordNetProvider:
     def synsets_of_key(self, key: str, senses: str = "primary"):
         """The senses behind ONE dimension — `land.v` asks WordNet only about the verb."""
         word, pos = keys.split_key(key)
-        found = [s for s in wn.synsets(word) if keys.normalize_pos(s.pos()) == pos]
+        found = [s for s in self.lemma_synsets(word) if keys.normalize_pos(s.pos()) == pos]
         return found[:1] if senses == "primary" and found else found
 
     def sense_keys(self, word: str) -> list[dict]:
@@ -165,7 +194,7 @@ class WordNetProvider:
         """
         out: list[dict] = []
         counters: dict[str, int] = {}
-        for synset in wn.synsets(word):
+        for synset in self.lemma_synsets(word):
             pos = keys.normalize_pos(synset.pos())
             counters[pos] = counters.get(pos, 0) + 1
             out.append(
@@ -177,6 +206,12 @@ class WordNetProvider:
                 }
             )
         return out
+
+
+def _lemma_names(synset) -> frozenset[str]:
+    """A synset's lemmas as the key convention spells them — lower case, underscores for spaces,
+    which is WordNet's own multiword form."""
+    return frozenset(lemma.name().lower() for lemma in synset.lemmas())
 
 
 # ------------------------------------------------------------------------------------------------

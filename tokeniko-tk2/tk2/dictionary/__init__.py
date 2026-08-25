@@ -9,7 +9,8 @@ row — the body reads the base, it never writes it.
                     (`eat.v.01`) and are not dimensions. One module, one truth.
   - `config.py`   — the declared policy: seeds, the depth cut, the bar. Hashed into the manifest
                     before it measures anything (tooling req. 4).
-  - `glosses.py`  — the `GlossProvider` protocol and the reduction of a definition to lexicon words.
+  - `glosses.py`  — the `GlossProvider` protocol, the reduction of a definition to lexicon words,
+                    and the base-form rule that decides which POS may mint a dimension (req. 21).
   - `closure.py`  — the definition digraph, its closed sets, the seed closure and its two cuts.
   - `wordnet.py`  — the real provider. Imports nltk, so it is NOT imported from here: the engine has
                     to stay runnable, and testable, with no corpus on the machine.
@@ -31,7 +32,13 @@ from tk2.dictionary.closure import (
     strongly_connected_components,
 )
 from tk2.dictionary.config import STANDING, BarPair, ClosurePolicy, DictionaryConfig
-from tk2.dictionary.glosses import GlossProvider, definition_in_lexicon, lexicon_words_in
+from tk2.dictionary.glosses import (
+    GlossProvider,
+    definition_in_lexicon,
+    dimension_parts_of_speech,
+    dimensions_of,
+    lexicon_words_in,
+)
 from tk2.dictionary.keys import InvalidKey, base_of, key_of, key_space, keys_for_word, split_key
 
 __all__ = [
@@ -49,6 +56,8 @@ __all__ = [
     "config",
     "definition_in_lexicon",
     "digraph_stats",
+    "dimension_parts_of_speech",
+    "dimensions_of",
     "glosses",
     "is_closed",
     "key_of",

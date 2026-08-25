@@ -3,12 +3,30 @@
 *QM brief, 2026-08-24. Second epic (`tokeniko-tk2/docs/plan.md` § E1). Same cadence as E0: ONE task
 at a time, STOP and report; QM validates, the Captain green-lights each commit; you never commit.*
 
-## Standing condition for THIS session: the body is unreachable
+## Standing condition — UPDATED 2026-08-25: the body is reachable
 
-The Captain is away from the body — **mongo is NOT available**. Everything until T5 is pure code:
-unit tests on fixtures and in-memory builds only. You may WRITE mongo-marked tests, but you cannot
-run them; say so in your reports rather than pretending. **T5 (the live build + bar + map — the E1
-gate) is HOME-GATED and not yours today.**
+The Captain is home; mongo is available. **T5 is no longer home-gated.** Partial gates only from the
+workshop (full gate = deploy condition, never routine).
+
+**T1 IS DONE, COMMITTED AND PUSHED** (`34e43c8`) — `tk2/dictionary/` exists: `keys.py` (POS-split
+keys as law, word-anchored sense keys `left.v.01` with the WordNet synset name kept as provenance),
+`config.py` (`ClosurePolicy` + `STANDING` + `fingerprint()` sha256), `glosses.py` (tokenise · stop
+· land on lexicon), `closure.py` (digraph over WORDS · SCC · seed closure · depth cut · `stopped`
+reason), `wordnet.py` (the only nltk-touching module). 327 checks green. Measured at full scale
+under depth-2: 83,082 lemmas → 1,135 words → 1,863 keys; zero multi-word closed sets; the
+`right`-ring reproduces as a named regression. You are CONTINUING that engine, not restarting it.
+
+## Captain's rulings, 2026-08-25 (binding for the rest of E1)
+
+- **`nltk` is ADMITTED** to the closed dependency list (pure python + data, isolated behind the
+  provider seam in `wordnet.py`). Declare it in `pyproject.toml` if not already.
+- **Stop list — lexicon membership WINS (option a).** A word that is in the lexicon is NEVER
+  dropped as a stop word; the stop list applies only to tokens that are not lexicon members. This
+  is what lets the Captain's own example (me → not → you → negation) form at all. It CHANGES the
+  measured numbers (the 1,135/1,863 figures above were measured under the old absolute stop list) —
+  **re-measure and report the new figures**; the old ones are superseded, not a regression.
+  This belongs in the mining layer (`glosses.py`) and the change must be visible in the policy
+  fingerprint if it is a policy knob.
 
 ## Read first
 

@@ -7,8 +7,8 @@ the seed closure's two cuts — with THE `right` RING as a named regression.
 
 import pytest
 
-from tests.lexicon_fixture import LEXICON, FixtureGlossProvider
-from tk2.dictionary import closure, glosses
+from tests.lexicon_fixture import LEXICON, FixtureGlossProvider, use_used_provider
+from tk2.dictionary import closure, glosses, keys
 from tk2.dictionary.config import ClosurePolicy
 
 
@@ -52,14 +52,31 @@ def test_a_definition_that_names_no_lexicon_word_is_silent(graph):
     assert closure.digraph_stats(graph)["silent"] == 2
 
 
-def test_a_stop_word_never_becomes_an_edge():
-    """The filter runs before the lexicon check — which is exactly why the real adapter cannot
-    reproduce the Captain's own closure example (nltk's English stop list contains `me`, `you` and
-    `not`). Here the mechanism is pinned on a stop list this test controls."""
+def test_a_stop_word_that_is_a_lexicon_word_survives_THE_RULING():
+    """The Captain's ruling, 2026-08-25: lexicon membership outranks the stop list. `rest` is a
+    lexicon word, so declaring it a stop word cannot delete the edge — the stop list is a statement
+    about function words in text, and once a word is a dimension what its gloss names is the
+    geometry's business.
+
+    This is what the ruling was FOR: nltk's English stop list contains `me`, `you`, `not` and `be`,
+    and under the old order the Captain's own closure example could never form on the real resource
+    because its edges were filtered out before the lexicon was consulted.
+    """
     plain = FixtureGlossProvider()
     muted = FixtureGlossProvider(stopwords=plain.stopwords() | {"rest"})
     assert closure.build_digraph(plain)["sleep"] == {"rest", "bed"}
-    assert closure.build_digraph(muted)["sleep"] == {"bed"}
+    assert closure.build_digraph(muted)["sleep"] == {"rest", "bed"}
+
+
+def test_a_stop_word_that_is_not_a_lexicon_word_is_still_dropped():
+    """The other half of the ruling, and the half that keeps the list doing any work at all: a
+    non-member stop token is dropped before its lemmas are ever consulted. `moves` is not a lexicon
+    word; muting it takes `move` off `direction`'s row, which is «was» not quietly naming `be`.
+    """
+    plain = FixtureGlossProvider()
+    muted = FixtureGlossProvider(stopwords=plain.stopwords() | {"moves"})
+    assert closure.build_digraph(plain)["direction"] == {"move"}
+    assert closure.build_digraph(muted)["direction"] == set()
 
 
 def test_the_sense_mode_reaches_the_resource(provider):
@@ -67,6 +84,29 @@ def test_the_sense_mode_reaches_the_resource(provider):
     `senses` and got the same graph would mean the mode never left the config."""
     assert closure.build_digraph(provider, ClosurePolicy(senses="primary"))["work"] == set()
     assert closure.build_digraph(provider, ClosurePolicy(senses="all"))["work"] == {"place"}
+
+
+# ------------------------------------------------------------------------------------------------
+# the aimed match — what curation quotes as evidence
+# ------------------------------------------------------------------------------------------------
+
+
+def test_the_aimed_match_returns_the_token_that_spoke(provider):
+    """`names_word` is `lexicon_words_in` aimed at ONE word: the Captain's approval reads the
+    evidence verbatim, so what comes back is the surface token, not a boolean. An inflection counts
+    — «as when one has *left*» is where `leave` is named."""
+    assert glosses.names_word("to move, as when one has left", "leave", provider) == "left"
+    assert glosses.names_word("to move, as when one has left", "rest", provider) is None
+
+
+def test_the_aimed_match_follows_the_same_two_laws(provider):
+    """A token spelled like the target is never dropped as a stop word (the target IS a dimension —
+    the ruling), and every other token still is."""
+    assert glosses.names_word("to rest in a bed", "in", provider) == "in"    # `in` is on the stop list
+    muted = FixtureGlossProvider(stopwords=provider.stopwords() | {"moves"})
+    text = "the line along which something moves"
+    assert glosses.names_word(text, "move", provider) == "moves"
+    assert glosses.names_word(text, "move", muted) is None
 
 
 # ------------------------------------------------------------------------------------------------
@@ -186,17 +226,63 @@ def test_one_more_ring_takes_right_in(graph):
     assert "right" in result.words
 
 
-def test_left_enters_through_an_inflection_REQUIREMENT_21(graph):
-    """`go`'s definition says «as when one has *left*» — *leave*'s participle. The engine mints
-    `left` the DIRECTION from it, because the surface form is itself a lexicon word and the surface
-    form is tried first.
+# --- REQUIREMENT 21: the inflection collision, repaired 2026-08-25 -------------------------------
 
-    This test pins TODAY's behaviour, and today's behaviour is the defect requirement 21 names. When
-    the POS-aware repair lands, this test is REWRITTEN (the assertion inverts), never deleted: the
-    fixture's lemma table already knows `left -> leave` and nothing consults it yet.
+
+def test_an_inflection_no_longer_silences_its_lemma_REQUIREMENT_21(graph, provider):
+    """`go`'s definition says «as when one has *left*» — *leave*'s participle. The old reduction
+    took the surface form and stopped, so it minted `left` the direction and never reached `leave`
+    at all, though the gloss was written about leaving.
+
+    The repair does not try the lemma first — that only moves the blindness, and «turn left» would
+    become `leave`. It stops picking a winner: the token names both readings, because at this layer
+    both are true and no tagger lives here.
     """
-    assert graph["go"] == {"move", "left"}
-    assert "leave" in FixtureGlossProvider().lemmas("left")
+    assert graph["go"] == {"move", "left", "leave"}
+    assert provider.lemma("left", "v") == "leave"
+    assert provider.lemma("left", "n") == "left"
+
+
+def test_an_inflection_cannot_mint_a_key_REQUIREMENT_21(provider):
+    """Where the collision actually did damage. `left` is not a base form of any verb — read as a
+    verb it is `leave` — so `left.v`, which was only ever a second name for `leave.v`, is not a
+    dimension. The resource still SAYS `left` is a verb (the fixture's POS table lists it, exactly
+    as `wn.synsets` does); the engine is what declines to mint the key.
+    """
+    assert provider.parts_of_speech("left") == ("n", "v", "a", "r")
+    assert glosses.dimension_parts_of_speech("left", provider) == ("n", "a", "r")
+    assert glosses.dimensions_of(["left", "leave"], provider) == [
+        "leave.n", "leave.v", "left.n", "left.a", "left.r",
+    ]
+
+
+def test_use_and_used_are_one_dimension_not_two_REQUIREMENT_21():
+    """The second collision the requirement names, in its own three-word world. `used` is a real
+    adjective and the past tense of `use`; minting `used.v` would give `use`'s verb senses a second
+    key under another spelling.
+    """
+    provider = use_used_provider()
+    assert glosses.dimensions_of(provider.lexicon(), provider) == [
+        "tool.n", "tool.v", "use.n", "use.v", "used.a",
+    ]
+    assert "used.v" not in glosses.dimensions_of(provider.lexicon(), provider)
+
+
+def test_both_readings_of_an_ambiguous_token_reach_the_graph():
+    """`tool`'s gloss says «an implement that is *used* to do work». `used` is a lexicon word and an
+    inflection of one, so the row names both — the same shape as `left`/`leave`, on the other pair.
+    """
+    graph = closure.build_digraph(use_used_provider())
+    assert graph["tool"] == {"use", "used"}
+
+
+def test_the_key_convention_is_asked_for_dimensions_not_the_resource(provider):
+    """A word the resource lists under a POS it is not a base form of still costs exactly the
+    dimensions it earns — `keys.keys_for_word` takes the POS list as DATA, and this is the seam
+    that decides which data it gets."""
+    raw = keys.keys_for_word("left", provider.parts_of_speech("left"))
+    minted = keys.keys_for_word("left", glosses.dimension_parts_of_speech("left", provider))
+    assert "left.v" in raw and "left.v" not in minted
 
 
 # ------------------------------------------------------------------------------------------------
