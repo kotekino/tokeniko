@@ -26,31 +26,137 @@ One hazard, recorded where the convention lives: KEYS CONTAIN DOTS. A key must t
 used as a Mongo field path — `{"$set": {f"edges.{key}": ...}}` silently writes a NESTED document
 (`edges.sleep.v`) instead of the cell you meant. The review caught this live; store cells in a way
 that treats the key as a VALUE (a subdocument list, or the whole map replaced at once).
+
+WHAT LEFT THIS MODULE AT T3, and what did not. The GRAMMAR stays — a key is a word plus a part of
+speech, sense keys are word-anchored, the numbering is ours. WHICH parts of speech exist is
+WordNet's answer rather than the grammar (the Captain's ruling of 2026-08-25, test 2 of the standing
+law), so it is declared in `dictionary_policy` from policy v3 and read back into the `Alphabet`
+below. The constant that remains is what this code was COMPILED against, and `assert_compiled` is
+what keeps the two from disagreeing in silence.
 """
 
-# ------------------------------------------------------------------------------------------------
-# the alphabet
-# ------------------------------------------------------------------------------------------------
+from dataclasses import dataclass
 
-# In WordNet's own order, which is also the order a multi-POS word's keys are listed in — so the
-# dimension order is a function of the word set alone and a rebuild lands the indices in the same
-# places.
-POS_ORDER = ("n", "v", "a", "r")
-VALID_POS = frozenset(POS_ORDER)
-
-POS_NAMES = {"n": "noun", "v": "verb", "a": "adjective", "r": "adverb"}
+# ------------------------------------------------------------------------------------------------
+# the alphabet — WHICH parts of speech exist, which is not the same statement as the key grammar
+# ------------------------------------------------------------------------------------------------
 
 SEPARATOR = "."
-
-# WordNet's satellite adjective. It is an adjective — a separate `s` dimension would split `hungry`
-# from `famished` on a distinction the lexicographer made about the synset, not about the word.
-SATELLITE_POS = "s"
 
 
 class InvalidKey(ValueError):
     """A key that does not obey the convention. Raised, never returned: the tk1 trap this project
     keeps refusing to repeat is the silent no-op, and a bad key that quietly becomes a new dimension
     is exactly that failure wearing a lexicographer's hat."""
+
+
+class AlphabetMismatch(InvalidKey):
+    """The declared alphabet and the one this module was compiled against disagree.
+
+    Not recoverable at run time and not meant to be: the fix is a code change under the Captain's
+    hand, landing in the same breath as the migration that moved the rows. Raised at the seam where
+    a policy becomes a config, so the refusal happens before a build measures anything.
+    """
+
+
+@dataclass(frozen=True, slots=True)
+class Alphabet:
+    """The parts of speech a key may name, in the order a multi-POS word's keys are listed.
+
+    A SEPARATE THING FROM THE GRAMMAR, and the standing law of 2026-08-25 is what separates them:
+    that a key IS a word plus a part of speech is FRAME (change it and every row, key and operation
+    changes shape); WHICH parts of speech exist is WordNet's answer about English, and evidence
+    could revise it — a resource that split adjectives from participles, or a language with a
+    class English has not got. So the alphabet is CURATION and its declaration is rows
+    (`dictionary_policy`, kind `pos`, since policy v3); this is the shape those rows are read into.
+
+    `aliases` is the resource's own spelling variance mapped onto the alphabet — WordNet's satellite
+    adjective `s` is an adjective, and a separate `s` dimension would split `hungry` from `famished`
+    on a distinction the lexicographer made about the SYNSET rather than about the word.
+    """
+
+    #: The letters, in the order dimensions are listed in. The dimension order is a function of the
+    #: word set alone, so a rebuild lands every index where it was.
+    order: tuple[str, ...]
+    #: `(letter, long name)`, for the probes that print a POS to a reader.
+    names: tuple[tuple[str, str], ...] = ()
+    #: `(spelling, letter)` — a reading the resource writes differently and the alphabet folds in.
+    aliases: tuple[tuple[str, str], ...] = ()
+
+    def __post_init__(self):
+        if not self.order:
+            raise InvalidKey("an alphabet with no parts of speech can name no dimension")
+        if len(set(self.order)) != len(self.order):
+            raise InvalidKey(f"the alphabet repeats a part of speech: {self.order}")
+        for spelling, letter in self.aliases:
+            if letter not in self.order:
+                raise InvalidKey(f"alias {spelling!r} points at {letter!r}, which is not in {self.order}")
+            if spelling in self.order:
+                raise InvalidKey(f"{spelling!r} is both a part of speech and an alias for one")
+
+    def __contains__(self, pos: str) -> bool:
+        return pos in self.order
+
+    def index(self, pos: str) -> int:
+        """Where this part of speech sorts. Raises rather than answering -1: an unknown POS is a
+        defect, and a sort that quietly put it first would hide it in a dimension order."""
+        try:
+            return self.order.index(pos)
+        except ValueError:
+            raise InvalidKey(f"unknown part of speech {pos!r} — the alphabet is {self.order}") from None
+
+    def normalize(self, pos: str) -> str:
+        """The one place an alias becomes its letter. Every reader of a resource's POS goes here."""
+        if not pos:
+            raise InvalidKey("empty part of speech")
+        p = pos.lower()
+        p = dict(self.aliases).get(p, p)
+        if p not in self.order:
+            raise InvalidKey(f"unknown part of speech {pos!r} — the alphabet is {self.order}")
+        return p
+
+    def as_dict(self) -> dict:
+        """The canonical form the policy fingerprint takes the alphabet over."""
+        return {
+            "order": list(self.order),
+            "names": [list(pair) for pair in self.names],
+            "aliases": [list(pair) for pair in self.aliases],
+        }
+
+
+#: THE ALPHABET THE KEY GRAMMAR IS COMPILED AGAINST — and deliberately not a second declaration of
+#: it. The declaration is the rows; this is what the code in this module was written to handle, and
+#: `assert_compiled` below is what makes the two agree out loud instead of by assumption.
+#:
+#: Why a constant survives the move at all: `db/0003` and `db/0005` construct a `DictionaryConfig`
+#: and a `WordNetProvider` with no alphabet in sight, and an applied migration is IMMUTABLE — the
+#: database already holds what that file did. Threading the alphabet through every key function
+#: would therefore have needed a default here anyway, and a default is the quieter declaration of
+#: the two. So the rows are made load-bearing by a REFUSAL rather than by a parameter: a policy that
+#: declares a different alphabet does not silently build a base under this one, it stops.
+GRAMMAR_ALPHABET = Alphabet(
+    order=("n", "v", "a", "r"),
+    names=(("n", "noun"), ("v", "verb"), ("a", "adjective"), ("r", "adverb")),
+    aliases=(("s", "a"),),
+)
+
+POS_ORDER = GRAMMAR_ALPHABET.order
+VALID_POS = frozenset(POS_ORDER)
+POS_NAMES = dict(GRAMMAR_ALPHABET.names)
+
+# WordNet's satellite adjective, named because the adapter and the tests both speak about it.
+SATELLITE_POS = "s"
+
+
+def assert_compiled(alphabet: Alphabet) -> None:
+    """Refuse an alphabet the key grammar was not built for. See `GRAMMAR_ALPHABET`."""
+    if alphabet != GRAMMAR_ALPHABET:
+        raise AlphabetMismatch(
+            f"the policy declares the alphabet {alphabet.as_dict()}, and the key convention was "
+            f"compiled against {GRAMMAR_ALPHABET.as_dict()}. A build under rows this module cannot "
+            f"honour would mint keys nobody declared: move `keys.GRAMMAR_ALPHABET` in the same "
+            f"breath as the migration that moved the rows."
+        )
 
 
 # ------------------------------------------------------------------------------------------------
@@ -60,14 +166,7 @@ class InvalidKey(ValueError):
 
 def normalize_pos(pos: str) -> str:
     """The one place `s` becomes `a`. Every reader of a resource's POS goes through here."""
-    if not pos:
-        raise InvalidKey("empty part of speech")
-    p = pos.lower()
-    if p == SATELLITE_POS:
-        p = "a"
-    if p not in VALID_POS:
-        raise InvalidKey(f"unknown part of speech {pos!r} — the alphabet is {POS_ORDER}")
-    return p
+    return GRAMMAR_ALPHABET.normalize(pos)
 
 
 def normalize_word(word: str) -> str:

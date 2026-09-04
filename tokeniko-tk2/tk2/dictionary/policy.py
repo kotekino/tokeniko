@@ -29,7 +29,8 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
-from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
+from tk2.dictionary import keys
+from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig, RelationPolicy
 
 Row = Mapping[str, Any]
 
@@ -54,6 +55,43 @@ KIND_CLOSURE = "closure"
 #: it is a RUN's own argument (a variant arguing with the standing policy), never a standing
 #: declaration, and a row that could set it would let a stored policy pretend to be the standard one.
 CLOSURE_SETTINGS = ("max_depth", "max_size", "senses")
+
+#: One WordNet relation R fills cells with. `name` is the relation, `value` its signed weight, and
+#: `position` its PRECEDENCE — the order the cell walk believes two relations in when both hold at
+#: the same absolute weight. Since policy v3.
+KIND_RELATION_WEIGHT = "relation_weight"
+
+#: One relation a CURATED (definitional) edge may claim, and at what strength. A separate kind from
+#: the mined weights rather than a `family` of them, because a row is unique per (version, kind,
+#: name) and `entails` is BOTH — the same claim from two provenances, which is the PoC's own choice
+#: («same name as the WordNet edge on purpose») and must not collapse into one row.
+KIND_CURATED_RELATION = "curated_relation"
+
+#: A setting of the curation mechanism itself — today only the reciprocal weight.
+KIND_CURATION = "curation"
+
+#: The `RelationPolicy` fields a `curation` row may name. Strict for `CLOSURE_SETTINGS`' reason.
+CURATION_SETTINGS = ("reciprocal_weight",)
+
+#: A cue word list: `name` is the curated relation it argues for, `value` the cue words, `position`
+#: the order the cues are tried in (a gloss that is both purposive and locative reads as purpose).
+KIND_CURATION_CUE = "curation_cue"
+
+#: The fallback when no cue fires: `name` is the POS pair as `src>dst`, `value` the relation.
+KIND_CURATION_DEFAULT = "curation_default"
+
+#: The separator inside a `curation_default` row's name. A pair of parts of speech is one statement
+#: and has to be one row name; `>` because the default is DIRECTED (`n>v` is not `v>n`).
+POS_PAIR_SEPARATOR = ">"
+
+#: One part of speech that exists. `name` is the letter, `value` the long name, `position` the order
+#: a multi-POS word's keys are listed in. Since policy v3 — the Captain's ruling of 2026-08-25: the
+#: alphabet is WordNet's answer about English, not the key grammar.
+KIND_POS = "pos"
+
+#: A spelling the resource uses for a part of speech already in the alphabet: `name` is the
+#: spelling, `value` the letter it folds onto (WordNet's satellite adjective `s` -> `a`).
+KIND_POS_ALIAS = "pos_alias"
 
 
 class PolicyRowsInvalid(ValueError):
@@ -149,6 +187,95 @@ def closure_from_rows(rows: Iterable[Row], extra_seeds: tuple[str, ...] = ()) ->
 
 
 # ------------------------------------------------------------------------------------------------
+# reading R's rows — the relation weights and the curator's vocabulary (policy v3)
+# ------------------------------------------------------------------------------------------------
+
+
+def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
+    """R's declared weights, or `None` when this policy version never declared any.
+
+    `None` is not a failure and must not become an empty `RelationPolicy`: v1 and v2 are still
+    readable and neither of them had anything to say about relations, so a config assembled from
+    them says nothing either (see `DictionaryConfig`). A version that declares SOME of it and not
+    the rest is a different matter and is refused — a curated vocabulary with no reciprocal weight
+    would write half an edge.
+    """
+    rows = list(rows)
+    weights = [(r["name"], float(r["value"])) for r in _of_kind(rows, KIND_RELATION_WEIGHT)]
+    curated = [(r["name"], float(r["value"])) for r in _of_kind(rows, KIND_CURATED_RELATION)]
+    settings = {r["name"]: r["value"] for r in _of_kind(rows, KIND_CURATION)}
+    cues = [(r["name"], tuple(r["value"])) for r in _of_kind(rows, KIND_CURATION_CUE)]
+    defaults = []
+    for row in _of_kind(rows, KIND_CURATION_DEFAULT):
+        source, _, target = row["name"].partition(POS_PAIR_SEPARATOR)
+        if not source or not target:
+            raise PolicyRowsInvalid(
+                f"a curation default names a POS pair as `src{POS_PAIR_SEPARATOR}dst`; "
+                f"{row['name']!r} is not one."
+            )
+        defaults.append((source, target, row["value"]))
+
+    if not weights:
+        if curated or settings or cues or defaults:
+            raise PolicyRowsInvalid(
+                "these rows declare the curator's vocabulary and no relation weights. R's weights "
+                "are what a curated edge sits beside; half a declaration is not a policy."
+            )
+        return None
+
+    unknown = sorted(set(settings) - set(CURATION_SETTINGS))
+    if unknown:
+        raise PolicyRowsInvalid(
+            f"curation rows name settings the policy has no field for: {unknown}. "
+            f"The settings are {list(CURATION_SETTINGS)}."
+        )
+    if curated and "reciprocal_weight" not in settings:
+        raise PolicyRowsInvalid(
+            "a curated vocabulary is declared with no `reciprocal_weight` row. The back-reference "
+            "is half of what a curated edge writes (the Captain's ruling of 2026-08-12), and a "
+            "default in code would be a second declaration of it."
+        )
+
+    try:
+        return RelationPolicy(
+            weights=tuple(weights),
+            curated=tuple(curated),
+            reciprocal_weight=float(settings.get("reciprocal_weight", 0.0)),
+            cues=tuple(cues),
+            defaults=tuple(defaults),
+        )
+    except ValueError as error:
+        raise PolicyRowsInvalid(str(error)) from error
+
+
+def alphabet_from_rows(rows: Iterable[Row]) -> keys.Alphabet | None:
+    """The parts of speech these rows declare, or `None` when they declare none (v1, v2).
+
+    Returned AS DECLARED and not checked against the compiled grammar here: reading a policy to look
+    at it must stay possible. The refusal fires one level up, in `config_from_rows`, which is where
+    rows become the thing a build measures under.
+    """
+    rows = list(rows)
+    letters = _of_kind(rows, KIND_POS)
+    aliases = _of_kind(rows, KIND_POS_ALIAS)
+    if not letters:
+        if aliases:
+            raise PolicyRowsInvalid(
+                "these rows alias parts of speech they never declare. An alphabet is its letters; "
+                "an alias alone points at nothing."
+            )
+        return None
+    try:
+        return keys.Alphabet(
+            order=tuple(r["name"] for r in letters),
+            names=tuple((r["name"], r["value"]) for r in letters),
+            aliases=tuple((r["name"], r["value"]) for r in aliases),
+        )
+    except keys.InvalidKey as error:
+        raise PolicyRowsInvalid(str(error)) from error
+
+
+# ------------------------------------------------------------------------------------------------
 # reading the bar rows
 # ------------------------------------------------------------------------------------------------
 
@@ -202,13 +329,23 @@ def config_from_rows(
     `extra_seeds` stays an argument rather than a row (see `CLOSURE_SETTINGS`): it is what a run
     argues with the standing policy, and it lands in the fingerprint like everything else, so a run
     that added seeds can never be mistaken for the standard one.
+
+    THE ALPHABET IS CHECKED HERE, and only here: this is the call that turns rows into the thing a
+    build measures under, so it is where a policy declaring parts of speech the key convention was
+    not compiled for must stop (`keys.assert_compiled`). Reading those rows to look at them stays
+    possible next door.
     """
     policy_rows = list(policy_rows)
     bar_rows = list(bar_rows)
+    alphabet = alphabet_from_rows(policy_rows)
+    if alphabet is not None:
+        keys.assert_compiled(alphabet)
     return DictionaryConfig(
         closure=closure_from_rows(policy_rows, extra_seeds),
         declared_seeds=seeds_from_rows(policy_rows),
         bar=bar_from_rows(bar_rows),
+        relations=relation_policy_from_rows(policy_rows),
+        alphabet=alphabet,
     )
 
 
@@ -383,6 +520,13 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
     round trip. It is NOT how a policy is normally authored — the normal direction is rows first,
     which is the whole point of the table — but the first set of rows has to come from somewhere,
     and reading them off the object that already held them is how they cross unchanged.
+
+    `families` is keyed by row NAME and serves the seeds and the relation weights alike (a seed's
+    family is the source that argued for it; a relation's is the group it belongs to). The curated
+    vocabulary and the alphabet carry a fixed family instead, because there is only one source for
+    either and a map entry that could be forgotten would leave a row unable to say where it came
+    from. A policy version that declares no relations and no alphabet writes exactly the rows it
+    always did.
     """
     families = families or {}
     rows: list[dict] = [
@@ -410,6 +554,57 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
         }
         for i, name in enumerate(CLOSURE_SETTINGS)
     ]
+
+    def entry(kind: str, name: str, value, position: int, family: str | None = None) -> dict:
+        return {
+            "version": version,
+            "kind": kind,
+            "name": name,
+            "value": value,
+            "family": families.get(name) if family is None else family,
+            "position": position,
+            "note": "",
+        }
+
+    if config.relations is not None:
+        relations = config.relations
+        rows += [
+            entry(KIND_RELATION_WEIGHT, name, weight, i)
+            for i, (name, weight) in enumerate(relations.weights)
+        ]
+        rows += [
+            entry(KIND_CURATED_RELATION, name, weight, i, family="definitional")
+            for i, (name, weight) in enumerate(relations.curated)
+        ]
+        rows += [
+            entry(KIND_CURATION, "reciprocal_weight", relations.reciprocal_weight, 0, family="definitional")
+        ]
+        rows += [
+            entry(KIND_CURATION_CUE, name, list(cues), i, family="definitional")
+            for i, (name, cues) in enumerate(relations.cues)
+        ]
+        rows += [
+            entry(
+                KIND_CURATION_DEFAULT,
+                f"{source}{POS_PAIR_SEPARATOR}{target}",
+                relation,
+                i,
+                family="definitional",
+            )
+            for i, (source, target, relation) in enumerate(relations.defaults)
+        ]
+
+    if config.alphabet is not None:
+        long_names = dict(config.alphabet.names)
+        rows += [
+            entry(KIND_POS, letter, long_names.get(letter), i, family="alphabet")
+            for i, letter in enumerate(config.alphabet.order)
+        ]
+        rows += [
+            entry(KIND_POS_ALIAS, spelling, letter, i, family="alphabet")
+            for i, (spelling, letter) in enumerate(config.alphabet.aliases)
+        ]
+
     return rows
 
 

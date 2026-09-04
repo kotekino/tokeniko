@@ -200,6 +200,18 @@ class FixtureGlossProvider:
     def stopwords(self):
         return self._stopwords
 
+    def senses_of_key(self, key):
+        """The senses one DIMENSION speaks for. One per (word, POS) here — enough to prove that
+        curation reads a particular definition and quotes it, and few enough to check by eye."""
+        word, _, pos = key.rpartition(".")
+        return (_fixture_sense(word, pos),) if pos in self.parts_of_speech(word) else ()
+
+    def definition_of_sense(self, sense):
+        """One sense's definition. The fixture's senses are `word.pos.01`, so this is the word's
+        gloss — which is what makes the sixteen-word world usable as a curation world too."""
+        word = sense.rsplit(".", 2)[0]
+        return self.gloss(word)
+
     def is_name_only(self, word):
         """Every reading this world has for the spelling is a name. Declared per POS in
         `name_readings` rather than derived, because the fixture has no synsets to read a capital
@@ -297,3 +309,125 @@ def name_only_provider():
         parts_of_speech=NAME_ONLY_POS,
         name_readings=NAME_ONLY_NAME_READINGS,
     )
+
+
+# ------------------------------------------------------------------------------------------------
+# the senses the sixteen-word world speaks — what curation quotes (T3)
+# ------------------------------------------------------------------------------------------------
+
+# Curation is about DEFINITIONS and quotes one of them verbatim, so it needs a resource that can be
+# asked about a single sense rather than about a word. This world has exactly one sense per (word,
+# POS) — which is all that is needed to prove the miner reads BOTH sides of a pair, mints the edge
+# from whichever gloss speaks, and refuses a tautology.
+
+
+def _fixture_sense(word: str, pos: str) -> str:
+    """The sense-key convention, so the fixture's identifiers look like the resource's."""
+    return f"{word}.{pos}.01"
+
+
+# ------------------------------------------------------------------------------------------------
+# a fourth world: the RELATIONS (T3) — R's own handcrafted shape
+# ------------------------------------------------------------------------------------------------
+
+# Apart from the sixteen-word world for the reason every other world here is: it exists to prove the
+# cell walk, and folding it in would cost the layers above their checkability. Eleven dimensions,
+# and every claim in it is one a person can verify by reading this table:
+#
+#   - `eat.v` and `devour.v` SHARE a synset (`eat.v.01`) — that is what synonymy is, and it is the
+#     one relation the builder computes rather than asks for.
+#   - `eat.v` also states `devour.v.02` as a troponym, so the pair has TWO relations and the cell
+#     has to pick one and remember both (`via`). Synonymy answers first.
+#   - `hungry.a` is the antonym of `full.a`: the one negative cell, and the sign is the point.
+#   - `hot.a` names `temperature.n` as its attribute: a CROSS-POS cell, which is half the reason
+#     the base splits by part of speech at all.
+#   - `eat.v` entails `swallow.v` and `chew.v`, `kill.v` causes `die.v` — the reverse reads
+#     (`entailed_by`, `caused_by`) are the builder's to derive, and weaker.
+#   - `eat.v` states a hypernym NOBODY SPEAKS (`consume.v.01` is not a dimension here): a relation
+#     pointing outside the base produces no cell, because inventing an axis for it would be
+#     membership by side effect.
+#   - `food.n` states nothing and nothing states it: a SILENT row, which is a finding rather than a
+#     defect (at the real base, 318 dimensions are silent and 141 of them are adverbs).
+
+RELATION_KEYS = (
+    "chew.v",
+    "devour.v",
+    "die.v",
+    "eat.v",
+    "food.n",
+    "full.a",
+    "hot.a",
+    "hungry.a",
+    "kill.v",
+    "swallow.v",
+    "temperature.n",
+)
+
+RELATION_SENSES = {
+    "chew.v": ("chew.v.01",),
+    "devour.v": ("eat.v.01", "devour.v.02"),
+    "die.v": ("die.v.01",),
+    "eat.v": ("eat.v.01",),
+    "food.n": ("food.n.01",),
+    "full.a": ("full.a.01",),
+    "hot.a": ("hot.a.01",),
+    "hungry.a": ("hungry.a.01",),
+    "kill.v": ("kill.v.01",),
+    "swallow.v": ("swallow.v.01",),
+    "temperature.n": ("temperature.n.01",),
+}
+
+RELATION_EDGES = {
+    "eat.v": {
+        "entails": frozenset({"swallow.v.01", "chew.v.01"}),
+        "troponym": frozenset({"devour.v.02"}),
+        "hypernym_1": frozenset({"consume.v.01"}),      # spoken by no dimension of this world
+    },
+    "kill.v": {"causes": frozenset({"die.v.01"})},
+    "hungry.a": {"antonym": frozenset({"full.a.01"})},
+    "full.a": {"antonym": frozenset({"hungry.a.01"})},
+    "hot.a": {"attribute": frozenset({"temperature.n.01"})},
+    "temperature.n": {"attribute": frozenset({"hot.a.01"})},
+}
+
+
+class FixtureRelationProvider:
+    """The `RelationProvider` protocol over the world above. No nltk, no corpus, no opinions."""
+
+    def __init__(self, senses=None, edges=None, relations=None):
+        self._senses = dict(RELATION_SENSES if senses is None else senses)
+        self._edges = dict(RELATION_EDGES if edges is None else edges)
+        # The resource's whole vocabulary, whether or not this world happens to use every name.
+        # A fixture that declared only what it uses would let a weight row for a real WordNet
+        # relation look like a policy error.
+        self._relations = tuple(WORDNET_RELATION_NAMES if relations is None else relations)
+
+    def senses_of_key(self, key):
+        return tuple(self._senses.get(key, ()))
+
+    def relations_of_key(self, key):
+        return dict(self._edges.get(key, {}))
+
+    def relations(self):
+        return self._relations
+
+
+#: What `tk2.dictionary.wordnet.RELATIONS` says, restated here so the pure tests need no corpus.
+#: A `wordnet`-marked test asserts the two agree — a fixture that had drifted from the resource
+#: would be a fixture testing a matrix nobody builds.
+WORDNET_RELATION_NAMES = (
+    "antonym",
+    "derivational",
+    "entails",
+    "causes",
+    "troponym",
+    "hyponym_1",
+    "hypernym_1",
+    "hypernym_2",
+    "verb_group",
+    "similar_to",
+    "attribute",
+    "also_see",
+    "meronym",
+    "holonym",
+)

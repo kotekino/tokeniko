@@ -42,6 +42,7 @@ import sys
 import time
 from pathlib import Path
 
+from tk2.datatier.policy_source import closed_forms, newest_policy_migration, standing_bar, standing_policy
 from tk2.dictionary import closure, glosses, policy, proposal
 from tk2.dictionary.config import ClosurePolicy, DictionaryConfig, bar_words
 from tk2.dictionary.wordnet import WordNetProvider, wordnet_lexicon
@@ -68,66 +69,8 @@ RAIL = 1_000_000
 
 
 # ------------------------------------------------------------------------------------------------
-# 2 — where the rows come from
+# 2 — where the rows come from: `tk2.datatier.policy_source`, which both instruments read through
 # ------------------------------------------------------------------------------------------------
-
-
-def _migration(number: int):
-    """Load a migration by number, as `tests/seed.py` does — the rows read off the file that will
-    write them, so a proposal can be measured before the Captain's hand applies it."""
-    from tk2.migrations import discover
-
-    found = next((m for m in discover() if m.number == number), None)
-    if found is None:
-        raise SystemExit(f"no migration numbered {number:04d}")
-    return found.load()
-
-
-def _newest_policy_migration():
-    """The migration file declaring the newest policy version — 0003 wrote v1, 0005 v2, and the next
-    ruling will write the one after.
-
-    Found by asking the files rather than by naming one: a tool that had a migration number in it
-    would have to be edited every time the Captain rules, and the edit that got forgotten would make
-    it quietly measure a superseded policy.
-    """
-    from tk2.migrations import discover
-
-    best = None
-    for found in discover():
-        module = found.load()
-        if hasattr(module, "POLICY_ROWS") and (
-            best is None or module.POLICY_VERSION > best[1].POLICY_VERSION
-        ):
-            best = (found, module)
-    if best is None:
-        raise SystemExit("no migration declares POLICY_ROWS — there is no policy to read")
-    return best
-
-
-def standing_policy(db_name: str | None) -> tuple[list[dict], str]:
-    """The policy rows AS THEY STAND, newest version only — live rows, or the migration's.
-
-    Returns the source too, and prints it: a measurement whose inputs came from an unnamed place is
-    not reproducible, and the whole difference between a proposal and an opinion is that one can be
-    run again.
-    """
-    if db_name:
-        from tk2.core.models import ALL_MODELS, DictionaryPolicyDoc
-        from tk2.datatier import boot_datatier, traps
-
-        boot_datatier(ALL_MODELS, db_name=db_name)
-        rows = [r.model_dump() for r in traps.find_all(DictionaryPolicyDoc)]
-        if not rows:
-            raise SystemExit(f"{db_name} holds no policy rows — has migration 0003 been applied?")
-        rows = policy.latest_version(rows)
-        return rows, f"{db_name}.dictionary_policy v{policy.policy_version(rows)}"
-
-    found, module = _newest_policy_migration()
-    return (
-        [dict(row) for row in module.POLICY_ROWS],
-        f"db/{found.label} (policy v{module.POLICY_VERSION}, not read from a database)",
-    )
 
 
 def purpose_and_structure(rows) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -141,26 +84,6 @@ def purpose_and_structure(rows) -> tuple[tuple[str, ...], tuple[str, ...]]:
     purpose = tuple(r["name"] for r in seeds if r.get("family") != policy.FAMILY_STRUCTURE)
     structure = tuple(r["name"] for r in seeds if r.get("family") == policy.FAMILY_STRUCTURE)
     return purpose, structure
-
-
-def closed_forms(db_name: str | None) -> tuple[tuple[str, ...], str]:
-    """The closed-class forms to exclude — live rows if there are any, else migration 0004's.
-
-    The fallback is not a convenience: on the day this proposal is measured 0004 has been WRITTEN
-    and not applied, because applying it is the Captain's hand. The tool says which source spoke.
-    """
-    if db_name:
-        from tk2.core.models import ClosedClassDoc
-        from tk2.datatier import traps
-
-        rows = [r.model_dump() for r in traps.find_all(ClosedClassDoc)]
-        if rows:
-            version = max(r["version"] for r in rows)
-            forms = tuple(sorted({r["form"] for r in rows if " " not in r["form"]}))
-            return forms, f"{db_name}.closed_classes v{version}"
-
-    module = _migration(4)
-    return module.FORMS, f"db/0004 v{module.VERSION} (not applied)"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -382,24 +305,6 @@ def run(db_name: str | None, out_path: Path | None) -> int:
 # ------------------------------------------------------------------------------------------------
 
 
-def standing_bar(db_name: str | None):
-    """The bar as it stands — the database's rows if there are any, else the pinned snapshot.
-
-    Both are returned as ROWS as well as pairs, because the fingerprint is taken over rows and the
-    whole point of printing it is that it can be compared with a manifest's.
-    """
-    if db_name:
-        from tk2.core.models import DictionaryBarDoc
-        from tk2.datatier import traps
-
-        rows = [r.model_dump() for r in traps.find_all(DictionaryBarDoc)]
-        if rows:
-            return policy.bar_from_rows(rows), rows, f"{db_name}.dictionary_bar v{policy.bar_version(rows)}"
-
-    document = policy.bar_snapshot()
-    return policy.snapshot_bar(), document["pairs"], f"bar_snapshot.json v{document['version']}"
-
-
 def verify(db_name: str | None) -> int:
     """Re-derive the standing structural seeds, diff them against the rows, and rebuild the base.
 
@@ -414,8 +319,8 @@ def verify(db_name: str | None) -> int:
     """
     started = time.time()
     rows, policy_source = standing_policy(db_name)
-    found, module = _newest_policy_migration()
-    bar, bar_rows, bar_source = standing_bar(db_name)
+    found, module = newest_policy_migration()
+    _bar, bar_rows, bar_source = standing_bar(db_name)
 
     print("=" * 96)
     print("VERIFY — the standing policy, re-derived and re-measured")
@@ -457,11 +362,10 @@ def verify(db_name: str | None) -> int:
     print()
 
     # --- 3. the base is what was ruled on --------------------------------------------------------
-    config = DictionaryConfig(
-        closure=policy.closure_from_rows(rows),
-        declared_seeds=declared,
-        bar=bar,
-    )
+    # THE WHOLE standing policy, not a config assembled from the half of it this file talks about:
+    # since v3 the rows also declare R's weights and the alphabet, and a fingerprint printed from a
+    # config that had dropped them would name a policy no build will ever run.
+    config = policy.config_from_rows(rows, bar_rows)
     print(f"building the base under {config.closure}…", flush=True)
     lexicon = wordnet_lexicon()
     provider = WordNetProvider(lexicon)

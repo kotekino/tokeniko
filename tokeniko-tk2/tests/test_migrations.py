@@ -25,6 +25,7 @@ from tests.seed import (
     param_rows,
     policy_rows,
     policy_rows_v2,
+    policy_rows_v3,
     sphere_poles,
 )
 
@@ -375,7 +376,7 @@ def test_reading_the_policy_without_naming_a_version_is_refused(created):
     stored = list(created["dictionary_policy"].find({}))
     with pytest.raises(policy.PolicyRowsInvalid):
         policy.policy_version(stored)
-    assert policy.policy_version(policy.latest_version(stored)) == 2
+    assert policy.policy_version(policy.latest_version(stored)) == 3
 
 
 # ------------------------------------------------------------------------------------------------
@@ -441,7 +442,7 @@ def test_0005_writes_policy_version_2_beside_version_1_and_not_over_it(created):
     v1 = [r for r in stored if r["version"] == 1]
     v2 = [r for r in stored if r["version"] == 2]
 
-    assert {r["version"] for r in stored} == {1, 2}
+    assert {1, 2} <= {r["version"] for r in stored}, "both versions are in the table afterwards"
     assert len(v1) == len(policy_rows())
     assert len(v2) == len(policy_rows_v2())
     assert {(r["kind"], r["name"]) for r in v2} == {(r["kind"], r["name"]) for r in policy_rows_v2()}
@@ -453,11 +454,15 @@ def test_0005_writes_policy_version_2_beside_version_1_and_not_over_it(created):
 @live
 def test_the_ruled_policy_reads_back_as_the_one_the_captain_ruled(created):
     """The seam again, at version 2: rows out of mongo, through the pure reader, and the closure
-    cuts and seed count are the ones the ruling names."""
+    cuts and seed count are the ones the ruling names.
+
+    VERSION-EXPLICIT since 0006 wrote v3 on top. The table is a ledger and now holds three, so
+    «the ruled policy» is a version somebody names — which is exactly what a manifest row does.
+    """
     from tests.test_dictionary_policy import RULED_FINGERPRINT
     from tk2.dictionary import policy
 
-    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 2]
     stored_bar = list(created["dictionary_bar"].find({}))
     config = policy.config_from_rows(stored, stored_bar)
 
@@ -478,3 +483,69 @@ def test_a_seed_cannot_hold_two_rows_in_one_version(created):
             {"version": 2, "kind": "seed", "name": "land", "value": None,
              "family": "structure", "position": 999, "note": "", "created_at": 1}
         )
+
+
+# ------------------------------------------------------------------------------------------------
+# 0006 puts R's weights, the curated vocabulary and the alphabet in rows
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0006_writes_policy_version_3_beside_the_two_before_it(created):
+    """A ledger, three deep. v1 and v2 are untouched — the property that keeps an old manifest row
+    meaningful, checked again because it is the property most easily lost."""
+    stored = list(created["dictionary_policy"].find({}))
+    by_version = {v: [r for r in stored if r["version"] == v] for v in (1, 2, 3)}
+
+    assert {r["version"] for r in stored} == {1, 2, 3}
+    assert len(by_version[1]) == len(policy_rows())
+    assert len(by_version[2]) == len(policy_rows_v2())
+    assert len(by_version[3]) == len(policy_rows_v3())
+    assert {(r["kind"], r["name"]) for r in by_version[3]} == {
+        (r["kind"], r["name"]) for r in policy_rows_v3()
+    }
+    # The bar still has not moved: it is a separate, append-mostly table, and a policy ruling is not
+    # an occasion to re-declare the expectation the ruling will be judged by.
+    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+
+
+@live
+def test_the_relation_weights_read_back_as_the_matrix_they_describe(created):
+    """The seam, at version 3: rows out of mongo, through the pure reader, into the value object R
+    is filled from — signs, precedence, curated vocabulary and alphabet included."""
+    from tests.test_dictionary_policy import V3_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+
+    assert policy.policy_version(stored) == 3
+    assert config.fingerprint() == V3_FINGERPRINT
+    assert dict(config.relations.weights)["antonym"] == -1.0
+    assert config.relations.reciprocal_weight == 0.60
+    assert config.alphabet.order == ("n", "v", "a", "r")
+
+
+@live
+def test_0006_creates_the_bases_own_collections_empty(created):
+    """`base_keys` and `base_r` are made by the DEPLOY and filled by the BUILD. A build that had to
+    create its own tables would be a build doing a deploy's job — and the collections have to exist
+    before the first one runs."""
+    from tk2.core.models import BaseKeyDoc, BaseRelationDoc
+
+    names = set(created.list_collection_names())
+    for model in (BaseKeyDoc, BaseRelationDoc):
+        assert model.Settings.name in names, f"{model.Settings.name} was not created"
+        assert created[model.Settings.name].count_documents({}) == 0
+
+
+@live
+def test_the_body_cannot_write_the_base(created):
+    """The base is `logic`: the build writes it through the migration door, the body reads it. The
+    ODM path is closed at the MODEL, so a caller holding one cannot save its way past the datatier."""
+    from tk2.core.models import BaseKeyDoc, BaseRelationDoc
+    from tk2.core.write_class import WriteClassViolation
+
+    for model in (BaseKeyDoc, BaseRelationDoc):
+        with pytest.raises(WriteClassViolation):
+            model.insert_one({"build": "b", "key": "eat.v", "index": 0})

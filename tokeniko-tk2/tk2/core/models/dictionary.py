@@ -26,6 +26,10 @@ Three tables, because they answer three different questions and carry three diff
   `dictionary_builds`  the manifest. One row per build, recording the policy version and
                        fingerprint AND the bar version and fingerprint it was measured against.
 
+...and since T3 the base itself: `base_keys` (the dimension order) and `base_r` (the relation
+matrix, sparse, provenance per cell). They are `logic` like the rest — the body reads the base and
+never writes it — and they are described where they are declared, at the foot of this file.
+
 The reading seam: nothing here reads the database and nothing here computes a fingerprint. The pure
 side (`tk2.dictionary.policy`) takes ROWS AS MAPPINGS — `model_dump()` output, or raw pymongo
 documents, either works — exactly as the closure engine takes an injected gloss provider. That is
@@ -35,7 +39,7 @@ what keeps `tk2/dictionary/` free of mongo while the policy it runs on lives in 
 from typing import Annotated, Any
 
 from bunnet import Indexed
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pymongo import ASCENDING, DESCENDING, IndexModel
 
 from tk2.core.documents import LogicDocument
@@ -196,4 +200,96 @@ class DictionaryBuildDoc(LogicDocument, Timestamped):
         name = "dictionary_builds"
         indexes = [
             IndexModel([("created_at", DESCENDING)]),
+        ]
+
+
+# ------------------------------------------------------------------------------------------------
+# the base itself — the key registry and R
+# ------------------------------------------------------------------------------------------------
+#
+# Added at T3. Two collections rather than one, because they answer two different questions and D
+# (T4) will ask the first one too: `base_keys` is THE DIMENSION ORDER, shared by every matrix of a
+# build, and `base_r` is one matrix over it. A build that stored its key space inside each matrix
+# would let R and D drift into two orders that no reader could compare cell for cell.
+#
+# NEITHER IS REGISTERED WITH THE BODY (`BASE_MODELS`, not `ALL_MODELS`), for `DictionaryBuildDoc`'s
+# reason and one worse: the r-cache snapshots every registered r-collection WHOLE on every slow
+# tick, and R is thousands of rows carrying hundreds of thousands of cells. The base is read the way
+# a dictionary is read — by key, on demand — and E2 builds that reader. What they share with the
+# ledger is the write-class: `logic`, so no collection in the database escapes the seam.
+
+
+class StoredCell(BaseModel):
+    """One non-zero entry of a row, as it is stored (`tk2.dictionary.matrix.Cell`).
+
+    A LIST of these, never a map keyed by the column: a base key contains a dot (`sleep.v`), and
+    mongo reads a dotted field name as a path — `{"$set": {"cells.sleep.v": …}}` writes a nested
+    document called `sleep` instead of the cell anybody meant. The key is a VALUE here, forever.
+    """
+
+    #: The dimension this cell is ABOUT. Row X, column Y is X's relation TO Y — asymmetric, which is
+    #: what keeps the antonym column-read and the entails/entailed_by distinction alive.
+    column: str = Field(min_length=1)
+    #: Signed. A negative weight is opposition STATED, not a small similarity.
+    w: float
+    #: The relation that set the value.
+    rel: str = Field(min_length=1)
+    #: `mined` · `curated` · `axis`. The field that keeps a curated cell distinguishable from a
+    #: mined one forever — a headline density that hides the hand is the first step back to a
+    #: matrix nobody can audit.
+    src: str = Field(min_length=1)
+    #: Every relation that held between the two, strongest first, as `[name, weight]` pairs. The
+    #: winner is what the geometry uses; this is what curation and a later retreat read.
+    via: list[tuple[str, float]] = Field(default_factory=list)
+    #: For a curated cell: the definition that justified it, verbatim (requirement 20).
+    evidence: str = ""
+
+
+class BaseKeyDoc(LogicDocument, Timestamped):
+    """logic (r) — one dimension of one build, with its index. THE key space, as rows.
+
+    The index is stored rather than derived from a sort, because it is the position a vector's
+    column means: two readers that sorted differently would read every cell of every row at the
+    wrong column, and nothing in the numbers would look wrong.
+    """
+
+    #: Which build these dimensions belong to. Two builds may sit in one database — that is what
+    #: makes a before/after comparison possible at all — so nothing here is «the» base.
+    build: Annotated[str, Indexed()] = Field(min_length=1)
+
+    key: str = Field(min_length=1)
+    word: str = Field(min_length=1)
+    pos: str = Field(min_length=1)
+    index: int = Field(ge=0)
+
+    class Settings:
+        name = "base_keys"
+        indexes = [
+            IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
+            IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
+        ]
+
+
+class BaseRelationDoc(LogicDocument, Timestamped):
+    """logic (r) — one row of R: what this dimension states about the others.
+
+    SPARSE. A row is its cells; a zero is the absence of a statement rather than a stored one. The
+    prototype's dense `vector` was free at 983 dimensions and is a hundred and fifty megabytes of
+    mostly zero at the full base — and R is sparse by nature, since a cell exists because a NAMED
+    relation put it there.
+    """
+
+    build: Annotated[str, Indexed()] = Field(min_length=1)
+
+    key: str = Field(min_length=1)
+    #: The dimension's own index, carried so a row can be read without the registry beside it.
+    index: int = Field(ge=0)
+
+    cells: list[StoredCell] = Field(default_factory=list)
+
+    class Settings:
+        name = "base_r"
+        indexes = [
+            IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
+            IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
         ]

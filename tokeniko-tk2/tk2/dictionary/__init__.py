@@ -14,6 +14,11 @@ row — the body reads the base, it never writes it.
   - `glosses.py`  — the `GlossProvider` protocol, the reduction of a definition to lexicon words,
                     and the base-form rule that decides which POS may mint a dimension (req. 21).
   - `closure.py`  — the definition digraph, its closed sets, the seed closure and its two cuts.
+  - `matrix.py`   — what a square matrix over base keys IS: sparse rows, provenance per cell, and
+                    the storage protocol the builders are handed (the mongo one lives in datatier).
+  - `relations.py`— R: every named relation, signed, with the cell walk's precedence and its law.
+  - `curation.py` — the definitional edges a hand may add, and the gate that hand must pass.
+  - `build.py`    — the assembly: closure -> dimensions -> R, one call under one declared policy.
   - `wordnet.py`  — the real provider. Imports nltk, so it is NOT imported from here: the engine has
                     to stay runnable, and testable, with no corpus on the machine.
 
@@ -22,7 +27,8 @@ BASE keys only — thousands, not the ~197k senses. The dictionary rides ON the 
 There is never a senses x senses matrix.
 """
 
-from tk2.dictionary import closure, config, glosses, keys, policy
+from tk2.dictionary import build, closure, config, curation, glosses, keys, matrix, policy, relations
+from tk2.dictionary.build import BaseBuild, PolicyIncomplete, build_base
 from tk2.dictionary.closure import (
     SeedClosure,
     build_digraph,
@@ -33,7 +39,7 @@ from tk2.dictionary.closure import (
     seed_closure,
     strongly_connected_components,
 )
-from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
+from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig, RelationPolicy
 from tk2.dictionary.glosses import (
     GlossProvider,
     definition_in_lexicon,
@@ -41,7 +47,17 @@ from tk2.dictionary.glosses import (
     dimensions_of,
     lexicon_words_in,
 )
-from tk2.dictionary.keys import InvalidKey, base_of, key_of, key_space, keys_for_word, split_key
+from tk2.dictionary.keys import (
+    Alphabet,
+    AlphabetMismatch,
+    InvalidKey,
+    base_of,
+    key_of,
+    key_space,
+    keys_for_word,
+    split_key,
+)
+from tk2.dictionary.matrix import Cell, Matrix, MatrixRow, MatrixStore, Provenance
 from tk2.dictionary.policy import (
     PolicyRowsInvalid,
     bar_fingerprint,
@@ -56,7 +72,22 @@ from tk2.dictionary.policy import (
 )
 
 __all__ = [
+    "Alphabet",
+    "AlphabetMismatch",
     "BarPair",
+    "BaseBuild",
+    "Cell",
+    "Matrix",
+    "MatrixRow",
+    "MatrixStore",
+    "PolicyIncomplete",
+    "Provenance",
+    "RelationPolicy",
+    "build",
+    "build_base",
+    "curation",
+    "matrix",
+    "relations",
     "ClosurePolicy",
     "DictionaryConfig",
     "GlossProvider",

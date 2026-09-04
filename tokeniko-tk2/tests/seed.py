@@ -95,3 +95,31 @@ def ruled_config():
 def structural_seeds() -> tuple[tuple[str, int, int], ...]:
     """`(word, rank, in_degree)` — the cut of the structural ranking the Captain ruled at k=200."""
     return tuple(migration(5).STRUCTURAL_SEEDS)
+
+
+# ------------------------------------------------------------------------------------------------
+# 0006 — R's weights, the curated vocabulary and the alphabet: policy version 3
+# ------------------------------------------------------------------------------------------------
+#
+# Read off the migration for the fourth time, and here it buys what it bought at 0005: the values
+# under test are the ones that will be written, so a test cannot keep passing after the Captain
+# moves a weight. Nothing here needs a database or a corpus.
+
+
+def policy_rows_v3() -> list[dict]:
+    return [dict(row) for row in migration(6).POLICY_ROWS]
+
+
+def declared_config_v3():
+    """The whole policy v3 declares — v2's seeds and cuts, plus R's weights and the alphabet."""
+    return migration(6).DECLARED
+
+
+def relation_policy():
+    """R's declared weights, as the engine receives them."""
+    return migration(6).DECLARED.relations
+
+
+def alphabet():
+    """The parts of speech policy v3 declares."""
+    return migration(6).ALPHABET

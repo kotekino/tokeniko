@@ -12,6 +12,9 @@ Three things under test, in the order they matter:
      and both fingerprints move when what they cover moves.
   3. THE SNAPSHOT CANNOT DRIFT. Reading it verifies its own pin offline; a live check asserts it
      against the database's rows whenever a database is reachable.
+  5. R's WEIGHTS ARE ROWS TOO (T3, policy v3) — the standing law's own worked example, with the
+     curated vocabulary, the miner's guess and the alphabet beside them, and the older versions
+     hashing exactly as they did.
   4. THE RULING IS IN THE ROWS. Migration 0005's version 2 — purpose ∪ structure, the size cap
      demoted to a rail — with version 1 still reading back as what T2b measured beside it. That the
      200 structural seeds really are the ranking's top 200 needs the whole digraph and is checked
@@ -26,11 +29,14 @@ from tests.seed import (
     bar_rows,
     closed_class_forms,
     declared_config,
+    declared_config_v3,
     policy_rows,
     policy_rows_v2,
+    policy_rows_v3,
     ruled_config,
     structural_seeds,
 )
+from tk2.dictionary import keys as keys_module
 from tk2.dictionary import policy
 from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
 
@@ -475,3 +481,192 @@ def test_the_bar_did_not_move_with_the_seeds():
     is not an occasion to quietly re-declare the expectation the ruling will be judged by."""
     assert ruled_config().bar == policy.snapshot_bar()
     assert len(ruled_config().bar) == 18
+
+
+# ------------------------------------------------------------------------------------------------
+# 5 — policy v3: R's weights, the curated vocabulary and the alphabet (T3)
+# ------------------------------------------------------------------------------------------------
+#
+# Offline again, and for section 1's reason: what is under test is a set of VALUES crossing a
+# medium. The standing law named this one in advance — «the relation weights you write in T3: they
+# land as rows from the start, never as a table in config.py» — so the load-bearing assertions here
+# are that the rows carry them, that the shape module carries none of them, and that v1 and v2 did
+# not move underneath.
+
+#: The fingerprint of policy v3 — v2's seeds and cuts, plus the nineteen relation weights, the six
+#: curated relations, the reciprocal, the miner's guess and the alphabet. Written down for
+#: T2B_FINGERPRINT's reason: it is what a build's manifest will record.
+V3_FINGERPRINT = "4bd99d3dbd57a50a354c888fa84abfc951af166b0d7c48f7bfa9934d7e2e5b67"
+
+
+def test_the_relation_weights_are_rows():
+    """The standing law's own worked example. Nineteen weights, signs included, read back as the
+    value object R is filled from."""
+    config = policy.config_from_rows(policy_rows_v3(), bar_rows())
+    assert config == declared_config_v3()
+    assert config.fingerprint() == V3_FINGERPRINT
+
+    weights = dict(config.relations.weights)
+    assert len(weights) == 19
+    assert weights["identity"] == 1.0 and weights["synonym"] == 1.0
+    assert weights["antonym"] == -1.0, "the sign is the antonym column-read primitive"
+    assert weights["causes"] == 0.85 and weights["caused_by"] == 0.60
+    assert weights["entails"] == 0.80 and weights["entailed_by"] == 0.60
+
+
+def test_the_declared_order_of_the_weights_is_the_cell_walks_precedence():
+    """`position` is not decoration here: two relations of equal absolute weight resolve to the one
+    declared first, so a rebuild cannot flip a cell's provenance by iteration luck."""
+    relations = policy.config_from_rows(policy_rows_v3(), bar_rows()).relations
+    assert relations.relations[:3] == ("identity", "synonym", "antonym")
+    assert relations.precedence("troponym") < relations.precedence("hyponym_1")
+    assert relations.weight_of("troponym") == relations.weight_of("hyponym_1")
+
+
+def test_neither_gloss_overlap_nor_wup_is_a_relation_of_r():
+    """The two the prototype's single weight table carried and R must not: `gloss_overlap` is
+    co-occurrence, which is D's whole job (requirement 10), and `wup` is a score OVER the taxonomy
+    rather than a named edge, so it fails R's provenance criterion and D's co-occurrence one alike."""
+    relations = policy.config_from_rows(policy_rows_v3(), bar_rows()).relations
+    assert "gloss_overlap" not in relations.relations
+    assert "wup" not in relations.relations
+
+
+def test_the_curated_vocabulary_is_closed_and_carries_the_reciprocal():
+    """Requirement 20's six, and the back-reference the Captain ruled on 2026-08-12. A separate row
+    KIND from the mined weights because `entails` is in both — the same claim from two provenances."""
+    relations = policy.config_from_rows(policy_rows_v3(), bar_rows()).relations
+    assert [name for name, _weight in relations.curated] == [
+        "used_for", "site_of", "involves", "entails", "causes", "state_of"
+    ]
+    assert relations.curated_weight("used_for") == 0.80
+    assert relations.reciprocal_weight == 0.60
+    # ...and the two `entails` are two different rows with two different kinds, never one.
+    kinds = {(r["kind"], r["name"]) for r in policy_rows_v3()}
+    assert (policy.KIND_RELATION_WEIGHT, "entails") in kinds
+    assert (policy.KIND_CURATED_RELATION, "entails") in kinds
+
+
+def test_the_miners_guess_is_rows_too():
+    """A cue-word table is a list, and the standing law is unambiguous about lists. Carried verbatim
+    from the prototype, in the order the cues are tried."""
+    relations = policy.config_from_rows(policy_rows_v3(), bar_rows()).relations
+    assert [name for name, _cues in relations.cues] == ["causes", "used_for", "site_of"]
+    assert "provides" in dict(relations.cues)["used_for"]
+    assert ("a", "v", "state_of") in relations.defaults
+
+
+def test_the_alphabet_travelled_with_the_policy():
+    """`POS_ORDER` — WordNet's answer about English, not the key grammar (the Captain, 2026-08-25).
+    It was ruled before v2 shipped and v2 shipped without it, so it folds in here."""
+    config = policy.config_from_rows(policy_rows_v3(), bar_rows())
+    assert config.alphabet.order == ("n", "v", "a", "r")
+    assert dict(config.alphabet.aliases) == {"s": "a"}
+    assert [r["name"] for r in policy_rows_v3() if r["kind"] == policy.KIND_POS] == list("nvar")
+
+
+def test_version_3_carries_version_2_forward_unedited():
+    """A build reads ONE version, so v3 has to be a WHOLE policy — and the half of it that did not
+    move must be v2's own values, not a re-typing of them."""
+    v2 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v2()}
+    v3 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v3()}
+    carried = {key: value for key, value in v3.items() if key[0] in (policy.KIND_SEED, policy.KIND_CLOSURE)}
+
+    assert carried == v2, "the seeds, the cuts, their families and their reasons cross unchanged"
+    assert ruled_config().closure == declared_config_v3().closure
+    assert ruled_config().declared_seeds == declared_config_v3().declared_seeds
+    assert declared_config_v3().bar == policy.snapshot_bar(), "the bar did not move with them either"
+
+
+def test_every_new_row_still_explains_itself():
+    """The rule the older versions are held to, applied to the kinds T3 adds: a curated value with
+    no reason attached is a value nobody can later argue with."""
+    assert all(row["note"].strip() for row in policy_rows_v3())
+    assert all(row["family"] for row in policy_rows_v3() if row["kind"] == policy.KIND_RELATION_WEIGHT)
+
+
+def test_the_older_versions_hash_exactly_as_they_did():
+    """THE regression the optional fields exist for. `as_dict` writes nothing about relations or the
+    alphabet when a policy declared neither, so a manifest row recording v1 or v2 keeps meaning what
+    it meant — and a v3 build cannot be mistaken for either."""
+    assert policy.config_from_rows(policy_rows(), bar_rows()).fingerprint() == T2B_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v2(), bar_rows()).fingerprint() == RULED_FINGERPRINT
+    assert V3_FINGERPRINT not in (T2B_FINGERPRINT, RULED_FINGERPRINT)
+
+    v1 = policy.config_from_rows(policy_rows(), bar_rows())
+    assert "relations" not in v1.as_dict() and "alphabet" not in v1.as_dict()
+    assert v1.relations is None and v1.alphabet is None
+
+
+# ------------------------------------------------------------------------------------------------
+# the mechanism, on rows written here — half a declaration is not a policy
+# ------------------------------------------------------------------------------------------------
+
+
+def _weight_rows(*pairs, version=1):
+    return [
+        _policy_row(policy.KIND_RELATION_WEIGHT, name, value, position=i, version=version)
+        for i, (name, value) in enumerate(pairs)
+    ]
+
+
+def test_a_policy_that_declares_no_relations_says_so_rather_than_inventing_them():
+    """`None`, not an empty `RelationPolicy`: v1 and v2 had nothing to say about relations, and a
+    config that answered «no weights» would be a config claiming a matrix nobody declared."""
+    assert policy.relation_policy_from_rows(_closure_rows()) is None
+
+
+def test_a_curated_vocabulary_without_weights_is_refused():
+    """Half a declaration. A curated edge is shaped like the mined edges it sits beside, so a
+    vocabulary with no table beside it describes nothing."""
+    rows = [_policy_row(policy.KIND_CURATED_RELATION, "used_for", 0.8)]
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.relation_policy_from_rows(rows)
+
+
+def test_a_curated_vocabulary_without_a_reciprocal_is_refused():
+    """The back-reference is half of what a curated edge writes, and a default in code would be a
+    second declaration of a number the Captain ruled."""
+    rows = _weight_rows(("identity", 1.0)) + [
+        _policy_row(policy.KIND_CURATED_RELATION, "used_for", 0.8)
+    ]
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.relation_policy_from_rows(rows)
+    assert "reciprocal_weight" in str(excinfo.value)
+
+
+def test_an_unknown_curation_setting_is_refused_not_ignored():
+    rows = _weight_rows(("identity", 1.0)) + [_policy_row(policy.KIND_CURATION, "temperature", 3)]
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.relation_policy_from_rows(rows)
+    assert "temperature" in str(excinfo.value)
+
+
+def test_a_cue_for_a_relation_outside_the_closed_set_is_refused():
+    """The vocabulary is closed at the row level too, or a guess could propose something no cell may
+    ever carry."""
+    rows = _weight_rows(("identity", 1.0)) + [
+        _policy_row(policy.KIND_CURATED_RELATION, "used_for", 0.8),
+        _policy_row(policy.KIND_CURATION, "reciprocal_weight", 0.6),
+        _policy_row(policy.KIND_CURATION_CUE, "smells_like", ["fishy"]),
+    ]
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.relation_policy_from_rows(rows)
+
+
+def test_an_alias_with_no_alphabet_to_point_at_is_refused():
+    assert policy.alphabet_from_rows(_closure_rows()) is None
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.alphabet_from_rows([_policy_row(policy.KIND_POS_ALIAS, "s", "a")])
+
+
+def test_an_alphabet_the_key_convention_cannot_honour_stops_at_the_config():
+    """Reading those rows to LOOK at them stays possible; assembling a build's config out of them
+    does not. The refusal happens before anything is measured."""
+    rows = _closure_rows() + [
+        _policy_row(policy.KIND_POS, letter, name, position=i)
+        for i, (letter, name) in enumerate((("n", "noun"), ("v", "verb"), ("x", "particle")))
+    ]
+    assert policy.alphabet_from_rows(rows).order == ("n", "v", "x")
+    with pytest.raises(keys_module.AlphabetMismatch):
+        policy.config_from_rows(rows, bar_rows())

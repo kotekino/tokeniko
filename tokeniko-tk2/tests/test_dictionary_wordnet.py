@@ -339,3 +339,125 @@ def test_the_at_scale_lexicon_is_single_words_only():
     # thousands of dimensions, never the ~197k senses. A number that drifts with the corpus is
     # checked as a magnitude on purpose.
     assert 50_000 < len(lexicon) < 150_000
+
+
+# ------------------------------------------------------------------------------------------------
+# the relation seam (T3) — the facts R's cells are made of
+# ------------------------------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def relation_provider():
+    try:
+        wn_adapter.ensure_corpora()
+    except wn_adapter.CorpusMissing as exc:
+        pytest.skip(str(exc))
+    return wn_adapter.WordNetProvider(
+        ["eat", "chew", "swallow", "devour", "kill", "die", "hot", "temperature",
+         "hungry", "enter", "leave", "land", "use", "used"]
+    )
+
+
+def test_the_named_relations_are_the_ones_the_prototype_mined(relation_provider):
+    """The adapter's vocabulary, asserted against the fixture's copy of it. A pure test running on a
+    list that had drifted from the resource would be a test of a matrix nobody builds."""
+    from tests.lexicon_fixture import WORDNET_RELATION_NAMES
+
+    assert wn_adapter.RELATIONS == WORDNET_RELATION_NAMES
+    assert relation_provider.relations() == wn_adapter.RELATIONS
+
+
+def test_the_relations_the_jurassic_build_could_never_produce(relation_provider):
+    """Four WordNet facts, one per relation the review was about. If nltk moves under us, the thing
+    that breaks says which belief broke."""
+    def targets(key, relation):
+        return relation_provider.relations_of_key(key).get(relation, frozenset())
+
+    assert "swallow.v.01" in targets("eat.v", "entails")
+    assert "chew.v.01" in targets("eat.v", "entails")
+    assert "die.v.01" in targets("kill.v", "causes")
+    assert "temperature.n.01" in targets("hot.a", "attribute")
+    assert any(name.startswith("devour") or name.startswith("eat")
+               for name in targets("eat.v", "troponym"))
+
+
+def test_antonymy_is_read_off_the_lemma_and_keeps_its_sign(relation_provider):
+    """WordNet states antonymy between LEMMAS, not synsets, which is why the adapter walks lemmas —
+    and why `enter`/`leave` is a cell and not a coincidence of two rows' neighbours."""
+    antonyms = relation_provider.relations_of_key("enter.v").get("antonym", frozenset())
+    assert any(name.startswith("leave") or name.startswith("exit") for name in antonyms)
+
+
+def test_a_dimension_speaks_every_sense_of_its_own_part_of_speech(relation_provider):
+    """The decision this adapter carries across from the prototype: the closure's `senses` cut
+    governs DEFINITIONS, and a dimension's relations are a different question about the same word.
+    A row that heard only WordNet's first reading would lose `eat entails chew` the day the
+    lexicographer reordered the senses."""
+    senses = relation_provider.senses_of_key("eat.v")
+    assert len(senses) > 1
+    assert all(".v." in sense for sense in senses)
+    assert relation_provider.senses_of_key("land.n") and relation_provider.senses_of_key("land.v")
+
+
+def test_an_inflection_borrows_no_relations(relation_provider):
+    """Requirement 21 holds at the relation seam too, because everything reads through
+    `lemma_synsets`: `used` is a real adjective and `used.v` does not exist, so it cannot quietly
+    become a second `use.v` carrying `use`'s edges."""
+    assert relation_provider.senses_of_key("used.a")
+    assert relation_provider.senses_of_key("used.v") == ()
+    assert relation_provider.relations_of_key("used.v") == {}
+
+
+def test_a_sense_can_be_quoted_by_itself(relation_provider):
+    """What a curated edge's evidence is: a particular definition, verbatim. «Every sense at once»
+    could not be quoted as anything a reader could check."""
+    definition = relation_provider.definition_of_sense("bed.n.01")
+    assert "furniture" in definition
+    assert relation_provider.gloss("bed").startswith(definition)
+
+
+def test_the_lemma_scope_is_a_parameter_and_defaults_to_the_standing_reading(relation_provider):
+    """The A/B the Captain ordered measured (2026-08-26), as a parameter of the run rather than a
+    hand edit somebody reverts. A caller who says nothing gets the law; the variant is asked for."""
+    assert relation_provider.lemma_scope == wn_adapter.STANDING_LEMMA_SCOPE == wn_adapter.SCOPE_SYNSET
+    with pytest.raises(ValueError):
+        wn_adapter.WordNetProvider(["eat"], lemma_scope="whichever")
+
+
+def test_the_own_lemma_reading_states_strictly_less_and_nothing_new(relation_provider):
+    """B is a SUBSET of A, relation by relation: narrowing whose lemma may speak can only remove a
+    statement, never invent one. Measured at the full base: 6,634 cells removed, 0 added."""
+    narrow = wn_adapter.WordNetProvider(
+        ["eat", "corrode", "refuse", "reject", "deny", "admit", "allow", "leave", "enter"],
+        lemma_scope=wn_adapter.SCOPE_WORD,
+    )
+    for key in ("eat.v", "refuse.v", "leave.v"):
+        wide_edges = relation_provider.relations_of_key(key)
+        narrow_edges = narrow.relations_of_key(key)
+        for relation, targets in narrow_edges.items():
+            assert targets <= wide_edges.get(relation, frozenset())
+
+
+def test_a_dimension_inherits_its_synonyms_oppositions_under_the_standing_reading():
+    """The finding in one assertion, with its witness. `eat` shares a synset with `corrode` («eat
+    away»), so under `synset` it carries `corrode`'s derivations; `refuse` carries `reject`'s
+    antonym. Both are gone under `word`. Which reading is right is the Captain's."""
+    words = ["eat", "corrode", "corrosion", "refuse", "reject", "admit"]
+    wide = wn_adapter.WordNetProvider(words)
+    narrow = wn_adapter.WordNetProvider(words, lemma_scope=wn_adapter.SCOPE_WORD)
+
+    assert "corrosion.n.02" in wide.relations_of_key("eat.v")["derivational"]
+    assert "corrosion.n.02" not in narrow.relations_of_key("eat.v").get("derivational", frozenset())
+    assert wide.lemma_sources("eat.v", "derivational")["corrosion.n.02"] == ("corrode",)
+
+    assert "admit.v.02" in wide.relations_of_key("refuse.v")["antonym"]
+    assert "admit.v.02" not in narrow.relations_of_key("refuse.v").get("antonym", frozenset())
+    assert "reject" in wide.lemma_sources("refuse.v", "antonym")["admit.v.02"]
+
+
+def test_only_the_two_lemma_stated_relations_can_be_scoped(relation_provider):
+    """Everything else in the table is synset-to-synset and the parameter cannot touch it — which
+    is why the measurement moves `derivational` and `antonym` and leaves `entails` alone."""
+    assert wn_adapter.LEMMA_SCOPED_RELATIONS == ("antonym", "derivational")
+    with pytest.raises(ValueError):
+        relation_provider.lemma_sources("eat.v", "entails")

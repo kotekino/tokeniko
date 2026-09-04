@@ -15,3 +15,15 @@ tool. The split is the same one everywhere: the body interprets, the tools and m
   re-derives the standing policy's structural seeds through the migration's own
   `derive_structural_seeds()`, diffs them against the rows, and rebuilds the base from them — what
   makes a materialised seed list a derivation rather than a paste.
+- `build_dictionary.py` — the base, built from the standing policy rows: the closure, the
+  dimensions, and R over them, with the shape of what was built and the bar READ (not scored — R is
+  half the geometry until D lands). `--apply --db … --authorized …` is the Captain's hand and the
+  only part that writes, through the migration door, leaving a manifest row behind.
+  `--compare-lemma-scope` is the ordered A/B of 2026-08-26: R built twice over ONE key space,
+  changing only whether a synset's other lemmas may state antonymy and derivation for a dimension.
+  `--lemma-scope word` measures the variant alone; neither may be stored, because a stored base has
+  to be the one its config fingerprint describes.
+- `curate_dictionary.py` — the definitional edges (requirement 20): `propose` mines both sides of a
+  pair and prints the evidence verbatim, `simulate` moves an in-memory copy of R and re-reads the
+  bar, `approve` is refused without `--i-am-the-captain` and `--authorized`. The default worklist is
+  DERIVED — the bar's NEAR pairs R leaves mute — rather than a list that would go stale.

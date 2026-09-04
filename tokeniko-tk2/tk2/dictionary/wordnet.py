@@ -41,6 +41,50 @@ REQUIRED_CORPORA = ("wordnet", "omw-1.4", "stopwords")
 # 21's repair nothing picks a winner among a token's readings: the reduction walks the whole POS
 # alphabet (`keys.POS_ORDER`) and keeps them all.
 
+# THE RELATIONS THIS ADAPTER STATES, in the order the prototype's cell walk evaluated them — which
+# is also the order the weight rows declare and therefore the precedence a tie resolves by. Not a
+# policy: a policy could not add a relation WordNet has not got, and could not remove one without
+# saying so (a weight of 0.0 is how a relation is switched off).
+RELATIONS = (
+    "antonym",
+    "derivational",
+    "entails",
+    "causes",
+    "troponym",
+    "hyponym_1",
+    "hypernym_1",
+    "hypernym_2",
+    "verb_group",
+    "similar_to",
+    "attribute",
+    "also_see",
+    "meronym",
+    "holonym",
+)
+
+# ------------------------------------------------------------------------------------------------
+# WHOSE LEMMA MAY SPEAK — the A/B the Captain ordered measured (2026-08-26)
+# ------------------------------------------------------------------------------------------------
+
+# Antonymy and derivation are the two relations WordNet states between LEMMAS rather than between
+# synsets; everything else in RELATIONS is synset-to-synset and this parameter cannot touch it.
+LEMMA_SCOPED_RELATIONS = ("antonym", "derivational")
+
+#: A — every lemma of the synset speaks. The prototype's reading, and the STANDING one: a dimension
+#: inherits the oppositions and derivations of the words it shares a synset with.
+SCOPE_SYNSET = "synset"
+
+#: B — only the lemma spelled like this dimension speaks. WordNet states these two relations of a
+#: LEMMA, so this reads the resource's own data model literally: `feed`'s antonym stays `feed`'s.
+SCOPE_WORD = "word"
+
+LEMMA_SCOPES = (SCOPE_SYNSET, SCOPE_WORD)
+
+#: The scope the standing policy was measured under, and the only one a build may STORE. A variant
+#: is a measurement, not a base: `config.RELATION_RULES` names the walk the fingerprint covers, and
+#: a stored base built under another reading would carry a hash describing a law it did not obey.
+STANDING_LEMMA_SCOPE = SCOPE_SYNSET
+
 # A cache sentinel: `lemma()` answers None for «not that part of speech at all», which is a real
 # answer and has to be cacheable as one.
 _UNCACHED = object()
@@ -150,14 +194,21 @@ class WordNetProvider:
     builders will walk them again; WordNet's own lookups are not free at lexicon scale.
     """
 
-    def __init__(self, lexicon, download: bool = False):
+    def __init__(self, lexicon, download: bool = False, lemma_scope: str = STANDING_LEMMA_SCOPE):
         ensure_corpora(download=download)
+        if lemma_scope not in LEMMA_SCOPES:
+            raise ValueError(f"unknown lemma scope {lemma_scope!r} — the two are {LEMMA_SCOPES}")
+        # A PARAMETER OF THE RUN, so both readings are reproducible from the repo rather than from a
+        # hand edit somebody reverted. It defaults to the standing one: a caller who says nothing
+        # gets the law, and the variant has to be asked for out loud.
+        self._lemma_scope = lemma_scope
         self._lexicon = tuple(dict.fromkeys(keys.normalize_word(w) for w in lexicon))
         self._gloss_cache: dict[tuple[str, str], str] = {}
         self._pos_cache: dict[str, tuple[str, ...]] = {}
         self._lemma_cache: dict[tuple[str, str], str | None] = {}
         self._synset_cache: dict[str, tuple] = {}
         self._name_cache: dict[str, bool] = {}
+        self._relation_cache: dict[str, dict[str, frozenset[str]]] = {}
         self._stopwords = frozenset(nltk_stopwords.words("english"))
 
     # -- the protocol ----------------------------------------------------------------------------
@@ -266,6 +317,135 @@ class WordNetProvider:
         word, pos = keys.split_key(key)
         found = [s for s in self.lemma_synsets(word) if keys.normalize_pos(s.pos()) == pos]
         return found[:1] if senses == "primary" and found else found
+
+    # -- the RelationProvider: what R is filled from ---------------------------------------------
+
+    def senses_of_key(self, key: str) -> tuple[str, ...]:
+        """Every sense the dimension speaks for — ALL readings of its part of speech.
+
+        Not `synsets_of_key(key, "primary")`, and the difference is a decision rather than an
+        oversight: the closure's `senses` cut governs which senses write a DEFINITION, because
+        membership is decided by what a word is defined as. A dimension's RELATIONS are a different
+        question about the same word — `land.v` is the verb, all of it — and a row that heard only
+        WordNet's first reading would lose `eat entails chew` the day the lexicographer reordered
+        the senses. This is the prototype's own behaviour (`tk2_matrix.precompute` filtered by POS
+        and never by sense) and it is inside `config.RELATION_RULES`.
+
+        Read through `lemma_synsets`, so requirement 21 and the name refusal hold here too: `used.v`
+        does not borrow `use`'s senses, and `be.n` is not beryllium.
+        """
+        word, pos = keys.split_key(key)
+        return tuple(
+            synset.name()
+            for synset in self.lemma_synsets(word)
+            if keys.normalize_pos(synset.pos()) == pos
+        )
+
+    @property
+    def lemma_scope(self) -> str:
+        """Which lemmas of a synset speak for this dimension. See `LEMMA_SCOPES`."""
+        return self._lemma_scope
+
+    def relations(self) -> tuple[str, ...]:
+        """The relations this adapter can state. Named as a tuple so a weight row for a relation
+        WordNet has not got is refused at build time instead of producing an empty column."""
+        return RELATIONS
+
+    def relations_of_key(self, key: str) -> dict[str, frozenset[str]]:
+        """`relation -> the senses it points at`, for one dimension. Memoised per key.
+
+        Walked once per dimension and never per pair: the expensive part of a matrix is the resource,
+        and the prototype paid for it n² times.
+
+        Two of WordNet's readings are renamed on the way through, because the name is the claim:
+        a verb's hyponym is a TROPONYM (a manner-of — `eat` -> `devour`, `slurp`), which is a
+        different relation from a noun's hyponym with a different meaning and its own weight; and
+        `instance_hypernyms` joins `hypernyms` because the distinction it draws (Maine is an
+        instance of a state) is about NAMES, which the base does not contain since option C.
+        """
+        cached = self._relation_cache.get(key)
+        if cached is None:
+            cached = self._mine_relations(key)
+            self._relation_cache[key] = cached
+        return cached
+
+    def _mine_relations(self, key: str) -> dict[str, frozenset[str]]:
+        found: dict[str, set[str]] = {}
+
+        def state(relation: str, target) -> None:
+            found.setdefault(relation, set()).add(target.name())
+
+        word, _pos = keys.split_key(key)
+        for synset in self._synsets_of(key):
+            # WHOSE LEMMA SPEAKS is the one thing `lemma_scope` decides, and it decides it for these
+            # two relations only, because these are the two WordNet states between LEMMAS. Under
+            # `synset` (the standing reading, and the prototype's) a dimension inherits the
+            # oppositions and derivations of every word it shares a synset with; under `word` it
+            # keeps its own. Which is right is the Captain's, and the measurement is
+            # `tools/build_dictionary.py --compare-lemma-scope`.
+            for lemma in synset.lemmas():
+                if self._lemma_scope == SCOPE_WORD and lemma.name().lower() != word:
+                    continue
+                for antonym in lemma.antonyms():
+                    state("antonym", antonym.synset())
+                for derived in lemma.derivationally_related_forms():
+                    state("derivational", derived.synset())
+            for target in synset.entailments():
+                state("entails", target)
+            for target in synset.causes():
+                state("causes", target)
+            for target in synset.verb_groups():
+                state("verb_group", target)
+            for target in synset.similar_tos():
+                state("similar_to", target)
+            for target in synset.attributes():
+                state("attribute", target)
+            for target in synset.also_sees():
+                state("also_see", target)
+            for target in synset.part_meronyms() + synset.member_meronyms() + synset.substance_meronyms():
+                state("meronym", target)
+            for target in synset.part_holonyms() + synset.member_holonyms() + synset.substance_holonyms():
+                state("holonym", target)
+            for target in synset.hyponyms():
+                state("troponym" if synset.pos() == "v" else "hyponym_1", target)
+            for target in synset.hypernyms() + synset.instance_hypernyms():
+                state("hypernym_1", target)
+                for grandparent in target.hypernyms():
+                    state("hypernym_2", grandparent)
+
+        return {relation: frozenset(targets) for relation, targets in found.items()}
+
+    def definition_of_sense(self, sense: str) -> str:
+        """ONE sense's definition — what a curated edge quotes as its evidence. Not the word's
+        joined gloss: an edge is justified by a particular reading, and «every sense at once» could
+        not be quoted as anything a reader could check."""
+        return wn.synset(sense).definition()
+
+    def lemma_sources(self, key: str, relation: str) -> dict[str, tuple[str, ...]]:
+        """WHICH LEMMAS state a lemma-scoped relation for this dimension: `target sense -> lemmas`.
+
+        The evidence behind the lemma-scope question, and the reason it is here rather than in a
+        probe: «`eat` has `feed`'s antonym» is a claim about the resource, and a ruling made on it
+        has to be able to name the lender. Answers under `synset` reading whatever the instance's
+        own scope is, because the question is what the borrowing WOULD be.
+        """
+        if relation not in LEMMA_SCOPED_RELATIONS:
+            raise ValueError(f"{relation!r} is not stated between lemmas; the two that are: "
+                             f"{LEMMA_SCOPED_RELATIONS}")
+        found: dict[str, set[str]] = {}
+        for synset in self._synsets_of(key):
+            for lemma in synset.lemmas():
+                targets = lemma.antonyms() if relation == "antonym" else \
+                    lemma.derivationally_related_forms()
+                for target in targets:
+                    found.setdefault(target.synset().name(), set()).add(lemma.name())
+        return {sense: tuple(sorted(lemmas)) for sense, lemmas in found.items()}
+
+    def _synsets_of(self, key: str):
+        word, pos = keys.split_key(key)
+        return [s for s in self.lemma_synsets(word) if keys.normalize_pos(s.pos()) == pos]
+
+    # -- beyond the protocols --------------------------------------------------------------------
 
     def sense_keys(self, word: str) -> list[dict]:
         """Every sense of a word under the tk2 sense-key convention, with WordNet's own name kept

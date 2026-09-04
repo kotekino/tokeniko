@@ -116,3 +116,45 @@ def test_sense_numbers_are_not_zero_based():
 def test_the_two_kinds_of_key_never_answer_for_each_other():
     assert keys.is_base_key("eat.v") and not keys.is_sense_key("eat.v")
     assert keys.is_sense_key("eat.v.01") and not keys.is_base_key("eat.v.01")
+
+
+# ------------------------------------------------------------------------------------------------
+# the alphabet — declared in rows since policy v3, compiled against here (T3)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_the_alphabet_is_a_value_and_the_grammar_is_not():
+    """The Captain's ruling of 2026-08-25, as two objects: WHICH parts of speech exist is a value
+    that can be declared (and is, in `dictionary_policy`), while a key BEING word-plus-POS is the
+    shape this module is."""
+    assert keys.GRAMMAR_ALPHABET.order == keys.POS_ORDER
+    assert dict(keys.GRAMMAR_ALPHABET.aliases) == {"s": "a"}
+    assert keys.GRAMMAR_ALPHABET.normalize("S") == "a"
+    assert keys.GRAMMAR_ALPHABET.index("v") == 1
+
+
+def test_the_rows_declare_the_alphabet_the_grammar_was_compiled_against():
+    """The whole point of the guard. The declaration is the rows; this constant is what the code can
+    honour, and the two are asserted against each other rather than assumed to agree."""
+    from tests.seed import alphabet
+
+    assert alphabet() == keys.GRAMMAR_ALPHABET
+    keys.assert_compiled(alphabet())
+
+
+def test_an_alphabet_the_grammar_cannot_honour_stops_the_build():
+    """A future policy that adds a part of speech must not quietly mint keys nobody ruled on: it
+    stops, and the fix is a code change in the same breath as the migration."""
+    with pytest.raises(keys.AlphabetMismatch):
+        keys.assert_compiled(keys.Alphabet(order=("n", "v", "a", "r", "x")))
+
+
+def test_an_alphabet_refuses_to_be_incoherent():
+    """The shape checks its own coherence, so a row set that half-declares something is caught where
+    it is read rather than where it is used."""
+    with pytest.raises(keys.InvalidKey):
+        keys.Alphabet(order=())
+    with pytest.raises(keys.InvalidKey):
+        keys.Alphabet(order=("n", "n"))
+    with pytest.raises(keys.InvalidKey):
+        keys.Alphabet(order=("n",), aliases=(("s", "v"),))     # points at a POS that does not exist
