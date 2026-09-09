@@ -19,8 +19,9 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [x] policy as rows — the ruling: k=200, rail 25,000, closed classes as typed KB rows — `a6acefb`
 - [x] R at scale + curation pipeline (Captain's hand on approve) — `f71baa3`
 - [x] lemma scope ruled (v4) + inferred opposition ruled (v5) — `7da676f`
-- [ ] D at scale (derivational down-weight DECIDED; sense mode + IDF questions) — in flight
-- [ ] the bar grown + map regenerated + the live build (E1 gate)
+- [x] D at scale + the dual read ruled (min_shared 1 · derivational 0.45 · mix 0.5) — `b8f325e`
+- [ ] **T5 = THE E1 GATE**: acceptance floors (his ruling) · bar grown from 18 (his ruling) ·
+      the map walked · the safe 218MB write · then the live build and the epic push
 
 ## E2 — the format (tkzip v2)
 - [ ] role inventory (VerbNet ref; source; part/determination split)

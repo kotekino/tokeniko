@@ -191,8 +191,46 @@ and D are built once, against a base whose policy is already settled.)*
      adjectives 13%, nouns 1.7%, verbs 0.3%: **R is close to mute about adverbs**, and the honest fix
      is D and curation, not borrowed edges.
 3. **D at scale** — gloss overlap over POS-split keys; derivational down-weight DECIDED here (the
-   land.n~land.v OPEN item); membership repair with POS-aware lemmas. **Two questions parked here by
-   the Captain, 2026-08-25:** (a) **the sense mode** — the closure mines `senses="primary"`, so for
+   land.n~land.v OPEN item); membership repair with POS-aware lemmas.
+   **LANDED 2026-09-09 (`b8f325e`).** D is the second floor: unsigned, symmetric, square over the
+   same 4,445 keys, mined through the seam T2/T2b/v4 hardened so it cannot re-open a defect R
+   already closed. Its walk arrived as **nine policy rows on its first day** (v6, migration 0009)
+   rather than a table in `config.py` — and those rows' notes named their own defect in numbers,
+   which is what made the ruling possible: at the prototype's gate of two, **87% of D's cells sat at
+   the cap**, so D had stopped saying HOW MUCH.
+   **v7 (migration 0010) is ONE ruling with THREE values**, all measured:
+   - **`min_shared` 2 -> 1.** The gate was suppressing the evidence (swept: 1 -> 1.67M cells, 41% at
+     cap, 41 silent rows, D alone 47/80 · 2 -> 153,830, 87%, 809, 26/80 · 3 -> 19,524, 98.7%, 2,285,
+     8/80). **At one, D separates what R cannot**: `cause.n~cause.v` +0.050 against `land.n~land.v`
+     +0.024 — twice as near, where R states the *identical* derivational cell.
+   - **`derivational` 0.90 -> 0.45.** A **peak, not a slope**: 0.90->64 · 0.60->65 · **0.45->67** ·
+     0.30->66 with the LOCAL order breaking (5/7 -> 4/7). Halved and not killed — the POS collapse is
+     now pulled apart by **evidence** rather than by silence. *It also moves PROVENANCE, not only
+     weight:* R's total is unchanged but **101 cells change which relation they claim**
+     (`attribute` 302 -> 400), because a derivation no longer outranks a stated `attribute` (0.70).
+     The row's note says so — a weight ruling that silently re-labels cells must be told, not found.
+   - **`mix` = 0.5, and it becomes a row at all** — in its own **`ReadingPolicy`** with its own
+     dated law, because *a parameter must travel with the law it is applied under* (a bare float
+     would let the concatenation shape change underneath a fingerprint). At mix 1.0 **D drowns the
+     opposition R states** — `enter~leave` goes positive. T5's acceptance floors belong in the same
+     object.
+   - **The dual read: 58/80 -> 67/80, local order 4/7 -> 5/7, MUTE 7 -> 0**, membership unmoved.
+   - **Both parked questions CLOSED, with their numbers in the rows so nobody re-litigates them
+     blind:** `senses="all"` **rejected** (key space 4,445 -> 12,925, `enter~leave` reads +0.759,
+     local 1/7 — and it moves MEMBERSHIP, a different kind of decision from a weight); `idf` **not
+     adopted, measured twice** — once at each gate, because the `min_shared` ruling repealed the
+     first measurement's conditions. At the ruled gate it cuts junk's share of shared mass
+     62.9% -> 45.7% (a bigger win than before) but the only-junk pairs never move (63.5%, that
+     figure is membership) and the reading gets **worse, 67 -> 65**; decisively, `bed.n~cause.n` — a
+     declared FAR and D's worst false positive — gets **louder**, +0.338 -> +0.352.
+   - **`measure` and `vocabulary` are unruled BY DEFAULT, not by decision**: at the old gate all
+     three measures and both vocabularies returned the identical bar (everything saturated). At the
+     new gate they are observable for the first time — a real question, now askable.
+   - **Carried to T5, measured not guessed:** D is **218.8 MB BSON** (max document 259 KB, the 16 MB
+     limit nowhere near), written as ONE `insert_many` that pymongo splits into ~5 wire batches —
+     **not atomic**. An interrupted apply leaves a partial base under a build label with no manifest
+     row; 218 MB over the network to the body makes that likely rather than theoretical.
+   *The two questions as they were parked by the Captain, 2026-08-25:* (a) **the sense mode** — the closure mines `senses="primary"`, so for
    every polysemous word the edges come from whichever sense WordNet ordered first, and that is
    frequently not the sense that made the word frequent (`small` = «the slender part of the back»,
    `large` = «a garment size», `plant` = «buildings for industrial labor», `state` = «the territory
