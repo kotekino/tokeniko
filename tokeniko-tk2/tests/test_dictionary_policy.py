@@ -12,6 +12,8 @@ Three things under test, in the order they matter:
      and both fingerprints move when what they cover moves.
   3. THE SNAPSHOT CANNOT DRIFT. Reading it verifies its own pin offline; a live check asserts it
      against the database's rows whenever a database is reachable.
+  9. THE DUAL READ IS RULED (policy v7): the mix gets a home of its own, and two numbers move on
+     the sweeps that measured them.
   7. AN INFERRED OPPOSITION is admitted (policy v5): the reading `add_only` and the relation it
      mints, two rows and one decision.
   6. WHOSE LEMMA MAY SPEAK is a row too (T3 addendum, policy v4) — the Captain's ruling of
@@ -36,17 +38,21 @@ from tests.seed import (
     declared_config_v3,
     declared_config_v4,
     declared_config_v5,
+    declared_config_v6,
+    declared_config_v7,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
     policy_rows_v4,
     policy_rows_v5,
+    policy_rows_v6,
+    policy_rows_v7,
     ruled_config,
     structural_seeds,
 )
 from tk2.dictionary import keys as keys_module
 from tk2.dictionary import policy
-from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
+from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig, ReadingPolicy
 
 #: The policy fingerprint of the base as it stood at `1e7cad3` (E1 T2b), before the values moved
 #: into rows. It is written down here and nowhere else: this is the regression the whole task is
@@ -856,3 +862,286 @@ def test_a_reading_and_its_weight_row_travel_together():
     again = relation_engine.policy_for(standing, "add_only")
     assert dict(again.weights)["antonym_inferred"] == -1.0
     assert again == standing, "the standing policy IS the add-only policy"
+
+
+# ------------------------------------------------------------------------------------------------
+# 8 — policy v6: D's gloss walk, declared before it measured anything (T4, 2026-09-09)
+# ------------------------------------------------------------------------------------------------
+#
+# The standing law's own worked example, applied to the second matrix on its first day: «a
+# category-2 set stated in code is a defect even when its contents are correct». D's nine parameters
+# are curation, so they arrive as rows rather than being moved into rows later — and they arrive as
+# the PROTOTYPE's values, because a value edited on the way in would corrupt the comparison the
+# measurement is about to make.
+
+#: The fingerprint of policy v6 — v5's whole declaration, plus the gloss walk.
+V6_FINGERPRINT = "29b95942c0840b7ee107bcf66034e9e373a185c6f9539940be833d60c21321a8"
+
+
+def test_the_gloss_walk_is_rows_from_its_first_day():
+    config = policy.config_from_rows(policy_rows_v6(), bar_rows())
+    assert config == declared_config_v6()
+    assert config.fingerprint() == V6_FINGERPRINT
+    assert config.distribution is not None
+    assert config.relations.antonym_symmetry == "add_only", "v5's ruling is carried, not re-argued"
+
+
+def test_the_walk_is_the_prototypes_own_values():
+    """T4b-i's rule, kept: «today's values migrate across VERBATIM». Every one of these is in
+    `scripts/tk2/tk2_config.py` or in `tk2_matrix.cell`, and the comparison the Captain is about to
+    rule on is only honest if the starting point is the thing that was measured before."""
+    walk = policy.config_from_rows(policy_rows_v6(), bar_rows()).distribution
+    assert (walk.measure, walk.weighting, walk.vocabulary) == ("jaccard", "uniform", "base")
+    assert (walk.min_shared, walk.scale, walk.cap, walk.floor) == (2, 5.0, 0.5, 0.1)
+    assert walk.identity == 1.0
+    assert walk.senses == "primary"
+
+
+def test_every_parameter_of_the_walk_explains_itself_and_what_it_measures():
+    """A curated value with no reason attached is one nobody can later argue with. Three of these do
+    not survive the change of scale intact, and the rows have to say so in numbers."""
+    notes = {r["name"]: r["note"] for r in policy_rows_v6()
+             if r["kind"] == policy.KIND_DISTRIBUTION}
+    assert set(notes) == set(policy.DISTRIBUTION_SETTINGS)
+    assert all(len(note) > 80 for note in notes.values())
+    assert "835,145" in notes["vocabulary"], "the base/lexicon measurement travels with the row"
+    assert "76,915" in notes["min_shared"], "what the floor actually sizes"
+    assert "BINARY" in notes["cap"], "the saturation finding is not left to a reader to discover"
+    assert "log(1 + N/df)" in notes["weighting"] and "smoothing" in notes["weighting"]
+
+
+def test_a_policy_that_declares_no_walk_says_so_rather_than_inventing_one():
+    """`None`, not a default walk: v1-v5 had nothing to say about D, and the base T3 measured must
+    stay readable exactly as it was measured."""
+    assert policy.distribution_from_rows(_closure_rows()) is None
+    v5 = policy.config_from_rows(policy_rows_v5(), bar_rows())
+    assert v5.distribution is None and "distribution" not in v5.as_dict()
+
+
+def test_half_a_walk_is_refused_rather_than_completed():
+    """A D missing its floor is not a laxer D — it is a matrix whose size nobody declared."""
+    rows = [_policy_row(policy.KIND_DISTRIBUTION, "measure", "jaccard"),
+            _policy_row(policy.KIND_DISTRIBUTION, "senses", "primary")]
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.distribution_from_rows(rows)
+    assert "min_shared" in str(excinfo.value)
+
+
+def test_an_unknown_walk_setting_is_refused_not_ignored():
+    rows = [_policy_row(policy.KIND_DISTRIBUTION, name, value)
+            for name, value in (("senses", "primary"), ("vocabulary", "base"),
+                                ("measure", "jaccard"), ("weighting", "uniform"),
+                                ("min_shared", 2), ("scale", 5.0), ("cap", 0.5),
+                                ("floor", 0.1), ("identity", 1.0), ("temperature", 3))]
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.distribution_from_rows(rows)
+    assert "temperature" in str(excinfo.value)
+
+
+def test_a_walk_whose_floor_is_above_its_cap_is_refused_at_the_row():
+    """Every cell D could write would be refused: a policy that declares an empty matrix by accident
+    rather than on purpose."""
+    rows = [_policy_row(policy.KIND_DISTRIBUTION, name, value)
+            for name, value in (("senses", "primary"), ("vocabulary", "base"),
+                                ("measure", "jaccard"), ("weighting", "uniform"),
+                                ("min_shared", 2), ("scale", 5.0), ("cap", 0.1),
+                                ("floor", 0.5), ("identity", 1.0))]
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.distribution_from_rows(rows)
+
+
+def test_version_6_carries_version_5_forward_unedited():
+    """A build reads ONE version, so v6 is a WHOLE policy — and the rows that did not move must be
+    v5's own values and reasons, not a re-typing of them."""
+    v5 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v5()}
+    v6 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v6()}
+
+    assert len(v6) == len(v5) + len(policy.DISTRIBUTION_SETTINGS)
+    assert {k: v for k, v in v6.items() if k in v5} == v5
+    assert {name for kind, name in set(v6) - set(v5)} == set(policy.DISTRIBUTION_SETTINGS)
+
+
+def test_the_five_older_versions_still_hash_as_they_did():
+    """`as_dict` writes nothing about a walk a policy never declared, so every manifest row naming
+    v1-v5 keeps meaning what it meant — and a v6 build cannot be mistaken for any of them."""
+    from tests.seed import policy_rows_v4
+
+    assert policy.config_from_rows(policy_rows(), bar_rows()).fingerprint() == T2B_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v2(), bar_rows()).fingerprint() == RULED_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v3(), bar_rows()).fingerprint() == V3_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v4(), bar_rows()).fingerprint() == V4_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v5(), bar_rows()).fingerprint() == V5_FINGERPRINT
+    assert len({T2B_FINGERPRINT, RULED_FINGERPRINT, V3_FINGERPRINT, V4_FINGERPRINT,
+                V5_FINGERPRINT, V6_FINGERPRINT}) == 6
+
+
+def test_a_walk_written_back_out_as_rows_reads_back_the_same():
+    """The round trip, for the ninth kind of row: what `policy_rows_of` writes is what
+    `config_from_rows` reads, or the migration that first writes a policy is writing something else."""
+    config = declared_config_v6()
+    written = policy.policy_rows_of(config, version=6)
+    assert policy.config_from_rows(written, policy.bar_rows_of(config.bar, 1)) == config
+
+
+# ------------------------------------------------------------------------------------------------
+# 9 — policy v7: the dual read gets a home, and two numbers move (T4, 2026-09-09)
+# ------------------------------------------------------------------------------------------------
+#
+# The mix was deliberately kept OUT of v6 — «measured at T4 and ruled by the Captain before it can
+# be a row at all» — and this is the ruling: 0.5, beside `min_shared` 1 and `derivational` 0.45.
+# What is held to account here is that the three moved and nothing else did, that the mix has no
+# default anywhere to fall back on, and that six older versions still hash as they always did.
+
+#: The fingerprint of policy v7 — v6's declaration with two values moved, plus the dual read.
+V7_FINGERPRINT = "3940735d6b1892e8da0b07f876a0f1a933952769f9d3040ff13c38445447638e"
+
+
+def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
+    config = policy.config_from_rows(policy_rows_v7(), bar_rows())
+    assert config == declared_config_v7()
+    assert config.fingerprint() == V7_FINGERPRINT
+    assert config.reading == ReadingPolicy(mix=0.5)
+    assert config.distribution.min_shared == 1
+    assert dict(config.relations.weights)["derivational"] == 0.45
+
+
+def test_the_mix_is_its_own_kind_and_not_a_setting_of_D():
+    """A row filed under `distribution` would say that D owns how loudly it is heard. It is a
+    property of reading the two matrices at once, and neither matrix's."""
+    v7 = {(r["kind"], r["name"]) for r in policy_rows_v7()}
+    assert (policy.KIND_READING, "mix") in v7
+    assert (policy.KIND_DISTRIBUTION, "mix") not in v7
+    assert [r["family"] for r in policy_rows_v7() if r["kind"] == policy.KIND_READING] == ["dual"]
+
+
+def test_an_undeclared_mix_is_a_refusal_and_never_a_silent_default():
+    """The law the lemma scope and the antonym reading carry, applied to the third parameter that
+    earned it: `None` from the rows, nothing invented, and a config that says so in `as_dict`."""
+    assert policy.reading_from_rows(_closure_rows()) is None
+    v6 = policy.config_from_rows(policy_rows_v6(), bar_rows())
+    assert v6.reading is None and "reading" not in v6.as_dict()
+    with pytest.raises(ValueError):
+        v6.with_reading(mix=0.5)
+
+
+def test_an_unknown_reading_setting_is_refused_not_ignored():
+    rows = [_policy_row(policy.KIND_READING, "mix", 0.5),
+            _policy_row(policy.KIND_READING, "floor", 0.30)]
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.reading_from_rows(rows)
+    assert "floor" in str(excinfo.value), "the acceptance floors are T5's, and they are not this row"
+
+
+def test_a_negative_mix_is_refused_at_the_row():
+    """It would flip every D cell's sign, and D is unsigned by construction — the sign is R's alone
+    and it is the antonym column-read primitive."""
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.reading_from_rows([_policy_row(policy.KIND_READING, "mix", -0.5)])
+    with pytest.raises(ValueError):
+        ReadingPolicy(mix=-1.0)
+
+
+def test_a_mix_of_zero_is_a_declaration_and_not_an_absence():
+    """«The dual read is R alone» is a thing a policy may say, and it must not read as «unset»."""
+    reading = policy.reading_from_rows([_policy_row(policy.KIND_READING, "mix", 0.0)])
+    assert reading == ReadingPolicy(mix=0.0)
+
+
+def test_a_dual_read_declared_over_no_D_is_refused():
+    """The mix says how loudly the SECOND geometry speaks; without one it describes a reading of a
+    matrix nobody was asked to build. Refused where rows become a thing a build measures under —
+    `reading_from_rows` next door still reads them, because looking at a policy must stay possible."""
+    rows = _closure_rows() + [_policy_row(policy.KIND_READING, "mix", 0.5)]
+    assert policy.reading_from_rows(rows) == ReadingPolicy(mix=0.5)
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.config_from_rows(rows, bar_rows())
+    assert "no gloss walk" in str(excinfo.value)
+
+
+def test_every_value_that_moved_says_in_numbers_what_moved_it():
+    """A ruled value whose reason is «the Captain said so» is one nobody can argue with later. Each
+    of the three carries the sweep that produced it, and the four measured-and-standing rows carry
+    what was measured about them — so no reader re-litigates a closed question blind."""
+    notes = {(r["kind"], r["name"]): r["note"] for r in policy_rows_v7()}
+
+    moved = notes[(policy.KIND_DISTRIBUTION, "min_shared")]
+    assert "1,670,286" in moved and "153,830" in moved and "19,524" in moved
+    assert "47 of 80" in moved and "26 of 80" in moved
+
+    halved = notes[(policy.KIND_RELATION_WEIGHT, "derivational")]
+    assert "PEAK" in halved and "0.45 -> 67" in halved and "0.30 -> 66" in halved
+
+    mix = notes[(policy.KIND_READING, "mix")]
+    assert "+0.063" in mix and "-0.059" in mix and "58/80 -> 67/80" in mix
+    assert "NO DEFAULT" in mix.upper()
+    # The sweep's four numbers were taken at the PRE-ruling derivational, and the note says so and
+    # says what they become under the whole ruling — a number whose conditions are lost is a number
+    # the next reader cannot reproduce.
+    assert "derivational` 0.90" in mix and "+0.065" in mix and "-0.062" in mix
+
+    # The two parked questions, closed by rejection — with their numbers, not their verdicts alone.
+    assert "12,925" in notes[(policy.KIND_DISTRIBUTION, "senses")]
+    assert "+0.759" in notes[(policy.KIND_CLOSURE, "senses")]
+    assert "35.7%" in notes[(policy.KIND_DISTRIBUTION, "weighting")]
+    assert "10.4%" in notes[(policy.KIND_DISTRIBUTION, "weighting")]
+    # And the two that could not be seen at all behind the old gate.
+    for name in ("measure", "vocabulary"):
+        assert "UNOBSERVABLE" in notes[(policy.KIND_DISTRIBUTION, name)].upper()
+
+
+def test_version_7_carries_version_6_forward_except_the_two_it_moved():
+    """A build reads ONE version, so v7 is a WHOLE policy — and every row that did not move must be
+    v6's own value AND v6's own reason, not a re-typing of either."""
+    v6 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v6()}
+    v7 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v7()}
+
+    assert set(v7) - set(v6) == {(policy.KIND_READING, "mix")}
+    moved_value = {key for key in v6 if key in v7 and v7[key][0] != v6[key][0]}
+    assert moved_value == {(policy.KIND_DISTRIBUTION, "min_shared"),
+                           (policy.KIND_RELATION_WEIGHT, "derivational")}
+
+    # The rows whose NOTE moved without their value: the four measured-and-standing, and they only
+    # ever GAIN text — v6's argument for the value is what a later reader still needs.
+    moved_note = {key for key in v6 if key in v7 and v7[key][2] != v6[key][2]} - moved_value
+    assert moved_note == {(policy.KIND_DISTRIBUTION, "measure"),
+                          (policy.KIND_DISTRIBUTION, "vocabulary"),
+                          (policy.KIND_DISTRIBUTION, "senses"),
+                          (policy.KIND_DISTRIBUTION, "weighting"),
+                          (policy.KIND_DISTRIBUTION, "cap"),
+                          (policy.KIND_CLOSURE, "senses")}
+    for key in moved_note:
+        assert v7[key][2].startswith(v6[key][2]), "a reason is extended, never replaced"
+
+    unmoved = set(v6) - moved_value - moved_note
+    assert {k: v6[k] for k in unmoved} == {k: v7[k] for k in unmoved}
+
+
+def test_the_relation_order_survives_the_reweighting():
+    """The declared order IS the cell walk's precedence, so rebuilding the weight tuple to change
+    one number must not reorder it — that would be a second, silent ruling riding along."""
+    v6 = policy.config_from_rows(policy_rows_v6(), bar_rows()).relations
+    v7 = policy.config_from_rows(policy_rows_v7(), bar_rows()).relations
+    assert v7.relations == v6.relations
+    assert {name: w for name, w in v7.weights if w != dict(v6.weights)[name]} == {
+        "derivational": 0.45
+    }
+
+
+def test_the_six_older_versions_still_hash_as_they_did():
+    """`as_dict` writes nothing about a dual read a policy never declared, so every manifest row
+    naming v1-v6 keeps meaning what it meant — and a v7 build cannot be mistaken for any of them."""
+    assert policy.config_from_rows(policy_rows(), bar_rows()).fingerprint() == T2B_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v2(), bar_rows()).fingerprint() == RULED_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v3(), bar_rows()).fingerprint() == V3_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v4(), bar_rows()).fingerprint() == V4_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v5(), bar_rows()).fingerprint() == V5_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v6(), bar_rows()).fingerprint() == V6_FINGERPRINT
+    assert len({T2B_FINGERPRINT, RULED_FINGERPRINT, V3_FINGERPRINT, V4_FINGERPRINT,
+                V5_FINGERPRINT, V6_FINGERPRINT, V7_FINGERPRINT}) == 7
+
+
+def test_a_dual_read_written_back_out_as_rows_reads_back_the_same():
+    """The round trip, for the tenth kind of row."""
+    config = declared_config_v7()
+    written = policy.policy_rows_of(config, version=7)
+    assert policy.config_from_rows(written, policy.bar_rows_of(config.bar, 1)) == config

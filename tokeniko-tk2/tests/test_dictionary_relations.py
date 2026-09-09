@@ -251,7 +251,7 @@ def test_the_in_memory_store_hands_back_what_it_was_given(R):
 
 
 def test_a_diff_names_the_cells_that_moved_and_not_only_how_many(R, provider, policy):
-    """The instrument every later question needs: the lemma-scope A/B, T4's `derivational`
+    """The instrument every later question needs: the lemma-scope A/B, the `derivational`
     down-weight, a curation batch, a resource bump. A tally answers «how many moved» and never
     «which», and the whole claim of R is that a cell can be asked what made it."""
     quieter = relations.build(

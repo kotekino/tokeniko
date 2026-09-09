@@ -19,15 +19,16 @@ from typing import Iterator
 
 from pymongo.database import Database
 
-from tk2.core.models import BaseKeyDoc, BaseRelationDoc
+from tk2.core.models import BaseDistributionDoc, BaseKeyDoc, BaseRelationDoc
 from tk2.datatier.migration_writer import MigrationWriter
 from tk2.dictionary import keys
 from tk2.dictionary.matrix import Cell, Matrix, MatrixRow
 
-#: Which collection holds which matrix. `base_d` joins at T4 — one line, because the shape is the
-#: same and the difference between R and D is what fills them, never how they are kept.
+#: Which collection holds which matrix. D joined at T4 — one line, because the shape is the same
+#: and the difference between R and D is what fills them, never how they are kept.
 MATRIX_MODELS = {
     BaseRelationDoc.Settings.name: BaseRelationDoc,
+    BaseDistributionDoc.Settings.name: BaseDistributionDoc,
 }
 
 

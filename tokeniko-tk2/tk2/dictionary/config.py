@@ -258,6 +258,170 @@ class RelationPolicy:
         return out
 
 
+# ------------------------------------------------------------------------------------------------
+# D's policy — what a definition contributes, and what a shared word is worth
+# ------------------------------------------------------------------------------------------------
+
+# The law of the GLOSS WALK, dated, for REDUCTION_RULES' reason and no other: the parameters below
+# say how much an overlap counts, and this says what «these two dimensions share a word» means at
+# all — a dimension's gloss is the definitions of ITS part of speech (`land.v` reads the verb), the
+# tokens land through the same reduction the closure uses (every POS-aware reading, the name refusal
+# applied, the stop list yielding to membership), and a dimension's own word is dropped from its own
+# gloss because a definition that names its headword states nothing about two concepts.
+#
+# It is the mining seam R and the closure already share, aimed at a key instead of a word — which is
+# the whole reason it is stated here rather than re-derived: a D that re-opened requirement 21 or the
+# name refusal would be a second reduction of the same glosses, and no fingerprint could tell the two
+# builds apart. Bump when the walk moves.
+DISTRIBUTION_RULES = "2026-09-09"
+
+#: The set measures a shared vocabulary may be scored by, over the shared and the two side masses.
+#: FRAME — the shape of the question («how much of the two definitions is the same»); which one is
+#: asked is a row.
+MEASURES = ("jaccard", "dice", "cosine")
+
+#: What one gloss word is worth. `uniform` = one word, one vote (the prototype's, and what a plain
+#: Jaccard means). `idf` = log(N / df) over the base's own rows, so a word half the base uses says
+#: almost nothing and a word two rows share says nearly everything.
+WEIGHTINGS = ("uniform", "idf")
+
+#: Which words a gloss's overlap is counted over. `base` = the closure's own words (the prototype's
+#: reading — the base is the vocabulary it defines itself in); `lexicon` = every word the resource
+#: knows, so a definition may share a word the base does not contain.
+VOCABULARIES = ("base", "lexicon")
+
+
+@dataclass(frozen=True, slots=True)
+class DistributionPolicy:
+    """How D is filled: which senses write a definition, which of its words count, and what a
+    shared vocabulary is worth.
+
+    CURATION, and rows from the start (`kind` = `distribution`), for the same reason the relation
+    weights are: «a category-2 set stated in code is a defect even when its contents are correct».
+    Every field is REQUIRED — there is no default here for `ClosurePolicy`'s reason, and a D built
+    under a value nobody declared is a matrix the manifest cannot vouch for.
+
+    `senses` is D's own and not the closure's, though today they agree: the closure's cut decides
+    which senses write a definition for MEMBERSHIP, and this decides which write one for the
+    GEOMETRY. They are the same question asked of two different things, and a ruling may yet move
+    one without the other.
+    """
+
+    #: `primary` (the first synset of the dimension's POS) or `all` (every reading of it).
+    senses: SenseMode
+    #: `base` or `lexicon` — see `VOCABULARIES`.
+    vocabulary: str
+    #: `jaccard`, `dice` or `cosine` — see `MEASURES`.
+    measure: str
+    #: `uniform` or `idf` — see `WEIGHTINGS`.
+    weighting: str
+    #: How many words two definitions must share before D says anything at all. One shared word is
+    #: a coincidence at this scale (`in` alone joins a fifth of the base); the prototype asked two.
+    min_shared: int
+    #: The multiplier on the measure. Not cosmetic: the diagonal is a declared 1.0, so what the
+    #: off-diagonal is worth AGAINST it is what decides every row cosine.
+    scale: float
+    #: The ceiling the scaled value saturates at.
+    cap: float
+    #: Below this the cell is not written. The noise floor, and — at this scale — the size rail.
+    floor: float
+    #: D's diagonal. A matrix whose diagonal is zero has no self-similarity and its cosines stop
+    #: meaning what they look like; D declares its own rather than borrowing R's, because the two
+    #: matrices are two geometries and only one of them has R's weights.
+    identity: float
+
+    def __post_init__(self):
+        if self.senses not in ("primary", "all"):
+            raise ValueError(f"unknown sense mode {self.senses!r}")
+        if self.vocabulary not in VOCABULARIES:
+            raise ValueError(f"unknown gloss vocabulary {self.vocabulary!r} — the two are {VOCABULARIES}")
+        if self.measure not in MEASURES:
+            raise ValueError(f"unknown overlap measure {self.measure!r} — the three are {MEASURES}")
+        if self.weighting not in WEIGHTINGS:
+            raise ValueError(f"unknown weighting {self.weighting!r} — the two are {WEIGHTINGS}")
+        if self.min_shared < 1:
+            raise ValueError("min_shared counts shared words; below one it is not a floor at all")
+        if self.scale <= 0:
+            raise ValueError("scale multiplies the measure; zero or less would erase D rather than shape it")
+        if self.cap <= 0:
+            raise ValueError("cap is the ceiling a scaled overlap saturates at, and it is positive")
+        if self.floor < 0:
+            raise ValueError("floor is a noise floor on an unsigned measure, never negative")
+        if self.floor >= self.cap:
+            raise ValueError(
+                f"the floor ({self.floor}) is at or above the cap ({self.cap}): every cell D could "
+                f"write would be refused, which is a policy that declares an empty matrix by "
+                f"accident rather than on purpose"
+            )
+
+    def as_dict(self) -> dict:
+        return {
+            "rules": DISTRIBUTION_RULES,
+            "senses": self.senses,
+            "vocabulary": self.vocabulary,
+            "measure": self.measure,
+            "weighting": self.weighting,
+            "min_shared": self.min_shared,
+            "scale": self.scale,
+            "cap": self.cap,
+            "floor": self.floor,
+            "identity": self.identity,
+        }
+
+
+# ------------------------------------------------------------------------------------------------
+# the DUAL READ's policy — how loudly the second geometry speaks when one number is wanted
+# ------------------------------------------------------------------------------------------------
+
+# The law of the DUAL READ, dated, for REDUCTION_RULES' reason and no other: `mix` says how much of
+# D a reader hears, and this says what «read R and D together» means at all — the two rows are
+# CONCATENATED into one sparse vector over 2n prefixed columns (`r/eat.v` and `d/eat.v` are two
+# different axes), D's half is scaled by `mix`, and one cosine is taken over the whole of it. Nothing
+# is averaged with anything, neither matrix is rewritten, and `mix = 0` is R alone.
+#
+# The shape is not cosmetic and the review measured why: averaged into one float, a positive gloss
+# overlap CANCELS a stated opposition instead of sitting beside it, and `enter~leave` reads +0.519
+# where R states -0.331. Concatenated, R's sign survives as long as `mix` leaves it room — which is
+# what the ruled value buys, and what a reader has to be able to check a build was measured under.
+# Bump this when the shape of the read moves; the parameter itself is a row and moves on its own.
+READING_RULES = "2026-09-09"
+
+
+@dataclass(frozen=True, slots=True)
+class ReadingPolicy:
+    """How R and D are read TOGETHER. Neither matrix's policy, and that is why it is its own object.
+
+    CURATION, and a row from its first day (`kind` = `reading`). It was deliberately kept out of
+    policy v6 — «measured at T4 and ruled by the Captain before it can be a row at all» — and v7 is
+    the ruling: `mix` = 0.5, measured (see `db/0010`).
+
+    Its own object rather than a bare float on `DictionaryConfig` for one reason, and it is the
+    reason `REDUCTION_RULES` exists: a parameter travels with the LAW it is applied under. A number
+    in the config with no `rules` beside it could have the shape of the read change underneath it —
+    concatenation becoming an average, say — and two builds would present the same fingerprint for
+    two different geometries. `RelationPolicy` and `DistributionPolicy` each carry their walk's date
+    for exactly this, and the dual read is the third walk.
+
+    ONE FIELD TODAY, and not for long: the acceptance floors the bar is scored against are T5's and
+    the Captain's, and they are the same category — a reading of two matrices rather than a property
+    of either. They land here when they are ruled.
+    """
+
+    #: How loudly D speaks: D's columns are scaled by this before the cosine. `0.0` is R alone and
+    #: is a real declaration, not an absence — «the dual read is R» is a thing a policy may say.
+    mix: float
+
+    def __post_init__(self):
+        if self.mix < 0:
+            raise ValueError(
+                f"a negative mix ({self.mix}) would flip every D cell's sign. D is unsigned by "
+                f"construction — the sign is R's alone, and it is the antonym column-read primitive."
+            )
+
+    def as_dict(self) -> dict:
+        return {"rules": READING_RULES, "mix": self.mix}
+
+
 @dataclass(frozen=True, slots=True)
 class DictionaryConfig:
     """The whole declared policy for one build. Hash it, record the hash, then measure.
@@ -279,6 +443,14 @@ class DictionaryConfig:
     relations: RelationPolicy | None = None
     #: Which parts of speech exist (`keys.Alphabet`). `None` for v1 and v2, which left it in code.
     alphabet: keys.Alphabet | None = None
+    #: D's gloss walk. `None` for v1–v5, which declared no D — and that absence is readable rather
+    #: than fatal for the same ledger reason `relations` is: the base T3 measured was built under a
+    #: policy that had nothing to say about D, and re-reading it must stay possible.
+    distribution: DistributionPolicy | None = None
+    #: How the two geometries are read TOGETHER. `None` for v1–v6, which declared no dual read — and
+    #: v6 declared none ON PURPOSE (the mix was a measurement until the Captain ruled it), so the
+    #: absence is a record of where the ruling sits in time and not an omission.
+    reading: ReadingPolicy | None = None
 
     @property
     def seeds(self) -> tuple[str, ...]:
@@ -312,6 +484,10 @@ class DictionaryConfig:
             out["relations"] = self.relations.as_dict()
         if self.alphabet is not None:
             out["alphabet"] = self.alphabet.as_dict()
+        if self.distribution is not None:
+            out["distribution"] = self.distribution.as_dict()
+        if self.reading is not None:
+            out["reading"] = self.reading.as_dict()
         return out
 
     def fingerprint(self) -> str:
@@ -331,3 +507,27 @@ class DictionaryConfig:
         """A variant, for the runs that argue with the standing policy. It is a NEW config with a
         new fingerprint — which is the point: a depth-3 run cannot be mistaken for a depth-2 one."""
         return replace(self, closure=replace(self.closure, **changes))
+
+    def with_distribution(self, **changes) -> "DictionaryConfig":
+        """A variant of D's walk — the shape every measurement of it takes, and the same argument:
+        a run that halved the scale cannot be mistaken for the declared one."""
+        if self.distribution is None:
+            raise ValueError(
+                "this policy declares no D, so there is nothing to vary. Policy v6 (db/0009) is "
+                "what declares the gloss walk."
+            )
+        return replace(self, distribution=replace(self.distribution, **changes))
+
+    def with_reading(self, **changes) -> "DictionaryConfig":
+        """A variant of the dual read — how the OTHER blends are measured now that one is standing.
+
+        Same argument as the two above, and it is the one the mix needed most: the sweep that found
+        0.5 has to stay runnable, and every row of it must carry a fingerprint that says out loud it
+        is not the ruled reading.
+        """
+        if self.reading is None:
+            raise ValueError(
+                "this policy declares no dual read, so there is nothing to vary. Policy v7 "
+                "(db/0010) is what declares the mix."
+            )
+        return replace(self, reading=replace(self.reading, **changes))

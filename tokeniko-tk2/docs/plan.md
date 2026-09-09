@@ -162,6 +162,34 @@ and D are built once, against a base whose policy is already settled.)*
    revisited (the `right`-ring lesson, req 21's sibling).
 2. **R at scale** — all named WordNet relations + the curated-edge pipeline
    (propose/simulate/approve, reciprocal 0.60, analytic-only, the Captain's hand on approve).
+   **LANDED 2026-09-04/09 (`f71baa3`, `7da676f`)** — R is square over the 4,445 base keys, built by
+   walking edges rather than the PoC's 19.8M-pair loop (5s); every cell names the relations that
+   produced it and whether it was mined or curated. The weights and the POS alphabet are policy v3
+   rows; curation's `approve` is a testable gate, not a CLI branch. **Two rulings came out of it,
+   both on measured numbers, both now rows:**
+   - **v4 — the lemma scope (`word`).** WordNet states antonymy and derivation lemma-to-lemma; the
+     PoC read them across the whole synset, asserting **6,634 edges the resource never wrote**
+     (`abstract.v → sugar.n`, lent by `cabbage`) including **257 unaudited negatives** — of which
+     `dark.n → day.n` was an antonym lent by `night` sitting on top of a real holonym. *A wrong
+     negative is worse than silence; ABSTAIN is first-class.* R: 56,599 → **49,965** cells,
+     membership unmoved, and **`land.n~land.v` (FAR) and `cause.n~cause.v` (NEAR) moved in opposite
+     directions for the first time** — the POS collapse is separable, which is what the bar was
+     declared to test.
+   - **v5 — the inferred opposition (`add_only`).** Opposition is symmetric even where the
+     lexicographer wrote it once, so the reverse cell is stated **where R is silent and never over a
+     stated one**: the overwriting variant destroyed four real relations, including the very
+     `dark.n → day.n` cell v4 had just repaired. The inferred half carries **its own relation name
+     and its own weight row** (`antonym_inferred`), so a cell can always say whether WordNet stated
+     the opposition or we completed it — the same principle that keeps curated distinguishable from
+     mined. 143 added, 0 overwritten, seven dimensions stop being silent (all adjectives/adverbs,
+     R's quietest ground). **The bar reads identically under all three readings** — this ruling rests
+     on the principle, not on a number, and the rows say so.
+   - **Neither reading has a code default**: an undeclared scope or mode is a refusal, never a quiet
+     fallback, and a build whose provider disagrees with the declared law is refused at assembly.
+   - Standing R under v5: **50,108 cells** (0.25% density), 806 negative, 346 silent rows;
+     `derivational` **5,870 cells / 11.7%**. Silent rows are not evenly spread — adverbs 46%,
+     adjectives 13%, nouns 1.7%, verbs 0.3%: **R is close to mute about adverbs**, and the honest fix
+     is D and curation, not borrowed edges.
 3. **D at scale** — gloss overlap over POS-split keys; derivational down-weight DECIDED here (the
    land.n~land.v OPEN item); membership repair with POS-aware lemmas. **Two questions parked here by
    the Captain, 2026-08-25:** (a) **the sense mode** — the closure mines `senses="primary"`, so for

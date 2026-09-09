@@ -1,7 +1,7 @@
 """THE MATRIX — what a square base matrix IS, and the door it is kept behind.
 
 R and D are two matrices of the same shape over ONE key space, so the shape belongs to neither of
-them: `relations.py` fills R, T4's builder fills D, and both produce what is defined here. The
+them: `relations.py` fills R, `distribution.py` fills D, and both produce what is defined here. The
 architecture in one line, because forgetting it costs a billion cells: these matrices are square
 over BASE keys — thousands, not the ~197k senses. A sense rides ON the base (tkzip req. 11).
 
@@ -209,6 +209,66 @@ class Matrix:
             "by_relation": dict(sorted(by_relation.items(), key=lambda item: -item[1])),
             "by_source": by_source,
         }
+
+
+# ------------------------------------------------------------------------------------------------
+# THE DUAL READ — two geometries, one number, and the parameter that says how much of each
+# ------------------------------------------------------------------------------------------------
+#
+# R and D are two matrices on purpose (finding 4 of the 2026-08-12 review) and nothing in the build
+# blends them. A READER may still want one number — the acceptance bar at T5 does — and this is the
+# only shape in which that is honest: the two rows are CONCATENATED into one vector over 2n columns
+# (R's columns, then D's, scaled by `mix`), and the cosine is taken over the whole of it. No cell is
+# averaged with another, no matrix is rewritten, and `mix = 0` is R alone.
+#
+# READ THE WARNING BEFORE USING IT. The review measured the failure this parameter can reproduce:
+# `enter~leave` reads -0.331 on relations alone and +0.519 once a gloss tail is mixed in, because
+# opposites are defined in the same words. A blend high enough to let D speak is a blend high enough
+# to bury R's sign, and the sign is the antonym column-read primitive.
+#
+# `mix` IS RULED AND IT IS A ROW (0.5, the Captain, 2026-09-09 — `ReadingPolicy`, db/0010), measured
+# at the full base: at 1.0 `enter~leave` turns positive at +0.063 and the bar reads 60 of 80; at 0.5
+# the sign survives at -0.059 and the bar peaks at 64. There is STILL no default in this module and
+# there never will be: every function here takes the mix as an argument, because a reading is what a
+# CALLER declares, and a default here would let a variant sweep and the standing reading present the
+# same number under two different meanings.
+
+
+def blended_row(relational: MatrixRow | None, distributional: MatrixRow | None, mix: float) -> dict[str, float]:
+    """One dimension's row across both geometries, as one sparse vector over 2n named columns.
+
+    The columns are prefixed rather than added together — `r/eat.v` and `d/eat.v` are two different
+    axes — which is what keeps a positive gloss overlap from cancelling a negative relation instead
+    of sitting beside it.
+    """
+    out: dict[str, float] = {}
+    if relational is not None:
+        for cell in relational.cells:
+            out[f"r/{cell.column}"] = cell.weight
+    if distributional is not None and mix:
+        for cell in distributional.cells:
+            out[f"d/{cell.column}"] = mix * cell.weight
+    return out
+
+
+def blended_cosine(relational: Matrix, distributional: Matrix, a: str, b: str, mix: float) -> float | None:
+    """The angle between two dimensions read across both matrices — `None` when either key is not a
+    dimension, for `Matrix.cosine`'s reason (a membership defect must not be reported as geometry).
+
+    Refuses two different key spaces: a blend across two orders would be arithmetic over columns
+    that are not the same words.
+    """
+    if relational.keys != distributional.keys:
+        raise ValueError(
+            f"{relational.name} and {distributional.name} are over different key spaces "
+            f"({len(relational.keys)} and {len(distributional.keys)} dimensions); there is no "
+            f"shared column to blend."
+        )
+    if relational.row(a) is None or relational.row(b) is None:
+        return None
+    left = blended_row(relational.row(a), distributional.row(a), mix)
+    right = blended_row(relational.row(b), distributional.row(b), mix)
+    return cosine(left, right)
 
 
 def cosine(a: dict[str, float], b: dict[str, float]) -> float:

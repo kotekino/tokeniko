@@ -28,6 +28,8 @@ from tests.seed import (
     policy_rows_v3,
     policy_rows_v4,
     policy_rows_v5,
+    policy_rows_v6,
+    policy_rows_v7,
     sphere_poles,
 )
 
@@ -378,7 +380,9 @@ def test_reading_the_policy_without_naming_a_version_is_refused(created):
     stored = list(created["dictionary_policy"].find({}))
     with pytest.raises(policy.PolicyRowsInvalid):
         policy.policy_version(stored)
-    assert policy.policy_version(policy.latest_version(stored)) == 5
+    # The NEWEST, whichever it is: this test is about the refusal and the explicit selection, and a
+    # version number in it would have to be edited every time the Captain rules.
+    assert policy.policy_version(policy.latest_version(stored)) == max(r["version"] for r in stored)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -599,20 +603,21 @@ def test_the_ruled_lemma_scope_reads_back_from_the_database(created):
 @live
 def test_0008_writes_policy_version_5_beside_the_four_before_it(created):
     stored = list(created["dictionary_policy"].find({}))
-    assert {r["version"] for r in stored} == {1, 2, 3, 4, 5}
+    assert {1, 2, 3, 4, 5} <= {r["version"] for r in stored}
     assert len([r for r in stored if r["version"] == 5]) == len(policy_rows_v5())
     assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
 
 
 @live
-def test_the_standing_policy_is_the_one_a_build_can_actually_run(created):
-    """The end of the whole chain, live: the newest rows read back as a policy that names every
-    value the engine needs — the cuts, the weights, the alphabet, whose lemma speaks, and how a
-    one-sided antonymy is read — with nothing left for a default in code to answer."""
+def test_version_5_is_the_policy_a_build_can_run_R_from(created):
+    """v5's whole declaration, live: the cuts, the weights, the alphabet, whose lemma speaks and how
+    a one-sided antonymy is read — with nothing left for a default in code to answer.
+
+    VERSION-EXPLICIT since 0009 wrote v6 on top, for the reason 0006 made v2's test explicit."""
     from tests.test_dictionary_policy import V5_FINGERPRINT
     from tk2.dictionary import policy, relations
 
-    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 5]
     config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
 
     assert policy.policy_version(stored) == 5
@@ -621,3 +626,92 @@ def test_the_standing_policy_is_the_one_a_build_can_actually_run(created):
     assert config.relations.lemma_scope == "word"
     assert config.alphabet is not None and config.closure.max_depth == 2
     assert relations.resolve_symmetry(config.relations, None) == relations.SYMMETRY_ADD_ONLY
+
+
+# ------------------------------------------------------------------------------------------------
+# 0009 declares D's gloss walk
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0009_writes_policy_version_6_beside_the_five_before_it(created):
+    stored = list(created["dictionary_policy"].find({}))
+    assert {1, 2, 3, 4, 5, 6} <= {r["version"] for r in stored}
+    assert len([r for r in stored if r["version"] == 6]) == len(policy_rows_v6())
+    assert len([r for r in stored if r["version"] == 5]) == len(policy_rows_v5())
+    # The bar still has not moved: a policy ruling is not an occasion to re-declare the expectation
+    # the ruling will be judged by.
+    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+
+
+@live
+def test_0009_creates_D_own_collection_empty(created):
+    """`base_d` is made by the DEPLOY and filled by the BUILD, exactly as `base_r` was at 0006: a
+    build that had to create its own table would be a build doing a deploy's job."""
+    from tk2.core.models import BaseDistributionDoc
+
+    assert BaseDistributionDoc.Settings.name in set(created.list_collection_names())
+    assert created[BaseDistributionDoc.Settings.name].count_documents({}) == 0
+
+
+@live
+def test_the_body_cannot_write_D_either(created):
+    from tk2.core.models import BaseDistributionDoc
+    from tk2.core.write_class import WriteClassViolation
+
+    with pytest.raises(WriteClassViolation):
+        BaseDistributionDoc.insert_one({"build": "b", "key": "eat.v", "index": 0})
+
+
+@live
+def test_version_6_can_build_both_matrices(created):
+    """v6 read back as a policy that names every value BOTH geometries need — R's weights and
+    readings, and D's nine parameters — with nothing left for a default in code to answer.
+
+    VERSION-EXPLICIT since 0010 wrote v7 on top, for the reason 0006 made v2's test explicit. It is
+    also where v6's deliberate SILENCE is checked: it declares D and says nothing about how loudly
+    to hear it, because the mix was still a measurement on the day these rows were written."""
+    from tests.test_dictionary_policy import V6_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 6]
+    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+
+    assert policy.policy_version(stored) == 6
+    assert config.fingerprint() == V6_FINGERPRINT
+    assert config.relations is not None and config.distribution is not None
+    assert config.distribution.measure == "jaccard" and config.distribution.min_shared == 2
+    assert config.reading is None
+
+
+# ------------------------------------------------------------------------------------------------
+# 0010 rules the dual read, and moves two numbers with it
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0010_writes_policy_version_7_beside_the_six_before_it(created):
+    stored = list(created["dictionary_policy"].find({}))
+    assert {r["version"] for r in stored} == {1, 2, 3, 4, 5, 6, 7}
+    assert len([r for r in stored if r["version"] == 7]) == len(policy_rows_v7())
+    assert len([r for r in stored if r["version"] == 6]) == len(policy_rows_v6())
+    # The bar still has not moved, three rulings deep now: a policy ruling is not an occasion to
+    # re-declare the expectation the ruling will be judged by.
+    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+
+
+@live
+def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(created):
+    """The end of the chain, live: the newest rows name every value both matrices need AND the one
+    value that says how to read them as one number — with nothing left for a default in code."""
+    from tests.test_dictionary_policy import V7_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+
+    assert policy.policy_version(stored) == 7
+    assert config.fingerprint() == V7_FINGERPRINT
+    assert config.reading is not None and config.reading.mix == 0.5
+    assert config.distribution.min_shared == 1
+    assert dict(config.relations.weights)["derivational"] == 0.45

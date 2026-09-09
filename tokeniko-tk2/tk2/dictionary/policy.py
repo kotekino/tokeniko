@@ -30,7 +30,14 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 from tk2.dictionary import keys
-from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig, RelationPolicy
+from tk2.dictionary.config import (
+    BarPair,
+    ClosurePolicy,
+    DictionaryConfig,
+    DistributionPolicy,
+    ReadingPolicy,
+    RelationPolicy,
+)
 
 Row = Mapping[str, Any]
 
@@ -92,6 +99,37 @@ KIND_CURATION_DEFAULT = "curation_default"
 #: The separator inside a `curation_default` row's name. A pair of parts of speech is one statement
 #: and has to be one row name; `>` because the default is DIRECTED (`n>v` is not `v>n`).
 POS_PAIR_SEPARATOR = ">"
+
+#: One setting of D's gloss walk: `name` is the `DistributionPolicy` field, `value` what it is set
+#: to. Its own kind rather than a family of the relation rows, because D is a different geometry —
+#: a table that mixed R's weights with D's floor could not be read strictly, and every one of these
+#: is required. Since policy v6.
+KIND_DISTRIBUTION = "distribution"
+
+#: The `DistributionPolicy` fields a `distribution` row may name. Strict, and COMPLETE: unlike the
+#: relation settings, every one of these must be present, because D cannot be built out of some of
+#: them. See `distribution_from_rows`.
+DISTRIBUTION_SETTINGS = (
+    "senses",
+    "vocabulary",
+    "measure",
+    "weighting",
+    "min_shared",
+    "scale",
+    "cap",
+    "floor",
+    "identity",
+)
+
+#: One setting of the DUAL READ — how R and D are read together. `name` is the `ReadingPolicy`
+#: field, `value` what it is set to. Its own kind rather than a `distribution` row, because the mix
+#: is not D's: it is a property of reading the two matrices at once, and a row filed under D would
+#: say that D owns how loudly it is heard. Since policy v7 — the Captain's ruling of 2026-09-09.
+KIND_READING = "reading"
+
+#: The `ReadingPolicy` fields a `reading` row may name. Strict and COMPLETE, for
+#: `DISTRIBUTION_SETTINGS`' reason: an undeclared mix is a refusal, never a silent 1.0.
+READING_SETTINGS = ("mix",)
 
 #: One part of speech that exists. `name` is the letter, `value` the long name, `position` the order
 #: a multi-POS word's keys are listed in. Since policy v3 — the Captain's ruling of 2026-08-25: the
@@ -266,6 +304,81 @@ def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
         raise PolicyRowsInvalid(str(error)) from error
 
 
+def distribution_from_rows(rows: Iterable[Row]) -> DistributionPolicy | None:
+    """D's declared gloss walk, or `None` when this policy version never declared one.
+
+    `None` for v1–v5 and that is a readable state, not a failure: the base T3 measured was built
+    under a policy that had nothing to say about D, and a config assembled from those rows must not
+    invent a walk to say it with. A version that declares SOME of the settings is refused, for
+    `closure_from_rows`' reason — a D missing its floor is not a laxer D, it is a matrix whose size
+    nobody declared.
+    """
+    declared = {row["name"]: row["value"] for row in _of_kind(rows, KIND_DISTRIBUTION)}
+    if not declared:
+        return None
+
+    unknown = sorted(set(declared) - set(DISTRIBUTION_SETTINGS))
+    if unknown:
+        raise PolicyRowsInvalid(
+            f"distribution rows name settings the policy has no field for: {unknown}. "
+            f"The settings are {list(DISTRIBUTION_SETTINGS)}."
+        )
+    missing = [name for name in DISTRIBUTION_SETTINGS if name not in declared]
+    if missing:
+        raise PolicyRowsInvalid(
+            f"D's walk is declared in part: {missing} unset. Every parameter of the walk is a "
+            f"curated decision, and one that fell back to a value in code would be a D the "
+            f"manifest cannot vouch for."
+        )
+
+    try:
+        return DistributionPolicy(
+            senses=declared["senses"],
+            vocabulary=declared["vocabulary"],
+            measure=declared["measure"],
+            weighting=declared["weighting"],
+            min_shared=int(declared["min_shared"]),
+            scale=float(declared["scale"]),
+            cap=float(declared["cap"]),
+            floor=float(declared["floor"]),
+            identity=float(declared["identity"]),
+        )
+    except ValueError as error:
+        raise PolicyRowsInvalid(str(error)) from error
+
+
+def reading_from_rows(rows: Iterable[Row]) -> ReadingPolicy | None:
+    """The dual read as these rows declare it, or `None` when they declare none.
+
+    `None` for v1–v6, and there it means something sharper than «this is old»: v6 declared D and
+    deliberately said nothing about how to hear it, because the mix was a measurement and not yet a
+    ruling. A config assembled from those rows must keep saying nothing — a default of 1.0 here
+    would be the tool's round number promoted to a declaration nobody made.
+    """
+    declared = {row["name"]: row["value"] for row in _of_kind(rows, KIND_READING)}
+    if not declared:
+        return None
+
+    unknown = sorted(set(declared) - set(READING_SETTINGS))
+    if unknown:
+        raise PolicyRowsInvalid(
+            f"reading rows name settings the policy has no field for: {unknown}. "
+            f"The settings are {list(READING_SETTINGS)}."
+        )
+    missing = [name for name in READING_SETTINGS if name not in declared]
+    if missing:
+        raise PolicyRowsInvalid(
+            f"the dual read is declared in part: {missing} unset. How loudly D speaks is a curated "
+            f"decision, and one that fell back to a value in code would be a reading the manifest "
+            f"cannot vouch for."
+        )
+
+    try:
+        return ReadingPolicy(mix=float(declared["mix"]))
+    except ValueError as error:
+        raise PolicyRowsInvalid(str(error)) from error
+
+
 def alphabet_from_rows(rows: Iterable[Row]) -> keys.Alphabet | None:
     """The parts of speech these rows declare, or `None` when they declare none (v1, v2).
 
@@ -352,18 +465,32 @@ def config_from_rows(
     build measures under, so it is where a policy declaring parts of speech the key convention was
     not compiled for must stop (`keys.assert_compiled`). Reading those rows to look at them stays
     possible next door.
+
+    SO IS THE PAIRING OF THE DUAL READ WITH D, for the same reason and on `relation_policy_from_
+    rows`' argument about half a declaration: a mix is how loudly the SECOND geometry speaks, and a
+    policy that declares one without declaring D is describing a reading of a matrix it never asked
+    anybody to build.
     """
     policy_rows = list(policy_rows)
     bar_rows = list(bar_rows)
     alphabet = alphabet_from_rows(policy_rows)
     if alphabet is not None:
         keys.assert_compiled(alphabet)
+    distribution = distribution_from_rows(policy_rows)
+    reading = reading_from_rows(policy_rows)
+    if reading is not None and distribution is None:
+        raise PolicyRowsInvalid(
+            "these rows declare a dual read and no gloss walk. The mix says how loudly D speaks, "
+            "and there is no D here for it to speak about."
+        )
     return DictionaryConfig(
         closure=closure_from_rows(policy_rows, extra_seeds),
         declared_seeds=seeds_from_rows(policy_rows),
         bar=bar_from_rows(bar_rows),
         relations=relation_policy_from_rows(policy_rows),
         alphabet=alphabet,
+        distribution=distribution,
+        reading=reading,
     )
 
 
@@ -614,6 +741,19 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
                 family="definitional",
             )
             for i, (source, target, relation) in enumerate(relations.defaults)
+        ]
+
+    if config.distribution is not None:
+        walk = config.distribution
+        rows += [
+            entry(KIND_DISTRIBUTION, name, getattr(walk, name), i, family="gloss")
+            for i, name in enumerate(DISTRIBUTION_SETTINGS)
+        ]
+
+    if config.reading is not None:
+        rows += [
+            entry(KIND_READING, name, getattr(config.reading, name), i, family="dual")
+            for i, name in enumerate(READING_SETTINGS)
         ]
 
     if config.alphabet is not None:

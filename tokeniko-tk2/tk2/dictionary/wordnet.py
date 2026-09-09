@@ -215,6 +215,7 @@ class WordNetProvider:
         self._lemma_scope = lemma_scope
         self._lexicon = tuple(dict.fromkeys(keys.normalize_word(w) for w in lexicon))
         self._gloss_cache: dict[tuple[str, str], str] = {}
+        self._key_gloss_cache: dict[tuple[str, str], str] = {}
         self._pos_cache: dict[str, tuple[str, ...]] = {}
         self._lemma_cache: dict[tuple[str, str], str | None] = {}
         self._synset_cache: dict[str, tuple] = {}
@@ -322,6 +323,20 @@ class WordNetProvider:
                 keep.append(synset)
                 seen.add(pos)
         return keep
+
+    def gloss_of_key(self, key: str, senses: str = "primary") -> str:
+        """ONE DIMENSION's definition — what D reads (`distribution.DefinitionProvider`).
+
+        `gloss` answers about a WORD and joins every part of speech's reading, which is right for
+        membership and wrong for a POS-split geometry: `land.n` and `land.v` would share a
+        definition and D would report them as one point. Definitions only, for `gloss`'s reason —
+        an example sentence is usage, and usage is co-occurrence wearing a definition's clothes.
+        """
+        cached = self._key_gloss_cache.get((key, senses))
+        if cached is None:
+            cached = " ; ".join(s.definition() for s in self.synsets_of_key(key, senses))
+            self._key_gloss_cache[(key, senses)] = cached
+        return cached
 
     def synsets_of_key(self, key: str, senses: str = "primary"):
         """The senses behind ONE dimension — `land.v` asks WordNet only about the verb."""

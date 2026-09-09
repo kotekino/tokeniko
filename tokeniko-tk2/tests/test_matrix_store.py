@@ -163,3 +163,64 @@ def test_a_stray_cell_never_reaches_the_database(store, policy):
     )
     with pytest.raises(ValueError):
         matrix.assert_square(stray)
+
+
+# ------------------------------------------------------------------------------------------------
+# D beside R, under one build and one registry (T4)
+# ------------------------------------------------------------------------------------------------
+
+
+def _distributional():
+    """A tiny D over the same key space — symmetric, unsigned, one relation."""
+    from tk2.dictionary.distribution import GLOSS_OVERLAP
+
+    shared = {("eat.v", "food.n"), ("food.n", "eat.v")}
+    rows = []
+    for index, key in enumerate(KEYS):
+        cells = [Cell(column=key, weight=1.0, relation="identity", source=matrix.SOURCE_AXIS,
+                      via=(Provenance("identity", 1.0),))]
+        for row_key, column in sorted(shared):
+            if row_key == key:
+                cells.append(Cell(column=column, weight=0.4, relation=GLOSS_OVERLAP,
+                                  via=(Provenance(GLOSS_OVERLAP, 0.4),)))
+        rows.append(matrix.MatrixRow(key=key, index=index, cells=tuple(cells)))
+    return matrix.Matrix(name="base_d", keys=KEYS, rows=tuple(rows))
+
+
+def test_both_matrices_of_a_build_share_one_key_registry(store, built, clean_db):
+    """The property the whole architecture rests on: R and D are two geometries over ONE dimension
+    order, so the registry is written once and the second matrix does not add a row to it."""
+    assert store.write(built, build="t1") == len(KEYS)
+    written = clean_db["base_keys"].count_documents({"build": "t1"})
+
+    assert store.write(_distributional(), build="t1") == len(KEYS)
+    assert clean_db["base_keys"].count_documents({"build": "t1"}) == written
+    assert store.keys("t1") == KEYS
+
+
+def test_D_survives_the_trip_whole_and_stays_unsigned(store, built):
+    store.write(built, build="t1")
+    store.write(_distributional(), build="t1")
+
+    read = store.matrix("t1", "base_d")
+    assert read.rows == _distributional().rows
+    assert read.cell("eat.v", "food.n").weight == 0.4
+    assert read.cell("food.n", "eat.v").weight == 0.4, "overlap is symmetric"
+    assert all(cell.weight > 0 for row in read.rows for cell in row.cells)
+    # ...and R is untouched beside it: two collections, one build label.
+    assert store.matrix("t1", "base_r").cell("hungry.a", "full.a").weight < 0
+
+
+def test_a_D_that_disagrees_about_the_dimensions_is_refused_too(store, built):
+    """The registry is written by whichever matrix lands first, and it binds the other."""
+    from tk2.datatier.matrix_store import KeySpaceConflict
+
+    store.write(built, build="t1")
+    shuffled = matrix.Matrix(
+        name="base_d",
+        keys=tuple(reversed(KEYS)),
+        rows=tuple(matrix.MatrixRow(key=key, index=index, cells=())
+                   for index, key in enumerate(reversed(KEYS))),
+    )
+    with pytest.raises(KeySpaceConflict):
+        store.write(shuffled, build="t1")

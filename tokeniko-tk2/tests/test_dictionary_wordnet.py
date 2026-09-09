@@ -311,6 +311,30 @@ def test_a_dimension_asks_wordnet_only_about_its_own_pos(provider):
     assert "ground" not in verb.definition()
 
 
+def test_a_dimensions_gloss_is_its_own_and_not_its_words(provider):
+    """D's whole reason for asking the resource about a KEY. `gloss` answers about a word and joins
+    every part of speech's reading, so `land.n` and `land.v` would arrive with one definition and D
+    would report them as the same point — which is precisely the pair under review."""
+    noun = provider.gloss_of_key("land.n")
+    verb = provider.gloss_of_key("land.v")
+
+    assert noun != verb
+    assert "estate" in noun and "estate" not in verb
+    assert noun in provider.gloss("land") and verb in provider.gloss("land")
+
+
+def test_the_sense_cut_reaches_a_keys_gloss_too(provider):
+    """`primary` is the first synset of THAT part of speech; `all` is every reading of it. The
+    closure's cut decides which senses earn a word its membership, D's decides which place a
+    dimension in the geometry, and they read the resource the same way."""
+    primary = provider.gloss_of_key("state.v", "primary")
+    every = provider.gloss_of_key("state.v", "all")
+
+    assert primary == provider.synsets_of_key("state.v")[0].definition()
+    assert every.startswith(primary) and len(every) > len(primary)
+    assert every.count(" ; ") == len(provider.synsets_of_key("state.v", "all")) - 1
+
+
 # ------------------------------------------------------------------------------------------------
 # the engine, end to end, on the real resource
 # ------------------------------------------------------------------------------------------------

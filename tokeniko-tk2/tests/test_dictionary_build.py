@@ -3,8 +3,8 @@
 Three commands in the prototype, one call here, and the reason is the manifest: a base is ONE
 measurement under ONE declared policy, and three commands each reading a config file are three
 chances for a build to be assembled out of parts nobody measured together. What this file holds to
-account is that the three steps really do share one policy and one key space — the property T4 will
-lean on when D lands beside R over the same dimensions.
+account is that the steps really do share one policy and one key space — the property D leans on,
+since T4, by being built over the very same dimensions R is.
 """
 
 from dataclasses import replace
@@ -16,7 +16,7 @@ from tests.lexicon_fixture import (
     FixtureGlossProvider,
     FixtureRelationProvider,
 )
-from tests.seed import relation_policy
+from tests.seed import distribution_policy, relation_policy
 from tk2.dictionary import build, glosses
 from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
 
@@ -49,15 +49,20 @@ class World(FixtureGlossProvider):
         return self._relations.relations()
 
 
-def config(relations=None, **closure):
+def config(relations=None, distribution=None, **closure):
     """A whole declared policy for the fixture world. Stated, never defaulted — since T4b there is
-    no default anywhere in code to fall back on."""
+    no default anywhere in code to fall back on.
+
+    `distribution` is passed explicitly by the tests that are about D, because a policy version that
+    declares no gloss walk is a real state (v1-v5) and the assembly has to keep building under it.
+    """
     cuts = {"max_depth": 2, "max_size": 1000, "senses": "primary"} | closure
     return DictionaryConfig(
         closure=ClosurePolicy(**cuts),
         declared_seeds=("sleep", "leave"),
         bar=(BarPair("sleep.v", "bed.n", "NEAR", "the fixture's own nearness"),),
         relations=relation_policy() if relations is None else relations,
+        distribution=distribution,
     )
 
 
@@ -119,3 +124,48 @@ def test_a_provider_reading_the_resource_against_the_policy_is_refused():
     # ...and a resource with no scope to have (every fixture) is not the failure: the guard asks
     # only providers that can answer.
     assert build.build_base(config(relations=ruled), World()).dimensions
+
+
+# ------------------------------------------------------------------------------------------------
+# D beside R, over ONE key space (T4)
+# ------------------------------------------------------------------------------------------------
+
+
+def _walk():
+    """THE standing gloss walk, read from the migration that declares it — nothing lowered.
+
+    It used to lower the floor to one shared word, because the declared two was a decision about the
+    real base's scale that this world's five-word glosses could not meet. The Captain ruled one on
+    2026-09-09 (policy v7) and the divergence closed itself: the fixture now runs the standing walk.
+    """
+    return distribution_policy()
+
+
+def test_both_matrices_are_built_over_the_very_same_dimensions():
+    """Not two key spaces computed the same way — the same object. It is the whole reason the key
+    space is computed once and handed to both, and the reason a reader may compare them cell for
+    cell."""
+    built = build.build_base(config(distribution=_walk()), World())
+
+    assert built.distributional is not None
+    assert built.distributional.keys == built.relational.keys == built.dimensions
+    assert [row.index for row in built.distributional.rows] == \
+        [row.index for row in built.relational.rows]
+
+
+def test_the_manifest_counts_both_geometries():
+    built = build.build_base(config(distribution=_walk()), World())
+    counts = built.counts()
+
+    assert counts["d_cells"] == built.distributional.stats()["nonzero"]
+    assert counts["d_silent_rows"] == built.distributional.stats()["silent_rows"]
+    assert counts["keys"] == len(built.dimensions)
+
+
+def test_a_policy_with_no_gloss_walk_builds_no_D_rather_than_a_default_one():
+    """v1-v5 declare none, and the base T3 measured must stay re-runnable exactly as it was
+    measured. The absence is reported by the tool; it is never filled in by a value in code."""
+    built = build.build_base(config(), World())
+
+    assert built.distributional is None
+    assert "d_cells" not in built.counts()

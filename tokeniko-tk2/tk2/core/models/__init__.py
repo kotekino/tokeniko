@@ -21,6 +21,7 @@ module): tables the body is the subject of rather than the reader of.
 from tk2.core.models.channel import ChannelRegisterDoc
 from tk2.core.models.derived import DerivedPointDoc
 from tk2.core.models.dictionary import (
+    BaseDistributionDoc,
     BaseKeyDoc,
     BaseRelationDoc,
     DictionaryBarDoc,
@@ -88,8 +89,9 @@ LEDGER_MODELS = [DictionaryBuildDoc]
 #: reason and one worse — the r-cache snapshots every registered r-collection WHOLE on every slow
 #: tick, and R is thousands of rows carrying hundreds of thousands of cells. The base is read the
 #: way a dictionary is read, by key and on demand, and E2 builds that reader. `logic` all the same:
-#: the build writes it through the migration door, the body reads it. `base_d` joins at T4.
-BASE_MODELS = [BaseKeyDoc, BaseRelationDoc]
+#: the build writes it through the migration door, the body reads it. `base_d` joined at T4, and it
+#: is the same shape as `base_r` — two geometries, one dimension order, one way of keeping a row.
+BASE_MODELS = [BaseKeyDoc, BaseRelationDoc, BaseDistributionDoc]
 
 #: Everything, in the order a reader should meet it: the tunables, the architecture, then the organs.
 ALL_MODELS = R_MODELS + KB_MODELS
@@ -97,6 +99,7 @@ ALL_MODELS = R_MODELS + KB_MODELS
 __all__ = [
     "ALL_MODELS",
     "BASE_MODELS",
+    "BaseDistributionDoc",
     "BaseKeyDoc",
     "BaseRelationDoc",
     "StoredCell",

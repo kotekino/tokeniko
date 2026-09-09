@@ -105,13 +105,13 @@ def test_a_ledger_is_not_registered_with_the_body():
 
 
 def test_the_base_is_not_registered_with_the_body_either():
-    """R (and D, at T4) are `logic` and enormous: the r-cache snapshots every registered
+    """R and D are `logic` and enormous: the r-cache snapshots every registered
     r-collection WHOLE on every slow tick, and R is thousands of rows carrying hundreds of thousands
     of cells. The base is read the way a dictionary is read — by key, on demand — and E2 builds that
     reader. Its write-class is unchanged: the build writes it through the migration door."""
     from tk2.core.models import BASE_MODELS
 
-    assert [m.Settings.name for m in BASE_MODELS] == ["base_keys", "base_r"]
+    assert [m.Settings.name for m in BASE_MODELS] == ["base_keys", "base_r", "base_d"]
     assert all(m.write_class is WriteClass.LOGIC for m in BASE_MODELS)
     assert not set(BASE_MODELS) & set(ALL_MODELS)
 

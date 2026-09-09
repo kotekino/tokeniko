@@ -26,8 +26,9 @@ Three tables, because they answer three different questions and carry three diff
   `dictionary_builds`  the manifest. One row per build, recording the policy version and
                        fingerprint AND the bar version and fingerprint it was measured against.
 
-...and since T3 the base itself: `base_keys` (the dimension order) and `base_r` (the relation
-matrix, sparse, provenance per cell). They are `logic` like the rest — the body reads the base and
+...and since T3 the base itself: `base_keys` (the dimension order), `base_r` (the relation matrix,
+sparse, provenance per cell) and — since T4 — `base_d` (the gloss-overlap matrix, over the very same
+dimension order). They are `logic` like the rest — the body reads the base and
 never writes it — and they are described where they are declared, at the foot of this file.
 
 The reading seam: nothing here reads the database and nothing here computes a fingerprint. The pure
@@ -207,10 +208,10 @@ class DictionaryBuildDoc(LogicDocument, Timestamped):
 # the base itself — the key registry and R
 # ------------------------------------------------------------------------------------------------
 #
-# Added at T3. Two collections rather than one, because they answer two different questions and D
-# (T4) will ask the first one too: `base_keys` is THE DIMENSION ORDER, shared by every matrix of a
-# build, and `base_r` is one matrix over it. A build that stored its key space inside each matrix
-# would let R and D drift into two orders that no reader could compare cell for cell.
+# Added at T3, completed at T4. Three collections rather than one, because they answer different
+# questions: `base_keys` is THE DIMENSION ORDER, shared by every matrix of a build, and `base_r` and
+# `base_d` are two matrices over it. A build that stored its key space inside each matrix would let
+# R and D drift into two orders that no reader could compare cell for cell.
 #
 # NEITHER IS REGISTERED WITH THE BODY (`BASE_MODELS`, not `ALL_MODELS`), for `DictionaryBuildDoc`'s
 # reason and one worse: the r-cache snapshots every registered r-collection WHOLE on every slow
@@ -264,6 +265,35 @@ class BaseKeyDoc(LogicDocument, Timestamped):
 
     class Settings:
         name = "base_keys"
+        indexes = [
+            IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
+            IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
+        ]
+
+
+class BaseDistributionDoc(LogicDocument, Timestamped):
+    """logic (r) — one row of D: which dimensions this one's definition shares words with.
+
+    THE SAME SHAPE AS R's, deliberately: R and D are two geometries over one key space and the
+    difference between them is what fills a cell, never how a cell is kept. A reader that had to
+    learn two row shapes to compare them cell for cell would be a reader that eventually compares
+    the wrong ones.
+
+    Sparser than its name suggests, and the floor is why: a cell exists only where two definitions
+    share at least `min_shared` vocabulary words and the scored overlap clears the declared floor.
+    Unsigned — there is no negative overlap, and the sign belongs to R alone.
+    """
+
+    build: Annotated[str, Indexed()] = Field(min_length=1)
+
+    key: str = Field(min_length=1)
+    #: The dimension's own index, carried so a row can be read without the registry beside it.
+    index: int = Field(ge=0)
+
+    cells: list[StoredCell] = Field(default_factory=list)
+
+    class Settings:
+        name = "base_d"
         indexes = [
             IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
             IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),

@@ -10,13 +10,16 @@ Pure. The resource arrives as a provider — which is also what lets the whole a
 the handcrafted worlds — and nothing here opens a database or writes a row. Storing the result is
 `tools/build_dictionary.py`'s act, and it goes through the migration door.
 
-D IS T4's, and it lands here: `build_base` will return it beside R, over the SAME dimensions, which
-is the whole reason the key space is computed once and passed to both.
+D LANDED HERE AT T4, beside R and over the SAME dimensions — which is the whole reason the key
+space is computed once and passed to both. It is built when the policy declares a gloss walk and
+skipped when it does not (v1–v5 declare none), and that absence is REPORTED rather than defaulted:
+re-running the base T3 measured must stay possible, and a D built under parameters nobody declared
+would be the standing law arriving by omission.
 """
 
 from dataclasses import dataclass, field
 
-from tk2.dictionary import closure, glosses, relations
+from tk2.dictionary import closure, distribution, glosses, relations
 from tk2.dictionary.closure import Digraph, SeedClosure
 from tk2.dictionary.config import DictionaryConfig
 from tk2.dictionary.matrix import Matrix
@@ -47,6 +50,8 @@ class BaseBuild:
     words: tuple[str, ...]
     dimensions: tuple[str, ...]
     relational: Matrix
+    #: D over the same dimensions, or `None` when the policy declares no gloss walk.
+    distributional: Matrix | None = None
     #: The closure's own account of itself — where it stopped, what it could not find, and what
     #: sits one ring past the cut. Carried because a build's manifest is not only its counts.
     closure: SeedClosure = None
@@ -54,9 +59,10 @@ class BaseBuild:
     one_ring_past: tuple[str, ...] = ()
 
     def counts(self) -> dict[str, int]:
-        """What the manifest records. Names chosen to stay meaningful when D joins them."""
+        """What the manifest records. `DictionaryBuildDoc.counts` is a free dict for exactly this
+        reason: D's numbers join R's without a migration against the shape."""
         stats = self.relational.stats()
-        return {
+        counted = {
             "lexicon": self.graph_stats.get("nodes", 0),
             "closure_words": len(self.words),
             "keys": len(self.dimensions),
@@ -65,6 +71,13 @@ class BaseBuild:
             "r_silent_rows": stats["silent_rows"],
             "one_ring_past": len(self.one_ring_past),
         }
+        if self.distributional is not None:
+            d_stats = self.distributional.stats()
+            counted |= {
+                "d_cells": d_stats["nonzero"],
+                "d_silent_rows": d_stats["silent_rows"],
+            }
+        return counted
 
 
 def build_base(
@@ -115,10 +128,19 @@ def build_base(
         dimensions, provider, config.relations, antonym_symmetry=antonym_symmetry
     )
 
+    # D over the SAME `dimensions` tuple — not a second key space computed the same way, the same
+    # object — so the two matrices can be read cell for cell and the store's registry describes
+    # both. A policy with no gloss walk builds no D rather than a default one; the tool says so.
+    distributional = None
+    if config.distribution is not None:
+        _step(progress, "distribution")
+        distributional = distribution.build(dimensions, provider, config.distribution)
+
     return BaseBuild(
         words=result.words,
         dimensions=dimensions,
         relational=relational,
+        distributional=distributional,
         closure=result,
         graph_stats=graph_stats,
         one_ring_past=result.one_ring_past(graph),

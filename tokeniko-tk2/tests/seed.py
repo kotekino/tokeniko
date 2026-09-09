@@ -168,3 +168,51 @@ def declared_config_v5():
 
 def relation_policy_v5():
     return migration(8).DECLARED.relations
+
+
+# ------------------------------------------------------------------------------------------------
+# 0009 — D's gloss walk declared: policy version 6
+# ------------------------------------------------------------------------------------------------
+
+
+def policy_rows_v6() -> list[dict]:
+    return [dict(row) for row in migration(9).POLICY_ROWS]
+
+
+def declared_config_v6():
+    """The policy v6 writes — v5's whole declaration, plus the nine parameters D is built from."""
+    return migration(9).DECLARED
+
+
+def distribution_policy():
+    """D's declared walk AS IT STANDS — the newest policy version, whichever that is.
+
+    Found by asking the files rather than by naming a migration, for `relation_policy`'s reason: a
+    fixture with a version number in it would have to be edited every time the Captain rules.
+    """
+    from tk2.datatier.policy_source import newest_policy_migration
+
+    return newest_policy_migration()[1].DECLARED.distribution
+
+
+# ------------------------------------------------------------------------------------------------
+# 0010 — the dual read ruled, and three values moved: policy version 7
+# ------------------------------------------------------------------------------------------------
+
+
+def policy_rows_v7() -> list[dict]:
+    return [dict(row) for row in migration(10).POLICY_ROWS]
+
+
+def declared_config_v7():
+    """The policy v7 writes — v6's whole declaration with two numbers moved, plus the mix."""
+    return migration(10).DECLARED
+
+
+def reading_policy():
+    """The dual read AS IT STANDS — the newest policy version, whichever that is, for
+    `distribution_policy`'s reason: a fixture with a version number in it would have to be edited
+    every time the Captain rules."""
+    from tk2.datatier.policy_source import newest_policy_migration
+
+    return newest_policy_migration()[1].DECLARED.reading

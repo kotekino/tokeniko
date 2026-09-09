@@ -16,9 +16,10 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
 - [x] proper-noun/abbreviation refusal (`or`=Oregon out of the base) — `1e7cad3`
 - [x] policy as rows — the mechanism (collection, bar ledger, manifest, offline snapshot) — `e480ccd`
-- [ ] policy as rows — the ruling: k=200, rail 25,000, closed classes as typed KB rows (in flight)
-- [ ] R at scale + curation pipeline (Captain's hand on approve)
-- [ ] D at scale (derivational down-weight DECIDED, membership repair)
+- [x] policy as rows — the ruling: k=200, rail 25,000, closed classes as typed KB rows — `a6acefb`
+- [x] R at scale + curation pipeline (Captain's hand on approve) — `f71baa3`
+- [x] lemma scope ruled (v4) + inferred opposition ruled (v5) — `7da676f`
+- [ ] D at scale (derivational down-weight DECIDED; sense mode + IDF questions) — in flight
 - [ ] the bar grown + map regenerated + the live build (E1 gate)
 
 ## E2 — the format (tkzip v2)

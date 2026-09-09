@@ -173,6 +173,19 @@ class FixtureGlossProvider:
             return self._glosses_all[word]
         return self._glosses.get(word, "")
 
+    def gloss_of_key(self, key, senses="primary"):
+        """ONE DIMENSION's definition — what D reads.
+
+        This world has one sense per (word, POS), so a key's gloss is its word's; the `senses` cut
+        still reaches through, because `work` has a second reading and D must see it move. A key
+        whose POS the resource does not report speaks nothing at all, which is what keeps a refused
+        reading out of D as well as out of the closure.
+        """
+        word, _, pos = key.rpartition(".")
+        if pos not in self.parts_of_speech(word):
+            return ""
+        return self.gloss(word, senses)
+
     def parts_of_speech(self, word):
         """What the resource reports, MINUS the readings that are names. WordNet's `be` is listed as
         a noun because of beryllium; reporting that noun would mint `be.n`, a dimension whose whole

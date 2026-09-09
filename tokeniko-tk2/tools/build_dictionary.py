@@ -15,9 +15,18 @@ to. The manifest a build leaves behind records the config fingerprint AND the po
 versions it was assembled from, so «two builds were measured under the same policy» is a claim a
 reader can check rather than assume.
 
-WHAT IS BUILT TODAY: the key space and R. D is T4's and lands beside it over the same key space —
-`base_keys` is written first for exactly that reason, and the store refuses a second matrix whose
-dimensions disagree with it.
+WHAT IS BUILT: the key space, R, and — since T4 — D over the very same key space. `base_keys` is
+written first for exactly that reason, and the store refuses a second matrix whose dimensions
+disagree with it. A policy version that declares no gloss walk (v1-v5) builds no D and the run says
+so; it does not invent one.
+
+THE DUAL READ. R and D are two matrices on purpose and nothing here blends them into the stored
+base. A READER may still want one number, and the dual read is the only shape in which that is
+honest: the two rows are concatenated into one vector (R's columns, then D's, scaled by the mix) and
+the cosine is taken over the whole of it, so no cell is ever averaged with another. THE MIX COMES
+FROM THE ROWS since policy v7 (the Captain's ruling of 2026-09-09, 0.5); `--mix` is how another
+blend is REPRODUCED, and a blend the rows did not declare is a measurement that may not be stored —
+exactly the shape `--lemma-scope` and `--antonym-symmetry` took before their rulings.
 
 THE BAR IS READ, NOT SCORED. R is half the geometry: `eat` and `food` have no WordNet relation at
 all (finding 4 of the 2026-08-12 review), so a relations-only run is expected to leave the topical
@@ -32,11 +41,11 @@ import argparse
 import json
 import sys
 import time
-from dataclasses import replace
+from dataclasses import fields, replace
 from pathlib import Path
 
 from tk2.datatier.policy_source import standing_bar, standing_policy
-from tk2.dictionary import build, closure, glosses, keys, matrix, policy, relations
+from tk2.dictionary import build, closure, distribution, glosses, keys, matrix, policy, relations
 from tk2.dictionary.config import DictionaryConfig, bar_words
 from tk2.dictionary.wordnet import (
     LEMMA_SCOPES,
@@ -50,13 +59,40 @@ from tk2.dictionary.wordnet import (
 #: resource, so the count is the number and these are the witnesses.
 SILENT_SHOWN = 25
 
+#: The blends the dual read is printed at, BESIDE the one the rows declare. 0.0 IS R alone, so the
+#: column is not a special case, and the top of the range is deliberately past anything plausible:
+#: the point of the table is to show where R's sign stops surviving the blend, which needs the
+#: failure IN it. The standing mix is folded in by `mix_columns`, so the table always contains the
+#: reading the build was actually measured under — a sweep that could omit it would be a table
+#: nobody could locate the policy in.
+MIXES = (0.0, 0.25, 0.5, 1.0, 2.0)
+
+
+def mix_columns(standing: float, mixes=MIXES) -> tuple[float, ...]:
+    """The sweep with the declared reading in it, in order and never twice."""
+    return tuple(sorted({*mixes, standing}))
+
+#: How many of D's loudest gloss words to print. The words the base's definitions cannot avoid are
+#: the whole of the Captain's parked question (b), so they are named and not counted.
+VOCABULARY_SHOWN = 20
+
+#: The words the pollution figure is measured against — the residual floor the name refusal left,
+#: named in the plan («`in` 27% of base rows, `be` 14%, `by` 14%, `as` 10%»). A stated set rather
+#: than a derived one because the figure is a COMPARISON with the 2026-08-25 measurement, and a
+#: junk set that moved with the base would compare two different questions.
+JUNK_WORDS = frozenset({"in", "be", "by", "as"})
+
 
 def build_base(config: DictionaryConfig, lemma_scope: str,
-               antonym_symmetry: str | None = None) -> build.BaseBuild:
+               antonym_symmetry: str | None = None):
     """The base as the rows describe it, with the resource named out loud on the way through.
 
-    The assembly itself is `tk2.dictionary.build`, so it is the same three steps a test can run on a
+    The assembly itself is `tk2.dictionary.build`, so it is the same steps a test can run on a
     handcrafted world; what belongs to a TOOL is naming the resource and saying how long it took.
+
+    Returns the provider beside the build, because D's report is about the VOCABULARY its cells were
+    computed from (which words the base's definitions cannot avoid) and that question is asked of
+    the resource, not of the matrix.
     """
     started = time.time()
     lexicon = wordnet_lexicon()
@@ -75,7 +111,10 @@ def build_base(config: DictionaryConfig, lemma_scope: str,
     print(f"  closure: {len(built.words):,} words -> {len(built.dimensions):,} dimensions "
           f"(stopped: {built.closure.stopped}, {len(built.one_ring_past):,} one ring past the cut)")
     print(f"  R: {built.relational.stats()['nonzero']:,} cells in {time.time() - started:.0f}s")
-    return built
+    if built.distributional is not None:
+        print(f"  D: {built.distributional.stats()['nonzero']:,} cells in "
+              f"{time.time() - started:.0f}s")
+    return built, provider
 
 
 # ------------------------------------------------------------------------------------------------
@@ -199,6 +238,715 @@ def _local_order(measured) -> dict:
                     f"{far['a']}~{far['b']} (FAR, {far['cosine']:+.3f})"
                 )
     return {"tested": tested, "held": held, "broken": broken}
+
+
+# ------------------------------------------------------------------------------------------------
+# the bar, read under any geometry — R alone, D alone, or the two blended
+# ------------------------------------------------------------------------------------------------
+
+
+def read_bar(bar, cosine_of, cells_of=None) -> dict:
+    """One bar, read under ONE geometry, threshold-free.
+
+    Written once and called for every reading there is, because the alternative is three copies of
+    the same arithmetic drifting apart — and the whole claim of the dual read is that R alone, D
+    alone and the blend are the SAME question asked of different columns.
+
+    Nothing here scores a pass. What it returns is what can be said without an absolute floor: the
+    cosine, whether the geometry states anything at all (MUTE is an abstention, not a miss), the
+    LOCAL order (does every NEAR pair out-score every FAR pair it shares a word with), the GLOBAL
+    order (every NEAR against every FAR, which is harsher and word-blind), and the MARGIN — the gap
+    between the worst NEAR and the best FAR. The floors are T5's and the Captain's.
+    """
+    measured = []
+    for pair in bar:
+        forward, reverse = cells_of(pair.a, pair.b) if cells_of else (None, None)
+        measured.append(
+            {
+                "a": pair.a,
+                "b": pair.b,
+                "verdict": pair.verdict,
+                "cosine": cosine_of(pair.a, pair.b),
+                "forward": _cell_summary(forward),
+                "reverse": _cell_summary(reverse),
+            }
+        )
+    near = [m["cosine"] for m in measured if m["verdict"] == "NEAR" and m["cosine"] is not None]
+    far = [m["cosine"] for m in measured if m["verdict"] == "FAR" and m["cosine"] is not None]
+    held = sum(1 for n in near for f in far if n > f)
+    return {
+        "pairs": measured,
+        "unscorable": [f"{m['a']}~{m['b']}" for m in measured if m["cosine"] is None],
+        "mute": [f"{m['a']}~{m['b']}" for m in measured
+                 if m["cosine"] is not None and not m["cosine"] and not m["forward"] and not m["reverse"]],
+        "local_order": _local_order(measured),
+        "global_order": {"tested": len(near) * len(far), "held": held},
+        "margin": (min(near) - max(far)) if near and far else None,
+        "worst_near": min(near) if near else None,
+        "best_far": max(far) if far else None,
+    }
+
+
+def _reading_line(label: str, reading: dict) -> str:
+    """One geometry's reading in one line — the shape every table below repeats."""
+    order = reading["local_order"]
+    globally = reading["global_order"]
+    mute = len(reading["mute"])
+    return (
+        f"  {label:<22} MUTE {mute:>2}  local {order['held']:>2}/{order['tested']:<3} "
+        f"global {globally['held']:>3}/{globally['tested']:<4} "
+        f"margin {_number(reading['margin']):>8}  worst NEAR {_number(reading['worst_near']):>8}  "
+        f"best FAR {_number(reading['best_far']):>8}"
+    )
+
+
+def _number(value, width: str = "+.3f") -> str:
+    """A measured number, or the em dash that means «there was nothing to measure»."""
+    return "—" if value is None else format(value, width)
+
+
+# ------------------------------------------------------------------------------------------------
+# D — the shape of the second geometry, and the vocabulary its cells are made of
+# ------------------------------------------------------------------------------------------------
+
+
+def report_distribution(built: build.BaseBuild, vectors, config: DictionaryConfig) -> dict:
+    """What D is, and what it is made of.
+
+    Two halves on purpose. The first is the matrix — how many cells, how dense, how many rows the
+    gloss walk cannot place. The second is the VOCABULARY, and it is the half the Captain's parked
+    question (b) is about: after the name refusal took Oregon's `or` off 57.8% of the base's rows,
+    what is left is real function words, and the figure that matters is how much of D's evidence is
+    nothing but them.
+    """
+    walk = config.distribution
+    matrix_d = built.distributional
+    stats = matrix_d.stats()
+    frequency = distribution.document_frequency(vectors)
+    sizes = sorted(len(words) for words in vectors.values())
+    saturated = sum(
+        1
+        for row in matrix_d.rows
+        for cell in row.cells
+        if cell.source != matrix.SOURCE_AXIS and abs(cell.weight - walk.cap) < 1e-9
+    )
+
+    print()
+    print("=" * 96)
+    print("D — THE SHAPE OF WHAT WAS BUILT  (gloss overlap: unsigned, symmetric, no relation named)")
+    print("=" * 96)
+    print(f"  walk              {walk.measure} · {walk.weighting} · vocabulary {walk.vocabulary} · "
+          f"senses {walk.senses}")
+    print(f"                    min_shared {walk.min_shared} · scale {walk.scale} · cap {walk.cap} "
+          f"· floor {walk.floor} · identity {walk.identity}")
+    print(f"  dimensions        {stats['dimensions']:,}")
+    print(f"  stated            {stats['nonzero']:,}  ({stats['density_pct']:.4f}% of "
+          f"{stats['off_diagonal']:,} possible)")
+    print(f"  AT THE CAP        {saturated:,}  ({100 * saturated / max(1, stats['nonzero']):.1f}% of "
+          f"stated — a saturated cell has stopped saying how much)")
+    print(f"  silent rows       {stats['silent_rows']:,}  (a dimension whose definition shares "
+          f"nothing with any other)")
+    print()
+    print(f"  gloss vectors     {len(frequency):,} distinct words · "
+          f"mean {sum(sizes) / max(1, len(sizes)):.1f} words per dimension · "
+          f"median {sizes[len(sizes) // 2]} · max {sizes[-1]} · "
+          f"{sum(1 for n in sizes if not n):,} empty")
+    print()
+    print(f"  the words the base's definitions cannot avoid (top {VOCABULARY_SHOWN} by rows named):")
+    loudest = sorted(frequency.items(), key=lambda item: (-item[1], item[0]))[:VOCABULARY_SHOWN]
+    for word, count in loudest:
+        print(f"    {word:<16} {count:>6,}  {100 * count / len(built.dimensions):5.1f}% of rows")
+
+    # AT BOTH FLOORS on purpose. The T2b figure the plan carries (84.8% before the name refusal,
+    # 59.1% after) counted every pair that shared ANYTHING, so `min_shared = 1` is the column that
+    # can be compared with it; the declared floor is the one this base actually runs at. Since the
+    # ruling of 2026-09-09 the two are THE SAME floor, and the label says so rather than letting one
+    # number wear the other's name.
+    pollution = {
+        floor: distribution.junk_pollution(
+            vectors, JUNK_WORDS, floor, distribution.word_weights(vectors, walk)
+        )
+        for floor in dict.fromkeys((1, walk.min_shared))
+    }
+    print()
+    print(f"  POLLUTION — pairs whose only shared words are {sorted(JUNK_WORDS)}")
+    for floor, measured in pollution.items():
+        names = (["the T2b comparison"] if floor == 1 else []) + (
+            ["the declared floor"] if floor == walk.min_shared else [])
+        note = "  (" + " and ".join(names) + ")"
+        print(f"    >= {floor} shared:  {measured['overlapping_pairs']:>9,} pairs   ONLY junk "
+              f"{measured['pairs_only_junk']:>8,} ({measured['pairs_only_junk_pct']:>5}%)   "
+              f"junk's share of the shared mass {measured['mass_from_junk_pct']}%{note}")
+    print("    the first figure is MEMBERSHIP — no weighting can move it, only a filter could; "
+          "the second is what a weighting moves")
+
+    return {
+        "stats": stats,
+        "saturated": saturated,
+        "vocabulary": len(frequency),
+        "loudest": [[word, count] for word, count in loudest],
+        "sizes": {"mean": round(sum(sizes) / max(1, len(sizes)), 2), "max": sizes[-1],
+                  "empty": sum(1 for n in sizes if not n)},
+        "pollution": {str(floor): measured for floor, measured in pollution.items()},
+    }
+
+
+# ------------------------------------------------------------------------------------------------
+# THE DUAL READ — R alone, D alone, and the blend, over one key space
+# ------------------------------------------------------------------------------------------------
+
+
+def report_dual(built: build.BaseBuild, config: DictionaryConfig, vectors=None, mixes=MIXES,
+                standing: float | None = None) -> dict:
+    """The bar under both geometries and their blend — the reading T5's gate will be built on.
+
+    HOW THEY ARE COMBINED, and why it is the only honest shape available: the two rows are
+    CONCATENATED (R's columns, then D's, scaled by `mix`) and one cosine is taken over the whole
+    vector. Nothing is averaged with anything — the review measured what averaging does, and it is
+    the reason there are two matrices at all: `enter~leave` reads -0.331 on relations alone and
+    +0.519 once a gloss tail is mixed in, because opposites are defined in the same words.
+
+    THE BLEND CAN STILL BURY THE SIGN, which is why the table runs past any plausible setting: a
+    mix high enough for D to speak is a mix high enough for a topical overlap to outweigh a stated
+    opposition. Where that happens is a NUMBER, printed below — and since the ruling of 2026-09-09
+    the sweep says which of its columns is the one the base is read under, because a table where the
+    standing reading is indistinguishable from six alternatives is a table nobody can conclude from.
+    """
+    relational, distributional = built.relational, built.distributional
+    readings = {
+        "R alone": read_bar(
+            config.bar,
+            relational.cosine,
+            lambda a, b: relations.stated_between(relational, a, b),
+        ),
+        "D alone": read_bar(
+            config.bar,
+            distributional.cosine,
+            lambda a, b: (distributional.cell(a, b), distributional.cell(b, a)),
+        ),
+    }
+    for mix in mixes:
+        readings[f"R+D mix {mix}"] = read_bar(
+            config.bar,
+            lambda a, b, m=mix: matrix.blended_cosine(relational, distributional, a, b, m),
+        )
+
+    print()
+    print("=" * 96)
+    print("THE DUAL READ — the same bar under R alone, D alone, and the two concatenated")
+    print("=" * 96)
+    columns = ["R alone", "D alone"] + [f"R+D mix {mix}" for mix in mixes]
+    if standing is not None:
+        print(f"  the declared reading is mix {standing} — every other column is a measurement")
+    print(f"  {'pair':<26} {'exp':<5}" + "".join(f"{name.replace('R+D mix ', 'mix '):>12}" for name in columns))
+    print(f"  {'-' * 26} {'-' * 5}" + "".join(f"{'-' * 11:>12}" for _ in columns))
+    for position, pair in enumerate(config.bar):
+        cells = "".join(
+            f"{_number(readings[name]['pairs'][position]['cosine']):>12}" for name in columns
+        )
+        print(f"  {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5}" + cells)
+
+    print()
+    for name in columns:
+        ruled = standing is not None and name == f"R+D mix {standing}"
+        print(_reading_line(name, readings[name]) + ("   <- the declared reading" if ruled else ""))
+        for broken in readings[name]["local_order"]["broken"][:3]:
+            print(f"      ! {broken}")
+
+    if vectors is not None:
+        print()
+        print("  WHAT D ACTUALLY SHARES — the bar pairs' DIRECT cell, and the words behind it")
+        print("  (the column above is the row COSINE, which is second-order: two dimensions can be")
+        print("   near in D without their own definitions sharing a word)")
+        for pair in config.bar:
+            cell = built.distributional.cell(pair.a, pair.b)
+            shared = distribution.shared_words(vectors, pair.a, pair.b)
+            print(f"    {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5} "
+                  f"{_cell_text(cell):>22}   shared: {' '.join(shared) if shared else '(nothing)'}")
+
+    print()
+    print("  WHERE THE SIGN GOES: a pair R states as opposition, read at each blend")
+    opposed = [
+        pair for pair in config.bar
+        if any(
+            cell is not None and cell.weight < 0
+            for cell in relations.stated_between(relational, pair.a, pair.b)
+        )
+    ]
+    for pair in opposed:
+        blended = {mix: matrix.blended_cosine(relational, distributional, pair.a, pair.b, mix)
+                   for mix in mixes}
+        line = "".join(f"{_number(blended[mix]):>12}" for mix in mixes)
+        flips = [mix for mix in mixes if (blended[mix] or 0) > 0]
+        print(f"    {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5}" + line
+              + (f"   turns positive at mix {min(flips)}" if flips else "   stays negative throughout"))
+
+    return {name: _reading_summary(reading) for name, reading in readings.items()}
+
+
+def _reading_summary(reading: dict) -> dict:
+    """A reading without its per-pair cells — what the json carries for a table of many readings."""
+    return {
+        "pairs": [{"a": p["a"], "b": p["b"], "verdict": p["verdict"], "cosine": p["cosine"]}
+                  for p in reading["pairs"]],
+        "mute": reading["mute"],
+        "unscorable": reading["unscorable"],
+        "local_order": reading["local_order"],
+        "global_order": reading["global_order"],
+        "margin": reading["margin"],
+        "worst_near": reading["worst_near"],
+        "best_far": reading["best_far"],
+    }
+
+
+# ------------------------------------------------------------------------------------------------
+# THE DERIVATIONAL DOWN-WEIGHT — the open item E1 was chartered to close, MEASURED
+# ------------------------------------------------------------------------------------------------
+
+#: The two pairs the whole question is about. `land.n ~ land.v` is declared FAR and
+#: `cause.n ~ cause.v` NEAR, and today they are THE SAME CELL — `derivational` at ±0.90 — so any
+#: down-weight moves both by the same arithmetic. Named here because the table below is unreadable
+#: without knowing which two rows to look at first.
+TARGET_PAIRS = (("land.n", "land.v"), ("cause.n", "cause.v"))
+
+#: The candidates the run measures when it is given none. 0.90 IS the standing weight, so the
+#: column is not a special case; 0.00 switches the relation off entirely (a cell whose only claim
+#: was `derivational` ceases to exist rather than weakening), which is the end of the range and has
+#: to be in it.
+DOWN_WEIGHTS = (0.90, 0.75, 0.60, 0.45, 0.30, 0.15, 0.00)
+
+
+def derivational_variants(policy_relations, weights):
+    """One `RelationPolicy` per candidate, differing in exactly one number.
+
+    A variant rather than an edited policy: a run that measured seven weights by mutating one object
+    would have seven results and one declaration, which is the whole failure `DictionaryConfig`
+    exists to prevent.
+    """
+    variants = {}
+    for weight in weights:
+        variants[weight] = replace(
+            policy_relations,
+            weights=tuple(
+                (name, weight if name == "derivational" else value)
+                for name, value in policy_relations.weights
+            ),
+        )
+    return variants
+
+
+def compare_derivational(config: DictionaryConfig, scope: str, weights) -> dict:
+    """Build R once per candidate weight over ONE key space, with D built once beside them.
+
+    The membership half is identical by construction — the closure reads GLOSSES, which no relation
+    weight can touch — and D is untouched too, so the comparison is honest cell for cell and the
+    dual read can be taken at every candidate without rebuilding the second geometry.
+    """
+    started = time.time()
+    lexicon = wordnet_lexicon()
+    provider = WordNetProvider(lexicon, lemma_scope=scope)
+
+    print(f"resource      WordNet through nltk — {len(lexicon):,} words · lemma scope {scope!r}")
+    print("building the definition digraph, the closure and D ONCE…", flush=True)
+    graph = closure.build_digraph(provider, config.closure)
+    result = closure.seed_closure(graph, config.seeds, config.closure)
+    dimensions = tuple(glosses.dimensions_of(result.words, provider))
+    print(f"  {len(result.words):,} words -> {len(dimensions):,} dimensions "
+          f"({time.time() - started:.0f}s)")
+
+    built_d = None
+    if config.distribution is not None:
+        built_d = distribution.build(dimensions, provider, config.distribution)
+        print(f"  D: {built_d.stats()['nonzero']:,} cells ({time.time() - started:.0f}s)", flush=True)
+
+    built = {}
+    for weight, variant in derivational_variants(config.relations, weights).items():
+        built[weight] = relations.build(dimensions, provider, variant)
+        print(f"  derivational {weight:.2f}  R: {built[weight].stats()['nonzero']:,} cells "
+              f"({time.time() - started:.0f}s)", flush=True)
+    return {"r": built, "d": built_d, "dimensions": dimensions}
+
+
+def report_derivational(measured: dict, config: DictionaryConfig, mix: float) -> dict:
+    """The candidates side by side: the two target pairs first, then the whole bar, then the cost.
+
+    THE COST IS THE HALF THAT DECIDES IT. A down-weight does not only move the pair it was aimed at
+    — `derivational` is 11.7% of R's cells — so what every candidate does to the OTHER seventeen
+    pairs is printed pair by pair, and the summary says plainly which ones each one costs.
+    """
+    built = measured["r"]
+    built_d = measured["d"]
+    weights = list(built)
+    standing = weights[0]
+
+    readings = {}
+    dual = {}
+    for weight in weights:
+        matrix_r = built[weight]
+        readings[weight] = read_bar(
+            config.bar, matrix_r.cosine,
+            lambda a, b, m=matrix_r: relations.stated_between(m, a, b),
+        )
+        if built_d is not None:
+            dual[weight] = read_bar(
+                config.bar,
+                lambda a, b, m=matrix_r: matrix.blended_cosine(m, built_d, a, b, mix),
+            )
+
+    print()
+    print("=" * 96)
+    print("THE DERIVATIONAL DOWN-WEIGHT — the two pairs the question is about")
+    print("=" * 96)
+    print(f"  {'pair':<26} {'exp':<5}" + "".join(f"{w:>10.2f}" for w in weights))
+    for a, b in TARGET_PAIRS:
+        declared = next((p for p in config.bar if {p.a, p.b} == {a, b}), None)
+        verdict = declared.verdict if declared else "?"
+        print(f"  {a + ' ~ ' + b:<26} {verdict:<5}"
+              + "".join(f"{_number(built[w].cosine(a, b)):>10}" for w in weights) + "   R alone")
+        if built_d is not None:
+            print(f"  {'':<26} {'':<5}"
+                  + "".join(f"{_number(matrix.blended_cosine(built[w], built_d, a, b, mix)):>10}"
+                            for w in weights) + f"   R+D mix {mix}")
+        cell = built[standing].cell(a, b)
+        print(f"  {'':<26} {'':<5}   stated: {_cell_text(cell)}"
+              + (f" / {_cell_text(built[standing].cell(b, a))}" if built[standing].cell(b, a) else ""))
+        if built_d is not None:
+            print(f"  {'':<26} {'':<5}   D says: {_cell_text(built_d.cell(a, b))}")
+
+    # THE NUMBER THE WHOLE QUESTION TURNS ON. The two pairs are the same cell at the same weight, so
+    # a down-weight scales BOTH — and what a ruling needs to know is not where each one lands but
+    # whether the distance between them ever opens. Absolute and relative, because they do not
+    # answer the same way.
+    if len(TARGET_PAIRS) == 2:
+        (near_a, near_b), (far_a, far_b) = TARGET_PAIRS[1], TARGET_PAIRS[0]
+        print()
+        print("  THE GAP BETWEEN THEM — cause.n~cause.v (NEAR) minus land.n~land.v (FAR)")
+        for label, cosine_of in (
+            ("R alone", lambda w, a, b: built[w].cosine(a, b)),
+            *(() if built_d is None else ((
+                f"R+D mix {mix}",
+                lambda w, a, b: matrix.blended_cosine(built[w], built_d, a, b, mix),
+            ),)),
+        ):
+            gaps = []
+            for weight in weights:
+                near = cosine_of(weight, near_a, near_b) or 0.0
+                far = cosine_of(weight, far_a, far_b) or 0.0
+                gaps.append((near - far, (near / far) if far else None))
+            print(f"    {label:<16} absolute" + "".join(f"{gap:>10.3f}" for gap, _ratio in gaps))
+            print(f"    {'':<16} ratio   "
+                  + "".join(f"{'      —' if ratio is None else f'{ratio:>10.3f}'}"
+                            for _gap, ratio in gaps))
+
+    print()
+    print("=" * 96)
+    print(f"THE WHOLE BAR ON R ALONE — one column per candidate weight")
+    print("=" * 96)
+    print(f"  {'pair':<26} {'exp':<5}" + "".join(f"{w:>10.2f}" for w in weights))
+    for position, pair in enumerate(config.bar):
+        moved = "*" if len({round(readings[w]["pairs"][position]["cosine"] or 0, 6)
+                            for w in weights}) > 1 else " "
+        print(f" {moved}{pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5}"
+              + "".join(f"{_number(readings[w]['pairs'][position]['cosine']):>10}" for w in weights))
+
+    print()
+    for weight in weights:
+        print(_reading_line(f"R alone  {weight:.2f}", readings[weight]))
+    if dual:
+        print()
+        for weight in weights:
+            print(_reading_line(f"R+D {mix}  {weight:.2f}", dual[weight]))
+
+    print()
+    print("=" * 96)
+    print("WHAT EACH CANDIDATE COSTS — the shape of R, and the pairs it moves the wrong way")
+    print("=" * 96)
+    print(f"  {'weight':>8} {'cells':>10} {'derivational':>14} {'negative':>10} {'silent':>8}   "
+          f"pairs whose local order breaks")
+    out = {}
+    for weight in weights:
+        stats = built[weight].stats()
+        broken = readings[weight]["local_order"]["broken"]
+        regressed = sorted(
+            set(_broken_pairs(broken)) - set(_broken_pairs(readings[standing]["local_order"]["broken"]))
+        )
+        print(f"  {weight:>8.2f} {stats['nonzero']:>10,} "
+              f"{stats['by_relation'].get('derivational', 0):>14,} {stats['negative']:>10,} "
+              f"{stats['silent_rows']:>8,}   "
+              f"{' '.join(regressed) if regressed else '(none beyond the standing weight)'}")
+        out[weight] = {
+            "stats": stats,
+            "r": _reading_summary(readings[weight]),
+            "dual": _reading_summary(dual[weight]) if dual else None,
+            "newly_broken": regressed,
+        }
+    return {"mix": mix, "candidates": {str(w): v for w, v in out.items()}}
+
+
+def _broken_pairs(broken) -> list[str]:
+    """The NEAR pair named at the head of each broken-order sentence — what a candidate costs, as
+    names rather than as a count."""
+    return [line.split(" (NEAR", 1)[0] for line in broken]
+
+
+# ------------------------------------------------------------------------------------------------
+# THE PARKED QUESTION (b) — the high-frequency dimensions, as a WEIGHTING
+# ------------------------------------------------------------------------------------------------
+
+
+def compare_weighting(config: DictionaryConfig, scope: str) -> dict:
+    """Build D twice over ONE key space, changing only what a shared gloss word is worth.
+
+    A weighting cannot move membership — the closure reads the digraph, and this touches only how
+    much each word of a definition counts — so the two Ds are comparable cell for cell, which is
+    what `matrix.diff` needs and what makes «this many cells the floor now refuses» a real number.
+    """
+    started = time.time()
+    lexicon = wordnet_lexicon()
+    provider = WordNetProvider(lexicon, lemma_scope=scope)
+
+    print(f"resource      WordNet through nltk — {len(lexicon):,} words · lemma scope {scope!r}")
+    print("building the definition digraph, the closure and R ONCE…", flush=True)
+    graph = closure.build_digraph(provider, config.closure)
+    result = closure.seed_closure(graph, config.seeds, config.closure)
+    dimensions = tuple(glosses.dimensions_of(result.words, provider))
+    relational = relations.build(dimensions, provider, config.relations)
+    print(f"  {len(result.words):,} words -> {len(dimensions):,} dimensions · R "
+          f"{relational.stats()['nonzero']:,} cells ({time.time() - started:.0f}s)")
+
+    built = {}
+    vectors = {}
+    for weighting in ("uniform", "idf"):
+        walk = replace(config.distribution, weighting=weighting)
+        built[weighting] = distribution.build(dimensions, provider, walk)
+        vectors[weighting] = distribution.gloss_vectors(dimensions, provider, walk)
+        print(f"  {weighting:<8} D: {built[weighting].stats()['nonzero']:,} cells "
+              f"({time.time() - started:.0f}s)", flush=True)
+    return {"d": built, "r": relational, "vectors": vectors, "walk": config.distribution}
+
+
+def report_weighting(measured: dict, config: DictionaryConfig, mix: float) -> dict:
+    """Uniform against idf: what the down-weight does to D's cells, to the junk, and to the bar."""
+    built = measured["d"]
+    relational = measured["r"]
+    modes = ["uniform", "idf"]
+    stats = {mode: built[mode].stats() for mode in modes}
+    walk = measured["walk"]
+
+    print()
+    print("=" * 96)
+    print("D'S DIMENSIONS — one word one vote, against log(1 + N/df)")
+    print("=" * 96)
+    print(f"  {'':<22}" + "".join(f"{mode:>16}" for mode in modes))
+    for label, key in (("stated cells", "nonzero"), ("silent rows", "silent_rows")):
+        print(f"  {label:<22}" + "".join(f"{stats[mode][key]:>16,}" for mode in modes))
+    print(f"  {'density %':<22}" + "".join(f"{stats[mode]['density_pct']:>16.4f}" for mode in modes))
+    saturated = {
+        mode: sum(1 for row in built[mode].rows for cell in row.cells
+                  if cell.source != matrix.SOURCE_AXIS and abs(cell.weight - walk.cap) < 1e-9)
+        for mode in modes
+    }
+    print(f"  {'at the cap':<22}" + "".join(f"{saturated[mode]:>16,}" for mode in modes))
+
+    moved = matrix.diff(built["uniform"], built["idf"])
+    print()
+    print(f"  cells uniform states and idf does not   {len(moved['removed']):,}")
+    print(f"  cells idf states and uniform does not   {len(moved['added']):,}")
+    print(f"  cells both state, at another weight     {len(moved['changed']):,}")
+
+    print()
+    print(f"  POLLUTION — pairs whose only shared words are {sorted(JUNK_WORDS)}")
+    pollution = {}
+    for mode in modes:
+        # The mass figure is measured UNDER ITS OWN WEIGHTING — that is the whole comparison. The
+        # pair figure cannot move (it is membership), and the two being printed side by side is
+        # what shows which half of the pollution a weighting can reach.
+        weighted = replace(walk, weighting=mode)
+        pollution[mode] = distribution.junk_pollution(
+            measured["vectors"][mode], JUNK_WORDS, walk.min_shared,
+            distribution.word_weights(measured["vectors"][mode], weighted),
+        )
+        print(f"    {mode:<8} pairs {pollution[mode]['overlapping_pairs']:>10,}   only junk "
+              f"{pollution[mode]['pairs_only_junk']:>8,} ({pollution[mode]['pairs_only_junk_pct']}%)"
+              f"   junk's share of the shared mass {pollution[mode]['mass_from_junk_pct']}%")
+
+    print()
+    print("=" * 96)
+    print("THE BAR — D alone, and R+D, under both weightings")
+    print("=" * 96)
+    readings = {}
+    for mode in modes:
+        readings[f"D {mode}"] = read_bar(
+            config.bar, built[mode].cosine,
+            lambda a, b, m=built[mode]: (m.cell(a, b), m.cell(b, a)),
+        )
+        readings[f"R+D {mode}"] = read_bar(
+            config.bar,
+            lambda a, b, m=built[mode]: matrix.blended_cosine(relational, m, a, b, mix),
+        )
+    columns = list(readings)
+    print(f"  {'pair':<26} {'exp':<5}" + "".join(f"{name:>14}" for name in columns))
+    for position, pair in enumerate(config.bar):
+        print(f"  {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5}"
+              + "".join(f"{_number(readings[name]['pairs'][position]['cosine']):>14}"
+                        for name in columns))
+    print()
+    for name in columns:
+        print(_reading_line(name, readings[name]))
+
+    return {
+        "stats": stats,
+        "saturated": saturated,
+        "diff": {k: len(v) for k, v in moved.items()},
+        "pollution": pollution,
+        "bar": {name: _reading_summary(reading) for name, reading in readings.items()},
+    }
+
+
+# ------------------------------------------------------------------------------------------------
+# THE PARKED QUESTION (a) — the sense mode, WHICH MOVES MEMBERSHIP
+# ------------------------------------------------------------------------------------------------
+
+
+def compare_senses(config: DictionaryConfig, scope: str) -> dict:
+    """Build the whole base twice — closure, R and D — under `primary` and under `all`.
+
+    THE ONE MEASUREMENT HERE THAT IS NOT LIKE THE OTHERS. The lemma scope, the antonym reading and
+    the derivational weight all leave the key space alone, so they can be diffed cell for cell. The
+    sense mode cannot: it changes what a word's DEFINITION IS, so it changes the digraph, so it
+    changes which words the closure admits and therefore which dimensions exist. Two bases, not two
+    readings of one — and that is why this is reported as two columns of counts and never as a diff.
+    """
+    started = time.time()
+    lexicon = wordnet_lexicon()
+    provider = WordNetProvider(lexicon, lemma_scope=scope)
+    print(f"resource      WordNet through nltk — {len(lexicon):,} words · lemma scope {scope!r}")
+
+    built = {}
+    for mode in ("primary", "all"):
+        variant = config.with_closure(senses=mode)
+        if variant.distribution is not None:
+            variant = variant.with_distribution(senses=mode)
+        graph = closure.build_digraph(provider, variant.closure)
+        graph_stats = closure.digraph_stats(graph)
+        result = closure.seed_closure(graph, variant.seeds, variant.closure)
+        dimensions = tuple(glosses.dimensions_of(result.words, provider))
+        print(f"  {mode:<8} {graph_stats['nodes']:,} nodes · {graph_stats['edges']:,} edges · "
+              f"{len(result.words):,} words -> {len(dimensions):,} dimensions "
+              f"({time.time() - started:.0f}s)", flush=True)
+        relational = relations.build(dimensions, provider, variant.relations)
+        print(f"  {'':<8} R: {relational.stats()['nonzero']:,} cells "
+              f"({time.time() - started:.0f}s)", flush=True)
+        distributional = None
+        if variant.distribution is not None:
+            distributional = distribution.build(dimensions, provider, variant.distribution)
+            print(f"  {'':<8} D: {distributional.stats()['nonzero']:,} cells "
+                  f"({time.time() - started:.0f}s)", flush=True)
+        built[mode] = build.BaseBuild(
+            words=result.words,
+            dimensions=dimensions,
+            relational=relational,
+            distributional=distributional,
+            closure=result,
+            graph_stats=graph_stats,
+            one_ring_past=result.one_ring_past(graph),
+        )
+    return built
+
+
+def report_senses(built: dict, config: DictionaryConfig, provider, mix: float) -> dict:
+    """Two bases side by side — and the membership question said out loud if it moved."""
+    modes = ["primary", "all"]
+
+    print()
+    print("=" * 96)
+    print("THE SENSE MODE — `primary` (the first synset per POS) against `all` (every reading)")
+    print("=" * 96)
+    print(f"  {'':<24}" + "".join(f"{mode:>16}" for mode in modes))
+    for label, value in (
+        ("digraph nodes", lambda b: b.graph_stats["nodes"]),
+        ("digraph edges", lambda b: b.graph_stats["edges"]),
+        ("silent definitions", lambda b: b.graph_stats["silent"]),
+        ("closure words", lambda b: len(b.words)),
+        ("dimensions", lambda b: len(b.dimensions)),
+        ("one ring past the cut", lambda b: len(b.one_ring_past)),
+        ("R cells", lambda b: b.relational.stats()["nonzero"]),
+        ("R negative", lambda b: b.relational.stats()["negative"]),
+        ("R silent rows", lambda b: b.relational.stats()["silent_rows"]),
+        ("D cells", lambda b: b.distributional.stats()["nonzero"] if b.distributional else 0),
+        ("D silent rows", lambda b: b.distributional.stats()["silent_rows"] if b.distributional else 0),
+    ):
+        print(f"  {label:<24}" + "".join(f"{value(built[mode]):>16,}" for mode in modes))
+
+    primary, every = set(built["primary"].dimensions), set(built["all"].dimensions)
+    print()
+    print(f"  MEMBERSHIP MOVED: {primary != every}")
+    print(f"    dimensions only under `primary`   {len(primary - every):,}  "
+          f"{' '.join(sorted(primary - every)[:12])}")
+    print(f"    dimensions only under `all`       {len(every - primary):,}  "
+          f"{' '.join(sorted(every - primary)[:12])}")
+
+    readings = {}
+    for mode in modes:
+        base = built[mode]
+        readings[f"R {mode}"] = read_bar(
+            config.bar, base.relational.cosine,
+            lambda a, b, m=base.relational: relations.stated_between(m, a, b),
+        )
+        if base.distributional is not None:
+            readings[f"D {mode}"] = read_bar(config.bar, base.distributional.cosine)
+            readings[f"R+D {mode}"] = read_bar(
+                config.bar,
+                lambda a, b, r=base.relational, d=base.distributional:
+                    matrix.blended_cosine(r, d, a, b, mix),
+            )
+
+    columns = list(readings)
+    print()
+    print("=" * 96)
+    print("THE BAR UNDER BOTH — a dash is a pair whose key is not a dimension of that base")
+    print("=" * 96)
+    print(f"  {'pair':<26} {'exp':<5}" + "".join(f"{name:>14}" for name in columns))
+    for position, pair in enumerate(config.bar):
+        print(f"  {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5}"
+              + "".join(f"{_number(readings[name]['pairs'][position]['cosine']):>14}"
+                        for name in columns))
+    print()
+    for name in columns:
+        print(_reading_line(name, readings[name]))
+
+    vocabulary = {}
+    for mode in modes:
+        base = built[mode]
+        if base.distributional is None:
+            continue
+        walk = config.distribution if mode == "primary" else replace(config.distribution, senses="all")
+        vectors = distribution.gloss_vectors(base.dimensions, provider, walk)
+        frequency = distribution.document_frequency(vectors)
+        loudest = sorted(frequency.items(), key=lambda item: (-item[1], item[0]))[:8]
+        vocabulary[mode] = {
+            "loudest": [[word, count, round(100 * count / len(base.dimensions), 1)]
+                        for word, count in loudest],
+            "pollution": distribution.junk_pollution(
+                vectors, JUNK_WORDS, walk.min_shared,
+                distribution.word_weights(vectors, walk),
+            ),
+        }
+        print()
+        print(f"  {mode}: loudest gloss words  "
+              + "  ".join(f"{word} {share}%" for word, _count, share in vocabulary[mode]["loudest"]))
+        print(f"  {mode}: pollution  only junk "
+              f"{vocabulary[mode]['pollution']['pairs_only_junk_pct']}% of "
+              f"{vocabulary[mode]['pollution']['overlapping_pairs']:,} overlapping pairs")
+
+    return {
+        "counts": {mode: built[mode].counts() for mode in modes},
+        "membership_moved": primary != every,
+        "only_primary": sorted(primary - every)[:200],
+        "only_all": sorted(every - primary)[:200],
+        "bar": {name: _reading_summary(reading) for name, reading in readings.items()},
+        "vocabulary": vocabulary,
+    }
 
 
 # ------------------------------------------------------------------------------------------------
@@ -398,7 +1146,7 @@ def report_symmetry(built: dict, config: DictionaryConfig) -> dict:
 
 def report_two(left, right, labels, config: DictionaryConfig, title: str) -> dict:
     """Two matrices over ONE key space, printed side by side — the shape every ordered measurement
-    has taken so far (the lemma scope, and now antonym symmetry) and the one T4's down-weight will.
+    has taken so far — the lemma scope, antonym symmetry, and T4's derivational down-weight.
 
     The two columns are LABELLED rather than named A and B in the code, because which reading is
     which is the Captain's business and this only counts.
@@ -597,6 +1345,55 @@ def run(argv: list[str] | None = None) -> int:
         help="build R twice over ONE key space and report the two readings side by side "
              "(the Captain's ordered measurement, 2026-08-26)",
     )
+    parser.add_argument(
+        "--senses",
+        choices=("primary", "all"),
+        default=None,
+        help="reproduce a sense mode other than the one the rows declare. It moves MEMBERSHIP (the "
+             "closure reads definitions), so it is a different base and not a different reading of "
+             "one: measurable, never storable",
+    )
+    parser.add_argument(
+        "--compare-senses",
+        action="store_true",
+        help="build the whole base twice — closure, R and D — under `primary` and under `all`, and "
+             "report the two side by side (the Captain's parked question (a), 2026-08-25)",
+    )
+    parser.add_argument(
+        "--compare-derivational",
+        default=None,
+        metavar="W,W,…",
+        help="build R once per candidate `derivational` weight over ONE key space and report the "
+             "bar at each (the E1 open item: land.n~land.v is FAR, cause.n~cause.v is NEAR, and "
+             "today they are the same cell). Empty or `default` measures "
+             + ",".join(f"{w:.2f}" for w in DOWN_WEIGHTS),
+    )
+    parser.add_argument(
+        "--compare-weighting",
+        action="store_true",
+        help="build D twice over ONE key space, uniform against an idf-shaped down-weight on its "
+             "gloss dimensions, and report both (the Captain's parked question (b), 2026-08-25)",
+    )
+    parser.add_argument(
+        "--walk",
+        action="append",
+        default=[],
+        metavar="NAME=VALUE",
+        help="reproduce a gloss walk other than the one the rows declare, one parameter at a time "
+             "(e.g. --walk scale=1 --walk cap=1 for a plain Jaccard, or --walk measure=dice). The "
+             "names are the `distribution` policy rows; a walk the rows did not declare is a "
+             "measurement and may not be stored",
+    )
+    parser.add_argument(
+        "--mix",
+        type=float,
+        default=None,
+        help="reproduce a dual read other than the one the rows declare: D's columns are scaled by "
+             "this, the two rows are concatenated and one cosine is taken over the whole vector. "
+             "Default: whatever policy v7 says (0.5, the Captain's ruling of 2026-09-09). THERE IS "
+             "NO FALLBACK — a policy that declares no mix and a run that names none is a refusal, "
+             "never a silent 1.0. A blend the rows did not declare may be measured and not stored",
+    )
     parser.add_argument("--note", default="", help="what this build is, for the manifest")
     parser.add_argument(
         "--apply",
@@ -634,11 +1431,139 @@ def run(argv: list[str] | None = None) -> int:
     print(f"alphabet      {'/'.join(config.alphabet.order) if config.alphabet else '(not declared)'}")
     print(f"lemma scope   {config.relations.lemma_scope or '(not declared by these rows)'}")
     print(f"antonymy      {config.relations.antonym_symmetry or '(not declared by these rows)'}")
+    print(f"dual read     mix {config.reading.mix if config.reading else '(not declared by these rows)'}")
     print()
     print(f"config fingerprint   {config.fingerprint()}")
     print(f"policy fingerprint   {policy.policy_fingerprint(rows)}")
     print(f"bar fingerprint      {policy.bar_fingerprint(bar_rows)}")
     print()
+
+    # THE MIX COMES FROM THE ROWS (policy v7), and there is NO fallback: an undeclared mix is a
+    # refusal, exactly as an undeclared lemma scope is. The round 1.0 this tool printed for a
+    # fortnight was a measurement's convenience, and the day it was ruled it stopped being available
+    # as a default — a reading nobody declared must not be able to reach a manifest.
+    declared_mix = config.reading.mix if config.reading is not None else None
+    mix = args.mix if args.mix is not None else declared_mix
+    if mix is None:
+        print("REFUSED: this policy version declares no dual read, so nothing says how loudly D "
+              "speaks. Policy v7 (db/0010) declares it; to reproduce another blend, name it with "
+              "--mix (and it cannot be stored).")
+        return 2
+    if args.apply and mix != declared_mix:
+        print(f"REFUSED: --mix {mix} is not what the rows declare ({declared_mix}). A stored base "
+              f"must be the one its config fingerprint describes; a blend the rows do not declare "
+              f"is a measurement.")
+        return 2
+    if args.mix is not None and mix != declared_mix:
+        if config.reading is not None:
+            config = config.with_reading(mix=mix)
+        print(f"dual read     MIX {mix}  — a reading nobody has ruled; measurable, never storable")
+        print(f"config fingerprint   {config.fingerprint()}   (the variant's, not the rows')")
+        print()
+
+    if args.walk:
+        if config.distribution is None:
+            print("REFUSED: this policy declares no gloss walk, so there is nothing to vary. "
+                  "Policy v6 (db/0009) is what declares it.")
+            return 2
+        try:
+            changes = _walk_overrides(args.walk, config.distribution)
+        except ValueError as error:
+            print(f"REFUSED: {error}")
+            return 2
+        if args.apply:
+            print(f"REFUSED: --walk {sorted(changes)} is not what the rows declare. A stored base "
+                  f"must be the one its config fingerprint describes; a walk the rows do not "
+                  f"declare is a measurement.")
+            return 2
+        config = config.with_distribution(**changes)
+        print(f"gloss walk    {config.distribution}")
+        print("              a walk nobody has ruled — measurable, never storable")
+        print(f"config fingerprint   {config.fingerprint()}   (the variant's, not the rows')")
+        print()
+
+    if args.senses is not None:
+        if args.compare_senses:
+            print("REFUSED: --compare-senses measures both modes; naming one with --senses would "
+                  "be an argument with the measurement it is asking for.")
+            return 2
+        if args.apply and args.senses != config.closure.senses:
+            print(f"REFUSED: --senses {args.senses!r} is not what the rows declare "
+                  f"({config.closure.senses!r}). It moves MEMBERSHIP, so it is a different base "
+                  f"entirely; a stored base must be the one its config fingerprint describes.")
+            return 2
+        # BOTH cuts move together: the closure's decides which senses write a definition for
+        # MEMBERSHIP, D's decides which write one for the GEOMETRY, and a run that moved one alone
+        # would be measuring a policy nobody has proposed.
+        config = config.with_closure(senses=args.senses)
+        if config.distribution is not None:
+            config = config.with_distribution(senses=args.senses)
+        print(f"senses        {args.senses.upper()}  — a base nobody has ruled; membership moves "
+              f"with it, and it may not be stored")
+        print(f"config fingerprint   {config.fingerprint()}   (the variant's, not the rows')")
+        print()
+
+    if args.compare_derivational is not None:
+        if args.apply:
+            print("REFUSED: --compare-derivational is a MEASUREMENT of candidate weights, and only "
+                  "one of them is the standing law.")
+            return 2
+        scope = args.lemma_scope or config.relations.lemma_scope
+        if scope is None:
+            print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
+            return 2
+        named = [w.strip() for w in args.compare_derivational.split(",") if w.strip()]
+        candidates = DOWN_WEIGHTS if not named or named == ["default"] else tuple(
+            float(w) for w in named
+        )
+        measured = report_derivational(
+            compare_derivational(config, scope, candidates), config, mix
+        )
+        print()
+        print(f"measured in {time.time() - started:.0f}s")
+        _write_json(args.json, {"policy_source": policy_source, "lemma_scope": scope,
+                                "derivational": measured})
+        return 0
+
+    if args.compare_weighting:
+        if args.apply:
+            print("REFUSED: --compare-weighting is a MEASUREMENT of two readings of D's "
+                  "dimensions, and one of them is not the standing law.")
+            return 2
+        if config.distribution is None:
+            print("REFUSED: this policy declares no gloss walk, so there is no D to weight. "
+                  "Policy v6 (db/0009) is what declares it.")
+            return 2
+        scope = args.lemma_scope or config.relations.lemma_scope
+        if scope is None:
+            print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
+            return 2
+        measured = report_weighting(compare_weighting(config, scope), config, mix)
+        print()
+        print(f"measured in {time.time() - started:.0f}s")
+        _write_json(args.json, {"policy_source": policy_source, "lemma_scope": scope,
+                                "weighting": measured})
+        return 0
+
+    if args.compare_senses:
+        if args.apply:
+            print("REFUSED: --compare-senses builds TWO BASES over two key spaces. Neither of them "
+                  "is a build of the standing policy, and one of them is not the standing law.")
+            return 2
+        scope = args.lemma_scope or config.relations.lemma_scope
+        if scope is None:
+            print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
+            return 2
+        from tk2.dictionary.wordnet import WordNetProvider as _P
+
+        measured = report_senses(
+            compare_senses(config, scope), config, _P(wordnet_lexicon(), lemma_scope=scope), mix
+        )
+        print()
+        print(f"measured in {time.time() - started:.0f}s")
+        _write_json(args.json, {"policy_source": policy_source, "lemma_scope": scope,
+                                "senses": measured})
+        return 0
 
     if args.compare_antonym_symmetry:
         if args.apply:
@@ -703,9 +1628,23 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.antonym_symmetry is not None:
         config = replace(config, relations=relations.policy_for(config.relations, args.antonym_symmetry))
-    built = build_base(config, scope, args.antonym_symmetry)
+    built, provider = build_base(config, scope, args.antonym_symmetry)
     stats = report_shape(built.relational)
+    d_stats = None
+    dual = None
+    if built.distributional is None:
+        print()
+        print("D — NOT BUILT: this policy version declares no gloss walk, so there is nothing to "
+              "build it from. Policy v6 (db/0009) is what declares it.")
+    else:
+        # Computed once and handed to both readings: the vocabulary D's cells are made of is the
+        # answer to the parked weighting question AND the evidence behind every bar pair, and two
+        # derivations of it would be two chances to report one and measure the other.
+        vectors = distribution.gloss_vectors(built.dimensions, provider, config.distribution)
+        d_stats = report_distribution(built, vectors, config)
     bar_reading = report_bar(built.relational, config.bar)
+    if built.distributional is not None:
+        dual = report_dual(built, config, vectors, mix_columns(mix), standing=mix)
     counts = built.counts()
 
     build_label = args.build or config.fingerprint()[:12]
@@ -729,8 +1668,11 @@ def run(argv: list[str] | None = None) -> int:
                     "bar_source": bar_source,
                     "build": build_label,
                     "counts": counts,
+                    "mix": mix,
                     "r": stats,
+                    "d": d_stats,
                     "bar": bar_reading,
+                    "dual": dual,
                     "manifest": {k: v for k, v in manifest.items() if k != "policy"},
                 },
                 indent=2,
@@ -746,11 +1688,49 @@ def run(argv: list[str] | None = None) -> int:
         print("(dry run — nothing was written. `--apply --db … --authorized …` is the Captain's hand)")
         return 0
 
-    return _apply(args, built.relational, manifest, build_label)
+    return _apply(args, built, manifest, build_label)
 
 
-def _apply(args, built, manifest, build_label: str) -> int:
-    """The write. Everything above this line is a measurement; this is the only part that lands."""
+def _walk_overrides(named, walk) -> dict:
+    """`name=value` arguments read against the walk's own fields, typed by what is already there.
+
+    Typed from the DECLARATION rather than from a table here, so a parameter added to the policy is
+    overridable the day it exists and a name that is not a parameter is refused rather than silently
+    added to a dataclass that has no room for it.
+    """
+    changes: dict = {}
+    for argument in named:
+        name, _, value = argument.partition("=")
+        name = name.strip()
+        if not hasattr(walk, name):
+            raise ValueError(
+                f"{name!r} is not a parameter of the gloss walk. They are "
+                f"{[f.name for f in fields(walk)]}."
+            )
+        current = getattr(walk, name)
+        changes[name] = type(current)(value.strip()) if not isinstance(current, str) else value.strip()
+    return changes
+
+
+def _write_json(path, payload) -> None:
+    """The measurement, whole, beside what was printed. Here rather than five times over: every
+    comparison writes the same document shape, and five copies of `json.dumps` is five chances for
+    one of them to lose a field nobody notices is missing."""
+    if not path:
+        return
+    Path(path).write_text(
+        json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n", encoding="utf-8"
+    )
+    print(f"wrote {path}")
+
+
+def _apply(args, built: build.BaseBuild, manifest, build_label: str) -> int:
+    """The write. Everything above this line is a measurement; this is the only part that lands.
+
+    BOTH MATRICES, under one build label and one key registry — the store writes the dimension order
+    first and refuses a second matrix that disagrees with it, which is what makes «R and D are over
+    one key space» a checked property rather than a promise.
+    """
     if not args.db:
         print("REFUSED: --apply must name the database it writes (--db). The guard refuses "
               "everything not whitelisted, and a build with no name is a build nobody authorized.")
@@ -766,11 +1746,14 @@ def _apply(args, built, manifest, build_label: str) -> int:
 
     db = database(args.db)
     store = MongoMatrixStore(db)
-    written = store.write(built, build_label)
-    MigrationWriter(db).insert(DictionaryBuildDoc, manifest)
     print()
-    print(f"written: {args.db}.{built.name} build='{build_label}' — {written:,} rows, "
-          f"and one manifest row in {DictionaryBuildDoc.Settings.name}")
+    for built_matrix in (built.relational, built.distributional):
+        if built_matrix is None:
+            continue
+        written = store.write(built_matrix, build_label)
+        print(f"written: {args.db}.{built_matrix.name} build='{build_label}' — {written:,} rows")
+    MigrationWriter(db).insert(DictionaryBuildDoc, manifest)
+    print(f"         one manifest row in {DictionaryBuildDoc.Settings.name}")
     return 0
 
 
