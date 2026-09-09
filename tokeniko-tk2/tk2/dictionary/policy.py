@@ -67,6 +67,15 @@ KIND_RELATION_WEIGHT = "relation_weight"
 #: («same name as the WordNet edge on purpose») and must not collapse into one row.
 KIND_CURATED_RELATION = "curated_relation"
 
+#: A setting of the MINING of relations — today only `lemma_scope`, ruled by the Captain on
+#: 2026-08-26 and a row since policy v4. Its own kind rather than a `relation_weight` with a
+#: non-numeric value: a weight and a reading of the resource are two different statements, and a
+#: table that mixed them could not be read strictly.
+KIND_RELATION_SETTING = "relation"
+
+#: The `RelationPolicy` fields a `relation` row may name. Strict for `CLOSURE_SETTINGS`' reason.
+RELATION_SETTINGS = ("lemma_scope", "antonym_symmetry")
+
 #: A setting of the curation mechanism itself — today only the reciprocal weight.
 KIND_CURATION = "curation"
 
@@ -202,6 +211,7 @@ def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
     """
     rows = list(rows)
     weights = [(r["name"], float(r["value"])) for r in _of_kind(rows, KIND_RELATION_WEIGHT)]
+    mining = {r["name"]: r["value"] for r in _of_kind(rows, KIND_RELATION_SETTING)}
     curated = [(r["name"], float(r["value"])) for r in _of_kind(rows, KIND_CURATED_RELATION)]
     settings = {r["name"]: r["value"] for r in _of_kind(rows, KIND_CURATION)}
     cues = [(r["name"], tuple(r["value"])) for r in _of_kind(rows, KIND_CURATION_CUE)]
@@ -216,7 +226,7 @@ def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
         defaults.append((source, target, row["value"]))
 
     if not weights:
-        if curated or settings or cues or defaults:
+        if curated or settings or cues or defaults or mining:
             raise PolicyRowsInvalid(
                 "these rows declare the curator's vocabulary and no relation weights. R's weights "
                 "are what a curated edge sits beside; half a declaration is not a policy."
@@ -228,6 +238,12 @@ def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
         raise PolicyRowsInvalid(
             f"curation rows name settings the policy has no field for: {unknown}. "
             f"The settings are {list(CURATION_SETTINGS)}."
+        )
+    unknown = sorted(set(mining) - set(RELATION_SETTINGS))
+    if unknown:
+        raise PolicyRowsInvalid(
+            f"relation rows name settings the policy has no field for: {unknown}. "
+            f"The settings are {list(RELATION_SETTINGS)}."
         )
     if curated and "reciprocal_weight" not in settings:
         raise PolicyRowsInvalid(
@@ -243,6 +259,8 @@ def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
             reciprocal_weight=float(settings.get("reciprocal_weight", 0.0)),
             cues=tuple(cues),
             defaults=tuple(defaults),
+            lemma_scope=mining.get("lemma_scope"),
+            antonym_symmetry=mining.get("antonym_symmetry"),
         )
     except ValueError as error:
         raise PolicyRowsInvalid(str(error)) from error
@@ -579,6 +597,10 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
         rows += [
             entry(KIND_CURATION, "reciprocal_weight", relations.reciprocal_weight, 0, family="definitional")
         ]
+        for position, name in enumerate(RELATION_SETTINGS):
+            value = getattr(relations, name)
+            if value is not None:
+                rows += [entry(KIND_RELATION_SETTING, name, value, position, family="mining")]
         rows += [
             entry(KIND_CURATION_CUE, name, list(cues), i, family="definitional")
             for i, (name, cues) in enumerate(relations.cues)

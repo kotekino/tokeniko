@@ -12,6 +12,10 @@ Three things under test, in the order they matter:
      and both fingerprints move when what they cover moves.
   3. THE SNAPSHOT CANNOT DRIFT. Reading it verifies its own pin offline; a live check asserts it
      against the database's rows whenever a database is reachable.
+  7. AN INFERRED OPPOSITION is admitted (policy v5): the reading `add_only` and the relation it
+     mints, two rows and one decision.
+  6. WHOSE LEMMA MAY SPEAK is a row too (T3 addendum, policy v4) — the Captain's ruling of
+     2026-08-26, with the measurement that produced it carried in the row's own reason.
   5. R's WEIGHTS ARE ROWS TOO (T3, policy v3) — the standing law's own worked example, with the
      curated vocabulary, the miner's guess and the alphabet beside them, and the older versions
      hashing exactly as they did.
@@ -30,9 +34,13 @@ from tests.seed import (
     closed_class_forms,
     declared_config,
     declared_config_v3,
+    declared_config_v4,
+    declared_config_v5,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
+    policy_rows_v4,
+    policy_rows_v5,
     ruled_config,
     structural_seeds,
 )
@@ -670,3 +678,181 @@ def test_an_alphabet_the_key_convention_cannot_honour_stops_at_the_config():
     assert policy.alphabet_from_rows(rows).order == ("n", "v", "x")
     with pytest.raises(keys_module.AlphabetMismatch):
         policy.config_from_rows(rows, bar_rows())
+
+
+# ------------------------------------------------------------------------------------------------
+# 6 — policy v4: whose lemma may speak (the Captain's ruling, 2026-08-26)
+# ------------------------------------------------------------------------------------------------
+#
+# The value that moved is one row, and the reason it is a row at all is the standing law's two
+# tests: changing it changes what the rows SAY and not the shape of anything, and EVIDENCE is
+# exactly what revised it — a measured A/B the Captain ruled on. What is checked here is that the
+# ruling reached the rows, that its measurement travelled with it, and that the three versions
+# before it did not move.
+
+#: The fingerprint of policy v4 — v3's whole declaration plus `lemma_scope = word`.
+V4_FINGERPRINT = "00edc2b29a35eb7152523659432a30711c609c20edc6c16b75daf196f7d4f2e5"
+
+
+def test_the_lemma_scope_is_a_row_and_it_says_word():
+    config = policy.config_from_rows(policy_rows_v4(), bar_rows())
+    assert config == declared_config_v4()
+    assert config.fingerprint() == V4_FINGERPRINT
+    assert config.relations.lemma_scope == "word"
+
+    scope_rows = [r for r in policy_rows_v4() if r["kind"] == policy.KIND_RELATION_SETTING]
+    assert [(r["name"], r["value"]) for r in scope_rows] == [("lemma_scope", "word")]
+
+
+def test_the_measurement_that_produced_the_ruling_travels_with_it():
+    """A curated value with no reason attached is a value nobody can later argue with — and this one
+    was ruled on numbers, so the numbers are the reason. The witness is named because «a wrong
+    negative is worse than silence» needs a wrong negative anybody can go and look at."""
+    note = next(r["note"] for r in policy_rows_v4() if r["kind"] == policy.KIND_RELATION_SETTING)
+    for measured in ("56,599", "49,965", "-6,634", "920 -> 663", "318 -> 353"):
+        assert measured in note, f"the note lost {measured}"
+    assert "dark.n -> day.n" in note and "night" in note
+    assert "3,095 words / 4,445 dimensions" in note, "membership did NOT move, and it must say so"
+
+
+def test_version_4_carries_version_3_forward_unedited():
+    """A build reads ONE version, so v4 is a WHOLE policy — and the 267 rows that did not move must
+    be v3's own values and reasons, not a re-typing of them."""
+    v3 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v3()}
+    v4 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v4()}
+
+    assert len(v4) == len(v3) + 1
+    assert {k: v for k, v in v4.items() if k in v3} == v3
+    assert set(v4) - set(v3) == {(policy.KIND_RELATION_SETTING, "lemma_scope")}
+    assert declared_config_v4().bar == policy.snapshot_bar()
+
+
+def test_the_three_older_versions_still_hash_as_they_did():
+    """Every fingerprint moves for v4 and none moves for what came before: `as_dict` writes nothing
+    about a scope a policy never declared. An old manifest row keeps meaning what it meant."""
+    assert policy.config_from_rows(policy_rows(), bar_rows()).fingerprint() == T2B_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v2(), bar_rows()).fingerprint() == RULED_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v3(), bar_rows()).fingerprint() == V3_FINGERPRINT
+    assert len({T2B_FINGERPRINT, RULED_FINGERPRINT, V3_FINGERPRINT, V4_FINGERPRINT}) == 4
+
+    v3 = policy.config_from_rows(policy_rows_v3(), bar_rows())
+    assert v3.relations.lemma_scope is None
+    assert "lemma_scope" not in v3.relations.as_dict()
+
+
+def test_the_mining_law_the_code_still_owns_did_not_move_with_it():
+    """`RELATION_RULES` names what stays in CODE about the cell walk. The scope left it and became a
+    row, so the config fingerprint covers the scope directly — bumping the date would claim the code
+    changed its mind about something it no longer decides."""
+    from tk2.dictionary.config import RELATION_RULES
+
+    assert policy.config_from_rows(policy_rows_v3(), bar_rows()).relations.as_dict()["rules"] == \
+        policy.config_from_rows(policy_rows_v4(), bar_rows()).relations.as_dict()["rules"] == \
+        RELATION_RULES
+
+
+def test_an_unknown_relation_setting_is_refused_not_ignored():
+    rows = _weight_rows(("identity", 1.0)) + [_policy_row(policy.KIND_RELATION_SETTING, "senses", "all")]
+    with pytest.raises(policy.PolicyRowsInvalid) as excinfo:
+        policy.relation_policy_from_rows(rows)
+    assert "senses" in str(excinfo.value)
+
+
+def test_a_scope_row_without_weights_beside_it_is_refused():
+    """Half a declaration again: a reading of the resource with no matrix to read it into."""
+    with pytest.raises(policy.PolicyRowsInvalid):
+        policy.relation_policy_from_rows([_policy_row(policy.KIND_RELATION_SETTING, "lemma_scope", "word")])
+
+
+# ------------------------------------------------------------------------------------------------
+# 7 — policy v5: the inferred opposition admitted (the Captain's ruling, 2026-08-26)
+# ------------------------------------------------------------------------------------------------
+
+#: The fingerprint of policy v5 — v4's whole declaration, plus `antonym_symmetry = add_only` and the
+#: weight of the relation that reading mints.
+V5_FINGERPRINT = "2e19cbb1329be812f1557f7807d99802d76320217ca45dc389189730eab88e79"
+
+
+def test_the_reading_and_the_relation_it_mints_are_both_rows():
+    """Two rows and ONE decision: the mode, and the weight of the cell it writes. Neither is
+    meaningful alone, and the engine refuses either without the other."""
+    config = policy.config_from_rows(policy_rows_v5(), bar_rows())
+    assert config == declared_config_v5()
+    assert config.fingerprint() == V5_FINGERPRINT
+    assert config.relations.antonym_symmetry == "add_only"
+    assert dict(config.relations.weights)["antonym_inferred"] == -1.0
+    assert config.relations.lemma_scope == "word", "v4's ruling is carried, not re-argued"
+
+
+def test_the_inferred_relation_is_believed_last_among_equals():
+    """Its PRECEDENCE is the end of the declared order, which costs nothing and says something: an
+    inferred opposition can only ever occupy a cell nothing else claimed, so its position never
+    decides a winner — and last is the honest place for it."""
+    relations = policy.config_from_rows(policy_rows_v5(), bar_rows()).relations
+    assert relations.relations[-1] == "antonym_inferred"
+    assert relations.precedence("antonym_inferred") > relations.precedence("antonym")
+
+
+def test_the_evidence_that_produced_the_ruling_travels_with_the_mode():
+    """It was ruled on a measurement AND on a principle, and the row has to carry both — the numbers
+    because they are the reason, and «the bar reads identically» because that is what says the
+    ruling does not rest on the bar."""
+    note = next(r["note"] for r in policy_rows_v5()
+                if (r["kind"], r["name"]) == (policy.KIND_RELATION_SETTING, "antonym_symmetry"))
+    for measured in ("143", "overwrites 0", "663 -> 806", "353 -> 346", "3,095 words / 4,445"):
+        assert measured in note, f"the note lost {measured}"
+    assert "dark.n -> day.n" in note, "the cell overwrite would have destroyed is named"
+    assert "IDENTICALLY UNDER ALL" in note and "PRINCIPLE" in note
+
+
+def test_the_name_argues_for_itself_in_the_row():
+    """Why it is not `antonym`, not `antonym_of`, and carries no `_reciprocal` suffix. A curated
+    value with no reason attached is a value nobody can later argue with — and this one is a NAME,
+    which is the part a later reader is most likely to want to change."""
+    note = next(r["note"] for r in policy_rows_v5()
+                if (r["kind"], r["name"]) == (policy.KIND_RELATION_WEIGHT, "antonym_inferred"))
+    assert "NOT called `antonym`" in note
+    assert "antonym_of" in note and "_reciprocal" in note
+    assert "same sign, same strength, different name" in note
+
+
+def test_version_5_carries_version_4_forward_unedited():
+    v4 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v4()}
+    v5 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v5()}
+
+    assert len(v5) == len(v4) + 2
+    assert {k: v for k, v in v5.items() if k in v4} == v4
+    assert set(v5) - set(v4) == {
+        (policy.KIND_RELATION_WEIGHT, "antonym_inferred"),
+        (policy.KIND_RELATION_SETTING, "antonym_symmetry"),
+    }
+    assert declared_config_v5().bar == policy.snapshot_bar()
+
+
+def test_the_four_older_versions_still_hash_as_they_did():
+    """Every fingerprint moves for v5 and none moves for what came before."""
+    assert policy.config_from_rows(policy_rows(), bar_rows()).fingerprint() == T2B_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v2(), bar_rows()).fingerprint() == RULED_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v3(), bar_rows()).fingerprint() == V3_FINGERPRINT
+    assert policy.config_from_rows(policy_rows_v4(), bar_rows()).fingerprint() == V4_FINGERPRINT
+    assert len({T2B_FINGERPRINT, RULED_FINGERPRINT, V3_FINGERPRINT, V4_FINGERPRINT,
+                V5_FINGERPRINT}) == 5
+
+    v4 = policy.config_from_rows(policy_rows_v4(), bar_rows())
+    assert v4.relations.antonym_symmetry is None
+    assert "antonym_symmetry" not in v4.relations.as_dict()
+
+
+def test_a_reading_and_its_weight_row_travel_together():
+    """The pairing, from both sides, as the engine enforces it — `relations.policy_for` is the one
+    place that knows which weight a reading needs, so nothing can strip it by hand and drift."""
+    from tk2.dictionary import relations as relation_engine
+
+    standing = policy.config_from_rows(policy_rows_v5(), bar_rows()).relations
+    for mode in ("stated", "overwrite"):
+        older = relation_engine.policy_for(standing, mode)
+        assert "antonym_inferred" not in dict(older.weights)
+        assert older.antonym_symmetry == mode
+    again = relation_engine.policy_for(standing, "add_only")
+    assert dict(again.weights)["antonym_inferred"] == -1.0
+    assert again == standing, "the standing policy IS the add-only policy"

@@ -19,10 +19,15 @@ tool. The split is the same one everywhere: the body interprets, the tools and m
   dimensions, and R over them, with the shape of what was built and the bar READ (not scored — R is
   half the geometry until D lands). `--apply --db … --authorized …` is the Captain's hand and the
   only part that writes, through the migration door, leaving a manifest row behind.
-  `--compare-lemma-scope` is the ordered A/B of 2026-08-26: R built twice over ONE key space,
-  changing only whether a synset's other lemmas may state antonymy and derivation for a dimension.
-  `--lemma-scope word` measures the variant alone; neither may be stored, because a stored base has
-  to be the one its config fingerprint describes.
+  `--compare-lemma-scope` is the A/B of 2026-08-26 the Captain ruled on: R built twice over ONE key
+  space, changing only whether a synset's other lemmas may state antonymy and derivation for a
+  dimension (he ruled `word` — policy v4). `--compare-antonym-symmetry` is the measurement ordered
+  beside it, now three readings of a one-sided antonymy: `stated` (the resource's own), `overwrite`
+  (state the reverse always — it destroys four stated cells) and `add_only` (complete a pair only
+  where R is silent, as its own relation `antonym_inferred` with its own weight row, which is the
+  shape a standing ruling would have to take).
+  `--lemma-scope` reproduces a reading the rows do not declare. None of these variants may be
+  STORED: a base in the database has to be the one its config fingerprint describes.
 - `curate_dictionary.py` — the definitional edges (requirement 20): `propose` mines both sides of a
   pair and prints the evidence verbatim, `simulate` moves an in-memory copy of R and re-reads the
   bar, `approve` is refused without `--i-am-the-captain` and `--authorized`. The default worklist is

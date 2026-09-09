@@ -149,6 +149,13 @@ class ClosurePolicy:
 # sign survives, a reverse read is its own weaker cell, and cross-POS cells are allowed because
 # `attribute` and `derivational` are cross-POS by nature. Two builds sharing a fingerprint must have
 # been measured under the same walk; bump this when the walk moves.
+#
+# IT DID NOT MOVE WHEN THE LEMMA SCOPE WAS RULED (2026-08-26), and the reason is worth stating so
+# the next reader does not «fix» it: whose lemma may speak LEFT this law and became a policy row
+# (`RelationPolicy.lemma_scope`), so the config fingerprint now covers it directly and a bump would
+# say the code changed its mind about something it no longer decides. What this date names is what
+# remains in code — and a policy version that declares no scope can no longer build R at all, so no
+# fingerprint is left describing a walk nobody can reproduce.
 RELATION_RULES = "2026-08-26"
 
 
@@ -181,6 +188,18 @@ class RelationPolicy:
     cues: tuple[tuple[str, tuple[str, ...]], ...] = ()
     #: `(source POS, target POS, relation)` — the fallback when no cue fires.
     defaults: tuple[tuple[str, str, str], ...] = ()
+    #: WHOSE LEMMA may state antonymy and derivation for a dimension — `synset` (every lemma of the
+    #: synset) or `word` (only its own). The Captain ruled `word` standing on 2026-08-26, on the
+    #: measured A/B; before that it was a constant in the adapter, and it is a row now because it is
+    #: content: it decides 6,634 cells and 257 negatives and evidence is exactly what revised it.
+    #: `None` for policy v3 and earlier, which never declared it — see `DictionaryConfig`.
+    lemma_scope: str | None = None
+    #: HOW A ONE-SIDED ANTONYMY IS READ — `stated` (what the resource wrote), `overwrite` (state the
+    #: reverse always) or `add_only` (complete a pair only where R is silent, as its own relation
+    #: `antonym_inferred`). The Captain ruled `add_only` standing on 2026-08-26: the bar cannot
+    #: separate the three, so it was never a measurement question but whether this being may hold an
+    #: opposition the resource never wrote down. `None` for policy v4 and earlier.
+    antonym_symmetry: str | None = None
 
     def __post_init__(self):
         names = [name for name, _weight in self.weights]
@@ -222,7 +241,7 @@ class RelationPolicy:
         return self.relations.index(relation)
 
     def as_dict(self) -> dict:
-        return {
+        out = {
             "rules": RELATION_RULES,
             "weights": [[name, weight] for name, weight in self.weights],
             "curated": [[name, weight] for name, weight in self.curated],
@@ -230,6 +249,13 @@ class RelationPolicy:
             "cues": [[rel, list(cues)] for rel, cues in self.cues],
             "defaults": [list(entry) for entry in self.defaults],
         }
+        # Omitted when undeclared, on `DictionaryConfig.as_dict`'s argument and for the same
+        # regression: v3 declared no scope and must keep hashing exactly as it did.
+        if self.lemma_scope is not None:
+            out["lemma_scope"] = self.lemma_scope
+        if self.antonym_symmetry is not None:
+            out["antonym_symmetry"] = self.antonym_symmetry
+        return out
 
 
 @dataclass(frozen=True, slots=True)

@@ -44,6 +44,7 @@ behind the provider, the weights live in rows.
 """
 
 from collections import defaultdict
+from dataclasses import replace
 from typing import Mapping, Protocol, runtime_checkable
 
 from tk2.dictionary import keys
@@ -79,6 +80,49 @@ REVERSE_OF = {
     "causes": "caused_by",
     "troponym": "troponym_of",
 }
+
+
+# ------------------------------------------------------------------------------------------------
+# ANTONYM SYMMETRY — three readings, all of them MEASUREMENTS (the QM's orders of 2026-08-26)
+# ------------------------------------------------------------------------------------------------
+#
+# WordNet states an antonymy once, on one lemma of one pair, so `leave -> enter` can exist while
+# `enter -> leave` does not — and semantic opposition is symmetric whether or not the lexicographer
+# wrote it twice. Three readings of that, and the parameter is a RUN's, never a policy row: nobody
+# has ruled any of them.
+
+#: What the resource stated, and no more. The standing reading.
+SYMMETRY_OFF = "stated"
+
+#: State the reverse cell wherever an antonym cell exists, whatever was already there. MEASURED
+#: 2026-08-26: +143 cells, +147 negatives — and four stated relations destroyed, `dark.n -> day.n`
+#: (holonym +0.60) among them. Kept exactly as it was measured so those numbers stay reproducible:
+#: it emits a plain `antonym`, which is precisely the defect the next reading exists to fix.
+SYMMETRY_OVERWRITE = "overwrite"
+
+#: Add the reverse cell ONLY where R is silent for that ordered pair, and give it its OWN relation
+#: name (`ANTONYM_INFERRED`). The Captain's design condition, 2026-08-26: if symmetry is ever ruled
+#: standing, an inferred opposition must be distinguishable from a stated one forever — the same
+#: principle that keeps a curated cell distinguishable from a mined one. So the measurement is
+#: shaped the way a ruling would land, and the numbers reported are the numbers it would produce.
+SYMMETRY_ADD_ONLY = "add_only"
+
+ANTONYM_SYMMETRIES = (SYMMETRY_OFF, SYMMETRY_OVERWRITE, SYMMETRY_ADD_ONLY)
+
+# THERE IS NO DEFAULT. `add_only` is standing since the Captain's ruling of 2026-08-26 and it stands
+# in a ROW (`dictionary_policy`, kind `relation`, since v5), like the lemma scope beside it. A
+# constant here would answer for the rows precisely when they are silent — and an undeclared mode
+# quietly reading as `stated` would be the ruling un-made by an absence. A run may still name a
+# reading (that is how the other two are reproduced); saying nothing defers to the policy, and a
+# policy that says nothing either is a refusal.
+
+#: The name an INFERRED opposition carries. Not `antonym`, which would make «WordNet said so» and
+#: «we completed it» one cell; not `antonym_of` or the curated `_reciprocal` suffix either, because
+#: both of those already mean «the weaker reverse read of a directional relation» (`entailed_by`,
+#: `used_for_reciprocal`) and this is the SAME claim at the same strength, merely inferred. Under
+#: `add_only` it needs its own weight in the policy, exactly as a standing ruling would have to
+#: write one — `assert_coherent` refuses the run otherwise, which is the check doing its job.
+ANTONYM_INFERRED = "antonym_inferred"
 
 
 class RelationsIncoherent(ValueError):
@@ -123,17 +167,23 @@ class RelationProvider(Protocol):
 # ------------------------------------------------------------------------------------------------
 
 
-def known_relations(provider: RelationProvider) -> tuple[str, ...]:
-    """Every relation name a cell may carry: the resource's, plus the three the walk itself makes."""
+def known_relations(provider: RelationProvider, antonym_symmetry: str) -> tuple[str, ...]:
+    """Every relation name a cell may carry: the resource's, plus the ones the walk itself makes."""
     stated = tuple(provider.relations())
     derived = (IDENTITY, SYNONYM) + tuple(REVERSE_OF[rel] for rel in REVERSE_OF if rel in stated)
+    if antonym_symmetry == SYMMETRY_ADD_ONLY:
+        derived += (ANTONYM_INFERRED,)
     return tuple(dict.fromkeys(stated + derived))
 
 
-def assert_coherent(provider: RelationProvider, policy: RelationPolicy) -> None:
+def assert_coherent(
+    provider: RelationProvider,
+    policy: RelationPolicy,
+    antonym_symmetry: str,
+) -> None:
     """The two sides name the same relations. Called before anything is mined."""
     declared = set(policy.relations)
-    known = set(known_relations(provider))
+    known = set(known_relations(provider, antonym_symmetry))
     unweighted = sorted(known - declared)
     unknown = sorted(declared - known)
     if unweighted:
@@ -148,12 +198,14 @@ def assert_coherent(provider: RelationProvider, policy: RelationPolicy) -> None:
         )
 
 
+
 def build(
     dimensions,
     provider: RelationProvider,
     policy: RelationPolicy,
     name: str = "base_r",
     progress=None,
+    antonym_symmetry: str | None = None,
 ) -> Matrix:
     """Fill R over `dimensions` — THE call the build tool makes.
 
@@ -162,12 +214,13 @@ def build(
     speaks simply produces no cell: it is a statement about a word the base does not contain, and
     inventing an axis for it would be membership by side effect.
     """
-    assert_coherent(provider, policy)
+    antonym_symmetry = resolve_symmetry(policy, antonym_symmetry)
+    assert_coherent(provider, policy, antonym_symmetry)
     index = dimension_index(dimensions)
     order = tuple(index)
 
     speakers = _speakers_of_sense(order, provider)
-    candidates = _candidates(order, provider, policy, speakers, progress)
+    candidates = _candidates(order, provider, policy, speakers, progress, antonym_symmetry)
 
     rows = []
     identity = policy.weight_of(IDENTITY)
@@ -195,6 +248,46 @@ def build(
     return matrix
 
 
+def policy_for(policy: RelationPolicy, mode: str) -> RelationPolicy:
+    """The policy a given reading of antonymy REQUIRES — with the weight row it needs, or without.
+
+    A reading and its weight travel together, and the coherence check enforces it from both sides:
+    `add_only` mints `antonym_inferred` cells, so the relation must be weighted, and the other two
+    mint none, so a weight for it would be a curated decision that never takes effect. Since v5 the
+    standing policy carries both, so reproducing an older reading means reproducing the policy that
+    reading belonged to — which is literally what `stated` was: v4, without this row.
+
+    Here rather than in the tool because it is the RULE, not the plumbing: a caller that stripped
+    the weight by hand could strip something else with it.
+    """
+    weights = tuple((name, weight) for name, weight in policy.weights if name != ANTONYM_INFERRED)
+    if mode == SYMMETRY_ADD_ONLY:
+        weights += ((ANTONYM_INFERRED, policy.weight_of(ANTONYM)),)
+    return replace(policy, weights=weights, antonym_symmetry=mode)
+
+
+def resolve_symmetry(policy: RelationPolicy, argument: str | None) -> str:
+    """Which reading of a one-sided antonymy this run uses: the RUN's, else the POLICY's, else a
+    refusal.
+
+    A run naming one is how the two non-standing readings are reproduced — the same shape
+    `ClosurePolicy.extra_seeds` has, a run's own argument against the standing declaration. Neither
+    of them may be stored, and the tool refuses that at its own door.
+    """
+    mode = argument if argument is not None else policy.antonym_symmetry
+    if mode is None:
+        raise RelationsIncoherent(
+            "no antonym symmetry declared: this policy version does not say how a one-sided "
+            f"antonymy is read, and there is no default in code to fall back on. Policy v5 "
+            f"(db/0008) declares it; the readings are {ANTONYM_SYMMETRIES}."
+        )
+    if mode not in ANTONYM_SYMMETRIES:
+        raise RelationsIncoherent(
+            f"unknown antonym symmetry {mode!r} — the readings are {ANTONYM_SYMMETRIES}"
+        )
+    return mode
+
+
 def _speakers_of_sense(order, provider: RelationProvider) -> dict[str, list[str]]:
     """sense identifier -> the dimensions that speak it, in dimension order.
 
@@ -210,7 +303,9 @@ def _speakers_of_sense(order, provider: RelationProvider) -> dict[str, list[str]
     return speakers
 
 
-def _candidates(order, provider, policy, speakers, progress) -> dict[str, dict[str, list[Provenance]]]:
+def _candidates(
+    order, provider, policy, speakers, progress, antonym_symmetry: str
+) -> dict[str, dict[str, list[Provenance]]]:
     """Every relation that holds between two dimensions, collected per (row, column).
 
     Collected rather than resolved on the way in, because the winner is a comparison and a cell's
@@ -219,6 +314,7 @@ def _candidates(order, provider, policy, speakers, progress) -> dict[str, dict[s
     """
     found: dict[str, dict[str, list[Provenance]]] = defaultdict(lambda: defaultdict(list))
     synonym = policy.weight_of(SYNONYM) if SYNONYM in policy.relations else 0.0
+    inferred: list[tuple[str, str]] = []
 
     def add(row: str, column: str, relation: str, weight: float) -> None:
         if row == column or not weight:
@@ -248,8 +344,27 @@ def _candidates(order, provider, policy, speakers, progress) -> dict[str, dict[s
                     add(key, column, relation, weight)
                     if reverse:
                         add(column, key, reverse, reverse_weight)
+                    if relation == ANTONYM:
+                        if antonym_symmetry == SYMMETRY_OVERWRITE:
+                            # As first measured: the same relation at the same weight, landing
+                            # wherever it lands. Four stated relations died of it.
+                            add(column, key, ANTONYM, weight)
+                        elif antonym_symmetry == SYMMETRY_ADD_ONLY:
+                            # Held back until the whole walk is done: «is R silent for this ordered
+                            # pair» cannot be answered while the pair is still being filled in.
+                            inferred.append((column, key))
         if progress is not None:
             progress(position, len(order))
+
+    # ADD-ONLY, in its own pass, because the question it asks is about the FINISHED row: an inferred
+    # opposition may complete a pair R had nothing to say about and may never displace something it
+    # did. The four cells the overwriting reading destroyed are exactly the ones this skips.
+    if inferred:
+        weight = policy.weight_of(ANTONYM_INFERRED)
+        for row, column in inferred:
+            if found[row].get(column):
+                continue
+            add(row, column, ANTONYM_INFERRED, weight)
     return found
 
 

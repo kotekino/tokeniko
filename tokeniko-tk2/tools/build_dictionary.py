@@ -32,6 +32,7 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from tk2.datatier.policy_source import standing_bar, standing_policy
@@ -41,7 +42,6 @@ from tk2.dictionary.wordnet import (
     LEMMA_SCOPES,
     SCOPE_SYNSET,
     SCOPE_WORD,
-    STANDING_LEMMA_SCOPE,
     WordNetProvider,
     wordnet_lexicon,
 )
@@ -51,7 +51,8 @@ from tk2.dictionary.wordnet import (
 SILENT_SHOWN = 25
 
 
-def build_base(config: DictionaryConfig, lemma_scope: str = STANDING_LEMMA_SCOPE) -> build.BaseBuild:
+def build_base(config: DictionaryConfig, lemma_scope: str,
+               antonym_symmetry: str | None = None) -> build.BaseBuild:
     """The base as the rows describe it, with the resource named out loud on the way through.
 
     The assembly itself is `tk2.dictionary.build`, so it is the same three steps a test can run on a
@@ -61,14 +62,14 @@ def build_base(config: DictionaryConfig, lemma_scope: str = STANDING_LEMMA_SCOPE
     lexicon = wordnet_lexicon()
     provider = WordNetProvider(lexicon, lemma_scope=lemma_scope)
     print(f"resource      WordNet through nltk — {len(lexicon):,} words after the name refusal")
-    if lemma_scope != STANDING_LEMMA_SCOPE:
-        print(f"lemma scope   {lemma_scope!r} — A VARIANT, not the standing reading. It may be "
-              f"measured and it may not be stored.")
+    if antonym_symmetry is not None:
+        print(f"antonym       {antonym_symmetry.upper()}  — a measurement of a reading nobody has ruled; see "
+              f"`relations.ANTONYM_SYMMETRIES`")
 
     def say(step: str) -> None:
         print(f"  {step:<12} ({time.time() - started:.0f}s)", flush=True)
 
-    built = build.build_base(config, provider, say)
+    built = build.build_base(config, provider, say, antonym_symmetry=antonym_symmetry)
     print(f"  {built.graph_stats['nodes']:,} nodes · {built.graph_stats['edges']:,} edges · "
           f"{built.graph_stats['silent']:,} silent definitions")
     print(f"  closure: {len(built.words):,} words -> {len(built.dimensions):,} dimensions "
@@ -238,75 +239,238 @@ def compare_lemma_scope(config: DictionaryConfig) -> dict:
     return built
 
 
-def report_compare(built: dict, config: DictionaryConfig, providers=None) -> dict:
-    a, b = built[SCOPE_SYNSET], built[SCOPE_WORD]
-    stats = {SCOPE_SYNSET: a.stats(), SCOPE_WORD: b.stats()}
+def compare_antonym_symmetry(config: DictionaryConfig, scope: str) -> dict:
+    """Build R three times over ONE key space under the SAME lemma scope — the QM's ordered
+    measurements of 2026-08-26, the second of them ordered after the first went wrong.
+
+    `stated` is what the resource said. `overwrite` states the reverse wherever an antonymy exists
+    and destroyed four stated relations doing it. `add_only` completes a pair ONLY where R was
+    silent, and says so in the cell's own relation name.
+    """
+    started = time.time()
+    lexicon = wordnet_lexicon()
+    provider = WordNetProvider(lexicon, lemma_scope=scope)
+
+    print(f"resource      WordNet through nltk — {len(lexicon):,} words · lemma scope {scope!r}")
+    print("building the definition digraph and the closure ONCE…", flush=True)
+    graph = closure.build_digraph(provider, config.closure)
+    result = closure.seed_closure(graph, config.seeds, config.closure)
+    dimensions = tuple(glosses.dimensions_of(result.words, provider))
+    print(f"  {len(result.words):,} words -> {len(dimensions):,} dimensions "
+          f"({time.time() - started:.0f}s)")
+
+    built = {}
+    for mode in relations.ANTONYM_SYMMETRIES:
+        built[mode] = relations.build(
+            dimensions, provider, relations.policy_for(config.relations, mode), antonym_symmetry=mode
+        )
+        print(f"  {mode:<10} R: {built[mode].stats()['nonzero']:,} cells "
+              f"({time.time() - started:.0f}s)", flush=True)
+    return built
+
+
+#: The cells the OVERWRITING reading destroyed (measured 2026-08-26). Named, because «add-only does
+#: not do this» is a claim about these four and not about a count.
+OVERWRITTEN_BY_SYMMETRY = (
+    ("dark.n", "day.n", "holonym"),
+    ("engage.v", "fire.v", "hypernym_2"),
+    ("get.v", "leave.v", "troponym"),
+    ("go.v", "stop.v", "hypernym_1"),
+)
+
+
+def report_symmetry(built: dict, config: DictionaryConfig) -> dict:
+    """The three readings side by side, and the four cells the middle one broke."""
+    stated = built[relations.SYMMETRY_OFF]
+    modes = list(relations.ANTONYM_SYMMETRIES)
+    stats = {mode: built[mode].stats() for mode in modes}
 
     print()
     print("=" * 96)
-    print("A / B — WHOSE LEMMA MAY SPEAK.  A = every lemma of the synset (standing) · B = own lemma")
+    print("ANTONYM SYMMETRY — three readings.  stated = WordNet's own · overwrite = both, always · "
+          "add_only = both where R was silent")
     print("=" * 96)
-    print(f"  {'':<18} {'A (synset)':>14} {'B (word)':>14} {'delta':>12}")
-    for label, key in (("stated cells", "nonzero"), ("negative", "negative"), ("silent rows", "silent_rows")):
-        left, right = stats[SCOPE_SYNSET][key], stats[SCOPE_WORD][key]
-        print(f"  {label:<18} {left:>14,} {right:>14,} {right - left:>+12,}")
-    print(f"  {'density %':<18} {stats[SCOPE_SYNSET]['density_pct']:>14.4f} "
-          f"{stats[SCOPE_WORD]['density_pct']:>14.4f}")
+    print(f"  {'':<20}" + "".join(f"{mode:>16}" for mode in modes))
+    for label, key in (("stated cells", "nonzero"), ("negative", "negative"),
+                       ("silent rows", "silent_rows")):
+        print(f"  {label:<20}" + "".join(f"{stats[mode][key]:>16,}" for mode in modes))
+    print(f"  {'density %':<20}" + "".join(f"{stats[mode]['density_pct']:>16.4f}" for mode in modes))
 
     print()
-    print(f"  {'relation':<16} {'A':>10} {'B':>10} {'delta':>10}")
-    names = sorted(set(stats[SCOPE_SYNSET]["by_relation"]) | set(stats[SCOPE_WORD]["by_relation"]))
+    print(f"  {'relation':<20}" + "".join(f"{mode:>16}" for mode in modes))
+    names = sorted(set().union(*(stats[mode]["by_relation"] for mode in modes)))
     for name in names:
-        left = stats[SCOPE_SYNSET]["by_relation"].get(name, 0)
-        right = stats[SCOPE_WORD]["by_relation"].get(name, 0)
-        mark = "  <-" if left != right else ""
-        print(f"  {name:<16} {left:>10,} {right:>10,} {right - left:>+10,}{mark}")
+        counts = [stats[mode]["by_relation"].get(name, 0) for mode in modes]
+        mark = "  <-" if len(set(counts)) > 1 else ""
+        print(f"  {name:<20}" + "".join(f"{count:>16,}" for count in counts) + mark)
 
     print()
-    print(f"  silent rows by POS   {'A':>12} {'B':>12}   of")
+    print(f"  {'silent rows by POS':<20}" + "".join(f"{mode:>16}" for mode in modes))
+    for pos in ("n", "v", "a", "r"):
+        counts = []
+        for mode in modes:
+            counts.append(sum(1 for row in built[mode].rows
+                              if row.is_silent and keys.pos_of(row.key) == pos))
+        print(f"  {pos:<20}" + "".join(f"{count:>16,}" for count in counts))
+
+    diffs = {mode: matrix.diff(stated, built[mode]) for mode in modes[1:]}
+    print()
+    print(f"  {'vs stated':<20}{'added':>16}{'removed':>16}{'OVERWRITTEN':>16}")
+    for mode in modes[1:]:
+        print(f"  {mode:<20}{len(diffs[mode]['added']):>16,}{len(diffs[mode]['removed']):>16,}"
+              f"{len(diffs[mode]['changed']):>16,}")
+
+    print()
+    print("=" * 96)
+    print("THE FOUR CELLS THE OVERWRITING READING DESTROYED")
+    print("=" * 96)
+    kept = True
+    for row, column, relation in OVERWRITTEN_BY_SYMMETRY:
+        cells = {mode: built[mode].cell(row, column) for mode in modes}
+        line = "  ".join(
+            f"{mode}: {cells[mode].relation}{cells[mode].weight:+.2f}" if cells[mode] else f"{mode}: MUTE"
+            for mode in modes
+        )
+        held = cells[relations.SYMMETRY_ADD_ONLY].relation == relation
+        kept = kept and held
+        print(f"  {row:>10} -> {column:<10} {'KEPT' if held else 'LOST':<5} {line}")
+    print(f"  add_only keeps all four stated relations: {kept}")
+
+    print()
+    print("=" * 96)
+    print("THE BAR — the three readings")
+    print("=" * 96)
+    print(f"  {'pair':<26} {'exp':<5}" + "".join(f"{'cos ' + mode:>14}" for mode in modes)
+          + "   cell (stated -> add_only)")
+    pairs = []
+    for pair in config.bar:
+        cosines = {mode: built[mode].cosine(pair.a, pair.b) for mode in modes}
+        cells = {mode: relations.stated_between(built[mode], pair.a, pair.b) for mode in modes}
+        text = {mode: _cell_text(cells[mode][0]) + " / " + _cell_text(cells[mode][1]) for mode in modes}
+        moved = "*" if len({round(c, 9) for c in cosines.values()}) > 1 else " "
+        print(f" {moved}{pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5}"
+              + "".join(f"{cosines[mode]:>+14.3f}" for mode in modes)
+              + f"   {text[relations.SYMMETRY_OFF]}  ->  {text[relations.SYMMETRY_ADD_ONLY]}")
+        pairs.append({"a": pair.a, "b": pair.b, "verdict": pair.verdict,
+                      "cosines": cosines, "cells": text})
+
+    reading = {}
+    for mode in modes:
+        measured = [
+            {"a": p.a, "b": p.b, "verdict": p.verdict,
+             "cosine": built[mode].cosine(p.a, p.b),
+             "forward": _cell_summary(relations.stated_between(built[mode], p.a, p.b)[0]),
+             "reverse": _cell_summary(relations.stated_between(built[mode], p.a, p.b)[1])}
+            for p in config.bar
+        ]
+        order = _local_order(measured)
+        mute = [m for m in measured if not m["forward"] and not m["reverse"]]
+        one_sided = [m for m in measured if bool(m["forward"]) != bool(m["reverse"])]
+        reading[mode] = {"local_order": order, "mute": len(mute),
+                         "one_sided": [f"{m['a']}~{m['b']}" for m in one_sided]}
+        print()
+        print(f"  {mode:<10} MUTE {len(mute)}/{len(measured)} · local order "
+              f"{order['held']}/{order['tested']} · stated ONE WAY ONLY: "
+              f"{' '.join(reading[mode]['one_sided']) or '(none)'}")
+
+    added = diffs[relations.SYMMETRY_ADD_ONLY]["added"]
+    print()
+    print("=" * 96)
+    print("WHAT ADD-ONLY ADDS")
+    print("=" * 96)
+    print(f"  cells added                {len(added):,}")
+    print(f"  all of them {relations.ANTONYM_INFERRED!r}: "
+          f"{all(cell.relation == relations.ANTONYM_INFERRED for _row, cell in added)}")
+    print(f"  cells overwritten          {len(diffs[relations.SYMMETRY_ADD_ONLY]['changed'])}")
+    print(f"  negatives                  {stats[relations.SYMMETRY_OFF]['negative']:,} -> "
+          f"{stats[relations.SYMMETRY_ADD_ONLY]['negative']:,}")
+    print(f"  silent rows                {stats[relations.SYMMETRY_OFF]['silent_rows']:,} -> "
+          f"{stats[relations.SYMMETRY_ADD_ONLY]['silent_rows']:,}")
+    print()
+    print("  the first 10 pairs it completes:")
+    for row, cell in added[:10]:
+        print(f"    {row:>18} -> {cell.column:<18} {cell.weight:+.2f} {cell.relation}")
+
+    return {"stats": stats, "bar": pairs, "reading": reading,
+            "added": len(added), "overwritten": {m: len(d["changed"]) for m, d in diffs.items()},
+            "four_cells_kept": kept}
+
+
+def report_two(left, right, labels, config: DictionaryConfig, title: str) -> dict:
+    """Two matrices over ONE key space, printed side by side — the shape every ordered measurement
+    has taken so far (the lemma scope, and now antonym symmetry) and the one T4's down-weight will.
+
+    The two columns are LABELLED rather than named A and B in the code, because which reading is
+    which is the Captain's business and this only counts.
+    """
+    left_label, right_label = labels
+    stats = {left_label: left.stats(), right_label: right.stats()}
+
+    print()
+    print("=" * 96)
+    print(title)
+    print("=" * 96)
+    print(f"  {'':<18} {left_label:>16} {right_label:>16} {'delta':>12}")
+    for label, key in (("stated cells", "nonzero"), ("negative", "negative"), ("silent rows", "silent_rows")):
+        a_value, b_value = stats[left_label][key], stats[right_label][key]
+        print(f"  {label:<18} {a_value:>16,} {b_value:>16,} {b_value - a_value:>+12,}")
+    print(f"  {'density %':<18} {stats[left_label]['density_pct']:>16.4f} "
+          f"{stats[right_label]['density_pct']:>16.4f}")
+
+    print()
+    print(f"  {'relation':<16} {left_label:>16} {right_label:>16} {'delta':>10}")
+    for name in sorted(set(stats[left_label]["by_relation"]) | set(stats[right_label]["by_relation"])):
+        a_value = stats[left_label]["by_relation"].get(name, 0)
+        b_value = stats[right_label]["by_relation"].get(name, 0)
+        mark = "  <-" if a_value != b_value else ""
+        print(f"  {name:<16} {a_value:>16,} {b_value:>16,} {b_value - a_value:>+10,}{mark}")
+
     silent = {}
-    for scope, built_matrix in ((SCOPE_SYNSET, a), (SCOPE_WORD, b)):
+    for label, built_matrix in ((left_label, left), (right_label, right)):
         counts = {}
         for row in built_matrix.rows:
             if row.is_silent:
                 pos = keys.pos_of(row.key)
                 counts[pos] = counts.get(pos, 0) + 1
-        silent[scope] = counts
+        silent[label] = counts
     total_by_pos = {}
-    for key in a.keys:
+    for key in left.keys:
         pos = keys.pos_of(key)
         total_by_pos[pos] = total_by_pos.get(pos, 0) + 1
+    print()
+    print(f"  silent rows by POS {left_label:>16} {right_label:>16}   of")
     for pos in ("n", "v", "a", "r"):
-        print(f"  {pos:<20} {silent[SCOPE_SYNSET].get(pos, 0):>12,} "
-              f"{silent[SCOPE_WORD].get(pos, 0):>12,}   {total_by_pos.get(pos, 0):,}")
+        print(f"  {pos:<18} {silent[left_label].get(pos, 0):>16,} "
+              f"{silent[right_label].get(pos, 0):>16,}   {total_by_pos.get(pos, 0):,}")
 
-    moved = matrix.diff(a, b)
+    moved = matrix.diff(left, right)
     print()
-    print(f"  cells A states and B does not   {len(moved['removed']):,}")
-    print(f"  cells B states and A does not   {len(moved['added']):,}")
-    print(f"  cells both state, differently   {len(moved['changed']):,}")
+    print(f"  cells {left_label} states and {right_label} does not   {len(moved['removed']):,}")
+    print(f"  cells {right_label} states and {left_label} does not   {len(moved['added']):,}")
+    print(f"  cells both state, differently             {len(moved['changed']):,}")
 
     print()
     print("=" * 96)
-    print("THE BAR, A BESIDE B")
+    print(f"THE BAR — {left_label} beside {right_label}")
     print("=" * 96)
-    print(f"  {'pair':<26} {'exp':<5} {'cos A':>8} {'cos B':>8}   {'cell A':>22} {'cell B':>22}")
+    print(f"  {'pair':<26} {'exp':<5} {'cos ' + left_label:>14} {'cos ' + right_label:>14}   "
+          f"{'cell ' + left_label:>26} {'cell ' + right_label:>26}")
     pairs = []
     for pair in config.bar:
-        cos_a, cos_b = a.cosine(pair.a, pair.b), b.cosine(pair.a, pair.b)
-        cell_a = relations.stated_between(a, pair.a, pair.b)
-        cell_b = relations.stated_between(b, pair.a, pair.b)
-        changed = "*" if (cos_a != cos_b or _cell_text(cell_a[0]) != _cell_text(cell_b[0])) else " "
+        cos_a, cos_b = left.cosine(pair.a, pair.b), right.cosine(pair.a, pair.b)
+        cell_a = relations.stated_between(left, pair.a, pair.b)
+        cell_b = relations.stated_between(right, pair.a, pair.b)
+        text_a = _cell_text(cell_a[0]) + " / " + _cell_text(cell_a[1])
+        text_b = _cell_text(cell_b[0]) + " / " + _cell_text(cell_b[1])
+        changed = "*" if (abs(cos_a - cos_b) > 1e-9 or text_a != text_b) else " "
         print(f" {changed}{pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5} "
-              f"{cos_a:>+8.3f} {cos_b:>+8.3f}   "
-              f"{_cell_text(cell_a[0]) + ' / ' + _cell_text(cell_a[1]):>22} "
-              f"{_cell_text(cell_b[0]) + ' / ' + _cell_text(cell_b[1]):>22}")
+              f"{cos_a:>+14.3f} {cos_b:>+14.3f}   {text_a:>26} {text_b:>26}")
         pairs.append({"a": pair.a, "b": pair.b, "verdict": pair.verdict,
-                      "cosine_a": cos_a, "cosine_b": cos_b,
-                      "cell_a": _cell_text(cell_a[0]), "cell_b": _cell_text(cell_b[0])})
+                      "cosine_left": cos_a, "cosine_right": cos_b,
+                      "cell_left": text_a, "cell_right": text_b})
 
     reading = {}
-    for scope, built_matrix in ((SCOPE_SYNSET, a), (SCOPE_WORD, b)):
+    for label, built_matrix in ((left_label, left), (right_label, right)):
         measured = [
             {"a": p.a, "b": p.b, "verdict": p.verdict,
              "cosine": built_matrix.cosine(p.a, p.b),
@@ -316,20 +480,33 @@ def report_compare(built: dict, config: DictionaryConfig, providers=None) -> dic
         ]
         order = _local_order(measured)
         mute = [m for m in measured if not m["forward"] and not m["reverse"]]
+        one_sided = [m for m in measured if bool(m["forward"]) != bool(m["reverse"])]
         far_positive = [m for m in measured
                         if m["verdict"] == "FAR" and _positive(m["forward"], m["reverse"])]
-        reading[scope] = {"local_order": order, "mute": len(mute),
+        reading[label] = {"local_order": order, "mute": len(mute),
+                          "one_sided": [f"{m['a']}~{m['b']}" for m in one_sided],
                           "far_with_positive_cell": [f"{m['a']}~{m['b']}" for m in far_positive]}
         print()
-        print(f"  {scope:<8} MUTE {len(mute)}/{len(measured)} · local order "
-              f"{order['held']}/{order['tested']} · FAR pairs with a positive cell: "
-              f"{' '.join(reading[scope]['far_with_positive_cell']) or '(none)'}")
+        print(f"  {label:<10} MUTE {len(mute)}/{len(measured)} · local order "
+              f"{order['held']}/{order['tested']} · stated ONE WAY ONLY: "
+              f"{' '.join(reading[label]['one_sided']) or '(none)'}")
+        print(f"  {'':<10} FAR pairs with a positive cell: "
+              f"{' '.join(reading[label]['far_with_positive_cell']) or '(none)'}")
         for broken in order["broken"]:
             print(f"      ! {broken}")
 
-    witnesses = _witnesses(moved["removed"], a, providers)
     return {"stats": stats, "silent_by_pos": silent, "bar": pairs, "reading": reading,
-            "diff": {k: len(v) for k, v in moved.items()}, "witnesses": witnesses}
+            "diff": {k: len(v) for k, v in moved.items()}, "moved": moved}
+
+
+def report_compare(built: dict, config: DictionaryConfig, providers=None) -> dict:
+    a, b = built[SCOPE_SYNSET], built[SCOPE_WORD]
+    measured = report_two(
+        a, b, (SCOPE_SYNSET, SCOPE_WORD), config,
+        "A / B — WHOSE LEMMA MAY SPEAK.  synset = every lemma of the synset · word = its own only",
+    )
+    witnesses = _witnesses(measured.pop("moved")["removed"], a, providers)
+    return {**measured, "witnesses": witnesses}
 
 
 def _witnesses(removed, built, providers, limit: int = 14) -> list[dict]:
@@ -393,10 +570,26 @@ def run(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--lemma-scope",
         choices=LEMMA_SCOPES,
-        default=STANDING_LEMMA_SCOPE,
-        help="whose lemma may state antonymy and derivation: `synset` (every lemma of the synset — "
-             "the standing reading) or `word` (only this dimension's own). A variant may be "
-             "measured and may not be stored",
+        default=None,
+        help="reproduce a reading other than the one the rows declare: `synset` (every lemma of the "
+             "synset — what the base was built under before 2026-08-26) or `word` (its own only, "
+             "ruled standing). Default: whatever policy v4 says. A reading the rows did not declare "
+             "may be measured and may not be stored",
+    )
+    parser.add_argument(
+        "--antonym-symmetry",
+        choices=relations.ANTONYM_SYMMETRIES,
+        default=None,
+        help="how a one-sided antonymy is read: `stated` (what the resource said — the standing "
+             "reading), `overwrite` (state the reverse always) or `add_only` (complete a pair only "
+             "where R is silent, as its own relation `antonym_inferred`). The last two are "
+             "measurements nobody has ruled: measurable, never storable",
+    )
+    parser.add_argument(
+        "--compare-antonym-symmetry",
+        action="store_true",
+        help="build R twice under the SAME lemma scope, symmetrizing antonymy in the second, and "
+             "report the two side by side (the QM's ordered measurement, 2026-08-26)",
     )
     parser.add_argument(
         "--compare-lemma-scope",
@@ -439,11 +632,34 @@ def run(argv: list[str] | None = None) -> int:
     print(f"curated       {len(config.relations.curated)} definitional relations · reciprocal "
           f"{config.relations.reciprocal_weight}")
     print(f"alphabet      {'/'.join(config.alphabet.order) if config.alphabet else '(not declared)'}")
+    print(f"lemma scope   {config.relations.lemma_scope or '(not declared by these rows)'}")
+    print(f"antonymy      {config.relations.antonym_symmetry or '(not declared by these rows)'}")
     print()
     print(f"config fingerprint   {config.fingerprint()}")
     print(f"policy fingerprint   {policy.policy_fingerprint(rows)}")
     print(f"bar fingerprint      {policy.bar_fingerprint(bar_rows)}")
     print()
+
+    if args.compare_antonym_symmetry:
+        if args.apply:
+            print("REFUSED: --compare-antonym-symmetry is a MEASUREMENT of three readings, and two "
+                  "of them are not the standing law.")
+            return 2
+        scope = args.lemma_scope or config.relations.lemma_scope
+        if scope is None:
+            print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
+            return 2
+        measured = report_symmetry(compare_antonym_symmetry(config, scope), config)
+        print()
+        print(f"measured in {time.time() - started:.0f}s")
+        if args.json:
+            Path(args.json).write_text(
+                json.dumps({"policy_source": policy_source, "lemma_scope": scope,
+                            "symmetry": measured}, indent=2, ensure_ascii=False, default=str) + "\n",
+                encoding="utf-8",
+            )
+            print(f"wrote {args.json}")
+        return 0
 
     if args.compare_lemma_scope:
         if args.apply:
@@ -466,13 +682,28 @@ def run(argv: list[str] | None = None) -> int:
             print(f"wrote {args.json}")
         return 0
 
-    if args.lemma_scope != STANDING_LEMMA_SCOPE and args.apply:
-        print(f"REFUSED: --lemma-scope {args.lemma_scope!r} is a variant of the mining law, and a "
-              f"stored base must be the one the config fingerprint describes "
-              f"(`config.RELATION_RULES`). Measure it; do not store it.")
+    # THE SCOPE COMES FROM THE ROWS (policy v4). `--lemma-scope` is how the OTHER reading is
+    # reproduced, and a reading the rows did not declare is a measurement that may not be stored.
+    declared_scope = config.relations.lemma_scope
+    scope = args.lemma_scope or declared_scope
+    if scope is None:
+        print("REFUSED: this policy version declares no `lemma_scope`, so nothing says whose lemma "
+              "may state antonymy and derivation. Policy v4 (db/0007) declares it; to reproduce an "
+              "older reading, name it with --lemma-scope (and it cannot be stored).")
+        return 2
+    if args.apply and scope != declared_scope:
+        print(f"REFUSED: --lemma-scope {scope!r} is not what the rows declare ({declared_scope!r}). "
+              f"A stored base must be the one its config fingerprint describes.")
+        return 2
+    if args.apply and args.antonym_symmetry not in (None, config.relations.antonym_symmetry):
+        print(f"REFUSED: --antonym-symmetry {args.antonym_symmetry!r} is not what the rows declare "
+              f"({config.relations.antonym_symmetry!r}). A stored base must be the one its config "
+              f"fingerprint describes; a reading the rows do not declare is a measurement.")
         return 2
 
-    built = build_base(config, args.lemma_scope)
+    if args.antonym_symmetry is not None:
+        config = replace(config, relations=relations.policy_for(config.relations, args.antonym_symmetry))
+    built = build_base(config, scope, args.antonym_symmetry)
     stats = report_shape(built.relational)
     bar_reading = report_bar(built.relational, config.bar)
     counts = built.counts()

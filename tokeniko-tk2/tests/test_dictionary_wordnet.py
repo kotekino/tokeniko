@@ -352,9 +352,14 @@ def relation_provider():
         wn_adapter.ensure_corpora()
     except wn_adapter.CorpusMissing as exc:
         pytest.skip(str(exc))
+    # The scope is the STANDING one, read off the rows rather than named here: a test with its own
+    # copy of a curated value keeps passing after the Captain moves it.
+    from tests.seed import relation_policy_v4
+
     return wn_adapter.WordNetProvider(
         ["eat", "chew", "swallow", "devour", "kill", "die", "hot", "temperature",
-         "hungry", "enter", "leave", "land", "use", "used"]
+         "hungry", "enter", "leave", "land", "use", "used"],
+        lemma_scope=relation_policy_v4().lemma_scope,
     )
 
 
@@ -416,34 +421,44 @@ def test_a_sense_can_be_quoted_by_itself(relation_provider):
     assert relation_provider.gloss("bed").startswith(definition)
 
 
-def test_the_lemma_scope_is_a_parameter_and_defaults_to_the_standing_reading(relation_provider):
-    """The A/B the Captain ordered measured (2026-08-26), as a parameter of the run rather than a
-    hand edit somebody reverts. A caller who says nothing gets the law; the variant is asked for."""
-    assert relation_provider.lemma_scope == wn_adapter.STANDING_LEMMA_SCOPE == wn_adapter.SCOPE_SYNSET
+def test_the_lemma_scope_has_no_default_in_code_at_all(relation_provider):
+    """The Captain's ruling of 2026-08-26 as an ABSENCE. The scope is a policy value and lives in
+    rows, so a constant here would answer for the rows precisely when they are silent — and it
+    decides 6,634 of R's cells. A provider built without one may mine GLOSSES (which is why
+    `db/0005`'s digraph derivation still works) and may not mine RELATIONS."""
+    assert relation_provider.lemma_scope == wn_adapter.SCOPE_WORD
+
+    undeclared = wn_adapter.WordNetProvider(["eat", "food"])
+    assert undeclared.lemma_scope is None
+    assert undeclared.gloss("eat")                      # the gloss seam is untouched by the scope
+    assert undeclared.senses_of_key("eat.v")
+    with pytest.raises(wn_adapter.LemmaScopeUndeclared):
+        undeclared.relations_of_key("eat.v")
+
     with pytest.raises(ValueError):
         wn_adapter.WordNetProvider(["eat"], lemma_scope="whichever")
 
 
-def test_the_own_lemma_reading_states_strictly_less_and_nothing_new(relation_provider):
+def test_the_own_lemma_reading_states_strictly_less_and_nothing_new(relation_provider):  # noqa: D401
     """B is a SUBSET of A, relation by relation: narrowing whose lemma may speak can only remove a
     statement, never invent one. Measured at the full base: 6,634 cells removed, 0 added."""
-    narrow = wn_adapter.WordNetProvider(
-        ["eat", "corrode", "refuse", "reject", "deny", "admit", "allow", "leave", "enter"],
-        lemma_scope=wn_adapter.SCOPE_WORD,
-    )
+    words = ["eat", "corrode", "refuse", "reject", "deny", "admit", "allow", "leave", "enter"]
+    wide = wn_adapter.WordNetProvider(words, lemma_scope=wn_adapter.SCOPE_SYNSET)
+    narrow = wn_adapter.WordNetProvider(words, lemma_scope=wn_adapter.SCOPE_WORD)
     for key in ("eat.v", "refuse.v", "leave.v"):
-        wide_edges = relation_provider.relations_of_key(key)
+        wide_edges = wide.relations_of_key(key)
         narrow_edges = narrow.relations_of_key(key)
         for relation, targets in narrow_edges.items():
             assert targets <= wide_edges.get(relation, frozenset())
 
 
-def test_a_dimension_inherits_its_synonyms_oppositions_under_the_standing_reading():
-    """The finding in one assertion, with its witness. `eat` shares a synset with `corrode` («eat
-    away»), so under `synset` it carries `corrode`'s derivations; `refuse` carries `reject`'s
-    antonym. Both are gone under `word`. Which reading is right is the Captain's."""
+def test_a_dimension_inherits_its_synonyms_oppositions_under_the_wide_reading():
+    """The finding that produced the ruling, in one assertion with its witness. `eat` shares a
+    synset with `corrode` («eat away»), so under `synset` it carries `corrode`'s derivations;
+    `refuse` carries `reject`'s antonym. Both are gone under `word`, which the Captain ruled
+    standing on 2026-08-26 — an edge WordNet never stated is an edge nobody may read back."""
     words = ["eat", "corrode", "corrosion", "refuse", "reject", "admit"]
-    wide = wn_adapter.WordNetProvider(words)
+    wide = wn_adapter.WordNetProvider(words, lemma_scope=wn_adapter.SCOPE_SYNSET)
     narrow = wn_adapter.WordNetProvider(words, lemma_scope=wn_adapter.SCOPE_WORD)
 
     assert "corrosion.n.02" in wide.relations_of_key("eat.v")["derivational"]

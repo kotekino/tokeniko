@@ -116,10 +116,55 @@ def declared_config_v3():
 
 
 def relation_policy():
-    """R's declared weights, as the engine receives them."""
-    return migration(6).DECLARED.relations
+    """R's declared weights AS THEY STAND — the newest policy version, whichever that is.
+
+    Found by asking the files rather than by naming a migration, for `tools/propose_seeds.py`'s
+    reason: a fixture with a version number in it would have to be edited every time the Captain
+    rules, and the edit that got forgotten would leave a test measuring a superseded policy. The
+    version-specific helpers below are for the tests that are ABOUT a particular ruling.
+    """
+    from tk2.datatier.policy_source import newest_policy_migration
+
+    return newest_policy_migration()[1].DECLARED.relations
 
 
 def alphabet():
     """The parts of speech policy v3 declares."""
     return migration(6).ALPHABET
+
+
+# ------------------------------------------------------------------------------------------------
+# 0007 — the lemma scope ruled: policy version 4
+# ------------------------------------------------------------------------------------------------
+
+
+def policy_rows_v4() -> list[dict]:
+    return [dict(row) for row in migration(7).POLICY_ROWS]
+
+
+def relation_policy_v4():
+    """R's declared weights at v4 — including whose lemma may speak."""
+    return migration(7).DECLARED.relations
+
+
+def declared_config_v4():
+    """The policy v4 writes — v3's whole declaration, plus whose lemma may speak."""
+    return migration(7).DECLARED
+
+
+# ------------------------------------------------------------------------------------------------
+# 0008 — the inferred opposition admitted: policy version 5
+# ------------------------------------------------------------------------------------------------
+
+
+def policy_rows_v5() -> list[dict]:
+    return [dict(row) for row in migration(8).POLICY_ROWS]
+
+
+def declared_config_v5():
+    """The policy v5 writes — v4's whole declaration, plus how a one-sided antonymy is read."""
+    return migration(8).DECLARED
+
+
+def relation_policy_v5():
+    return migration(8).DECLARED.relations

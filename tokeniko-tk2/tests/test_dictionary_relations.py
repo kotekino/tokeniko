@@ -14,7 +14,7 @@ Captain moves it.
 import pytest
 
 from tests.lexicon_fixture import FixtureRelationProvider
-from tests.seed import relation_policy
+from tests.seed import relation_policy_v4, relation_policy_v5
 from tk2.dictionary import keys, matrix, relations
 from tk2.dictionary.config import RelationPolicy
 
@@ -40,7 +40,9 @@ def provider():
 
 @pytest.fixture
 def policy():
-    return relation_policy()
+    """THE standing policy (v5), read from the migration that declares it. A test with its own copy
+    of a curated value keeps passing after the Captain moves it."""
+    return relation_policy_v5()
 
 
 @pytest.fixture
@@ -166,12 +168,9 @@ def test_two_equally_strong_relations_resolve_by_the_declared_order(policy):
 def test_a_relation_switched_off_writes_no_cell(policy):
     """A weight of 0.0 is a DECLARATION that a relation does not count — the prototype's own
     mechanism, and the only way to switch one off. It is not the same as an absent row."""
-    off = RelationPolicy(
+    off = replace_policy(
+        policy,
         weights=tuple((name, 0.0 if name == "entails" else weight) for name, weight in policy.weights),
-        curated=policy.curated,
-        reciprocal_weight=policy.reciprocal_weight,
-        cues=policy.cues,
-        defaults=policy.defaults,
     )
     built = relations.build(KEYS, FixtureRelationProvider(), off)
     assert built.cell("eat.v", "swallow.v") is None
@@ -197,7 +196,7 @@ def test_a_weight_for_a_relation_nothing_produces_is_refused(policy):
     failing. `RelationsIncoherent` says which side is short."""
     weights = policy.weights + (("smells_like", 0.4),)
     with pytest.raises(relations.RelationsIncoherent) as excinfo:
-        relations.build(KEYS, FixtureRelationProvider(), RelationPolicy(weights=weights))
+        relations.build(KEYS, FixtureRelationProvider(), replace_policy(policy, weights=weights))
     assert "smells_like" in str(excinfo.value)
 
 
@@ -271,3 +270,165 @@ def test_a_diff_across_two_key_spaces_is_refused(R, provider, policy):
     smaller = relations.build(KEYS[:3], provider, policy)
     with pytest.raises(ValueError):
         matrix.diff(R, smaller)
+
+
+# ------------------------------------------------------------------------------------------------
+# antonym symmetry — a measurement, and shaped as one
+# ------------------------------------------------------------------------------------------------
+
+
+def test_antonymy_is_stated_in_wordnets_own_direction_by_default(policy):
+    """WordNet writes an antonymy once, on one lemma of one pair, so a one-sided cell is what the
+    resource actually said. Symmetry is OFF unless a run asks for it: nobody has ruled it, and a
+    default would be the ruling taken quietly."""
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {"a.v": {"antonym": frozenset({"b.v.01"})}}
+    one_sided = relations.build(
+        ("a.v", "b.v"), FixtureRelationProvider(senses=senses, edges=edges),
+        relations.policy_for(policy, relations.SYMMETRY_OFF),
+    )
+
+    assert not hasattr(relations, "ANTONYM_SYMMETRY_DEFAULT"), "the reading is a row, not a default"
+    assert one_sided.cell("a.v", "b.v").relation == "antonym"
+    assert one_sided.cell("b.v", "a.v") is None, "R states what the resource stated, and no more"
+
+
+def test_symmetry_completes_the_pair_when_a_run_asks_for_it(policy):
+    """The QM's ordered measurement of 2026-08-26: semantic opposition is symmetric even where the
+    lexicographer wrote it once. Same relation, same weight — the claim is that the cell was
+    MISSING, not that a weaker reverse read exists (which is what `entailed_by` is)."""
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {"a.v": {"antonym": frozenset({"b.v.01"})}}
+    both = relations.build(
+        ("a.v", "b.v"), FixtureRelationProvider(senses=senses, edges=edges),
+        relations.policy_for(policy, relations.SYMMETRY_OVERWRITE),
+    )
+
+    assert both.cell("b.v", "a.v").weight == policy.weight_of("antonym") < 0
+    assert both.cell("b.v", "a.v").relation == "antonym"
+    assert both.stats()["negative"] == 2
+
+
+def test_symmetry_overwrites_a_stated_relation_when_the_pair_holds_two(policy):
+    """What it BREAKS, at fixture scale — measured at the full base as four cells, one of them
+    `dark.n -> day.n`, where a stated part-of becomes a derived opposition. A pair may hold an
+    antonymy one way and a different stated relation the other, and R is asymmetric precisely so it
+    can carry both."""
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {
+        "a.v": {"hypernym_1": frozenset({"b.v.01"})},
+        "b.v": {"antonym": frozenset({"a.v.01"})},
+    }
+    provider = FixtureRelationProvider(senses=senses, edges=edges)
+    stated = relations.build(("a.v", "b.v"), provider, relations.policy_for(policy, relations.SYMMETRY_OFF))
+    symmetric = relations.build(
+        ("a.v", "b.v"), provider, relations.policy_for(policy, relations.SYMMETRY_OVERWRITE)
+    )
+
+    assert stated.cell("a.v", "b.v").relation == "hypernym_1"
+    assert symmetric.cell("a.v", "b.v").relation == "antonym"
+    assert matrix.diff(stated, symmetric)["changed"], "the loss is visible in a diff, never silent"
+
+
+def test_a_run_that_declares_no_reading_and_a_policy_that_declares_none_is_refused():
+    """The Captain's condition of 2026-08-26 as an ABSENCE: an undeclared mode must be a refusal and
+    never a silent `stated`, which would un-make the ruling by omission. Policy v4 predates the
+    reading, so nothing anywhere says how a one-sided antonymy is to be read — and the build stops
+    instead of choosing."""
+    older = relation_policy_v4()
+    assert older.antonym_symmetry is None
+    with pytest.raises(relations.RelationsIncoherent) as excinfo:
+        relations.build(KEYS, FixtureRelationProvider(), older)
+    assert "no antonym symmetry declared" in str(excinfo.value)
+
+
+def test_the_reading_comes_from_the_rows_and_a_run_may_argue_with_it():
+    """Since v5 the standing policy carries it, so a build needs no argument at all — and a run that
+    names one is reproducing a non-standing reading, the same shape `extra_seeds` has."""
+    standing = relation_policy_v5()
+    assert standing.antonym_symmetry == relations.SYMMETRY_ADD_ONLY
+    assert relations.resolve_symmetry(standing, None) == relations.SYMMETRY_ADD_ONLY
+    assert relations.resolve_symmetry(standing, relations.SYMMETRY_OFF) == relations.SYMMETRY_OFF
+
+
+def test_the_standing_policy_weights_the_relation_the_standing_reading_mints():
+    """The pairing is a property of the code, not a convention of the migration's author: a mode
+    without its weight is refused at `assert_coherent`, and a weight without its mode too."""
+    standing = relation_policy_v5()
+    assert dict(standing.weights)[relations.ANTONYM_INFERRED] == -1.0
+
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {"a.v": {"antonym": frozenset({"b.v.01"})}}
+    built = relations.build(("a.v", "b.v"), FixtureRelationProvider(senses=senses, edges=edges), standing)
+    assert built.cell("b.v", "a.v").relation == relations.ANTONYM_INFERRED
+
+    orphaned = replace_policy(standing, antonym_symmetry=relations.SYMMETRY_OFF)  # the weight stays
+    with pytest.raises(relations.RelationsIncoherent) as excinfo:
+        relations.build(("a.v", "b.v"), FixtureRelationProvider(senses=senses, edges=edges), orphaned)
+    assert relations.ANTONYM_INFERRED in str(excinfo.value)
+
+
+def replace_policy(policy, **changes):
+    from dataclasses import replace
+
+    return replace(policy, **changes)
+
+
+def test_an_inferred_opposition_needs_its_own_weight_row():
+    """The condition, enforced by the coherence check rather than by care: `add_only` produces a
+    relation policy v4 does not weight, so the run stops until somebody declares it. That is what
+    makes «a ruling has to write the row» a fact rather than an intention — and v5 wrote it."""
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {"a.v": {"antonym": frozenset({"b.v.01"})}}
+    provider = FixtureRelationProvider(senses=senses, edges=edges)
+
+    with pytest.raises(relations.RelationsIncoherent) as excinfo:
+        relations.build(("a.v", "b.v"), provider, relation_policy_v4(),
+                        antonym_symmetry=relations.SYMMETRY_ADD_ONLY)
+    assert relations.ANTONYM_INFERRED in str(excinfo.value)
+
+
+def test_add_only_completes_a_silent_pair_and_says_the_cell_was_inferred(policy):
+    """A cell whose whole contract is that it can say what made it must not say «WordNet» when the
+    answer is «we did». Same weight, different name — the principle that keeps a curated cell
+    distinguishable from a mined one, applied to an inferred one."""
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {"a.v": {"antonym": frozenset({"b.v.01"})}}
+    built = relations.build(
+        ("a.v", "b.v"), FixtureRelationProvider(senses=senses, edges=edges), policy,
+        antonym_symmetry=relations.SYMMETRY_ADD_ONLY,
+    )
+
+    assert built.cell("a.v", "b.v").relation == "antonym", "what WordNet stated keeps its name"
+    inferred = built.cell("b.v", "a.v")
+    assert inferred.relation == relations.ANTONYM_INFERRED
+    assert inferred.weight == policy.weight_of("antonym") < 0
+    assert [p.relation for p in inferred.via] == [relations.ANTONYM_INFERRED]
+
+
+def test_add_only_never_displaces_a_stated_relation(policy):
+    """The whole difference from the overwriting reading, and the reason it was ordered: at the full
+    base the overwriting one destroyed four stated cells, `dark.n -> day.n` (holonym) among them.
+    A pair may hold an antonymy one way and something else the other, and R is asymmetric so that it
+    can carry both."""
+    senses = {"a.v": ("a.v.01",), "b.v": ("b.v.01",)}
+    edges = {
+        "a.v": {"hypernym_1": frozenset({"b.v.01"})},
+        "b.v": {"antonym": frozenset({"a.v.01"})},
+    }
+    provider = FixtureRelationProvider(senses=senses, edges=edges)
+    stated = relations.build(("a.v", "b.v"), provider, relations.policy_for(policy, relations.SYMMETRY_OFF))
+    add_only = relations.build(
+        ("a.v", "b.v"), provider, policy, antonym_symmetry=relations.SYMMETRY_ADD_ONLY
+    )
+
+    assert add_only.cell("a.v", "b.v").relation == "hypernym_1"
+    assert matrix.diff(stated, add_only)["changed"] == [], "add-only overwrites nothing, ever"
+
+
+def test_the_three_readings_are_a_closed_set(policy):
+    """Three named readings and no fourth by typo: an unknown one is refused rather than quietly
+    treated as «off», which would report the standing numbers under a variant's name."""
+    assert relations.ANTONYM_SYMMETRIES == ("stated", "overwrite", "add_only")
+    with pytest.raises(relations.RelationsIncoherent):
+        relations.build(KEYS, FixtureRelationProvider(), policy, antonym_symmetry="both_ways")

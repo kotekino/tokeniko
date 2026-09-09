@@ -80,14 +80,25 @@ SCOPE_WORD = "word"
 
 LEMMA_SCOPES = (SCOPE_SYNSET, SCOPE_WORD)
 
-#: The scope the standing policy was measured under, and the only one a build may STORE. A variant
-#: is a measurement, not a base: `config.RELATION_RULES` names the walk the fingerprint covers, and
-#: a stored base built under another reading would carry a hash describing a law it did not obey.
-STANDING_LEMMA_SCOPE = SCOPE_SYNSET
+#: THERE IS NO DEFAULT, and that is the Captain's ruling of 2026-08-26 in one absence: the scope is
+#: a POLICY value and lives in rows (`dictionary_policy`, kind `relation`, since v4), so a constant
+#: here would be the quieter of two declarations — answering for the rows precisely when they are
+#: silent. A provider built without one is not «the standing reading»; it is a provider that may not
+#: be asked a relation question at all (see `LemmaScopeUndeclared`). The gloss seam is untouched by
+#: it, which is why `db/0005`'s digraph derivation still constructs one with nothing to say here.
 
 # A cache sentinel: `lemma()` answers None for «not that part of speech at all», which is a real
 # answer and has to be cacheable as one.
 _UNCACHED = object()
+
+
+class LemmaScopeUndeclared(RuntimeError):
+    """A relation was asked of a provider whose lemma scope nobody declared.
+
+    Raised rather than defaulted, for `ClosurePolicy`'s reason and the same standing law: the scope
+    decides 6,634 of R's cells and 257 of its negatives, and a build that fell back to a value in
+    code would be a build the manifest's fingerprint cannot vouch for.
+    """
 
 
 class CorpusMissing(RuntimeError):
@@ -194,13 +205,13 @@ class WordNetProvider:
     builders will walk them again; WordNet's own lookups are not free at lexicon scale.
     """
 
-    def __init__(self, lexicon, download: bool = False, lemma_scope: str = STANDING_LEMMA_SCOPE):
+    def __init__(self, lexicon, download: bool = False, lemma_scope: str | None = None):
         ensure_corpora(download=download)
-        if lemma_scope not in LEMMA_SCOPES:
+        if lemma_scope is not None and lemma_scope not in LEMMA_SCOPES:
             raise ValueError(f"unknown lemma scope {lemma_scope!r} — the two are {LEMMA_SCOPES}")
-        # A PARAMETER OF THE RUN, so both readings are reproducible from the repo rather than from a
-        # hand edit somebody reverted. It defaults to the standing one: a caller who says nothing
-        # gets the law, and the variant has to be asked for out loud.
+        # `None` is «undeclared», never «the usual one»: a caller that says nothing may still mine
+        # GLOSSES (the closure, the seed derivation) and may not mine RELATIONS. The value comes
+        # from the policy rows, and both readings stay reproducible because the tool can pass either.
         self._lemma_scope = lemma_scope
         self._lexicon = tuple(dict.fromkeys(keys.normalize_word(w) for w in lexicon))
         self._gloss_cache: dict[tuple[str, str], str] = {}
@@ -342,8 +353,8 @@ class WordNetProvider:
         )
 
     @property
-    def lemma_scope(self) -> str:
-        """Which lemmas of a synset speak for this dimension. See `LEMMA_SCOPES`."""
+    def lemma_scope(self) -> str | None:
+        """Which lemmas of a synset speak for this dimension, or `None` when nobody has said."""
         return self._lemma_scope
 
     def relations(self) -> tuple[str, ...]:
@@ -363,6 +374,12 @@ class WordNetProvider:
         `instance_hypernyms` joins `hypernyms` because the distinction it draws (Maine is an
         instance of a state) is about NAMES, which the base does not contain since option C.
         """
+        if self._lemma_scope is None:
+            raise LemmaScopeUndeclared(
+                "this provider was built without a lemma scope, so it cannot say which lemmas of a "
+                "synset state antonymy and derivation for a dimension. The value is a policy row "
+                f"(kind {'relation'!r}, name 'lemma_scope') since v4; the readings are {LEMMA_SCOPES}."
+            )
         cached = self._relation_cache.get(key)
         if cached is None:
             cached = self._mine_relations(key)

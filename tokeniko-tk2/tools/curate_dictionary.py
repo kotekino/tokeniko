@@ -33,6 +33,21 @@ from tk2.dictionary.build import build_base
 from tk2.dictionary.wordnet import WordNetProvider, wordnet_lexicon
 
 
+def resource(config):
+    """The adapter, reading the resource the way the ROWS say (policy v4's `lemma_scope`).
+
+    Never a default: a curated edge is proposed against the base R actually holds, and a provider
+    reading the resource differently would be mining against a matrix nobody built.
+    """
+    scope = config.relations.lemma_scope if config.relations else None
+    if scope is None:
+        raise SystemExit(
+            "this policy version declares no `lemma_scope`, so nothing says how the resource is to "
+            "be read. Policy v4 (db/0007) declares it."
+        )
+    return WordNetProvider(wordnet_lexicon(), lemma_scope=scope)
+
+
 def load(args):
     """The standing policy, and the base it describes. Printed before anything is mined."""
     rows, policy_source = standing_policy(args.db)
@@ -52,7 +67,7 @@ def load(args):
         return config, rows, bar_rows, built
 
     started = time.time()
-    provider = WordNetProvider(wordnet_lexicon())
+    provider = resource(config)
     print("base          rebuilt in memory from the rows (no --build named)", flush=True)
     matrix = build_base(config, provider).relational
     print(f"              {len(matrix.keys):,} dimensions · {matrix.stats()['nonzero']:,} cells "
@@ -89,7 +104,7 @@ def worklist(args, matrix, bar) -> list[tuple[str, str]]:
 
 def cmd_propose(args) -> int:
     config, _rows, _bar_rows, matrix = load(args)
-    provider = WordNetProvider(wordnet_lexicon())
+    provider = resource(config)
     pairs = worklist(args, matrix, config.bar)
 
     print()

@@ -7,6 +7,8 @@ account is that the three steps really do share one policy and one key space —
 lean on when D lands beside R over the same dimensions.
 """
 
+from dataclasses import replace
+
 import pytest
 
 from tests.lexicon_fixture import (
@@ -100,3 +102,20 @@ def test_a_policy_with_no_weights_builds_nothing_rather_than_something_smaller()
             ),
             World(),
         )
+
+
+def test_a_provider_reading_the_resource_against_the_policy_is_refused():
+    """The one failure the guard exists for: a base built under one lemma scope while the rows say
+    the other is perfectly well-formed, measurably different, and recorded under a fingerprint
+    describing the reading it did not obey. Nothing downstream could ever notice."""
+
+    class Wrong(World):
+        lemma_scope = "synset"
+
+    ruled = replace(relation_policy(), lemma_scope="word")
+    with pytest.raises(build.MiningLawMismatch):
+        build.build_base(config(relations=ruled), Wrong())
+
+    # ...and a resource with no scope to have (every fixture) is not the failure: the guard asks
+    # only providers that can answer.
+    assert build.build_base(config(relations=ruled), World()).dimensions

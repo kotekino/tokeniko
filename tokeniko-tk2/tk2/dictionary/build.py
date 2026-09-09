@@ -31,6 +31,15 @@ class PolicyIncomplete(ValueError):
     """
 
 
+class MiningLawMismatch(ValueError):
+    """The resource is reading itself one way and the policy declares another.
+
+    The single failure this guard exists for: a provider built under one lemma scope while the rows
+    say the other produces a base that is perfectly well-formed, measurably different, and recorded
+    under a fingerprint describing the reading it did NOT obey. Nothing downstream could ever notice.
+    """
+
+
 @dataclass(frozen=True, slots=True)
 class BaseBuild:
     """One base: the words the closure admitted, the dimensions they occupy, and the matrices."""
@@ -58,7 +67,12 @@ class BaseBuild:
         }
 
 
-def build_base(config: DictionaryConfig, provider, progress=None) -> BaseBuild:
+def build_base(
+    config: DictionaryConfig,
+    provider,
+    progress=None,
+    antonym_symmetry: str | None = None,
+) -> BaseBuild:
     """THE build: the definition digraph, the seed closure, the dimensions, and R over them.
 
     `provider` answers both protocols — the gloss seam the closure reads through and the relation
@@ -72,6 +86,18 @@ def build_base(config: DictionaryConfig, provider, progress=None) -> BaseBuild:
             "matrix nobody weighted."
         )
 
+    # The provider is the resource; the scope is the POLICY telling it how to read itself. Asked of
+    # a provider that can answer (`getattr`, because a fixture resource has no scope to have), and
+    # refused when the two disagree — see `MiningLawMismatch`.
+    declared = config.relations.lemma_scope
+    reading = getattr(provider, "lemma_scope", None)
+    if declared is not None and reading is not None and declared != reading:
+        raise MiningLawMismatch(
+            f"the policy declares lemma_scope {declared!r} and the provider is reading the resource "
+            f"as {reading!r}. The base would be measured under one law and fingerprinted under the "
+            f"other."
+        )
+
     _step(progress, "digraph")
     graph: Digraph = closure.build_digraph(provider, config.closure)
     graph_stats = closure.digraph_stats(graph)
@@ -81,7 +107,13 @@ def build_base(config: DictionaryConfig, provider, progress=None) -> BaseBuild:
     dimensions = tuple(glosses.dimensions_of(result.words, provider))
 
     _step(progress, "relations")
-    relational = relations.build(dimensions, provider, config.relations)
+    # `antonym_symmetry` is the RUN's argument against the standing declaration, and `None` defers
+    # to the policy — which is where the reading lives since v5 (`relations.resolve_symmetry`). A
+    # run that names one is reproducing a non-standing reading and may not be STORED; the tool
+    # refuses that at its own door.
+    relational = relations.build(
+        dimensions, provider, config.relations, antonym_symmetry=antonym_symmetry
+    )
 
     return BaseBuild(
         words=result.words,

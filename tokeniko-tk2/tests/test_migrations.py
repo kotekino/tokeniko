@@ -26,6 +26,8 @@ from tests.seed import (
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
+    policy_rows_v4,
+    policy_rows_v5,
     sphere_poles,
 )
 
@@ -376,7 +378,7 @@ def test_reading_the_policy_without_naming_a_version_is_refused(created):
     stored = list(created["dictionary_policy"].find({}))
     with pytest.raises(policy.PolicyRowsInvalid):
         policy.policy_version(stored)
-    assert policy.policy_version(policy.latest_version(stored)) == 3
+    assert policy.policy_version(policy.latest_version(stored)) == 5
 
 
 # ------------------------------------------------------------------------------------------------
@@ -497,7 +499,7 @@ def test_0006_writes_policy_version_3_beside_the_two_before_it(created):
     stored = list(created["dictionary_policy"].find({}))
     by_version = {v: [r for r in stored if r["version"] == v] for v in (1, 2, 3)}
 
-    assert {r["version"] for r in stored} == {1, 2, 3}
+    assert {1, 2, 3} <= {r["version"] for r in stored}
     assert len(by_version[1]) == len(policy_rows())
     assert len(by_version[2]) == len(policy_rows_v2())
     assert len(by_version[3]) == len(policy_rows_v3())
@@ -512,11 +514,13 @@ def test_0006_writes_policy_version_3_beside_the_two_before_it(created):
 @live
 def test_the_relation_weights_read_back_as_the_matrix_they_describe(created):
     """The seam, at version 3: rows out of mongo, through the pure reader, into the value object R
-    is filled from — signs, precedence, curated vocabulary and alphabet included."""
+    is filled from — signs, precedence, curated vocabulary and alphabet included.
+
+    VERSION-EXPLICIT since 0007 wrote v4 on top, for the reason 0006 made v2's test explicit."""
     from tests.test_dictionary_policy import V3_FINGERPRINT
     from tk2.dictionary import policy
 
-    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 3]
     config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
 
     assert policy.policy_version(stored) == 3
@@ -549,3 +553,71 @@ def test_the_body_cannot_write_the_base(created):
     for model in (BaseKeyDoc, BaseRelationDoc):
         with pytest.raises(WriteClassViolation):
             model.insert_one({"build": "b", "key": "eat.v", "index": 0})
+
+
+# ------------------------------------------------------------------------------------------------
+# 0007 rules whose lemma may speak
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0007_writes_policy_version_4_beside_the_three_before_it(created):
+    """Four deep, and the ledger property holds at every level: nothing below v4 is edited, so a
+    manifest row naming any of them still points at something a reader can read."""
+    stored = list(created["dictionary_policy"].find({}))
+    assert {1, 2, 3, 4} <= {r["version"] for r in stored}
+    assert len([r for r in stored if r["version"] == 4]) == len(policy_rows_v4())
+    assert len([r for r in stored if r["version"] == 3]) == len(policy_rows_v3())
+
+
+@live
+def test_the_ruled_lemma_scope_reads_back_from_the_database(created):
+    """The seam at version 4, and the value the Captain ruled: rows out of mongo, through the pure
+    reader, into the thing that decides whether `eat` carries `corrode`'s derivations.
+
+    VERSION-EXPLICIT since 0008 wrote v5 on top — the table is four rulings deep now."""
+    from tests.test_dictionary_policy import V4_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 4]
+    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+
+    assert policy.policy_version(stored) == 4
+    assert config.relations.lemma_scope == "word"
+    assert config.fingerprint() == V4_FINGERPRINT
+    # ...and everything v3 declared is still declared, unedited.
+    assert dict(config.relations.weights)["antonym"] == -1.0
+    assert config.alphabet.order == ("n", "v", "a", "r")
+    assert len(config.declared_seeds) == 224
+
+
+# ------------------------------------------------------------------------------------------------
+# 0008 admits the inferred opposition
+# ------------------------------------------------------------------------------------------------
+
+
+@live
+def test_0008_writes_policy_version_5_beside_the_four_before_it(created):
+    stored = list(created["dictionary_policy"].find({}))
+    assert {r["version"] for r in stored} == {1, 2, 3, 4, 5}
+    assert len([r for r in stored if r["version"] == 5]) == len(policy_rows_v5())
+    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+
+
+@live
+def test_the_standing_policy_is_the_one_a_build_can_actually_run(created):
+    """The end of the whole chain, live: the newest rows read back as a policy that names every
+    value the engine needs — the cuts, the weights, the alphabet, whose lemma speaks, and how a
+    one-sided antonymy is read — with nothing left for a default in code to answer."""
+    from tests.test_dictionary_policy import V5_FINGERPRINT
+    from tk2.dictionary import policy, relations
+
+    stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+
+    assert policy.policy_version(stored) == 5
+    assert config.fingerprint() == V5_FINGERPRINT
+    assert config.relations.antonym_symmetry == relations.SYMMETRY_ADD_ONLY
+    assert config.relations.lemma_scope == "word"
+    assert config.alphabet is not None and config.closure.max_depth == 2
+    assert relations.resolve_symmetry(config.relations, None) == relations.SYMMETRY_ADD_ONLY
