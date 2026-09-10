@@ -28,6 +28,8 @@ document, not the cell you meant), which is why a row's cells are a LIST of subd
 `column` VALUE.
 """
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from math import sqrt
 from typing import Iterable, Iterator, Protocol, runtime_checkable
@@ -286,6 +288,44 @@ def cosine(a: dict[str, float], b: dict[str, float]) -> float:
     if norm_a == 0 or norm_b == 0:
         return 0.0
     return dot / (norm_a * norm_b)
+
+
+# ------------------------------------------------------------------------------------------------
+# WHAT A MATRIX HASHES TO — the number a stored copy is checked against
+# ------------------------------------------------------------------------------------------------
+
+
+def fingerprint(matrix: Matrix) -> str:
+    """sha256 over a matrix's whole content: its name, its dimension order, and every cell of every
+    row exactly as `Cell.as_row` stores it.
+
+    THE POINT IS THE ROUND TRIP. A build writes two hundred megabytes across a network into rows
+    nobody will ever read whole again, and «the copy is the matrix» has to be a checkable claim
+    rather than a hope — a truncated batch, a re-ordered key space and a silently coerced weight all
+    produce a base that looks perfectly healthy. So the writer records this and a reader can
+    recompute it from the stored rows (`tools/verify_base.py`).
+
+    Hashed row by row rather than over one serialised blob, because the blob would be a second copy
+    of the base in memory to compute a number about the first. The row's own dict is canonicalised
+    (sorted keys, no whitespace) so the hash is a function of the CONTENT and not of how python felt
+    about ordering a dictionary that day.
+    """
+    digest = hashlib.sha256()
+    digest.update(json.dumps({"name": matrix.name, "keys": list(matrix.keys)},
+                             sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8"))
+    for row in matrix.rows:
+        digest.update(json.dumps(
+            {"key": row.key, "index": row.index, "cells": [cell.as_row() for cell in row.cells]},
+            sort_keys=True, separators=(",", ":"), ensure_ascii=False,
+        ).encode("utf-8"))
+    return digest.hexdigest()
+
+
+def cell_count(matrix: Matrix) -> int:
+    """Every cell the matrix holds, the diagonal included. `Matrix.stats()['nonzero']` counts what
+    was STATED and excludes the axis; this counts what is stored, which is what a stored copy can be
+    compared against without rebuilding the base to interpret it."""
+    return sum(len(row.cells) for row in matrix.rows)
 
 
 # ------------------------------------------------------------------------------------------------

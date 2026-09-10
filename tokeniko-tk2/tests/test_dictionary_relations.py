@@ -432,3 +432,36 @@ def test_the_three_readings_are_a_closed_set(policy):
     assert relations.ANTONYM_SYMMETRIES == ("stated", "overwrite", "add_only")
     with pytest.raises(relations.RelationsIncoherent):
         relations.build(KEYS, FixtureRelationProvider(), policy, antonym_symmetry="both_ways")
+
+
+def test_a_matrix_fingerprints_its_content_and_not_its_object(R):
+    """What a stored copy is checked against (`tk2.datatier.matrix_store`'s seal, T5). It has to be
+    a function of the CONTENT — two builds of one matrix agree — and it has to move when any cell
+    does, because a truncated batch or a coerced weight is exactly what a row count cannot see."""
+    from dataclasses import replace
+
+    twin = matrix.Matrix(
+        name=R.name,
+        keys=R.keys,
+        rows=tuple(matrix.MatrixRow(key=row.key, index=row.index, cells=row.cells)
+                   for row in R.rows),
+    )
+    assert matrix.fingerprint(twin) == matrix.fingerprint(R)
+    assert matrix.cell_count(R) == sum(len(row.cells) for row in R.rows)
+
+    moved = list(R.rows)
+    stated = next(i for i, row in enumerate(moved) if row.cells)
+    first = moved[stated].cells[0]
+    moved[stated] = replace(moved[stated],
+                            cells=(replace(first, weight=first.weight / 2), *moved[stated].cells[1:]))
+    assert matrix.fingerprint(
+        matrix.Matrix(name=R.name, keys=R.keys, rows=tuple(moved))
+    ) != matrix.fingerprint(R)
+
+
+def test_the_fingerprint_moves_when_the_key_space_is_re_ordered(R):
+    """The failure a count could never catch, and the reason the registry is sealed as well: the
+    same rows under a different dimension order are a matrix about other words."""
+    assert matrix.fingerprint(
+        matrix.Matrix(name=R.name, keys=tuple(reversed(R.keys)), rows=R.rows)
+    ) != matrix.fingerprint(R)

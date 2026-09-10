@@ -2,3 +2,7 @@
 *.egg-info/
 build/
 dist/
+
+# The map (`tools/base_map.py`) — a four-megabyte diagnostic regenerated from the base in 85
+# seconds. It is a thing to LOOK at, never a thing to review a diff of.
+out/

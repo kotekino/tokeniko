@@ -27,9 +27,10 @@ Three tables, because they answer three different questions and carry three diff
                        fingerprint AND the bar version and fingerprint it was measured against.
 
 ...and since T3 the base itself: `base_keys` (the dimension order), `base_r` (the relation matrix,
-sparse, provenance per cell) and — since T4 — `base_d` (the gloss-overlap matrix, over the very same
-dimension order). They are `logic` like the rest — the body reads the base and
-never writes it — and they are described where they are declared, at the foot of this file.
+sparse, provenance per cell), — since T4 — `base_d` (the gloss-overlap matrix, over the very same
+dimension order), and — since T5 — `base_seals`, the row that says a matrix arrived WHOLE. They are
+`logic` like the rest — the body reads the base and never writes it — and they are described where
+they are declared, at the foot of this file.
 
 The reading seam: nothing here reads the database and nothing here computes a fingerprint. The pure
 side (`tk2.dictionary.policy`) takes ROWS AS MAPPINGS — `model_dump()` output, or raw pymongo
@@ -297,6 +298,58 @@ class BaseDistributionDoc(LogicDocument, Timestamped):
         indexes = [
             IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
             IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
+        ]
+
+
+class BaseSealDoc(LogicDocument, Timestamped):
+    """logic (r) — one matrix of one build, declared COMPLETE. The row a reader refuses a base for.
+
+    Added at T5, and it is the answer to a measured hazard rather than a precaution: D is 218 MB of
+    BSON that pymongo splits into several wire messages, over a network, to a body in another room.
+    An interrupted apply left a partial matrix under a build label that looked exactly like a whole
+    one — the rows were valid, the registry was there, and only a count nobody was taking could have
+    said otherwise.
+
+    So a build SEALS each matrix, and the seal is written LAST: after every chunk has landed and
+    after the stored row count has been read back and agreed with. Until then there is no seal, and
+    `MongoMatrixStore` refuses to read an unsealed matrix at all. A half-written base is therefore
+    not a base that reads wrong — it is a base that does not read.
+
+    THE FINGERPRINT is the second half of the same idea and covers what a count cannot: a truncated
+    row, a re-ordered key space, a weight that came back as something else. It is
+    `tk2.dictionary.matrix.fingerprint` over the matrix as it was built, and `tools/verify_base.py`
+    recomputes it from the stored rows. A count says «all of it arrived»; this says «and it is what
+    left».
+    """
+
+    build: Annotated[str, Indexed()] = Field(min_length=1)
+
+    #: The matrix this seals, by its collection name (`base_r`, `base_d`) — or `base_keys` for the
+    #: dimension registry, which is a matrix's worth of meaning and is written first.
+    name: str = Field(min_length=1)
+
+    #: How many rows the writer wrote AND read back. Both, or the seal would only repeat what the
+    #: writer believed.
+    rows: int = Field(ge=0)
+
+    #: How many cells those rows carry, the diagonal included. A row count alone cannot notice a row
+    #: that arrived with half its cells.
+    cells: int = Field(ge=0)
+
+    #: `tk2.dictionary.matrix.fingerprint` of what was written. Empty for the key registry, which is
+    #: its own content and is compared as an ordered list.
+    fingerprint: str = ""
+
+    #: How the write was made, for a reader who finds a slow build in the ledger: the chunk size the
+    #: rows went out in and how long the whole matrix took. A note, not a promise.
+    note: str = ""
+
+    class Settings:
+        name = "base_seals"
+        indexes = [
+            # One seal per matrix per build. Two would make «is this build complete?» a question
+            # with two answers, which is the one thing the seal exists to prevent.
+            IndexModel([("build", ASCENDING), ("name", ASCENDING)], unique=True),
         ]
 
 

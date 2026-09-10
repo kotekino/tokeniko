@@ -108,10 +108,14 @@ def test_the_base_is_not_registered_with_the_body_either():
     """R and D are `logic` and enormous: the r-cache snapshots every registered
     r-collection WHOLE on every slow tick, and R is thousands of rows carrying hundreds of thousands
     of cells. The base is read the way a dictionary is read — by key, on demand — and E2 builds that
-    reader. Its write-class is unchanged: the build writes it through the migration door."""
+    reader. Its write-class is unchanged: the build writes it through the migration door.
+
+    `base_seals` joined them at T5 and belongs on the same side of the line: it is the row that says
+    a matrix arrived whole, it is written by a build, and the body has no more business caching it
+    than it has caching the matrix it vouches for."""
     from tk2.core.models import BASE_MODELS
 
-    assert [m.Settings.name for m in BASE_MODELS] == ["base_keys", "base_r", "base_d"]
+    assert [m.Settings.name for m in BASE_MODELS] == ["base_keys", "base_r", "base_d", "base_seals"]
     assert all(m.write_class is WriteClass.LOGIC for m in BASE_MODELS)
     assert not set(BASE_MODELS) & set(ALL_MODELS)
 

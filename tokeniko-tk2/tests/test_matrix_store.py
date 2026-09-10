@@ -224,3 +224,181 @@ def test_a_D_that_disagrees_about_the_dimensions_is_refused_too(store, built):
     )
     with pytest.raises(KeySpaceConflict):
         store.write(shuffled, build="t1")
+
+
+# ------------------------------------------------------------------------------------------------
+# THE SEAL — a matrix is complete, or it does not read (T5)
+# ------------------------------------------------------------------------------------------------
+#
+# The hazard is the one T4 measured and could not fix in its own task: D is 218 MB of BSON that
+# pymongo splits into several wire messages, over a network, to a body in another room. What these
+# tests hold is not that a write works — the tests above do that — but that an INTERRUPTED one
+# cannot be mistaken for a whole one, which is a property about failure and has to be provoked.
+
+
+def test_a_written_matrix_is_sealed_with_its_own_count_and_fingerprint(store, built):
+    from tk2.dictionary import matrix as matrix_module
+
+    store.write(built, build="t1")
+    seal = store.seal("t1", "base_r")
+
+    assert seal["rows"] == len(KEYS)
+    assert seal["cells"] == matrix_module.cell_count(built)
+    assert seal["fingerprint"] == matrix_module.fingerprint(built)
+    assert store.seal("t1", "base_keys")["rows"] == len(KEYS), "the registry is sealed too"
+
+
+def test_an_unsealed_matrix_does_not_read_at_all(store, built, clean_db):
+    """THE property. A partial base must be unreadable rather than plausible: every row of it is
+    valid, the registry is there, and only the missing seal says the write never finished."""
+    from tk2.datatier.matrix_store import BaseIncomplete
+
+    store.write(built, build="t1")
+    clean_db["base_seals"].delete_many({"build": "t1", "name": "base_r"})
+
+    with pytest.raises(BaseIncomplete):
+        store.matrix("t1", "base_r")
+    with pytest.raises(BaseIncomplete):
+        store.row("t1", "base_r", "eat.v")
+    with pytest.raises(BaseIncomplete):
+        list(store.rows("t1", "base_r"))
+    # ...and the rows are still there to be looked at, which is what makes recovery possible.
+    assert clean_db["base_r"].count_documents({"build": "t1"}) == len(KEYS)
+
+
+def test_an_unsealed_registry_takes_the_whole_build_down(store, built, clean_db):
+    """The registry is what every cell's column MEANS, so a half-written one is not a smaller key
+    space — it is a base whose rows point at the wrong words."""
+    from tk2.datatier.matrix_store import BaseIncomplete
+
+    store.write(built, build="t1")
+    clean_db["base_seals"].delete_many({"build": "t1", "name": "base_keys"})
+
+    with pytest.raises(BaseIncomplete):
+        store.keys("t1")
+    with pytest.raises(BaseIncomplete):
+        store.matrix("t1", "base_r")
+
+
+def test_a_rewrite_breaks_the_seal_before_it_touches_a_row(store, built, monkeypatch, clean_db):
+    """The window in which a rewrite is unreadable starts at the FIRST delete, not at the first
+    failure — so an interruption anywhere inside a rewrite leaves nothing that reads."""
+    from tk2.datatier import matrix_store as module
+
+    seen = {}
+
+    original = module.MongoMatrixStore._break_seal
+
+    def watch(self, build, name):
+        seen[name] = clean_db["base_r"].count_documents({"build": build})
+        return original(self, build, name)
+
+    store.write(built, build="t1")
+    monkeypatch.setattr(module.MongoMatrixStore, "_break_seal", watch)
+    store.write(built, build="t1")
+
+    assert seen["base_r"] == len(KEYS), "the seal came off while the old rows were still there"
+
+
+def test_an_interrupted_write_leaves_no_seal_and_the_build_stays_unreadable(store, built, monkeypatch):
+    """The failure itself, provoked: the second chunk raises, and what is left behind is rows with
+    nothing vouching for them."""
+    from tk2.datatier import matrix_store as module
+    from tk2.datatier.matrix_store import BaseIncomplete
+
+    calls = {"n": 0}
+    original = module.MigrationWriter.insert_many
+
+    def fail_on_the_second(self, model, rows):
+        if model.Settings.name == "base_r":
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("the network went away mid-write")
+        return original(self, model, rows)
+
+    monkeypatch.setattr(module, "CHUNK_ROWS", 2)
+    monkeypatch.setattr(module.MigrationWriter, "insert_many", fail_on_the_second)
+
+    with pytest.raises(RuntimeError):
+        store.write(built, build="t1")
+
+    assert calls["n"] == 2, "the write had already landed one chunk of base_r"
+    assert store.seal("t1", "base_r") is None
+    with pytest.raises(BaseIncomplete):
+        store.matrix("t1", "base_r")
+
+
+def test_a_re_run_of_an_interrupted_write_heals_the_build(store, built, monkeypatch):
+    """The recovery is the command again. A writer can re-seal a registry it has just PROVED is the
+    right one; a reader cannot, which is why the refusal lives on the read."""
+    from tk2.datatier import matrix_store as module
+
+    calls = {"n": 0}
+    original = module.MigrationWriter.insert_many
+
+    def fail_once(self, model, rows):
+        if model.Settings.name == "base_r":
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise RuntimeError("the network went away mid-write")
+        return original(self, model, rows)
+
+    monkeypatch.setattr(module, "CHUNK_ROWS", 2)
+    monkeypatch.setattr(module.MigrationWriter, "insert_many", fail_once)
+    with pytest.raises(RuntimeError):
+        store.write(built, build="t1")
+
+    monkeypatch.undo()
+    assert store.write(built, build="t1") == len(KEYS)
+    assert store.matrix("t1", "base_r").rows == built.rows
+    assert store.verify("t1", "base_r")["whole"]
+
+
+def test_the_write_goes_out_in_chunks_and_says_so(store, built, monkeypatch):
+    """A failure has to be able to name a place rather than a two-hundred-megabyte range."""
+    from tk2.datatier import matrix_store as module
+
+    monkeypatch.setattr(module, "CHUNK_ROWS", 3)
+    seen = []
+    store.write(built, build="t1", progress=lambda chunk, chunks, rows: seen.append((chunk, chunks, rows)))
+
+    assert [row[0] for row in seen] == list(range(1, len(seen) + 1))
+    assert seen[-1][2] == len(KEYS), "the last chunk reports the whole matrix"
+    assert len(seen) == 3, "seven rows in threes"
+
+
+def test_a_row_wider_than_the_budget_still_goes_out_on_its_own(built):
+    """The chunker may not invent a size limit mongo has not got."""
+    from tk2.datatier.matrix_store import _chunked
+
+    rows = [{"cells": [0] * 100_000}, {"cells": []}, {"cells": []}]
+    chunks = list(_chunked(rows))
+
+    assert len(chunks[0]) == 1, "the wide row is alone"
+    assert sum(len(chunk) for chunk in chunks) == len(rows), "and nothing was dropped"
+
+
+def test_verify_reads_the_matrix_back_and_recomputes_its_fingerprint(store, built, clean_db):
+    """The seal says «all of it arrived»; this says «and it is what left»."""
+    store.write(built, build="t1")
+    assert store.verify("t1", "base_r")["whole"]
+    assert store.verify_keys("t1")["whole"]
+
+    clean_db["base_r"].update_one(
+        {"build": "t1", "key": "eat.v"}, {"$set": {"cells.0.w": 0.123456}}
+    )
+    spoiled = store.verify("t1", "base_r")
+    assert not spoiled["whole"]
+    assert spoiled["fingerprint"] != spoiled["fingerprint_sealed"]
+    assert spoiled["rows"] == spoiled["rows_sealed"], "a count could never have caught this"
+
+
+def test_a_dropped_build_loses_its_seals_first(store, built, clean_db):
+    store.write(built, build="t1")
+    store.write(_distributional(), build="t1")
+
+    gone = store.drop("t1")
+
+    assert gone["base_r"] == len(KEYS) and gone["base_keys"] == len(KEYS)
+    assert clean_db["base_seals"].count_documents({"build": "t1"}) == 0
+    assert store.builds() == ()
