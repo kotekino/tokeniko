@@ -139,6 +139,41 @@ PARTS_OF_SPEECH = {
 # ------------------------------------------------------------------------------------------------
 
 
+#: The world's SENSES. E1c's layer needs a word to have readings, and the sixteen-word world had
+#: none — a gloss per word was all the base ever asked for. Two words are given a second reading on
+#: purpose, because a layer whose every word means one thing cannot prove it separates readings:
+#: `left` is the direction and the past of leaving, and `rest` is repose and remainder.
+#:
+#: `(sense key, synset name, definition)`, in WordNet's own shape: the synset name is anchored on
+#: whichever lemma heads it and deliberately does NOT always match the key — `left.a.02` living in
+#: `leftover.s.01` is the case that made the key word-anchored in the first place.
+SENSES = {
+    "left.n": (("left.n.01", "left.n.01", "the direction opposite right"),),
+    "left.a": (("left.a.01", "left.a.01", "on the left side"),
+               ("left.a.02", "leftover.s.01", "not used up, as when one has left")),
+    "rest.n": (("rest.n.01", "rest.n.01", "a state of sleep or repose"),
+               ("rest.n.02", "remainder.n.01", "what is left of a place")),
+    "rest.v": (("rest.v.01", "rest.v.01", "to sleep or be at rest"),),
+    "bed.n": (("bed.n.01", "bed.n.01", "furniture for sleep"),),
+    "sleep.v": (("sleep.v.01", "sleep.v.01", "to rest in a bed"),),
+    "go.v": (("go.v.01", "go.v.01", "to move, as when one has left"),),
+    "move.v": (("move.v.01", "move.v.01", "to go from a place"),),
+    "place.n": (("place.n.01", "place.n.01", "a direction or position"),),
+    "work.n": (("work.n.01", "work.n.01", "labor of a person"),),
+    "work.v": (("work.v.01", "work.v.01", "to labor"),),
+}
+
+#: What each SENSE states, where the sixteen-word world has anything to say. Keyed by sense so the
+#: layer can prove it separates readings: `left.a.01` opposes `right`, and `left.a.02` — the
+#: leftover — opposes nothing at all.
+SENSE_EDGES = {
+    "left.a.01": {"antonym": frozenset({"right.a.01"})},
+    "rest.n.01": {"hypernym_1": frozenset({"sleep.n.01"})},
+    "rest.n.02": {"hypernym_1": frozenset({"place.n.01"})},
+    "sleep.v.01": {"entails": frozenset({"rest.v.01"})},
+}
+
+
 class FixtureGlossProvider:
     """The `GlossProvider` protocol over the world above. No nltk, no network, no corpus."""
 
@@ -162,6 +197,22 @@ class FixtureGlossProvider:
 
     def lexicon(self):
         return self._lexicon
+
+    def sense_keys(self, word):
+        """Every reading of a word, in the shape the real adapter returns — key, base, synset name
+        and definition. A word with no declared senses has none, which is a legitimate answer: the
+        resource has spellings it knows only as names."""
+        out = []
+        for pos in self.parts_of_speech(word):
+            for key, synset, definition in SENSES.get(f"{word}.{pos}", ()):
+                out.append({"key": key, "base": f"{word}.{pos}",
+                            "synset": synset, "definition": definition})
+        return out
+
+    def relations_of_sense(self, sense):
+        """What ONE reading states. The point of the layer: `left.a.01` opposes `right` and
+        `left.a.02` — «not used up» — opposes nothing, where the base key `left.a` is both."""
+        return dict(SENSE_EDGES.get(sense, {}))
 
     def gloss(self, word, senses="primary"):
         """A refused reading does not speak. The real adapter gets this for free — its gloss is

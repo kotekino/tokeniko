@@ -110,12 +110,22 @@ def test_the_base_is_not_registered_with_the_body_either():
     of cells. The base is read the way a dictionary is read — by key, on demand — and E2 builds that
     reader. Its write-class is unchanged: the build writes it through the migration door.
 
-    `base_seals` joined them at T5 and belongs on the same side of the line: it is the row that says
-    a matrix arrived whole, it is written by a build, and the body has no more business caching it
-    than it has caching the matrix it vouches for."""
+    `dictionary_base_seals` joined them at T5 and belongs on the same side of the line: it is the row
+    that says a matrix arrived whole, it is written by a build, and the body has no more business
+    caching it than it has caching the matrix it vouches for.
+
+    `dictionary_sense_vectors` joined at E1c and belongs there most of all — 120,475 rows carrying
+    816,309 cells is the largest thing in the database by a wide margin, and it is read exactly the
+    way a dictionary is read: «every sense of `small.a`», by key, on demand."""
     from tk2.core.models import BASE_MODELS
 
-    assert [m.Settings.name for m in BASE_MODELS] == ["dictionary_base_keys", "dictionary_base_relations", "dictionary_base_distribution", "dictionary_base_seals"]
+    assert [m.Settings.name for m in BASE_MODELS] == [
+        "dictionary_base_keys",
+        "dictionary_base_relations",
+        "dictionary_base_distribution",
+        "dictionary_base_seals",
+        "dictionary_sense_vectors",
+    ]
     assert all(m.write_class is WriteClass.LOGIC for m in BASE_MODELS)
     assert not set(BASE_MODELS) & set(ALL_MODELS)
 

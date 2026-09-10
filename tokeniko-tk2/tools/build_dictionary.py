@@ -45,7 +45,7 @@ from dataclasses import fields, replace
 from pathlib import Path
 
 from tk2.datatier.policy_source import closed_forms, standing_bar, standing_policy
-from tk2.dictionary import build, closure, distribution, glosses, keys, matrix, policy, relations
+from tk2.dictionary import build, closure, distribution, glosses, keys, matrix, policy, relations, senses
 from tk2.dictionary.config import DictionaryConfig, bar_words
 from tk2.dictionary.wordnet import (
     LEMMA_SCOPES,
@@ -84,7 +84,7 @@ JUNK_WORDS = frozenset({"in", "be", "by", "as"})
 
 
 def build_base(config: DictionaryConfig, lemma_scope: str,
-               antonym_symmetry: str | None = None, closed=None):
+               antonym_symmetry: str | None = None, closed=None, with_senses: bool = False):
     """The base as the rows describe it, with the resource named out loud on the way through.
 
     The assembly itself is `tk2.dictionary.build`, so it is the same steps a test can run on a
@@ -106,7 +106,8 @@ def build_base(config: DictionaryConfig, lemma_scope: str,
         print(f"  {step:<12} ({time.time() - started:.0f}s)", flush=True)
 
     built = build.build_base(
-        config, provider, say, antonym_symmetry=antonym_symmetry, closed_forms=closed
+        config, provider, say, antonym_symmetry=antonym_symmetry, closed_forms=closed,
+        with_senses=with_senses,
     )
     print(f"  {built.graph_stats['nodes']:,} nodes · {built.graph_stats['edges']:,} edges · "
           f"{built.graph_stats['silent']:,} silent definitions")
@@ -1893,6 +1894,13 @@ def run(argv: list[str] | None = None) -> int:
              "NO FALLBACK — a policy that declares no mix and a run that names none is a refusal, "
              "never a silent 1.0. A blend the rows did not declare may be measured and not stored",
     )
+    parser.add_argument(
+        "--senses-layer",
+        action="store_true",
+        help="also place every SENSE against the base — the dictionary's second floor (E1c). "
+             "120,475 senses, about four minutes, and the base itself is unchanged by it: the "
+             "layer rides ON the dimensions and is never square",
+    )
     parser.add_argument("--note", default="", help="what this build is, for the manifest")
     parser.add_argument(
         "--apply",
@@ -2048,7 +2056,8 @@ def run(argv: list[str] | None = None) -> int:
         if scope is None:
             print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
             return 2
-        built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms)
+        built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms,
+                                 with_senses=args.senses_layer)
         vectors = distribution.gloss_vectors(
             built.dimensions, provider, config.distribution, structure_forms
         )
@@ -2163,7 +2172,8 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.antonym_symmetry is not None:
         config = replace(config, relations=relations.policy_for(config.relations, args.antonym_symmetry))
-    built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms)
+    built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms,
+                                 with_senses=args.senses_layer)
     stats = report_shape(built.relational)
     d_stats = None
     dual = None
@@ -2192,6 +2202,7 @@ def run(argv: list[str] | None = None) -> int:
         counts=counts,
         authorization=args.authorized or "(unauthorized — dry run)",
         note=args.note,
+        build=build_label,
     )
 
     print()
@@ -2305,6 +2316,19 @@ def _apply(args, built: build.BaseBuild, manifest, build_label: str) -> int:
         print(f"written: {args.db}.{built_matrix.name} build='{build_label}' — {written:,} rows, "
               f"{sealed['cells']:,} cells in {time.time() - started:.0f}s")
         print(f"         SEALED {sealed['fingerprint'][:16]}…  ({sealed['note']})")
+    if built.senses is not None:
+        started = time.time()
+
+        def say_senses(chunk: int, chunks: int, rows: int, at=started) -> None:
+            print(f"  {senses.SENSE_LAYER}  chunk {chunk:>3}/{chunks:<3} {rows:>7,} senses "
+                  f"({time.time() - at:.0f}s)", flush=True)
+
+        written = store.write_senses(built.senses, build_label, progress=say_senses)
+        sealed = store.seal(build_label, senses.SENSE_LAYER)
+        print(f"written: {args.db}.{senses.SENSE_LAYER} build='{build_label}' — {written:,} senses, "
+              f"{sealed['cells']:,} cells in {time.time() - started:.0f}s")
+        print(f"         SEALED {sealed['fingerprint'][:16]}…  ({sealed['note']})")
+
     MigrationWriter(db).insert(DictionaryBuildDoc, manifest)
     print(f"         one manifest row in {DictionaryBuildDoc.Settings.name}")
     print()

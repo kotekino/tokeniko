@@ -19,7 +19,7 @@ would be the standing law arriving by omission.
 
 from dataclasses import dataclass, field
 
-from tk2.dictionary import closure, distribution, glosses, relations
+from tk2.dictionary import closure, distribution, glosses, relations, senses
 from tk2.dictionary.closure import Digraph, SeedClosure
 from tk2.dictionary.config import DictionaryConfig
 from tk2.dictionary.matrix import Matrix
@@ -52,6 +52,10 @@ class BaseBuild:
     relational: Matrix
     #: D over the same dimensions, or `None` when the policy declares no gloss walk.
     distributional: Matrix | None = None
+    #: The SENSE LAYER over the same dimensions, or `None` when the build was not asked for it.
+    #: `None` rather than an empty list, because «not built» and «built and empty» are different
+    #: facts and a manifest that could not tell them apart would be a manifest nobody could read.
+    senses: tuple | None = None
     #: The closure's own account of itself — where it stopped, what it could not find, and what
     #: sits one ring past the cut. Carried because a build's manifest is not only its counts.
     closure: SeedClosure = None
@@ -77,6 +81,13 @@ class BaseBuild:
                 "d_cells": d_stats["nonzero"],
                 "d_silent_rows": d_stats["silent_rows"],
             }
+        if self.senses is not None:
+            # The layer's own numbers, and the unplaced count among them ON PURPOSE: a sense the
+            # geometry cannot see is one the station will have to ABSTAIN on, and a manifest that
+            # recorded only what was placed would make that a surprise rather than a fact.
+            counted |= {("senses_" + name if not name.startswith("senses") else name): value
+                        for name, value in senses.stats(self.senses).items()
+                        if isinstance(value, int)}
         return counted
 
 
@@ -86,6 +97,7 @@ def build_base(
     progress=None,
     antonym_symmetry: str | None = None,
     closed_forms=None,
+    with_senses: bool = False,
 ) -> BaseBuild:
     """THE build: the definition digraph, the seed closure, the dimensions, and R over them.
 
@@ -144,11 +156,22 @@ def build_base(
             dimensions, provider, config.distribution, closed=closed_forms
         )
 
+    placed = None
+    if with_senses:
+        # The layer is built over the resource's WHOLE lexicon, not over the dimensions' own words:
+        # the point of it is that a sense of a word the base does not contain still has a place in
+        # the base's space. `bank` is not a base dimension and `bank.n.02` is still placeable.
+        _step(progress, "senses")
+        placed = tuple(
+            senses.build(dimensions, provider.lexicon(), provider, config, closed=closed_forms)
+        )
+
     return BaseBuild(
         words=result.words,
         dimensions=dimensions,
         relational=relational,
         distributional=distributional,
+        senses=placed,
         closure=result,
         graph_stats=graph_stats,
         one_ring_past=result.one_ring_past(graph),

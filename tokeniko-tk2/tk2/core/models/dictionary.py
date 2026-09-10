@@ -179,6 +179,14 @@ class DictionaryBuildDoc(LogicDocument, Timestamped):
 
     #: And the canonical policy itself, so a later reader can DIFF two builds instead of trusting
     #: two hashes to differ for the reason he assumes (`DictionaryConfig.as_dict()`).
+    #: THE BUILD LABEL its rows are stored under. Added at E1c, and the reason is a defect that had
+    #: been flagged as theoretical and then happened: a manifest recorded the POLICY a build ran and
+    #: never the label, so the only link to its rows was that the default label IS the head of the
+    #: config fingerprint. The moment two builds ran the same policy — E1b's rebuild and E1c's
+    #: layer — `find_one` on that fingerprint started returning whichever row came first, and a
+    #: verifier printed one build's authorization beside another build's rows with a straight face.
+    build: Annotated[str, Indexed()] = ""
+
     policy: dict = Field(default_factory=dict)
 
     policy_version: int = Field(ge=1)
@@ -269,6 +277,69 @@ class BaseKeyDoc(LogicDocument, Timestamped):
         indexes = [
             IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
             IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
+        ]
+
+
+class SenseVectorDoc(LogicDocument, Timestamped):
+    """logic (r) — one SENSE, placed in the base's space. The dictionary's second floor.
+
+    THE BASE IS THE FRAME, THE SENSES ARE THE CONTENT, and that division is E1c's whole ruling. A
+    base dimension is one word under one part of speech and it reads its definition from WordNet's
+    FIRST synset — which is why `small.n` reads «the slender part of the back» and why that was
+    called a defect all through E1. It stops being one here: `small.a` is a frame, and
+    `small.a.01 … small.a.09` each carry their own reading. The 4,555 dimensions cover 17,257 senses
+    at a mean of 3.79 apiece, and 73% of what a dimension means was being discarded until this table.
+
+    IT RIDES ON THE BASE AND IS NEVER SQUARE (the architecture guard, tkzip req 11): a sense's cells
+    are BASE DIMENSIONS, never other senses. 120,475 senses against 4,555 dimensions is half a
+    billion possible cells and about half a million real ones; a senses×senses matrix would be
+    14.5 BILLION and is the mistake this shape exists to make impossible.
+
+    TWO VECTORS, MIRRORING THE TWO FLOORS. `distribution` is the sense's own gloss reduced through
+    the same seam D uses — requirement 21's repair, the stop-list ruling, the name refusal and the
+    structure filter all hold, because a second reduction would re-open every one of them quietly.
+    `relations` is what WordNet states about THIS SYNSET, which is evidence the base structurally
+    cannot hold: relations are stated per synset, and collapsing synsets to POS keys is what lost
+    them. `bank.n.02` knows it is a financial institution; `bank.n` cannot.
+
+    Measured before it was built: the gloss reaches 3.41 base dimensions on average and is empty for
+    5.3% of senses; the synset's relations reach 0.86 and are empty for 54.1%. Relations alone are
+    far too thin to place a sense — which is why both are here, and why `relations` may legitimately
+    be empty on a row whose `distribution` is not.
+    """
+
+    #: Which build placed this sense. A sense vector is only meaningful against the key space it was
+    #: computed over, and two builds may sit in one database.
+    build: Annotated[str, Indexed()] = Field(min_length=1)
+
+    #: The tk2 sense key, word-anchored: `left.a.01`. It truncates to its base key, which WordNet's
+    #: own synset name does not — `left.a.01` may live in a synset called `leftover.s.01`.
+    key: str = Field(min_length=1)
+    #: The base dimension this sense is a reading OF. Indexed because «every sense of `small.a`» is
+    #: the question the station will ask most.
+    base: Annotated[str, Indexed()] = Field(min_length=1)
+    #: Which reading of that dimension, 1-based, in WordNet's own sense order.
+    ordinal: int = Field(ge=1)
+
+    #: WordNet's own name for the synset, kept as PROVENANCE and never used as an identifier: it is
+    #: what makes a build auditable against the resource, and what a version bump would be diffed on.
+    synset: str = Field(min_length=1)
+    #: The definition this sense was placed from, verbatim. Stored because a vector nobody can trace
+    #: back to the words that produced it is a vector nobody can argue with.
+    definition: str = ""
+
+    #: Over BASE dimensions: what this sense's own definition shares with the base's vocabulary.
+    distribution: list[StoredCell] = Field(default_factory=list)
+    #: Over BASE dimensions: what WordNet states about this synset. Empty for the majority of
+    #: senses, and that is a finding rather than a fault — most of a synset's relatives are not base
+    #: words.
+    relations: list[StoredCell] = Field(default_factory=list)
+
+    class Settings:
+        name = "dictionary_sense_vectors"
+        indexes = [
+            IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
+            IndexModel([("build", ASCENDING), ("base", ASCENDING), ("ordinal", ASCENDING)]),
         ]
 
 

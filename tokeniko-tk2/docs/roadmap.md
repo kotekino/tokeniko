@@ -37,10 +37,11 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] thirteen migrations → one baseline; all nine policy versions carried with their notes verbatim
 - [x] rebuilt and proved: `9824ef46…` reproduces, every collection identical row by row
 
-## E1c — the sense layer *(NEXT — before E2, the Captain's ruling)*
-- [ ] the sense vector: how a sense's D-vector over base dims is derived (his ruling)
-- [ ] sense selection: `senses="primary"` and its measured rot (his ruling)
-- [ ] the 120,475 senses built ON the base — never a senses×senses matrix
+## E1c — the sense layer ✅ 2026-09-10 — see `landed.md`
+- [x] the sense vector ruled: BOTH floors — gloss over base dims, and the synset's own relations
+- [x] sense selection ruled: `senses="primary"` stands — the base is the frame, the senses the content
+- [x] **120,475 senses placed (96.9%), 816,309 cells, sealed and read back whole**
+- [x] the manifest names its own build (a T5 finding that became real when two builds shared a policy)
 
 ## E2 — the format (tkzip v2)
 - [ ] role inventory (VerbNet ref; source; part/determination split)

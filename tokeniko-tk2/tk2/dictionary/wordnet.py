@@ -92,6 +92,10 @@ LEMMA_SCOPES = (SCOPE_SYNSET, SCOPE_WORD)
 _UNCACHED = object()
 
 
+class InvalidSense(ValueError):
+    """A sense key that names a reading the resource does not have — see `relations_of_sense`."""
+
+
 class LemmaScopeUndeclared(RuntimeError):
     """A relation was asked of a provider whose lemma scope nobody declared.
 
@@ -402,50 +406,80 @@ class WordNetProvider:
         return cached
 
     def _mine_relations(self, key: str) -> dict[str, frozenset[str]]:
+        """Every relation the base dimension states — walked over ALL of its synsets."""
         found: dict[str, set[str]] = {}
+        word, _pos = keys.split_key(key)
+        for synset in self._synsets_of(key):
+            self._state_relations(synset, word, found)
+        return {relation: frozenset(targets) for relation, targets in found.items()}
+
+    def relations_of_sense(self, sense: str) -> dict[str, frozenset[str]]:
+        """Every relation ONE SENSE states — the same walk over its one synset.
+
+        This is the evidence the base structurally cannot hold. WordNet states its relations per
+        SYNSET, and collapsing synsets to POS keys is what lost them: `bank.n.02` knows it is a
+        financial institution and `bank.n` cannot, because `bank.n` is every reading at once.
+
+        The same `_state_relations` walk as the base's, deliberately — a second walk would be a
+        second set of decisions about which readings are renamed and whose lemma may speak, and the
+        two would drift apart in a way no fingerprint could see.
+        """
+        if self._lemma_scope is None:
+            raise LemmaScopeUndeclared(
+                "this provider was built without a lemma scope, so it cannot say which lemmas of a "
+                "synset may state its antonymy and derivation. The scope is a policy row."
+            )
+        found: dict[str, set[str]] = {}
+        word, _pos, ordinal = keys.split_sense_key(sense)
+        synsets = self.synsets_of_key(keys.base_of(sense), "all")
+        if ordinal > len(synsets):
+            raise InvalidSense(
+                f"{sense!r} names reading {ordinal} of {keys.base_of(sense)!r}, which has "
+                f"{len(synsets)}. A sense key is only meaningful against the resource it was minted "
+                f"from — a WordNet bump can move a word's sense order."
+            )
+        self._state_relations(synsets[ordinal - 1], word, found)
+        return {relation: frozenset(targets) for relation, targets in found.items()}
+
+    def _state_relations(self, synset, word: str, found: dict[str, set[str]]) -> None:
+        """ONE synset's relations, added to `found`. The single walk both floors read through."""
 
         def state(relation: str, target) -> None:
             found.setdefault(relation, set()).add(target.name())
 
-        word, _pos = keys.split_key(key)
-        for synset in self._synsets_of(key):
-            # WHOSE LEMMA SPEAKS is the one thing `lemma_scope` decides, and it decides it for these
-            # two relations only, because these are the two WordNet states between LEMMAS. Under
-            # `synset` (the standing reading, and the prototype's) a dimension inherits the
-            # oppositions and derivations of every word it shares a synset with; under `word` it
-            # keeps its own. Which is right is the Captain's, and the measurement is
-            # `tools/build_dictionary.py --compare-lemma-scope`.
-            for lemma in synset.lemmas():
-                if self._lemma_scope == SCOPE_WORD and lemma.name().lower() != word:
-                    continue
-                for antonym in lemma.antonyms():
-                    state("antonym", antonym.synset())
-                for derived in lemma.derivationally_related_forms():
-                    state("derivational", derived.synset())
-            for target in synset.entailments():
-                state("entails", target)
-            for target in synset.causes():
-                state("causes", target)
-            for target in synset.verb_groups():
-                state("verb_group", target)
-            for target in synset.similar_tos():
-                state("similar_to", target)
-            for target in synset.attributes():
-                state("attribute", target)
-            for target in synset.also_sees():
-                state("also_see", target)
-            for target in synset.part_meronyms() + synset.member_meronyms() + synset.substance_meronyms():
-                state("meronym", target)
-            for target in synset.part_holonyms() + synset.member_holonyms() + synset.substance_holonyms():
-                state("holonym", target)
-            for target in synset.hyponyms():
-                state("troponym" if synset.pos() == "v" else "hyponym_1", target)
-            for target in synset.hypernyms() + synset.instance_hypernyms():
-                state("hypernym_1", target)
-                for grandparent in target.hypernyms():
-                    state("hypernym_2", grandparent)
-
-        return {relation: frozenset(targets) for relation, targets in found.items()}
+        # WHOSE LEMMA SPEAKS is the one thing `lemma_scope` decides, and it decides it for these
+        # two relations only, because these are the two WordNet states between LEMMAS. Under
+        # `synset` (the prototype's reading) a dimension inherits the oppositions and derivations of
+        # every word it shares a synset with; under `word` — ruled standing at v4 — it keeps its own.
+        for lemma in synset.lemmas():
+            if self._lemma_scope == SCOPE_WORD and lemma.name().lower() != word:
+                continue
+            for antonym in lemma.antonyms():
+                state("antonym", antonym.synset())
+            for derived in lemma.derivationally_related_forms():
+                state("derivational", derived.synset())
+        for target in synset.entailments():
+            state("entails", target)
+        for target in synset.causes():
+            state("causes", target)
+        for target in synset.verb_groups():
+            state("verb_group", target)
+        for target in synset.similar_tos():
+            state("similar_to", target)
+        for target in synset.attributes():
+            state("attribute", target)
+        for target in synset.also_sees():
+            state("also_see", target)
+        for target in synset.part_meronyms() + synset.member_meronyms() + synset.substance_meronyms():
+            state("meronym", target)
+        for target in synset.part_holonyms() + synset.member_holonyms() + synset.substance_holonyms():
+            state("holonym", target)
+        for target in synset.hyponyms():
+            state("troponym" if synset.pos() == "v" else "hyponym_1", target)
+        for target in synset.hypernyms() + synset.instance_hypernyms():
+            state("hypernym_1", target)
+            for grandparent in target.hypernyms():
+                state("hypernym_2", grandparent)
 
     def definition_of_sense(self, sense: str) -> str:
         """ONE sense's definition — what a curated edge quotes as its evidence. Not the word's

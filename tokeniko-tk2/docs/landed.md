@@ -96,3 +96,54 @@ correct: a matrix's name is inside its content hash, and the name changed.
 *Inherited flags: `db/archive/` must stay readable and never runnable — `discover()` does not descend
 into it, and a test holds that · `db/data/declared_rows.json` is 744 KB of curated rows and its diff
 is the audit trail: a changed NOTE shows there as plainly as a changed value.*
+
+---
+
+## E1c — the sense layer ✅ 2026-09-10
+
+*The dictionary's second floor, and the half E1 did not build. Ruled before E2 on the Captain's
+word: E3's parser resolves a word to a SENSE, and discovering that mid-station would be expensive.*
+
+**What stands, in `tokeniko_tk2.dictionary_sense_vectors`** — one row per sense, sealed like a
+matrix, read back WHOLE:
+
+| | |
+|---|---|
+| senses | **120,475** |
+| placed | **116,725 (96.9%)** |
+| cells | **816,309** (693,811 distribution + 122,498 relations) |
+| unplaced | 3,750 (3.1%) — no gloss word and no relation reaches the base |
+| build | ~4½ minutes; the base itself unchanged at `9824ef46…` |
+
+**The ruling, in one sentence: THE BASE IS THE FRAME, THE SENSES ARE THE CONTENT.** A base dimension
+is one word under one part of speech reading WordNet's first synset. `small.n` reads «the slender
+part of the back» — called a defect all through E1 — and it stops being one here, because the other
+readings finally have somewhere to live. The base's 4,555 dimensions cover 17,257 senses at a mean of
+3.79 apiece; 73% of what a dimension means was being discarded until this table.
+
+**Two vectors, mirroring the two floors**, so one law reads both. The `relations` half is the point:
+WordNet states relations per SYNSET, and collapsing synsets to POS keys is what lost them —
+`bank.n.01` reaches `slope`, `bank.n.02` reaches `financial institution`, `bank.n` is both at once
+and reaches neither cleanly. Measured before it was built: the gloss reaches 3.41 base dimensions and
+is empty for 5.3% of senses; the relations reach 0.86 and are empty for 54.1%. Neither alone places a
+sense.
+
+**Never square, and the row's shape is what enforces it** (tkzip req 11): a sense's cells are BASE
+DIMENSIONS. 120,475 × 4,555 is half a billion possible cells; senses×senses would be **14.5 billion**.
+
+**`senses="primary"` stands for the base**, now with a reason. Both alternatives were measured:
+`senses="all"` triples the key space and collapses the local order to 1/7; the UNION of a dimension's
+senses buys +5 on global order but **buries 15 stated oppositions**, lifts every FAR control and
+flips `land.v~leave.v` positive — a thirteen-word vector shares words with everything.
+
+**The distribution vector is an indicator and says so.** Scoring it as an overlap was tried first:
+94.8% of cells landed on the cap anyway, the same saturation that halved D's gate at T4, and the 5%
+that varied varied by definition LENGTH — a fact about prose, not about meaning. The `weighting` seam
+is kept so a later `idf` ruling makes the cells stop being flat.
+
+*Inherited flags: an **unplaced sense** (3.1%) is one the station will ABSTAIN on — the count is in
+the manifest so it is predictable rather than surprising · the **acceptance floors are the base's**,
+measured over base-to-base cosines, and whether a sense-to-base reading is judged by the same numbers
+is E3's question · `dictionary_builds` gained a `build` field: the T5 finding that a manifest could
+not name its own rows became real the moment two builds shared one policy, and the two pre-fix rows
+are left in the ledger because a ledger records what happened.*

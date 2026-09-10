@@ -39,6 +39,7 @@ from pymongo.database import Database
 from tk2.core.models import BaseDistributionDoc, BaseKeyDoc, BaseRelationDoc, BaseSealDoc
 from tk2.datatier.migration_writer import MigrationWriter
 from tk2.dictionary import keys, matrix as matrix_module
+from tk2.dictionary.senses import SENSE_LAYER, fingerprint as sense_fingerprint
 from tk2.dictionary.matrix import Cell, Matrix, MatrixRow
 
 #: Which collection holds which matrix. D joined at T4 — one line, because the shape is the same
@@ -163,6 +164,77 @@ class MongoMatrixStore:
             },
         )
         return len(rows)
+
+    def write_senses(self, placed, build: str, progress=None) -> int:
+        """Store the SENSE LAYER under a build label, and seal it like a matrix.
+
+        Same four steps in the same order as `write`, for the same reason: seal off, delete, chunk,
+        count back, seal. A sense layer is not a matrix — it is not square and never will be — but a
+        half-written one is exactly as unreadable as a half-written matrix, so it earns the same
+        protection rather than a lighter one because its shape is different.
+
+        Chunked by the cells a row actually carries, not by a row count: a sense placed by fourteen
+        base words and one by none are two very different documents, and a fixed chunk size would be
+        sized for the wrong one.
+        """
+        from tk2.core.models import SenseVectorDoc
+
+        self._break_seal(build, SENSE_LAYER)
+        collection = self._writer.collection(SenseVectorDoc)
+        collection.delete_many({"build": build})
+
+        chunks = list(_chunked(
+            list(placed),
+            cost=lambda s: ROW_BYTES + CELL_BYTES * (len(s.distribution) + len(s.relations)),
+        ))
+        written = cells = 0
+        for position, chunk in enumerate(chunks, start=1):
+            self._writer.insert_many(SenseVectorDoc, [
+                {
+                    "build": build,
+                    "key": sense.key,
+                    "base": sense.base,
+                    "ordinal": sense.ordinal,
+                    "synset": sense.synset,
+                    "definition": sense.definition,
+                    "distribution": [cell.as_row() for cell in sense.distribution],
+                    "relations": [cell.as_row() for cell in sense.relations],
+                }
+                for sense in chunk
+            ])
+            written += len(chunk)
+            cells += sum(len(s.distribution) + len(s.relations) for s in chunk)
+            if progress is not None:
+                progress(position, len(chunks), written)
+
+        stored = collection.count_documents({"build": build})
+        self._writer.insert_many(BaseSealDoc, [{
+            "build": build,
+            "name": SENSE_LAYER,
+            "rows": stored,
+            "cells": cells,
+            "fingerprint": sense_fingerprint(placed),
+        }])
+        return stored
+
+    def senses(self, build: str, base: str | None = None) -> list[dict]:
+        """The sense layer back, or just the readings of one base dimension.
+
+        REFUSES AN UNSEALED LAYER, exactly as a matrix read does. «Every sense of `small.a`» is the
+        question the station will ask most, so `base` is a first-class argument rather than a filter
+        the caller is left to write — and the index is built for it.
+        """
+        from tk2.core.models import SenseVectorDoc
+
+        self._require_seal(build, SENSE_LAYER)
+        query = {"build": build}
+        if base is not None:
+            query["base"] = base
+        return list(
+            self._db[SenseVectorDoc.Settings.name]
+            .find(query, {"_id": 0})
+            .sort([("base", 1), ("ordinal", 1)])
+        )
 
     def write_keys(self, dimensions, build: str) -> int:
         """THE dimension order of a build. Idempotent, and loud when it is asked to change.

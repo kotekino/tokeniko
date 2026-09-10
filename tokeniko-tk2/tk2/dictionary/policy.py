@@ -584,6 +584,7 @@ def manifest_row(
     counts: Mapping[str, int],
     authorization: str,
     note: str = "",
+    build: str = "",
 ) -> dict:
     """THE ledger entry, assembled from the same rows the build read — `DictionaryBuildDoc`'s shape.
 
@@ -595,6 +596,9 @@ def manifest_row(
     policy_rows = list(policy_rows)
     bar_rows = list(bar_rows)
     return {
+        # The label its rows are under. Since E1c, because two builds may share a policy — and then
+        # the config fingerprint stops identifying either of them.
+        "build": build,
         "config_fingerprint": config.fingerprint(),
         "policy": config.as_dict(),
         "policy_version": policy_version(policy_rows),

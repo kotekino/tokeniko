@@ -385,7 +385,7 @@ database retired — `tokeniko_tk2` is now the one name it allows rather than on
 
 ---
 
-## E1c — The sense layer *(next)*
+## E1c — The sense layer *(done 2026-09-10)*
 
 **Goal:** the full dictionary. E1 built the BASE — 4,555 POS-split keys, the frame the geometry is
 stated over. The resource carries **68,779 words and 120,475 senses**, and those RIDE ON the base: a
@@ -396,16 +396,51 @@ guard, tkzip req 11 — **never a senses×senses matrix**).
 discovering that mid-station would be expensive. The Captain ruled it first on 2026-09-10: «we should
 take care of it before anything else».
 
-**The two decisions E1 deliberately left open** — both are rulings, both need measuring first:
-1. **The sense vector** — how a sense's D-vector over base dims is derived, and whether R is
-   consulted per sense or per key.
-2. **Sense selection** — `senses="primary"` is the standing walk and its rot is measured and
-   documented (task 3 above): `small` reads as «the slender part of the back». That is a BASE
-   problem today and becomes a SENSE problem the moment senses are first-class.
+**The two decisions, MEASURED then RULED 2026-09-10:**
+
+1. **The sense vector: BOTH floors, mirroring the base.** A sense carries a `distribution` vector
+   (its own definition through the same seam D uses) and a `relations` vector (what WordNet states
+   about THIS SYNSET, mapped onto base dimensions). Measured first: the gloss reaches **3.41** base
+   dimensions on average and is empty for 5.3% of senses; the synset's relations reach **0.86** and
+   are empty for **54.1%**. Relations alone cannot place a sense — which is why both, and why a row
+   with empty `relations` is the normal case rather than a fault.
+   *The relations are the point of the layer*: WordNet states them per SYNSET, and collapsing
+   synsets to POS keys is what lost them. `bank.n.01` reaches `slope`, `bank.n.02` reaches
+   `financial institution`, and `bank.n` is both at once and so reaches neither cleanly.
+   The distribution vector is an **indicator** and says so: a sense is placed against a DIMENSION,
+   which is one word and not a definition, so «this definition names `slope`» has no magnitude.
+   Measured the other way first — scoring one shared word against the definition's length — and
+   **94.8% of the cells landed on the cap anyway**, the same saturation that halved D's gate at T4.
+   The `weighting` seam is kept, so a later `idf` ruling makes the cells stop being flat.
+2. **Sense selection: `senses="primary"` STANDS for the base, now with a reason rather than by
+   default.** The rot was never in `primary` — it was in having nowhere else to put the other
+   readings. Both alternatives were measured and both cost more than they bought: `senses="all"`
+   triples the key space and collapses the local order to 1 of 7 (rejected at T4), and the UNION of
+   a dimension's senses into its gloss vector buys +5 on global order while **burying 15 stated
+   oppositions**, lifting every FAR control and flipping `land.v~leave.v` positive — because a
+   thirteen-word vector shares words with everything. **The base is the frame, the senses are the
+   content**, and that sentence is the whole ruling.
 
 **Answers to:** dictionary req «sense-split seam» (resolved in part at E1 — dimensions stop at POS;
 this is the other half) · tkzip req 9 (a wrong verb sense is a wrong action, so senses must stay
 distinguishable in the dictionary layer).
+
+**LANDED.** `dictionary_sense_vectors`: **120,475 senses, 116,725 placed (96.9%), 816,309 cells**,
+built in ~4½ minutes and sealed like a matrix — the layer reads back WHOLE or it does not read. The
+base is unchanged by it (`9824ef46…`), because the layer rides ON the dimensions and is never
+square: 120,475 × 4,555 is half a billion possible cells against 14.5 BILLION for senses×senses,
+which is the mistake the row's shape makes impossible to write.
+
+**One defect it surfaced, flagged at T5 as theoretical and now real:** a manifest recorded the
+POLICY a build ran and never the LABEL its rows are under, so the only link was that the default
+label IS the head of the config fingerprint. The moment two builds shared a policy — E1b's rebuild
+and E1c's layer — the verifier printed one build's authorization beside another build's rows.
+`DictionaryBuildDoc` gains `build`, and the verifier finds by it.
+
+*Open, and named rather than left to be discovered: **an unplaced sense** (3.1%) is one the station
+will have to ABSTAIN on — the count is in the manifest so that is predictable rather than
+surprising · the **acceptance floors are the base's**, measured over base-to-base cosines, and
+whether a sense-to-base reading is judged by the same numbers is E3's question, not answered here.*
 
 ---
 

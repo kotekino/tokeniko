@@ -34,6 +34,7 @@ import time
 from pathlib import Path
 
 from tk2.core import constants
+from tk2.dictionary.matrix import Cell
 from tk2.core.models import BaseKeyDoc, DictionaryBuildDoc
 from tk2.datatier import database
 from tk2.datatier.guard import DatabaseRefused
@@ -83,12 +84,51 @@ def verify(build: str, store: MongoMatrixStore) -> dict:
               f"{found['fingerprint_sealed'][:16]}…  "
               f"{'OK' if found['whole'] else 'FAILED'}")
 
-    # A manifest row does not carry the build LABEL at all — `DictionaryBuildDoc` records the
-    # policy a build ran and not the label its rows are under — so it is found by the one link that
-    # exists: the default label IS the head of the config fingerprint. A build labelled by hand
-    # breaks that link, and the run says so rather than showing the wrong row with a straight face.
+    # The sense layer, read back and re-hashed like a matrix. It is not a matrix — it is not square
+    # and never will be — but a half-written layer is exactly as unreadable as a half-written
+    # matrix, and a seal nobody checks is a promise nobody keeps.
+    from tk2.dictionary import senses as sense_layer
+
+    seal = store.seal(build, sense_layer.SENSE_LAYER)
+    if seal is None:
+        print(f"    {sense_layer.SENSE_LAYER:<16} absent (this build placed no senses)")
+    else:
+        rows = store.senses(build)
+        placed = tuple(
+            sense_layer.SenseVector(
+                key=row["key"], base=row["base"], ordinal=row["ordinal"], synset=row["synset"],
+                definition=row.get("definition", ""),
+                distribution=tuple(Cell.from_row(c) for c in row.get("distribution", ())),
+                relations=tuple(Cell.from_row(c) for c in row.get("relations", ())),
+            )
+            for row in rows
+        )
+        cells = sum(len(s.distribution) + len(s.relations) for s in placed)
+        digest = sense_layer.fingerprint(placed)
+        whole = (len(rows) == seal["rows"] and cells == seal["cells"]
+                 and digest == seal["fingerprint"])
+        findings["senses"] = {"rows": len(rows), "cells": cells, "whole": whole,
+                              "fingerprint": digest, "fingerprint_sealed": seal["fingerprint"]}
+        findings["whole"] &= whole
+        stats = sense_layer.stats(placed)
+        print(f"    {sense_layer.SENSE_LAYER:<16} {len(rows):>7,} senses (sealed {seal['rows']:,}) · "
+              f"{cells:>9,} cells (sealed {seal['cells']:,})")
+        print(f"    {'':<16} fingerprint {digest[:16]}… against sealed "
+              f"{seal['fingerprint'][:16]}…  {'OK' if whole else 'FAILED'}")
+        print(f"    {'':<16} placed {stats['placed']:,} · unplaced {stats['unplaced']:,} "
+              f"({100 * stats['unplaced'] / max(len(rows), 1):.1f}%) — an unplaced sense is one the "
+              f"station will ABSTAIN on, not a fault")
+
+    # BY LABEL since E1c, and the older fingerprint match kept as a fallback. A manifest used to
+    # record only the POLICY a build ran, so the only link to its rows was that the default label IS
+    # the head of the config fingerprint — and the moment two builds ran one policy (E1b's rebuild
+    # and E1c's layer) that link returned whichever row came first. The newest row wins the fallback,
+    # because a build that re-ran its own policy is describing the rows that are there NOW.
     ledger = store.database[DictionaryBuildDoc.Settings.name]
-    manifest = ledger.find_one({"config_fingerprint": {"$regex": f"^{build}"}})
+    manifest = ledger.find_one({"build": build})
+    if manifest is None:
+        manifest = ledger.find_one({"config_fingerprint": {"$regex": f"^{build}"}},
+                                   sort=[("created_at", -1)])
     if manifest is None:
         newest = ledger.find_one({}, sort=[("created_at", -1)])
         if newest is not None:
