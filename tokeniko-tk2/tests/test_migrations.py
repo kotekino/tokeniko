@@ -20,6 +20,7 @@ from tk2.datatier import traps
 from tests.seed import (
     all_poles,
     bar_rows,
+    bar_rows_v2,
     closed_class_forms,
     closed_class_rows,
     param_rows,
@@ -337,7 +338,7 @@ def test_0003_writes_the_policy_and_the_bar_as_declared(created):
     collection holds v1 AND v2, a v1 manifest row still has to point at something readable, and a
     query that named no version would be asking «the policy» of a ledger that holds two."""
     stored_policy = [r for r in created["dictionary_policy"].find({}) if r["version"] == 1]
-    stored_bar = list(created["dictionary_bar"].find({}))
+    stored_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
 
     assert {(r["kind"], r["name"]) for r in stored_policy} == {
         (r["kind"], r["name"]) for r in policy_rows()
@@ -362,13 +363,21 @@ def test_the_policy_read_back_from_the_database_is_the_one_that_was_declared(cre
     from tk2.dictionary import policy
 
     stored_policy = [r for r in created["dictionary_policy"].find({}) if r["version"] == 1]
-    stored_bar = list(created["dictionary_bar"].find({}))
+    # Version-explicit on BOTH tables since 0011 grew the bar: `bar_version` reads ACROSS versions
+    # (v2 means v1's rows plus v2's), so a query that named no version would hand v1's policy a bar
+    # of thirty-seven pairs and call the result v1's fingerprint.
+    stored_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
     config = policy.config_from_rows(stored_policy, stored_bar)
 
     assert config.fingerprint() == T2B_FINGERPRINT
     assert policy.policy_version(stored_policy) == 1
     assert policy.bar_version(stored_bar) == 1
-    assert policy.bar_fingerprint(stored_bar) == policy.bar_snapshot()["fingerprint"]
+    # The snapshot pins the LIVE bar (v1 + v2 since 0011), so it is checked against every row —
+    # `stored_bar` above is deliberately v1 only, because THAT is what v1's fingerprint was measured
+    # against.
+    assert policy.bar_fingerprint(
+        list(created["dictionary_bar"].find({}))
+    ) == policy.bar_snapshot()["fingerprint"]
 
 
 @live
@@ -454,7 +463,11 @@ def test_0005_writes_policy_version_2_beside_version_1_and_not_over_it(created):
     assert {(r["kind"], r["name"]) for r in v2} == {(r["kind"], r["name"]) for r in policy_rows_v2()}
     # The bar did not move with it: it is a separate, append-mostly table and v2 is measured against
     # the same eighteen pairs.
-    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+    # A POLICY migration must leave the BAR alone: v1's eighteen are still there, still live.
+    # Not «the bar has only v1» — 0011 adds v2, and the fixture applies the whole chain.
+    v1_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    assert len(v1_bar) == len(bar_rows())
+    assert all(r["retired_at"] is None for r in v1_bar)
 
 
 @live
@@ -469,7 +482,8 @@ def test_the_ruled_policy_reads_back_as_the_one_the_captain_ruled(created):
     from tk2.dictionary import policy
 
     stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 2]
-    stored_bar = list(created["dictionary_bar"].find({}))
+    # Bar v1 explicitly, since 0011: RULED_FINGERPRINT was measured against eighteen pairs.
+    stored_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
     config = policy.config_from_rows(stored, stored_bar)
 
     assert policy.policy_version(stored) == 2
@@ -512,7 +526,11 @@ def test_0006_writes_policy_version_3_beside_the_two_before_it(created):
     }
     # The bar still has not moved: it is a separate, append-mostly table, and a policy ruling is not
     # an occasion to re-declare the expectation the ruling will be judged by.
-    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+    # A POLICY migration must leave the BAR alone: v1's eighteen are still there, still live.
+    # Not «the bar has only v1» — 0011 adds v2, and the fixture applies the whole chain.
+    v1_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    assert len(v1_bar) == len(bar_rows())
+    assert all(r["retired_at"] is None for r in v1_bar)
 
 
 @live
@@ -525,7 +543,12 @@ def test_the_relation_weights_read_back_as_the_matrix_they_describe(created):
     from tk2.dictionary import policy
 
     stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 3]
-    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+    # Bar v1 EXPLICITLY, since 0011 grew the bar to thirty-seven: this fingerprint was measured
+    # against eighteen pairs, and the bar is inside the hash. Reading the live bar here would move a
+    # historical number every time the bar grows, which is the opposite of a regression.
+    config = policy.config_from_rows(
+        stored, [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    )
 
     assert policy.policy_version(stored) == 3
     assert config.fingerprint() == V3_FINGERPRINT
@@ -584,7 +607,12 @@ def test_the_ruled_lemma_scope_reads_back_from_the_database(created):
     from tk2.dictionary import policy
 
     stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 4]
-    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+    # Bar v1 EXPLICITLY, since 0011 grew the bar to thirty-seven: this fingerprint was measured
+    # against eighteen pairs, and the bar is inside the hash. Reading the live bar here would move a
+    # historical number every time the bar grows, which is the opposite of a regression.
+    config = policy.config_from_rows(
+        stored, [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    )
 
     assert policy.policy_version(stored) == 4
     assert config.relations.lemma_scope == "word"
@@ -605,7 +633,11 @@ def test_0008_writes_policy_version_5_beside_the_four_before_it(created):
     stored = list(created["dictionary_policy"].find({}))
     assert {1, 2, 3, 4, 5} <= {r["version"] for r in stored}
     assert len([r for r in stored if r["version"] == 5]) == len(policy_rows_v5())
-    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+    # A POLICY migration must leave the BAR alone: v1's eighteen are still there, still live.
+    # Not «the bar has only v1» — 0011 adds v2, and the fixture applies the whole chain.
+    v1_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    assert len(v1_bar) == len(bar_rows())
+    assert all(r["retired_at"] is None for r in v1_bar)
 
 
 @live
@@ -618,7 +650,12 @@ def test_version_5_is_the_policy_a_build_can_run_R_from(created):
     from tk2.dictionary import policy, relations
 
     stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 5]
-    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+    # Bar v1 EXPLICITLY, since 0011 grew the bar to thirty-seven: this fingerprint was measured
+    # against eighteen pairs, and the bar is inside the hash. Reading the live bar here would move a
+    # historical number every time the bar grows, which is the opposite of a regression.
+    config = policy.config_from_rows(
+        stored, [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    )
 
     assert policy.policy_version(stored) == 5
     assert config.fingerprint() == V5_FINGERPRINT
@@ -641,7 +678,11 @@ def test_0009_writes_policy_version_6_beside_the_five_before_it(created):
     assert len([r for r in stored if r["version"] == 5]) == len(policy_rows_v5())
     # The bar still has not moved: a policy ruling is not an occasion to re-declare the expectation
     # the ruling will be judged by.
-    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+    # A POLICY migration must leave the BAR alone: v1's eighteen are still there, still live.
+    # Not «the bar has only v1» — 0011 adds v2, and the fixture applies the whole chain.
+    v1_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    assert len(v1_bar) == len(bar_rows())
+    assert all(r["retired_at"] is None for r in v1_bar)
 
 
 @live
@@ -675,7 +716,12 @@ def test_version_6_can_build_both_matrices(created):
     from tk2.dictionary import policy
 
     stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 6]
-    config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+    # Bar v1 EXPLICITLY, since 0011 grew the bar to thirty-seven: this fingerprint was measured
+    # against eighteen pairs, and the bar is inside the hash. Reading the live bar here would move a
+    # historical number every time the bar grows, which is the opposite of a regression.
+    config = policy.config_from_rows(
+        stored, [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    )
 
     assert policy.policy_version(stored) == 6
     assert config.fingerprint() == V6_FINGERPRINT
@@ -692,26 +738,75 @@ def test_version_6_can_build_both_matrices(created):
 @live
 def test_0010_writes_policy_version_7_beside_the_six_before_it(created):
     stored = list(created["dictionary_policy"].find({}))
-    assert {r["version"] for r in stored} == {1, 2, 3, 4, 5, 6, 7}
+    assert {1, 2, 3, 4, 5, 6, 7} <= {r["version"] for r in stored}
     assert len([r for r in stored if r["version"] == 7]) == len(policy_rows_v7())
     assert len([r for r in stored if r["version"] == 6]) == len(policy_rows_v6())
     # The bar still has not moved, three rulings deep now: a policy ruling is not an occasion to
     # re-declare the expectation the ruling will be judged by.
-    assert {r["version"] for r in created["dictionary_bar"].find({})} == {1}
+    # A POLICY migration must leave the BAR alone: v1's eighteen are still there, still live.
+    # Not «the bar has only v1» — 0011 adds v2, and the fixture applies the whole chain.
+    v1_bar = [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    assert len(v1_bar) == len(bar_rows())
+    assert all(r["retired_at"] is None for r in v1_bar)
+
+
+def test_the_grown_bar_reads_back_as_thirty_seven_live_pairs(created):
+    """0011, live: the bar is a two-version ledger and `bar_version` reads ACROSS versions — v2
+    means v1's eighteen plus v2's nineteen, all live, none retired. The number a build records is
+    the newest version, and what it measured against is every unretired row."""
+    from tk2.dictionary import policy
+
+    stored_bar = list(created["dictionary_bar"].find({}))
+
+    assert {r["version"] for r in stored_bar} == {1, 2}
+    assert policy.bar_version(stored_bar) == 2
+    assert len(policy.bar_from_rows(stored_bar)) == 37
+    assert all(r["retired_at"] is None for r in stored_bar)
+    assert all(r["created_at"] > 0 for r in stored_bar)
+    assert {(r["a"], r["b"], r["verdict"]) for r in stored_bar if r["version"] == 2} == {
+        (r["a"], r["b"], r["verdict"]) for r in bar_rows_v2()
+    }
+
+
+@live
+def test_the_bar_growing_moved_version_sevens_hash_without_touching_its_policy(created):
+    """The bar is inside the config fingerprint, so 0011 moved v7's hash without editing one policy
+    row — and that is the mechanism working, not a defect: a build measured against thirty-seven
+    pairs must not be able to present the hash of one measured against eighteen."""
+    from tests.test_dictionary_policy import V7_AGAINST_BAR_V2, V7_FINGERPRINT
+    from tk2.dictionary import policy
+
+    stored = [r for r in created["dictionary_policy"].find({}) if r["version"] == 7]
+    grown = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
+    original = policy.config_from_rows(
+        stored, [r for r in created["dictionary_bar"].find({}) if r["version"] == 1]
+    )
+
+    assert len(grown.bar) == 37 and len(original.bar) == 18
+    assert grown.fingerprint() == V7_AGAINST_BAR_V2
+    assert original.fingerprint() == V7_FINGERPRINT
+    assert grown.distribution == original.distribution
+    assert grown.reading == original.reading
 
 
 @live
 def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(created):
     """The end of the chain, live: the newest rows name every value both matrices need AND the one
     value that says how to read them as one number — with nothing left for a default in code."""
-    from tests.test_dictionary_policy import V7_FINGERPRINT
+    from tests.test_dictionary_policy import STANDING_FINGERPRINT
     from tk2.dictionary import policy
 
     stored = policy.latest_version(list(created["dictionary_policy"].find({})))
+    # The LIVE bar here, deliberately: this test is about what a build actually runs, and since
+    # 0012 that is policy v8 measured against all thirty-seven pairs. The historical versions are
+    # pinned to bar v1 elsewhere; the standing reading is pinned to nothing but the newest rows.
     config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
 
-    assert policy.policy_version(stored) == 7
-    assert config.fingerprint() == V7_FINGERPRINT
-    assert config.reading is not None and config.reading.mix == 0.5
+    assert policy.policy_version(stored) == 8
+    assert len(config.bar) == 37
+    assert config.distribution.structure == "compiled"
+    assert config.reading.mix == 0.15
+    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.reading is not None and config.reading.mix == 0.15
     assert config.distribution.min_shared == 1
     assert dict(config.relations.weights)["derivational"] == 0.45

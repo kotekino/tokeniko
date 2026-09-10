@@ -17,7 +17,7 @@ import math
 import pytest
 
 from tests.lexicon_fixture import LEXICON, FixtureGlossProvider
-from tests.seed import distribution_policy, reading_policy
+from tests.seed import closed_class_forms, distribution_policy, reading_policy
 from tk2.dictionary import distribution, glosses, matrix
 from tk2.dictionary.config import DistributionPolicy
 
@@ -47,8 +47,19 @@ def walk():
 
 
 @pytest.fixture
-def D(dimensions, world, walk):
-    return distribution.build(dimensions, world, walk)
+def closed():
+    """The closed-class forms, injected exactly as a build injects them.
+
+    The standing walk reads structure as `compiled` since 2026-09-10, and `vocabulary_of` REFUSES
+    that reading with nothing injected rather than quietly admitting the words — so a fixture that
+    left this out would be testing a walk the body does not run.
+    """
+    return closed_class_forms()
+
+
+@pytest.fixture
+def D(dimensions, world, walk, closed):
+    return distribution.build(dimensions, world, walk, closed=closed)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -100,20 +111,20 @@ def test_every_cell_names_the_one_relation_D_can_state(D):
 # ------------------------------------------------------------------------------------------------
 
 
-def test_a_dimensions_gloss_is_read_through_the_closures_own_reduction(dimensions, world, walk):
+def test_a_dimensions_gloss_is_read_through_the_closures_own_reduction(dimensions, world, walk, closed):
     """«to go away from a place» names `go` and `place`, and the reduction is the one the digraph
     is built from — so requirement 21, the stop-list ruling and the name refusal hold here too."""
-    vectors = distribution.gloss_vectors(dimensions, world, walk)
+    vectors = distribution.gloss_vectors(dimensions, world, walk, closed)
     assert vectors["leave.v"] == frozenset({"go", "place"})
     # `left` is `leave`'s participle AND a word of its own: the token names both, and no winner is
     # picked at this layer (requirement 21, at the gloss level rather than at the key).
     assert vectors["go.v"] == frozenset({"move", "leave", "left"})
 
 
-def test_a_dimension_drops_its_own_word_from_its_own_definition(dimensions, world, walk):
+def test_a_dimension_drops_its_own_word_from_its_own_definition(dimensions, world, walk, closed):
     """A tautology states nothing about two concepts — and counting it would hand every POS-sibling
     pair a free shared word, which is exactly the pair (`land.n ~ land.v`) under review."""
-    vectors = distribution.gloss_vectors(dimensions, world, walk)
+    vectors = distribution.gloss_vectors(dimensions, world, walk, closed)
     for key, words in vectors.items():
         assert key.rsplit(".", 1)[0] not in words
 
@@ -126,27 +137,73 @@ def test_the_gloss_is_the_KEYs_and_not_the_words(world, walk):
     assert world.gloss_of_key("bed.v", "primary") == ""
 
 
-def test_the_vocabulary_is_the_base_or_the_lexicon_and_says_which(dimensions, world, walk):
+def test_the_vocabulary_is_the_base_or_the_lexicon_and_says_which(dimensions, world, walk, closed):
     """Under `base` the words counted are the base's own — the prototype's reading, and the one the
     subset's whole argument supports; under `lexicon` a definition may name a word the base lacks."""
     from dataclasses import replace
 
-    base = distribution.vocabulary_of(dimensions, world, walk)
-    assert base == frozenset(key.rsplit(".", 1)[0] for key in dimensions)
+    words = frozenset(key.rsplit(".", 1)[0] for key in dimensions)
+    structural = frozenset(w for w in words if w in closed)
+    assert structural, "the fixture world has to contain some function words or this proves nothing"
 
-    whole = distribution.vocabulary_of(dimensions, world, replace(walk, vocabulary="lexicon"))
-    assert whole == frozenset(LEXICON)
+    base = distribution.vocabulary_of(dimensions, world, walk, closed)
+    assert base == words - structural
+
+    whole = distribution.vocabulary_of(dimensions, world, replace(walk, vocabulary="lexicon"), closed)
+    assert whole == frozenset(LEXICON) - structural
     assert base <= whole
 
 
-def test_the_sense_cut_reaches_the_resource(dimensions, world, walk):
+def test_a_function_word_is_not_a_word_two_definitions_can_share(dimensions, world, walk, closed):
+    """The Captain's ruling of 2026-09-10, on the fixture: `me`, `not` and `you` are closed-class
+    forms AND dimensions of this little world, and under `compiled` they leave the vocabulary D
+    computes overlap from. They keep their own rows — a function word can still BE a dimension; it
+    just stops being evidence that two other dimensions are alike.
+
+    On the real base this is the difference between `agreeably.r ~ unpleasantly.r` reading +0.916
+    and reading -0.274: stated opposites whose glosses share `in a manner`.
+    """
+    from dataclasses import replace
+
+    admitted = distribution.vocabulary_of(dimensions, world, replace(walk, structure="admitted"), closed)
+    compiled = distribution.vocabulary_of(dimensions, world, walk, closed)
+
+    assert walk.structure == "compiled"
+    assert {"me", "not", "you"} <= admitted
+    assert not ({"me", "not", "you"} & compiled)
+    assert compiled < admitted
+
+
+def test_a_compiled_reading_with_nothing_injected_is_refused(dimensions, world, walk):
+    """Never a silent `admitted`: a build that would be CHANGED by the answer must not be given one
+    nobody declared. Same law as the lemma scope and the antonym mode."""
+    with pytest.raises(distribution.DistributionIncoherent):
+        distribution.vocabulary_of(dimensions, world, walk, None)
+
+
+def test_a_policy_from_before_the_question_reads_as_it_always_read(dimensions, world, walk):
+    """`None` is UNDECLARED, and it is not the same statement as `admitted`. Policy versions 6 and
+    7 were written before the question existed; they must keep building the D they always built, or
+    their recorded fingerprints stop naming what was measured."""
+    from dataclasses import replace
+
+    older = distribution.vocabulary_of(dimensions, world, replace(walk, structure=None), None)
+    admitted = distribution.vocabulary_of(
+        dimensions, world, replace(walk, structure="admitted"), None
+    )
+
+    assert older == admitted
+    assert {"me", "not", "you"} <= older
+
+
+def test_the_sense_cut_reaches_the_resource(dimensions, world, walk, closed):
     """`work`'s second reading is «the place where one labors», and under `all` it is part of the
     definition D is built from. The closure's cut governs membership; this one governs the geometry,
     and they are two rows because they are two questions about the same word."""
     from dataclasses import replace
 
-    primary = distribution.gloss_vectors(dimensions, world, walk)
-    every = distribution.gloss_vectors(dimensions, world, replace(walk, senses="all"))
+    primary = distribution.gloss_vectors(dimensions, world, walk, closed)
+    every = distribution.gloss_vectors(dimensions, world, replace(walk, senses="all"), closed)
     assert "place" not in primary["work.n"]
     assert "place" in every["work.n"]
 
@@ -192,17 +249,17 @@ def test_below_the_floor_nothing_is_written(walk):
     assert distribution.value_of(5, 5, 5, high) == pytest.approx(high.cap)
 
 
-def test_min_shared_counts_WORDS_and_not_weight(dimensions, world, walk):
+def test_min_shared_counts_WORDS_and_not_weight(dimensions, world, walk, closed):
     """The floor that does the sizing at the real base. It is a count of shared words on purpose: a
     mass floor would move every time the weighting did, and «how much evidence is there» is not the
     same question as «how much is that evidence worth»."""
     from dataclasses import replace
 
-    one = distribution.build(dimensions, world, walk)
-    two = distribution.build(dimensions, world, replace(walk, min_shared=2))
+    one = distribution.build(dimensions, world, walk, closed=closed)
+    two = distribution.build(dimensions, world, replace(walk, min_shared=2), closed=closed)
     assert two.stats()["nonzero"] < one.stats()["nonzero"]
 
-    vectors = distribution.gloss_vectors(dimensions, world, walk)
+    vectors = distribution.gloss_vectors(dimensions, world, walk, closed)
     for row in two.rows:
         for cell in row.cells:
             if cell.source == matrix.SOURCE_AXIS:
@@ -215,14 +272,14 @@ def test_min_shared_counts_WORDS_and_not_weight(dimensions, world, walk):
 # ------------------------------------------------------------------------------------------------
 
 
-def test_uniform_means_one_word_one_vote(dimensions, world, walk):
-    assert distribution.word_weights(distribution.gloss_vectors(dimensions, world, walk), walk) == {}
+def test_uniform_means_one_word_one_vote(dimensions, world, walk, closed):
+    assert distribution.word_weights(distribution.gloss_vectors(dimensions, world, walk, closed), walk) == {}
 
 
-def test_idf_weighs_a_rare_word_above_a_common_one(dimensions, world, walk):
+def test_idf_weighs_a_rare_word_above_a_common_one(dimensions, world, walk, closed):
     from dataclasses import replace
 
-    vectors = distribution.gloss_vectors(dimensions, world, walk)
+    vectors = distribution.gloss_vectors(dimensions, world, walk, closed)
     weights = distribution.word_weights(vectors, replace(walk, weighting="idf"))
     frequency = distribution.document_frequency(vectors)
 
@@ -248,13 +305,13 @@ def test_a_word_nobody_can_avoid_is_worth_little_and_never_nothing(dimensions, w
 # ------------------------------------------------------------------------------------------------
 
 
-def test_the_pair_figure_is_membership_and_the_mass_figure_is_weighting(dimensions, world, walk):
+def test_the_pair_figure_is_membership_and_the_mass_figure_is_weighting(dimensions, world, walk, closed):
     """Two numbers rather than one, because they answer different questions: which pairs rest on
     nothing but the words everybody uses (a weighting cannot move it — only a filter could), and how
     much of the shared mass those words carry (which is exactly what a weighting moves)."""
     from dataclasses import replace
 
-    vectors = distribution.gloss_vectors(dimensions, world, walk)
+    vectors = distribution.gloss_vectors(dimensions, world, walk, closed)
     frequency = distribution.document_frequency(vectors)
     # The world's OWN loudest words, so the fixture is asking the question the real base asks: at
     # the full base these are `in`, `by`, `be`, `as`, and what makes them junk is their frequency.

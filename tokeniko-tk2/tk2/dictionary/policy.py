@@ -121,6 +121,14 @@ DISTRIBUTION_SETTINGS = (
     "identity",
 )
 
+#: Settings a policy version MAY declare without being incomplete — the walk's questions that were
+#: asked after some versions were already written. `structure` arrived at v8 (2026-09-10); v6 and v7
+#: declared a complete walk without it and must keep reading back as the walks they were, so its
+#: absence is «undeclared» and not «missing». A version that declares it and then leaves out a
+#: REQUIRED setting is still refused: this list widens what a complete walk may say, never what it
+#: may leave out.
+DISTRIBUTION_OPTIONAL = ("structure",)
+
 #: One setting of the DUAL READ — how R and D are read together. `name` is the `ReadingPolicy`
 #: field, `value` what it is set to. Its own kind rather than a `distribution` row, because the mix
 #: is not D's: it is a property of reading the two matrices at once, and a row filed under D would
@@ -317,7 +325,7 @@ def distribution_from_rows(rows: Iterable[Row]) -> DistributionPolicy | None:
     if not declared:
         return None
 
-    unknown = sorted(set(declared) - set(DISTRIBUTION_SETTINGS))
+    unknown = sorted(set(declared) - set(DISTRIBUTION_SETTINGS) - set(DISTRIBUTION_OPTIONAL))
     if unknown:
         raise PolicyRowsInvalid(
             f"distribution rows name settings the policy has no field for: {unknown}. "
@@ -342,6 +350,9 @@ def distribution_from_rows(rows: Iterable[Row]) -> DistributionPolicy | None:
             cap=float(declared["cap"]),
             floor=float(declared["floor"]),
             identity=float(declared["identity"]),
+            # Absent for v6 and v7, which were written before the question existed. `None` there
+            # is the honest reading and it is what keeps their fingerprints where they were.
+            structure=declared.get("structure"),
         )
     except ValueError as error:
         raise PolicyRowsInvalid(str(error)) from error
@@ -745,9 +756,14 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
 
     if config.distribution is not None:
         walk = config.distribution
+        # An optional setting is written only when the version declares it: a row saying
+        # `structure = None` would be v6 claiming to have answered a question it never faced.
+        written = [*DISTRIBUTION_SETTINGS, *(
+            name for name in DISTRIBUTION_OPTIONAL if getattr(walk, name) is not None
+        )]
         rows += [
             entry(KIND_DISTRIBUTION, name, getattr(walk, name), i, family="gloss")
-            for i, name in enumerate(DISTRIBUTION_SETTINGS)
+            for i, name in enumerate(written)
         ]
 
     if config.reading is not None:

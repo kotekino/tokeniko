@@ -16,7 +16,7 @@ from tests.lexicon_fixture import (
     FixtureGlossProvider,
     FixtureRelationProvider,
 )
-from tests.seed import distribution_policy, relation_policy
+from tests.seed import closed_class_forms, distribution_policy, relation_policy
 from tk2.dictionary import build, glosses
 from tk2.dictionary.config import BarPair, ClosurePolicy, DictionaryConfig
 
@@ -145,7 +145,7 @@ def test_both_matrices_are_built_over_the_very_same_dimensions():
     """Not two key spaces computed the same way — the same object. It is the whole reason the key
     space is computed once and handed to both, and the reason a reader may compare them cell for
     cell."""
-    built = build.build_base(config(distribution=_walk()), World())
+    built = build.build_base(config(distribution=_walk()), World(), closed_forms=closed_class_forms())
 
     assert built.distributional is not None
     assert built.distributional.keys == built.relational.keys == built.dimensions
@@ -154,7 +154,7 @@ def test_both_matrices_are_built_over_the_very_same_dimensions():
 
 
 def test_the_manifest_counts_both_geometries():
-    built = build.build_base(config(distribution=_walk()), World())
+    built = build.build_base(config(distribution=_walk()), World(), closed_forms=closed_class_forms())
     counts = built.counts()
 
     assert counts["d_cells"] == built.distributional.stats()["nonzero"]

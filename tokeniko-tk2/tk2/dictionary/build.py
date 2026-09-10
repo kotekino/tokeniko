@@ -85,12 +85,18 @@ def build_base(
     provider,
     progress=None,
     antonym_symmetry: str | None = None,
+    closed_forms=None,
 ) -> BaseBuild:
     """THE build: the definition digraph, the seed closure, the dimensions, and R over them.
 
     `provider` answers both protocols — the gloss seam the closure reads through and the relation
     seam R is filled from. One object because it is one resource, and two objects would be two
     chances for the membership and the geometry to be measured against different WordNets.
+
+    `closed_forms` is the `closed_classes` table (migration 0004), injected because the dictionary
+    package is pure and those are KB rows. D needs it whenever the policy reads structure as
+    `compiled`; the refusal for a missing one lives in `distribution.vocabulary_of`, which is the
+    only place that can tell whether it was needed.
     """
     if config.relations is None:
         raise PolicyIncomplete(
@@ -134,7 +140,9 @@ def build_base(
     distributional = None
     if config.distribution is not None:
         _step(progress, "distribution")
-        distributional = distribution.build(dimensions, provider, config.distribution)
+        distributional = distribution.build(
+            dimensions, provider, config.distribution, closed=closed_forms
+        )
 
     return BaseBuild(
         words=result.words,

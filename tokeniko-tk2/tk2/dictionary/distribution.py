@@ -88,7 +88,9 @@ class DefinitionProvider(Protocol):
 # ------------------------------------------------------------------------------------------------
 
 
-def vocabulary_of(dimensions, provider, policy: DistributionPolicy) -> frozenset[str]:
+def vocabulary_of(
+    dimensions, provider, policy: DistributionPolicy, closed=None
+) -> frozenset[str]:
     """The words a definition may be counted as naming.
 
     `base` derives it from the dimensions themselves rather than taking it as an argument, which is
@@ -96,13 +98,40 @@ def vocabulary_of(dimensions, provider, policy: DistributionPolicy) -> frozenset
     base's own words (the prototype's reading — the subset was chosen for defining itself), and
     under `lexicon` it is everything the resource knows, so a definition may share a word the base
     does not contain.
+
+    `closed` is the closed-class forms, INJECTED — `closed_classes` is a KB table (migration 0004)
+    and this module is pure, so the rows arrive the way the provider does. Under
+    `structure = "compiled"` they leave the vocabulary entirely: the standing law of 2026-08-25 says
+    a function word is compiled and never defined, and two definitions being counted as sharing `in`
+    is D defining one. The law was enforced on the seed RANKING when it was ruled and never here, so
+    until 2026-09-10 D computed a fifth of its evidence out of words that carry none —
+    `agreeably.r` and `unpleasantly.r` are stated opposites whose glosses share `in a manner`, and
+    they read +0.916 because of it.
+
+    A `compiled` reading with nothing injected is a refusal, not a silent `admitted`: it would build
+    a matrix that disagrees with its own fingerprint.
     """
     if policy.vocabulary == "base":
-        return frozenset(keys.word_of(key) for key in dimensions)
-    return frozenset(keys.normalize_word(word) for word in provider.lexicon())
+        words = frozenset(keys.word_of(key) for key in dimensions)
+    else:
+        words = frozenset(keys.normalize_word(word) for word in provider.lexicon())
+
+    if policy.structure is None or policy.structure == "admitted":
+        # `None` is a policy from before the question was asked (v6, v7). It reads as it always
+        # read, which is what keeps its recorded fingerprint honest — and it is NOT the same
+        # statement as `admitted`, which is a version that considered the question and said no.
+        return words
+    if closed is None:
+        raise DistributionIncoherent(
+            "the policy reads structure as 'compiled' and no closed-class forms were injected — "
+            "D cannot leave out words nobody named"
+        )
+    return frozenset(w for w in words if w not in closed)
 
 
-def gloss_vectors(dimensions, provider, policy: DistributionPolicy) -> dict[str, frozenset[str]]:
+def gloss_vectors(
+    dimensions, provider, policy: DistributionPolicy, closed=None
+) -> dict[str, frozenset[str]]:
     """Each dimension's definition, reduced to the vocabulary words it names.
 
     The dimension's own word is dropped for `definition_in_lexicon`'s reason: «land: the land on
@@ -110,7 +139,7 @@ def gloss_vectors(dimensions, provider, policy: DistributionPolicy) -> dict[str,
     every POS-sibling pair a free shared word — which is exactly the pair (`land.n ~ land.v`) the
     Captain is ruling on.
     """
-    vocabulary = vocabulary_of(dimensions, provider, policy)
+    vocabulary = vocabulary_of(dimensions, provider, policy, closed)
     vectors: dict[str, frozenset[str]] = {}
     for key in dimensions:
         text = provider.gloss_of_key(key, policy.senses)
@@ -207,6 +236,7 @@ def build(
     policy: DistributionPolicy,
     name: str = "base_d",
     progress=None,
+    closed=None,
 ) -> Matrix:
     """Fill D over `dimensions` — the call the build tool makes, beside R's.
 
@@ -224,7 +254,7 @@ def build(
     index = dimension_index(dimensions)
     order = tuple(index)
 
-    vectors = gloss_vectors(order, provider, policy)
+    vectors = gloss_vectors(order, provider, policy, closed)
     weights = word_weights(vectors, policy)
 
     def mass_of(word: str) -> float:

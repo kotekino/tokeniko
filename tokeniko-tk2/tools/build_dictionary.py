@@ -44,7 +44,7 @@ import time
 from dataclasses import fields, replace
 from pathlib import Path
 
-from tk2.datatier.policy_source import standing_bar, standing_policy
+from tk2.datatier.policy_source import closed_forms, standing_bar, standing_policy
 from tk2.dictionary import build, closure, distribution, glosses, keys, matrix, policy, relations
 from tk2.dictionary.config import DictionaryConfig, bar_words
 from tk2.dictionary.wordnet import (
@@ -84,7 +84,7 @@ JUNK_WORDS = frozenset({"in", "be", "by", "as"})
 
 
 def build_base(config: DictionaryConfig, lemma_scope: str,
-               antonym_symmetry: str | None = None):
+               antonym_symmetry: str | None = None, closed=None):
     """The base as the rows describe it, with the resource named out loud on the way through.
 
     The assembly itself is `tk2.dictionary.build`, so it is the same steps a test can run on a
@@ -105,7 +105,9 @@ def build_base(config: DictionaryConfig, lemma_scope: str,
     def say(step: str) -> None:
         print(f"  {step:<12} ({time.time() - started:.0f}s)", flush=True)
 
-    built = build.build_base(config, provider, say, antonym_symmetry=antonym_symmetry)
+    built = build.build_base(
+        config, provider, say, antonym_symmetry=antonym_symmetry, closed_forms=closed
+    )
     print(f"  {built.graph_stats['nodes']:,} nodes · {built.graph_stats['edges']:,} edges · "
           f"{built.graph_stats['silent']:,} silent definitions")
     print(f"  closure: {len(built.words):,} words -> {len(built.dimensions):,} dimensions "
@@ -500,6 +502,494 @@ def _reading_summary(reading: dict) -> dict:
 
 
 # ------------------------------------------------------------------------------------------------
+# THE ACCEPTANCE FLOORS — MEASURED HERE, DECLARED NOWHERE (T5, the Captain's ruling)
+# ------------------------------------------------------------------------------------------------
+#
+# The bar has been read threshold-free all through E1 on purpose: the cosine, the cells, MUTE, the
+# local order. T5 is where NEAR and FAR finally have to mean a number — and this file measures
+# candidates and states nothing. The floors are curation, they land in `ReadingPolicy` beside the
+# mix (a reading of two matrices, not a property of either), and they arrive as rows when the
+# Captain has ruled, exactly as the mix did.
+#
+# THE PROTOTYPE'S 0.30 / 0.15 IS A CANDIDATE LIKE ANY OTHER AND IS MEASURED AS ONE. It was
+# calibrated at 983 dimensions and its own justification has already failed to reproduce at scale
+# (`sleep~bed` 0.353 there, 0.154 here), so it is in the table to be read, never to be inherited.
+#
+# WHAT IS MEASURED AND WHY EACH PART IS HERE:
+#   - the POPULATION. A floor is a claim about how much of the base is NEAR, and a threshold read
+#     without the distribution behind it is a number nobody can size. This base's median pair reads
+#     +0.026 and its top decile starts at +0.131, which is the fact that decides most of the
+#     argument.
+#   - the FRONTIER over (NEAR floor, FAR ceiling). Every distinct decision boundary the eighteen
+#     readings admit, scored as decided-right / decided-WRONG / abstained. ABSTAIN is first-class in
+#     this project, so a shape that can say «I do not know» is measured beside the ones that cannot.
+#   - the WITNESSES. What a candidate floor actually admits, sampled and printed with the words
+#     behind each pair. A floor that reads well on eighteen curated pairs and admits nine hundred
+#     thousand junk ones is a floor that has to be seen to be argued with.
+#
+# numpy enters the project HERE, and only in this tool. Nine and a half million cosines is not a
+# pure-python loop, and `tk2/dictionary/` stays free of it: the pure side keeps its sparse rows and
+# this densifies a copy for one measurement.
+
+#: Where the population table is cut. Wide at the bottom because that is where the bar sits, and it
+#: runs to 0.9 because the top of this distribution is a FINDING and not a tail: rows whose whole
+#: gloss is function words are near-parallel, and the reader has to see how many.
+FLOOR_GRID = (-0.05, 0.0, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50, 0.70, 0.90)
+
+#: The quantiles printed for the population. p99.99 is in it because a floor that admits a tenth of
+#: the base and one that admits a ten-thousandth are different KINDS of claim.
+FLOOR_QUANTILES = (0.5, 0.75, 0.90, 0.95, 0.99, 0.999, 0.9999)
+
+#: The prototype's pair, kept as a named candidate so the table contains what NOT inheriting it
+#: means in numbers rather than as an assertion.
+PROTOTYPE_FLOORS = (0.30, 0.15)
+
+#: How many pairs at a candidate floor are sampled to say what it admits. Five thousand rather than
+#: fifty: the composition figure is a percentage and a percentage from fifty pairs is a mood.
+FLOOR_SAMPLE = 5000
+
+#: How many of those are printed with their evidence. Enough to read, few enough to read.
+FLOOR_WITNESSES = 20
+
+#: The sampler's seed, stated so the witnesses are the same witnesses on a re-run. A measurement
+#: whose examples change every time it is run is a measurement nobody can quote.
+FLOOR_SEED = 20260910
+
+
+def dual_vectors(built: build.BaseBuild, mix: float):
+    """Both matrices as ONE dense, L2-normalised array of 2n columns — the dual read, densified.
+
+    The same concatenation `matrix.blended_row` performs and in the same column order (R's, then D's
+    scaled by the mix), so a dot product here and `matrix.blended_cosine` there are the same number;
+    the run asserts that on the bar's own pairs rather than trusting it.
+    """
+    import numpy as np
+
+    keys = built.relational.keys
+    index = {key: i for i, key in enumerate(keys)}
+    n = len(keys)
+
+    dense = np.zeros((n, 2 * n), dtype=np.float32)
+    for row in built.relational.rows:
+        for cell in row.cells:
+            dense[row.index, index[cell.column]] = cell.weight
+    if mix:
+        for row in built.distributional.rows:
+            for cell in row.cells:
+                dense[row.index, n + index[cell.column]] = mix * cell.weight
+
+    norm = np.linalg.norm(dense, axis=1, keepdims=True)
+    norm[norm == 0] = 1.0
+    dense /= norm
+    return dense, index
+
+
+def population(vectors, grid=FLOOR_GRID, quantiles=FLOOR_QUANTILES, chunk: int = 512) -> dict:
+    """The whole upper triangle, as a histogram and the shares above a grid.
+
+    Chunked rather than materialised: the cosine matrix of this base is 79 MB and the next base's
+    will not be, and a measurement that only runs while the base is small is a measurement that
+    stops being run.
+    """
+    import numpy as np
+
+    n = vectors.shape[0]
+    edges = np.linspace(-1.0, 1.0, 4001)
+    hist = np.zeros(len(edges) - 1, dtype=np.int64)
+    total = 0
+    for start in range(0, n, chunk):
+        stop = min(start + chunk, n)
+        block = vectors[start:stop] @ vectors.T
+        for offset in range(stop - start):
+            row = block[offset, start + offset + 1:]
+            if row.size:
+                hist += np.histogram(row, bins=edges)[0]
+                total += row.size
+
+    cumulative = np.cumsum(hist)
+    centres = (edges[:-1] + edges[1:]) / 2
+
+    def at_quantile(q: float) -> float:
+        return float(centres[min(int(np.searchsorted(cumulative, q * total)), len(centres) - 1)])
+
+    def above(threshold: float) -> int:
+        bucket = max(0, min(int(np.searchsorted(edges, threshold)) - 1, len(hist) - 1))
+        return int(total - (cumulative[bucket - 1] if bucket else 0))
+
+    return {
+        "pairs": total,
+        "quantiles": {q: at_quantile(q) for q in quantiles},
+        "above": {t: above(t) for t in grid},
+        "negative": int(cumulative[int(np.searchsorted(edges, 0.0)) - 1]),
+        "_above": above,
+    }
+
+
+def floor_frontier(readings: list[tuple[str, str, float]]) -> list[dict]:
+    """Every (NEAR floor, FAR ceiling) the bar itself can distinguish, scored.
+
+    The candidate cuts are the MIDPOINTS between consecutive readings, which is the only honest
+    grid: a threshold set exactly on a measured value is a coin toss about that pair, and rounding
+    one to two decimals moves it across its own pair as often as not.
+    """
+    values = sorted({round(float(value), 6) for _a, _b, value in readings})
+    cuts = [values[0] - 0.01] + [(x + y) / 2 for x, y in zip(values, values[1:])] + [values[-1] + 0.01]
+
+    out = []
+    for near in cuts:
+        for far in cuts:
+            if far > near:
+                continue
+            decided = wrong = abstained = 0
+            errors = []
+            for a, b, value in readings:
+                if value >= near:
+                    decided += 1
+                    if b != "NEAR":
+                        wrong += 1
+                        errors.append(f"{a} called NEAR")
+                elif value <= far:
+                    decided += 1
+                    if b != "FAR":
+                        wrong += 1
+                        errors.append(f"{a} called FAR")
+                else:
+                    abstained += 1
+            out.append({"near": near, "far": far, "decided": decided, "wrong": wrong,
+                        "abstained": abstained, "errors": errors})
+    out.sort(key=lambda row: (row["wrong"], -row["decided"], -row["near"]))
+    return out
+
+
+def floor_composition(built: build.BaseBuild, vectors, gloss_vectors, index, floor: float,
+                      sample: int = FLOOR_SAMPLE, seed: int = FLOOR_SEED) -> dict:
+    """What sits above a candidate floor: how many pairs, how many of them R states anything about,
+    and what a random sample of them is actually made of.
+
+    The composition is the point. `pairs_only_junk` here is not `distribution.junk_pollution`'s
+    figure — that one is about every overlapping pair in D, and this one is about the pairs a FLOOR
+    would call NEAR, which is the population an acceptance verdict would actually be issued over.
+    """
+    import numpy as np
+
+    keys = built.relational.keys
+    n = len(keys)
+    rng = np.random.default_rng(seed)
+
+    above = 0
+    with_relation = 0
+    picked: list[tuple[float, str, str]] = []
+    for start in range(0, n, 512):
+        stop = min(start + 512, n)
+        block = vectors[start:stop] @ vectors.T
+        for offset in range(stop - start):
+            row = start + offset
+            hits = np.nonzero(block[offset, row + 1:] >= floor)[0] + row + 1
+            above += hits.size
+            for column in hits:
+                key, other = keys[row], keys[int(column)]
+                if built.relational.cell(key, other) or built.relational.cell(other, key):
+                    with_relation += 1
+    if above:
+        # A second pass to sample: the first counted, and drawing without knowing the total would
+        # weight the early rows. `share` is the acceptance probability that lands ~`sample` pairs.
+        share = min(1.0, sample / above)
+        for start in range(0, n, 512):
+            stop = min(start + 512, n)
+            block = vectors[start:stop] @ vectors.T
+            for offset in range(stop - start):
+                row = start + offset
+                hits = np.nonzero(block[offset, row + 1:] >= floor)[0] + row + 1
+                if not hits.size:
+                    continue
+                for column in hits[rng.random(hits.size) < share]:
+                    picked.append((float(block[offset, int(column)]), keys[row], keys[int(column)]))
+
+    made_of = {"only_junk": 0, "a_real_word": 0, "nothing_direct": 0}
+    witnesses = []
+    for value, a, b in picked:
+        shared = distribution.shared_words(gloss_vectors, a, b)
+        if not shared:
+            made_of["nothing_direct"] += 1
+        elif set(shared) <= JUNK_WORDS:
+            made_of["only_junk"] += 1
+        else:
+            made_of["a_real_word"] += 1
+        cell = built.relational.cell(a, b) or built.relational.cell(b, a)
+        witnesses.append({"cosine": value, "a": a, "b": b, "shared": shared,
+                          "relation": cell.relation if cell else None})
+    rng.shuffle(witnesses)
+    return {
+        "floor": floor,
+        "pairs": above,
+        "with_relation": with_relation,
+        "sampled": len(picked),
+        "made_of": made_of,
+        "witnesses": witnesses[:FLOOR_WITNESSES],
+    }
+
+
+def sign_survival(built: build.BaseBuild, vectors, index, mix: float, shown: int = 8) -> dict:
+    """What becomes of R's sign in the dual read — the FAR half of any floor, measured.
+
+    D is unsigned, so a negative reading is R's alone and no threshold has to be calibrated for it:
+    zero IS the boundary, by construction rather than by fitting. That makes the FAR half of a
+    two-sided shape almost free — and it makes THIS the number the shape has to be ruled on, because
+    a sign the blend has already buried is a FAR verdict nobody will ever get.
+    """
+    import numpy as np
+
+    relational = built.relational
+    n = len(relational.keys)
+    R = np.zeros((n, n), dtype=np.float32)
+    for row in relational.rows:
+        for cell in row.cells:
+            R[row.index, index[cell.column]] = cell.weight
+    norm = np.linalg.norm(R, axis=1, keepdims=True)
+    norm[norm == 0] = 1.0
+    r_only = R / norm
+
+    opposed = np.argwhere(np.triu((R < 0) | (R.T < 0), 1))
+    keys_list = relational.keys
+    measured = []
+    for left, right in opposed:
+        measured.append({
+            "a": keys_list[left],
+            "b": keys_list[right],
+            "r": float(r_only[left] @ r_only[right]),
+            "dual": float(vectors[left] @ vectors[right]),
+        })
+    lifted = [row for row in measured if row["r"] < 0 <= row["dual"]]
+
+    # And the other direction: of every pair in the base that READS below zero, how many are an
+    # opposition R states between the two, and how many are two rows disagreeing in sign about a
+    # third dimension? The second is the antonym column-read working at second order, and it is by
+    # far the larger number — which is worth knowing before anybody reads «negative» as «stated».
+    stated_negative = (R < 0) | (R.T < 0)
+    direct = third = 0
+    for start in range(0, n, 512):
+        stop = min(start + 512, n)
+        block = vectors[start:stop] @ vectors.T
+        for offset in range(stop - start):
+            row = start + offset
+            hits = np.nonzero(block[offset, row + 1:] < 0)[0] + row + 1
+            if not hits.size:
+                continue
+            here = int(stated_negative[row, hits].sum())
+            direct += here
+            third += hits.size - here
+
+    return {
+        "opposed_pairs": len(measured),
+        "negative_in_r": sum(1 for row in measured if row["r"] < 0),
+        "negative_in_dual": sum(1 for row in measured if row["dual"] < 0),
+        "lifted": len(lifted),
+        "worst": sorted(lifted, key=lambda row: -row["dual"])[:shown],
+        "direct_negative": direct,
+        "third_party": third,
+    }
+
+
+def report_floors(built: build.BaseBuild, config: DictionaryConfig, gloss_vectors, mix: float) -> dict:
+    """THE T5 measurement: where the bar sits in its own population, and what every candidate shape
+    would decide. Nothing here rules anything — see the section head."""
+    import numpy as np
+
+    vectors, index = dual_vectors(built, mix)
+    n = vectors.shape[0]
+
+    print()
+    print("=" * 96)
+    print("THE ACCEPTANCE FLOORS — MEASURED, NOT RULED (the floors are the Captain's)")
+    print("=" * 96)
+    print(f"  reading           R and D concatenated at mix {mix}"
+          f"{'  (the declared reading)' if config.reading and mix == config.reading.mix else '  (a variant)'}")
+    print(f"  dimensions        {n:,}")
+
+    # The densified read must BE the engine's read, and the bar is where that is checked: a floor
+    # measured against a second implementation of the cosine would be calibrated on arithmetic
+    # nobody else runs.
+    for pair in config.bar:
+        mine = float(vectors[index[pair.a]] @ vectors[index[pair.b]])
+        theirs = matrix.blended_cosine(built.relational, built.distributional, pair.a, pair.b, mix)
+        if theirs is not None and abs(mine - theirs) > 5e-4:
+            raise AssertionError(
+                f"the densified dual read disagrees with the engine's on {pair.a}~{pair.b}: "
+                f"{mine:+.5f} against {theirs:+.5f}"
+            )
+
+    stats = population(vectors)
+    total = stats["pairs"]
+    print(f"  population        {total:,} pairs")
+    print()
+    print("  WHERE THE WHOLE BASE SITS — the dual read over every pair of dimensions")
+    print("    " + "  ".join(f"p{q * 100:g} {value:+.3f}" for q, value in stats["quantiles"].items()))
+    print()
+    print(f"    {'at or above':<14}{'pairs':>14}{'share':>10}")
+    for threshold in FLOOR_GRID:
+        count = stats["above"][threshold]
+        print(f"    {threshold:>+11.2f}   {count:>14,}{100 * count / total:>9.4f}%")
+    print(f"    {'negative':>11}   {stats['negative']:>14,}{100 * stats['negative'] / total:>9.4f}%")
+    print()
+    print("  THE SIGN — the only thing in this geometry that is not a calibration")
+    sign = sign_survival(built, vectors, index, mix)
+    print(f"    D is UNSIGNED, so no gloss overlap can push a cosine below zero on its own: a "
+          f"negative")
+    print(f"    reading is R's sign and nothing else. Of the {stats['negative']:,} pairs that read "
+          f"below zero,")
+    print(f"    {sign['direct_negative']:,} are pairs R states an opposition BETWEEN; the other "
+          f"{sign['third_party']:,} disagree in sign about a")
+    print(f"    third dimension, which is the antonym column-read working at second order.")
+    print(f"    BUT THE SIGN DOES NOT ALWAYS SURVIVE THE BLEND. R states an opposition for "
+          f"{sign['opposed_pairs']:,} pairs;")
+    print(f"    {sign['negative_in_r']:,} of them read below zero on R alone and only "
+          f"{sign['negative_in_dual']:,} still do at mix {mix} — "
+          f"{sign['lifted']:,} are")
+    print(f"    lifted to zero or above by D. The loudest of them:")
+    for row in sign["worst"]:
+        print(f"      {row['a'] + ' ~ ' + row['b']:<30} R {row['r']:+.3f} -> R+D {row['dual']:+.3f}")
+    print()
+    print("  THE BAR IN THAT POPULATION")
+    print(f"    {'pair':<26} {'exp':<5} {'cosine':>9} {'nearer than':>12} {'rank a':>8} {'rank b':>8}")
+    readings: list[tuple[str, str, float]] = []
+    measured = []
+    for pair in config.bar:
+        i, j = index[pair.a], index[pair.b]
+        value = float(vectors[i] @ vectors[j])
+        row_i, row_j = vectors[i] @ vectors.T, vectors[j] @ vectors.T
+        rank_i, rank_j = int((row_i > value).sum()), int((row_j > value).sum())
+        share = stats["_above"](value) / total
+        readings.append((f"{pair.a}~{pair.b}", pair.verdict, value))
+        measured.append({"a": pair.a, "b": pair.b, "verdict": pair.verdict, "cosine": value,
+                         "nearer_than_pct": 100 * (1 - share), "rank_a": rank_i, "rank_b": rank_j})
+        print(f"    {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5} {value:>+9.4f} "
+              f"{100 * (1 - share):>11.2f}% {rank_i:>8,} {rank_j:>8,}")
+    print("    «nearer than» is the share of all pairs this one out-scores; the ranks are its place")
+    print("    in each row's own neighbourhood, which is the scale-free reading of the same fact")
+
+    near = [value for _label, verdict, value in readings if verdict == "NEAR"]
+    far = [value for _label, verdict, value in readings if verdict == "FAR"]
+    wall = max(far)
+    wall_pair = next(label for label, verdict, value in readings if value == wall)
+
+    print()
+    print("  ONE THRESHOLD — the prototype's shape, recalibrated (no abstention)")
+    best = 0
+    cuts = sorted({round(value, 6) for _l, _v, value in readings})
+    for cut in [(x + y) / 2 for x, y in zip(cuts, cuts[1:])]:
+        right = sum(1 for _l, verdict, value in readings if (value >= cut) == (verdict == "NEAR"))
+        best = max(best, right)
+    for cut in [(x + y) / 2 for x, y in zip(cuts, cuts[1:])]:
+        right = sum(1 for _l, verdict, value in readings if (value >= cut) == (verdict == "NEAR"))
+        if right < best:
+            continue
+        missed = [label for label, verdict, value in readings if (value >= cut) != (verdict == "NEAR")]
+        print(f"    {cut:>+9.4f}   {right} of {len(readings)}   misses: {', '.join(missed)}")
+    print(f"    NO single number does better than {best} of {len(readings)} on this base. The wall is "
+          f"{wall_pair} at {wall:+.4f} —")
+    print(f"    the highest-reading declared FAR — and {sum(1 for v in near if v < wall)} declared NEAR "
+          f"pairs read below it.")
+
+    print()
+    print("  A NEAR FLOOR AND A FAR CEILING, WITH AN ABSTENTION BAND BETWEEN")
+    print("    (ABSTAIN is first-class: a decided-wrong is a failure, an abstention is a silence)")
+    print(f"    {'wrong':>5} {'decided':>7} {'abstain':>7}   {'NEAR floor':>10} {'FAR ceiling':>11}   what it gets wrong")
+    seen = set()
+    frontier = floor_frontier(readings)
+    for row in frontier:
+        signature = (row["wrong"], row["decided"])
+        if signature in seen or row["wrong"] > 2:
+            continue
+        seen.add(signature)
+        print(f"    {row['wrong']:>5} {row['decided']:>7} {row['abstained']:>7}   "
+              f"{row['near']:>+10.4f} {row['far']:>+11.4f}   {'; '.join(row['errors']) or '—'}")
+
+    decided_prototype = _score_floors(readings, *PROTOTYPE_FLOORS)
+    print()
+    print(f"    THE PROTOTYPE'S OWN PAIR (NEAR >= {PROTOTYPE_FLOORS[0]}, FAR <= {PROTOTYPE_FLOORS[1]}), "
+          f"measured here rather than inherited:")
+    print(f"    {decided_prototype['wrong']:>5} {decided_prototype['decided']:>7} "
+          f"{decided_prototype['abstained']:>7}   {PROTOTYPE_FLOORS[0]:>+10.4f} "
+          f"{PROTOTYPE_FLOORS[1]:>+11.4f}   {'; '.join(decided_prototype['errors']) or '—'}")
+
+    zero = [row for row in frontier if row["wrong"] == 0]
+    best_zero = zero[0] if zero else None
+    candidates = sorted({round(row["near"], 4) for row in frontier[:1] } |
+                        ({round(best_zero["near"], 4)} if best_zero else set()) |
+                        {PROTOTYPE_FLOORS[0], round(wall, 4)})
+
+    print()
+    print("  WHAT A CANDIDATE NEAR FLOOR ADMITS — the population an acceptance verdict is issued over")
+    composed = {}
+    for floor in candidates:
+        composed[floor] = floor_composition(built, vectors, gloss_vectors, index, floor)
+        made = composed[floor]["made_of"]
+        sampled = max(1, composed[floor]["sampled"])
+        pairs = composed[floor]["pairs"]
+        print(f"    NEAR >= {floor:+.4f}   {pairs:>10,} pairs ({100 * pairs / total:5.2f}% of the base) · "
+              f"{composed[floor]['with_relation']:,} of them "
+              f"({100 * composed[floor]['with_relation'] / max(1, pairs):.2f}%) have ANY R cell")
+        print(f"    {'':>16}   of {composed[floor]['sampled']:,} sampled: "
+              f"{100 * made['only_junk'] / sampled:.1f}% share NOTHING but {sorted(JUNK_WORDS)} · "
+              f"{100 * made['a_real_word'] / sampled:.1f}% share a real word · "
+              f"{100 * made['nothing_direct'] / sampled:.1f}% share no word at all")
+
+    show = best_zero["near"] if best_zero else max(candidates)
+    witnesses = composed[round(show, 4)] if round(show, 4) in composed else composed[max(composed)]
+    print()
+    print(f"  WITNESSES — {FLOOR_WITNESSES} pairs drawn at random from what NEAR >= "
+          f"{witnesses['floor']:+.4f} admits")
+    for row in witnesses["witnesses"]:
+        shared = " ".join(row["shared"]) if row["shared"] else "(no word in common)"
+        print(f"    {row['cosine']:>+7.3f}  {row['a'] + ' ~ ' + row['b']:<34} "
+              f"R:{(row['relation'] or '—'):<14} shared: {shared}")
+
+    print()
+    print(f"  {wall_pair} — D's worst false positive, a declared FAR — reads {wall:+.4f}, nearer than "
+          f"{100 * (1 - stats['_above'](wall) / total):.2f}% of the base.")
+    print(f"  It is the ceiling every candidate NEAR floor has to clear, and the "
+          f"{sum(1 for v in near if v < wall)} declared NEAR pairs below it are what a floor above "
+          f"it cannot decide.")
+
+    return {
+        "mix": mix,
+        "population": {"pairs": total, "negative": stats["negative"],
+                       "quantiles": {str(q): v for q, v in stats["quantiles"].items()},
+                       "above": {str(t): c for t, c in stats["above"].items()}},
+        "bar": measured,
+        "sign": {k: v for k, v in sign.items() if k != "worst"} | {"worst": sign["worst"]},
+        "best_single": best,
+        "wall": {"pair": wall_pair, "cosine": wall},
+        "frontier": [row for row in frontier if row["wrong"] <= 2][:40],
+        "prototype": decided_prototype,
+        "admits": {str(floor): {k: v for k, v in row.items() if k != "witnesses"}
+                   for floor, row in composed.items()},
+        "witnesses": witnesses["witnesses"],
+    }
+
+
+def _score_floors(readings, near: float, far: float) -> dict:
+    """One named pair of floors, scored the way the frontier scores its own."""
+    decided = wrong = abstained = 0
+    errors = []
+    for label, verdict, value in readings:
+        if value >= near:
+            decided += 1
+            if verdict != "NEAR":
+                wrong += 1
+                errors.append(f"{label} called NEAR")
+        elif value <= far:
+            decided += 1
+            if verdict != "FAR":
+                wrong += 1
+                errors.append(f"{label} called FAR")
+        else:
+            abstained += 1
+    return {"near": near, "far": far, "decided": decided, "wrong": wrong,
+            "abstained": abstained, "errors": errors}
+
+
+# ------------------------------------------------------------------------------------------------
 # THE DERIVATIONAL DOWN-WEIGHT — the open item E1 was chartered to close, MEASURED
 # ------------------------------------------------------------------------------------------------
 
@@ -535,7 +1025,7 @@ def derivational_variants(policy_relations, weights):
     return variants
 
 
-def compare_derivational(config: DictionaryConfig, scope: str, weights) -> dict:
+def compare_derivational(config: DictionaryConfig, scope: str, weights, closed=None) -> dict:
     """Build R once per candidate weight over ONE key space, with D built once beside them.
 
     The membership half is identical by construction — the closure reads GLOSSES, which no relation
@@ -694,7 +1184,7 @@ def _broken_pairs(broken) -> list[str]:
 # ------------------------------------------------------------------------------------------------
 
 
-def compare_weighting(config: DictionaryConfig, scope: str) -> dict:
+def compare_weighting(config: DictionaryConfig, scope: str, closed=None) -> dict:
     """Build D twice over ONE key space, changing only what a shared gloss word is worth.
 
     A weighting cannot move membership — the closure reads the digraph, and this touches only how
@@ -718,8 +1208,8 @@ def compare_weighting(config: DictionaryConfig, scope: str) -> dict:
     vectors = {}
     for weighting in ("uniform", "idf"):
         walk = replace(config.distribution, weighting=weighting)
-        built[weighting] = distribution.build(dimensions, provider, walk)
-        vectors[weighting] = distribution.gloss_vectors(dimensions, provider, walk)
+        built[weighting] = distribution.build(dimensions, provider, walk, closed=closed)
+        vectors[weighting] = distribution.gloss_vectors(dimensions, provider, walk, closed)
         print(f"  {weighting:<8} D: {built[weighting].stats()['nonzero']:,} cells "
               f"({time.time() - started:.0f}s)", flush=True)
     return {"d": built, "r": relational, "vectors": vectors, "walk": config.distribution}
@@ -808,7 +1298,7 @@ def report_weighting(measured: dict, config: DictionaryConfig, mix: float) -> di
 # ------------------------------------------------------------------------------------------------
 
 
-def compare_senses(config: DictionaryConfig, scope: str) -> dict:
+def compare_senses(config: DictionaryConfig, scope: str, closed=None) -> dict:
     """Build the whole base twice — closure, R and D — under `primary` and under `all`.
 
     THE ONE MEASUREMENT HERE THAT IS NOT LIKE THE OTHERS. The lemma scope, the antonym reading and
@@ -854,7 +1344,7 @@ def compare_senses(config: DictionaryConfig, scope: str) -> dict:
     return built
 
 
-def report_senses(built: dict, config: DictionaryConfig, provider, mix: float) -> dict:
+def report_senses(built: dict, config: DictionaryConfig, provider, mix: float, closed=None) -> dict:
     """Two bases side by side — and the membership question said out loud if it moved."""
     modes = ["primary", "all"]
 
@@ -921,7 +1411,7 @@ def report_senses(built: dict, config: DictionaryConfig, provider, mix: float) -
         if base.distributional is None:
             continue
         walk = config.distribution if mode == "primary" else replace(config.distribution, senses="all")
-        vectors = distribution.gloss_vectors(base.dimensions, provider, walk)
+        vectors = distribution.gloss_vectors(base.dimensions, provider, walk, closed)
         frequency = distribution.document_frequency(vectors)
         loudest = sorted(frequency.items(), key=lambda item: (-item[1], item[0]))[:8]
         vocabulary[mode] = {
@@ -954,7 +1444,7 @@ def report_senses(built: dict, config: DictionaryConfig, provider, mix: float) -
 # ------------------------------------------------------------------------------------------------
 
 
-def compare_lemma_scope(config: DictionaryConfig) -> dict:
+def compare_lemma_scope(config: DictionaryConfig, closed=None) -> dict:
     """Build R twice over ONE key space, changing only which lemmas of a synset speak.
 
     The Captain ordered this measured before he rules (2026-08-26). The membership half is
@@ -987,7 +1477,7 @@ def compare_lemma_scope(config: DictionaryConfig) -> dict:
     return built
 
 
-def compare_antonym_symmetry(config: DictionaryConfig, scope: str) -> dict:
+def compare_antonym_symmetry(config: DictionaryConfig, scope: str, closed=None) -> dict:
     """Build R three times over ONE key space under the SAME lemma scope — the QM's ordered
     measurements of 2026-08-26, the second of them ordered after the first went wrong.
 
@@ -1375,6 +1865,15 @@ def run(argv: list[str] | None = None) -> int:
              "gloss dimensions, and report both (the Captain's parked question (b), 2026-08-25)",
     )
     parser.add_argument(
+        "--floors",
+        action="store_true",
+        help="measure the ACCEPTANCE FLOORS the bar would be scored against: where every pair sits "
+             "in the population of all 9.9M pairs, what any single threshold can and cannot do, the "
+             "(NEAR floor, FAR ceiling) frontier with an abstention band, and what a candidate "
+             "floor actually admits. Measures candidates and declares nothing — the floors are the "
+             "Captain's, and they land in `ReadingPolicy` beside the mix when he has ruled",
+    )
+    parser.add_argument(
         "--walk",
         action="append",
         default=[],
@@ -1412,6 +1911,10 @@ def run(argv: list[str] | None = None) -> int:
     rows, policy_source = standing_policy(args.db)
     bar, bar_rows, bar_source = standing_bar(args.db)
     config = policy.config_from_rows(rows, bar_rows)
+    # The closed classes reach D only when the policy asks for them; read either way so the header
+    # can say WHICH table a `compiled` reading was taken against.
+    structure_forms, structure_source = closed_forms(args.db)
+    structure_forms = frozenset(structure_forms)
 
     print("=" * 96)
     print("BUILD THE BASE — declared before measuring")
@@ -1419,6 +1922,13 @@ def run(argv: list[str] | None = None) -> int:
     print(f"policy        {policy_source}")
     print(f"              {config.closure}")
     print(f"bar           {bar_source}, {len(bar)} pairs ({len(bar_words(bar))} words)")
+    if config.distribution is not None:
+        reading = config.distribution.structure
+        if reading == "compiled":
+            print(f"structure     COMPILED — {len(structure_forms)} closed-class forms leave D's "
+                  f"vocabulary ({structure_source})")
+        else:
+            print("structure     ADMITTED — a closed-class form counts like any other shared word")
     if config.relations is None:
         print()
         print("REFUSED: the standing policy declares no relation weights, so there is no R to "
@@ -1517,12 +2027,36 @@ def run(argv: list[str] | None = None) -> int:
             float(w) for w in named
         )
         measured = report_derivational(
-            compare_derivational(config, scope, candidates), config, mix
+            compare_derivational(config, scope, candidates, structure_forms), config, mix
         )
         print()
         print(f"measured in {time.time() - started:.0f}s")
         _write_json(args.json, {"policy_source": policy_source, "lemma_scope": scope,
                                 "derivational": measured})
+        return 0
+
+    if args.floors:
+        if args.apply:
+            print("REFUSED: --floors MEASURES candidate floors. None of them is declared, and a "
+                  "build cannot be stored under a reading nobody has ruled.")
+            return 2
+        if config.distribution is None:
+            print("REFUSED: this policy declares no gloss walk, so there is no dual read to set a "
+                  "floor on. Policy v6 (db/0009) is what declares D.")
+            return 2
+        scope = args.lemma_scope or config.relations.lemma_scope
+        if scope is None:
+            print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
+            return 2
+        built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms)
+        vectors = distribution.gloss_vectors(
+            built.dimensions, provider, config.distribution, structure_forms
+        )
+        measured = report_floors(built, config, vectors, mix)
+        print()
+        print(f"measured in {time.time() - started:.0f}s")
+        _write_json(args.json, {"policy_source": policy_source, "bar_source": bar_source,
+                                "lemma_scope": scope, "floors": measured})
         return 0
 
     if args.compare_weighting:
@@ -1538,7 +2072,7 @@ def run(argv: list[str] | None = None) -> int:
         if scope is None:
             print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
             return 2
-        measured = report_weighting(compare_weighting(config, scope), config, mix)
+        measured = report_weighting(compare_weighting(config, scope, structure_forms), config, mix)
         print()
         print(f"measured in {time.time() - started:.0f}s")
         _write_json(args.json, {"policy_source": policy_source, "lemma_scope": scope,
@@ -1557,7 +2091,8 @@ def run(argv: list[str] | None = None) -> int:
         from tk2.dictionary.wordnet import WordNetProvider as _P
 
         measured = report_senses(
-            compare_senses(config, scope), config, _P(wordnet_lexicon(), lemma_scope=scope), mix
+            compare_senses(config, scope, structure_forms), config,
+            _P(wordnet_lexicon(), lemma_scope=scope), mix, structure_forms
         )
         print()
         print(f"measured in {time.time() - started:.0f}s")
@@ -1574,7 +2109,7 @@ def run(argv: list[str] | None = None) -> int:
         if scope is None:
             print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
             return 2
-        measured = report_symmetry(compare_antonym_symmetry(config, scope), config)
+        measured = report_symmetry(compare_antonym_symmetry(config, scope, structure_forms), config)
         print()
         print(f"measured in {time.time() - started:.0f}s")
         if args.json:
@@ -1592,7 +2127,7 @@ def run(argv: list[str] | None = None) -> int:
                   "is a build, and one of them is not the standing law.")
             return 2
         providers = None
-        comparison = compare_lemma_scope(config)
+        comparison = compare_lemma_scope(config, structure_forms)
         from tk2.dictionary.wordnet import WordNetProvider as _P
         providers = {SCOPE_SYNSET: _P(wordnet_lexicon(), lemma_scope=SCOPE_SYNSET)}
         measured = report_compare(comparison, config, providers)
@@ -1628,7 +2163,7 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.antonym_symmetry is not None:
         config = replace(config, relations=relations.policy_for(config.relations, args.antonym_symmetry))
-    built, provider = build_base(config, scope, args.antonym_symmetry)
+    built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms)
     stats = report_shape(built.relational)
     d_stats = None
     dual = None
@@ -1640,7 +2175,9 @@ def run(argv: list[str] | None = None) -> int:
         # Computed once and handed to both readings: the vocabulary D's cells are made of is the
         # answer to the parked weighting question AND the evidence behind every bar pair, and two
         # derivations of it would be two chances to report one and measure the other.
-        vectors = distribution.gloss_vectors(built.dimensions, provider, config.distribution)
+        vectors = distribution.gloss_vectors(
+            built.dimensions, provider, config.distribution, structure_forms
+        )
         d_stats = report_distribution(built, vectors, config)
     bar_reading = report_bar(built.relational, config.bar)
     if built.distributional is not None:
@@ -1730,6 +2267,13 @@ def _apply(args, built: build.BaseBuild, manifest, build_label: str) -> int:
     BOTH MATRICES, under one build label and one key registry — the store writes the dimension order
     first and refuses a second matrix that disagrees with it, which is what makes «R and D are over
     one key space» a checked property rather than a promise.
+
+    AND EACH ONE SEALED (T5). D is 218 MB across a network; the store chunks it, counts the rows
+    back out of the database and only then writes the row that says the matrix is whole. An
+    interruption here therefore leaves a base that DOES NOT READ rather than one that reads wrong,
+    and the recovery is to run this command again. The manifest row is written last of all, after
+    both seals — so a manifest row in the ledger means the base under it was complete when it was
+    made, which is the claim the whole ledger rests on.
     """
     if not args.db:
         print("REFUSED: --apply must name the database it writes (--db). The guard refuses "
@@ -1750,10 +2294,22 @@ def _apply(args, built: build.BaseBuild, manifest, build_label: str) -> int:
     for built_matrix in (built.relational, built.distributional):
         if built_matrix is None:
             continue
-        written = store.write(built_matrix, build_label)
-        print(f"written: {args.db}.{built_matrix.name} build='{build_label}' — {written:,} rows")
+        started = time.time()
+
+        def say(chunk: int, chunks: int, rows: int, name=built_matrix.name, at=started) -> None:
+            print(f"  {name}  chunk {chunk:>3}/{chunks:<3} {rows:>6,} rows "
+                  f"({time.time() - at:.0f}s)", flush=True)
+
+        written = store.write(built_matrix, build_label, progress=say)
+        sealed = store.seal(build_label, built_matrix.name)
+        print(f"written: {args.db}.{built_matrix.name} build='{build_label}' — {written:,} rows, "
+              f"{sealed['cells']:,} cells in {time.time() - started:.0f}s")
+        print(f"         SEALED {sealed['fingerprint'][:16]}…  ({sealed['note']})")
     MigrationWriter(db).insert(DictionaryBuildDoc, manifest)
     print(f"         one manifest row in {DictionaryBuildDoc.Settings.name}")
+    print()
+    print(f"VERIFY IT: PYTHONPATH=. ../.venv/bin/python tools/verify_base.py --db {args.db} "
+          f"--build {build_label}")
     return 0
 
 

@@ -290,6 +290,12 @@ WEIGHTINGS = ("uniform", "idf")
 #: knows, so a definition may share a word the base does not contain.
 VOCABULARIES = ("base", "lexicon")
 
+#: What D does with a word whose job in a sentence is STRUCTURAL. `admitted` = it counts like any
+#: other shared word (every build before 2026-09-10); `compiled` = it is not part of the vocabulary
+#: two definitions may be said to share, because the standing law says a function word is compiled
+#: and never defined — and D asking whether two glosses both contain `in` is D defining one.
+STRUCTURE_READINGS = ("admitted", "compiled")
+
 
 @dataclass(frozen=True, slots=True)
 class DistributionPolicy:
@@ -329,6 +335,17 @@ class DistributionPolicy:
     #: meaning what they look like; D declares its own rather than borrowing R's, because the two
     #: matrices are two geometries and only one of them has R's weights.
     identity: float
+    #: `admitted` or `compiled` — see `STRUCTURE_READINGS`. Whether a closed-class form may be one
+    #: of the words two definitions are counted as sharing. The forms themselves are NOT named here:
+    #: they are the `closed_classes` rows migration 0004 wrote and they arrive injected, so this row
+    #: says only what to DO with them.
+    #:
+    #: LAST in the field order and the only one with a default, because `None` means UNDECLARED —
+    #: the treatment `reading` got when the mix arrived at v7. Policy versions 6 and 7 predate this
+    #: question and must keep reading back and fingerprinting exactly as they always did, so
+    #: `as_dict` omits an undeclared field entirely. A build that would be CHANGED by the answer is
+    #: refused rather than quietly given one (`distribution.vocabulary_of`).
+    structure: str | None = None
 
     def __post_init__(self):
         if self.senses not in ("primary", "all"):
@@ -337,6 +354,10 @@ class DistributionPolicy:
             raise ValueError(f"unknown gloss vocabulary {self.vocabulary!r} — the two are {VOCABULARIES}")
         if self.measure not in MEASURES:
             raise ValueError(f"unknown overlap measure {self.measure!r} — the three are {MEASURES}")
+        if self.structure is not None and self.structure not in STRUCTURE_READINGS:
+            raise ValueError(
+                f"unknown structure reading {self.structure!r} — the two are {STRUCTURE_READINGS}"
+            )
         if self.weighting not in WEIGHTINGS:
             raise ValueError(f"unknown weighting {self.weighting!r} — the two are {WEIGHTINGS}")
         if self.min_shared < 1:
@@ -355,7 +376,7 @@ class DistributionPolicy:
             )
 
     def as_dict(self) -> dict:
-        return {
+        out = {
             "rules": DISTRIBUTION_RULES,
             "senses": self.senses,
             "vocabulary": self.vocabulary,
@@ -367,6 +388,11 @@ class DistributionPolicy:
             "floor": self.floor,
             "identity": self.identity,
         }
+        # Omitted when undeclared, so v6's and v7's fingerprints do not move under a question they
+        # never faced — the same rule `reading` follows on `DictionaryConfig`.
+        if self.structure is not None:
+            out["structure"] = self.structure
+        return out
 
 
 # ------------------------------------------------------------------------------------------------

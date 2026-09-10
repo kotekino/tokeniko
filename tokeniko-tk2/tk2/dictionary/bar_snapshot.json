@@ -1,7 +1,7 @@
 {
   "source": "tokeniko_tk2_body_test",
-  "version": 1,
-  "fingerprint": "5ff0a29a0eff04dcca708ebf57f65580b3a97183d8a18de53b70211f2f80d510",
+  "version": 2,
+  "fingerprint": "c3808346731cdc987af1c952f496e7f8f4110bd3d54deb7d4f47e960291cfbca",
   "pairs": [
     {
       "version": 1,
@@ -146,6 +146,158 @@
       "b": "runway.n",
       "verdict": "FAR",
       "why": "control"
+    },
+    {
+      "version": 2,
+      "position": 0,
+      "a": "open.v",
+      "b": "shut.v",
+      "verdict": "FAR",
+      "why": "stated antonymy, and both definitions are about the same act — the sign against the gloss overlap in one pair"
+    },
+    {
+      "version": 2,
+      "position": 1,
+      "a": "employee.n",
+      "b": "employer.n",
+      "verdict": "FAR",
+      "why": "a NOUN opposition: R's antonymy is overwhelmingly adjectival and nothing tested the sign on nouns. Topically as near as two words get — an employer is defined by employing, an employee by being employed — so it is the sign or nothing"
+    },
+    {
+      "version": 2,
+      "position": 2,
+      "a": "mental.a",
+      "b": "physical.a",
+      "verdict": "FAR",
+      "why": "stated antonymy between two abstract adjectives, the ground R is quietest about"
+    },
+    {
+      "version": 2,
+      "position": 3,
+      "a": "externally.r",
+      "b": "internally.r",
+      "verdict": "FAR",
+      "why": "an ADVERB opposition, drawn blind from WordNet's stated adverb antonymy (seed 20260910) after the class was found missing from the frozen seventeen. The class is where the sign burial is worst — 167 of 405 stated oppositions read at or above zero at mix 0.5, and the ones that break loudest are adverbs"
+    },
+    {
+      "version": 2,
+      "position": 4,
+      "a": "agreeably.r",
+      "b": "unpleasantly.r",
+      "verdict": "FAR",
+      "why": "the second of the blind adverb draw. «In an enjoyable manner» against «in an unpleasant manner»: near-identical gloss shape, opposite meaning — the exact case a gloss-overlap floor gets wrong and a sign gets right"
+    },
+    {
+      "version": 2,
+      "position": 5,
+      "a": "fast.n",
+      "b": "fast.v",
+      "verdict": "NEAR",
+      "why": "abstaining from food, and to abstain from food: one act, two parts of speech"
+    },
+    {
+      "version": 2,
+      "position": 6,
+      "a": "compass.n",
+      "b": "compass.v",
+      "verdict": "FAR",
+      "why": "a navigational instrument against to bring about — land.n~land.v's shape over the identical derivational cell, and the pair that becomes the new FAR wall"
+    },
+    {
+      "version": 2,
+      "position": 7,
+      "a": "buy.n",
+      "b": "buy.v",
+      "verdict": "NEAR",
+      "why": "an advantageous purchase, and to obtain by purchase"
+    },
+    {
+      "version": 2,
+      "position": 8,
+      "a": "play.n",
+      "b": "play.v",
+      "verdict": "FAR",
+      "why": "a dramatic work against to participate in games — one spelling, two unrelated readings. The most arguable pair of the nineteen and kept deliberately: a bar whose every pair is obvious tests nothing"
+    },
+    {
+      "version": 2,
+      "position": 9,
+      "a": "food.n",
+      "b": "hungry.a",
+      "verdict": "NEAR",
+      "why": "the effect axis, second witness beside eat.v~hungry.a"
+    },
+    {
+      "version": 2,
+      "position": 10,
+      "a": "intend.v",
+      "b": "wish.v",
+      "verdict": "NEAR",
+      "why": "volitional: action selection resolves these against each other and R states nothing between them"
+    },
+    {
+      "version": 2,
+      "position": 11,
+      "a": "must.n",
+      "b": "need.n",
+      "verdict": "NEAR",
+      "why": "the volitional family in its noun readings"
+    },
+    {
+      "version": 2,
+      "position": 12,
+      "a": "land.v",
+      "b": "leave.v",
+      "verdict": "FAR",
+      "why": "one family, opposite endpoints: to come to rest against to go away. The generator proposed NEAR from the family alone; the meaning says FAR, and the flip was made before the freeze"
+    },
+    {
+      "version": 2,
+      "position": 13,
+      "a": "bed.n",
+      "b": "drink.n",
+      "verdict": "FAR",
+      "why": "one family is not one neighbourhood: furniture against a serving of a beverage. Also flipped against the generator before the freeze"
+    },
+    {
+      "version": 2,
+      "position": 14,
+      "a": "affliction.n",
+      "b": "injury.n",
+      "verdict": "NEAR",
+      "why": "co-hyponyms of ill_health with no direct edge — R can only reach it through shared hypernym columns, as it reaches walk.v~run.v"
+    },
+    {
+      "version": 2,
+      "position": 15,
+      "a": "impairment.n",
+      "b": "nonsweet.a",
+      "verdict": "FAR",
+      "why": "drawn uniformly at random from the dimension list (seed 20260910)"
+    },
+    {
+      "version": 2,
+      "position": 16,
+      "a": "thoroughly.r",
+      "b": "swinging.n",
+      "verdict": "FAR",
+      "why": "drawn uniformly at random from the dimension list (seed 20260910)"
+    },
+    {
+      "version": 2,
+      "position": 17,
+      "a": "shadow.n",
+      "b": "upward.a",
+      "verdict": "FAR",
+      "why": "drawn uniformly at random from the dimension list (seed 20260910)"
+    },
+    {
+      "version": 2,
+      "position": 18,
+      "a": "interlace.v",
+      "b": "aged.n",
+      "verdict": "FAR",
+      "why": "drawn uniformly at random from the dimension list (seed 20260910)"
     }
   ]
 }

@@ -33,6 +33,8 @@ import pytest
 
 from tests.seed import (
     bar_rows,
+    migration,
+    bar_rows_v2,
     closed_class_forms,
     declared_config,
     declared_config_v3,
@@ -40,6 +42,7 @@ from tests.seed import (
     declared_config_v5,
     declared_config_v6,
     declared_config_v7,
+    declared_config_v8,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -47,6 +50,7 @@ from tests.seed import (
     policy_rows_v5,
     policy_rows_v6,
     policy_rows_v7,
+    policy_rows_v8,
     ruled_config,
     structural_seeds,
 )
@@ -326,9 +330,13 @@ def test_the_snapshot_is_the_migrated_bar():
     """The acceptance suite runs where no body is reachable, so it reads this. It must be the same
     bar the rows hold, pair for pair and reason for reason."""
     document = policy.bar_snapshot()
-    assert document["version"] == 1
-    assert document["fingerprint"] == policy.bar_fingerprint(bar_rows())
-    assert policy.snapshot_bar() == policy.config_from_rows(policy_rows(), bar_rows()).bar
+    assert document["version"] == 2
+    assert document["fingerprint"] == policy.bar_fingerprint(bar_rows() + bar_rows_v2())
+    # The snapshot is the LIVE bar — v1's eighteen plus v2's nineteen since 0011 — so it is read
+    # against the live rows, not against v1's alone.
+    assert policy.snapshot_bar() == policy.config_from_rows(
+        policy_rows(), bar_rows() + bar_rows_v2()
+    ).bar
 
 
 def test_reading_the_snapshot_verifies_its_own_pin(tmp_path):
@@ -361,9 +369,13 @@ def test_the_snapshot_matches_the_database(clean_db):
 
     writer = MigrationWriter(clean_db)
     clean_db[DictionaryBarDoc.Settings.name].delete_many({})
-    writer.insert_many(DictionaryBarDoc, bar_rows())
+    # BOTH versions: the snapshot pins the LIVE bar, and since 0011 that is v1 plus v2. Writing
+    # only v1 here would prove the snapshot matches a bar nobody runs.
+    writer.insert_many(DictionaryBarDoc, bar_rows() + bar_rows_v2())
 
     stored = list(clean_db[DictionaryBarDoc.Settings.name].find({}))
+    assert policy.bar_version(stored) == 2
+    assert len(policy.bar_from_rows(stored)) == 37
     assert policy.bar_fingerprint(stored) == policy.bar_snapshot()["fingerprint"]
 
 
@@ -493,7 +505,7 @@ def test_the_newest_version_is_selected_explicitly_and_never_guessed():
 def test_the_bar_did_not_move_with_the_seeds():
     """v2 is measured against the same eighteen pairs. The bar is append-mostly and a policy ruling
     is not an occasion to quietly re-declare the expectation the ruling will be judged by."""
-    assert ruled_config().bar == policy.snapshot_bar()
+    assert ruled_config().bar == policy.bar_from_rows(bar_rows())
     assert len(ruled_config().bar) == 18
 
 
@@ -589,7 +601,10 @@ def test_version_3_carries_version_2_forward_unedited():
     assert carried == v2, "the seeds, the cuts, their families and their reasons cross unchanged"
     assert ruled_config().closure == declared_config_v3().closure
     assert ruled_config().declared_seeds == declared_config_v3().declared_seeds
-    assert declared_config_v3().bar == policy.snapshot_bar(), "the bar did not move with them either"
+    # A POLICY migration writes no bar rows at all — which is the honest form of «the bar
+    # did not move», now that 0011 has grown it and `snapshot_bar()` reads thirty-seven.
+    assert not hasattr(migration(6), "BAR_ROWS")
+    assert declared_config_v3().bar == policy.bar_from_rows(bar_rows())
 
 
 def test_every_new_row_still_explains_itself():
@@ -730,7 +745,10 @@ def test_version_4_carries_version_3_forward_unedited():
     assert len(v4) == len(v3) + 1
     assert {k: v for k, v in v4.items() if k in v3} == v3
     assert set(v4) - set(v3) == {(policy.KIND_RELATION_SETTING, "lemma_scope")}
-    assert declared_config_v4().bar == policy.snapshot_bar()
+    # A POLICY migration writes no bar rows at all — which is the honest form of «the bar
+    # did not move», now that 0011 has grown it and `snapshot_bar()` reads thirty-seven.
+    assert not hasattr(migration(7), "BAR_ROWS")
+    assert declared_config_v4().bar == policy.bar_from_rows(bar_rows())
 
 
 def test_the_three_older_versions_still_hash_as_they_did():
@@ -832,7 +850,10 @@ def test_version_5_carries_version_4_forward_unedited():
         (policy.KIND_RELATION_WEIGHT, "antonym_inferred"),
         (policy.KIND_RELATION_SETTING, "antonym_symmetry"),
     }
-    assert declared_config_v5().bar == policy.snapshot_bar()
+    # A POLICY migration writes no bar rows at all — which is the honest form of «the bar
+    # did not move», now that 0011 has grown it and `snapshot_bar()` reads thirty-seven.
+    assert not hasattr(migration(8), "BAR_ROWS")
+    assert declared_config_v5().bar == policy.bar_from_rows(bar_rows())
 
 
 def test_the_four_older_versions_still_hash_as_they_did():
@@ -1003,6 +1024,103 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
     assert config.reading == ReadingPolicy(mix=0.5)
     assert config.distribution.min_shared == 1
     assert dict(config.relations.weights)["derivational"] == 0.45
+
+
+#: The fingerprint of what a build actually RUNS after 0011: policy v7 against the LIVE bar, which
+#: is now v1's eighteen plus v2's nineteen. It differs from `V7_FINGERPRINT` for exactly one reason
+#: — the bar grew — and that difference is the mechanism working: a build measured against
+#: thirty-seven pairs must not be able to present the hash of one measured against eighteen.
+STANDING_FINGERPRINT = "cac116244d11f45b0ef9e086a752f87de3a16e3a61cf31d9ea3a7895b5321a30"
+
+#: What policy v7 hashes to against the GROWN bar — the standing reading between 0011 and 0012, and
+#: kept because it is the only place the bar's growth is visible as a number on its own: same policy
+#: rows as `V7_FINGERPRINT`, eighteen pairs against thirty-seven.
+V7_AGAINST_BAR_V2 = "ef0a3a4702255bf0b2189cde8043a326007f0b01d2afd557f398ac1f35e7c6db"
+
+
+def test_the_standing_reading_is_policy_v7_against_the_grown_bar():
+    """The two constants side by side, so the ONLY thing that separates them is legible: same
+    policy rows, two different bars. If a later ruling moves a policy value, this test and
+    `V7_FINGERPRINT` move together; if a later bar grows, only this one moves."""
+    grown = policy.config_from_rows(policy_rows_v7(), bar_rows() + bar_rows_v2())
+    v1 = policy.config_from_rows(policy_rows_v7(), bar_rows())
+
+    assert len(grown.bar) == 37
+    assert len(v1.bar) == 18
+    assert grown.fingerprint() == V7_AGAINST_BAR_V2
+    assert v1.fingerprint() == V7_FINGERPRINT
+    assert grown.fingerprint() != v1.fingerprint()
+    # Nothing but the bar moved: the policy half of both configs is the same object.
+    assert grown.closure == v1.closure
+    assert grown.relations == v1.relations
+    assert grown.distribution == v1.distribution
+    assert grown.reading == v1.reading
+
+
+def test_the_grown_bar_keeps_every_pair_version_one_declared():
+    """Append-mostly, measured: v2 ADDS, it never edits or drops. A bar that could rewrite its own
+    history would make «declared before the run» unprovable."""
+    v1 = {(p.a, p.b, p.verdict, p.why) for p in policy.bar_from_rows(bar_rows())}
+    grown = {(p.a, p.b, p.verdict, p.why) for p in policy.bar_from_rows(bar_rows() + bar_rows_v2())}
+
+    assert v1 < grown
+    assert len(grown - v1) == 19
+
+
+def test_the_grown_bar_can_see_an_opposition_outside_the_verbs():
+    """The defect that made the bar grow: at the ruled mix, 167 of the 405 oppositions R states
+    read at or above zero — and not one was on the bar, because v1's only two opposition pairs are
+    verbs. v2 states one in each of the other three parts of speech."""
+    added = list(policy.bar_from_rows(bar_rows_v2()))
+    far = [p for p in added if p.verdict == "FAR"]
+    pos = {p.a.rsplit(".", 1)[1] for p in far} | {p.b.rsplit(".", 1)[1] for p in far}
+
+    assert {"n", "a", "r"} <= pos
+    assert ("employee.n", "employer.n") in {(p.a, p.b) for p in far}
+    assert ("mental.a", "physical.a") in {(p.a, p.b) for p in far}
+    assert ("externally.r", "internally.r") in {(p.a, p.b) for p in far}
+
+
+def test_policy_v8_is_the_structure_ruling_and_the_re_ruled_mix():
+    """The Captain's ruling of 2026-09-10, in rows: a function word stops being evidence, and D is
+    turned down from 0.5 to 0.15. Both were re-measured against the grown bar — neither could have
+    been decided against the eighteen, which is why 0011 came first."""
+    config = policy.config_from_rows(policy_rows_v8(), bar_rows() + bar_rows_v2())
+
+    assert config == declared_config_v8()
+    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.distribution.structure == "compiled"
+    assert config.reading == ReadingPolicy(mix=0.15)
+    assert len(config.bar) == 37
+
+
+def test_v8_moved_two_values_and_nothing_else():
+    """Every other row crosses with its value, its family AND its reason: a ruling is not an
+    occasion to quietly re-type the policy around it."""
+    v7 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v7()}
+    v8 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v8()}
+
+    moved = {key for key in v7 if v7[key][0] != v8.get(key, (None,))[0]}
+    added = set(v8) - set(v7)
+
+    assert moved == {(policy.KIND_READING, "mix")}
+    assert added == {(policy.KIND_DISTRIBUTION, "structure")}
+    assert {key: v8[key] for key in v8 if key not in moved | added} == {
+        key: v7[key] for key in v7 if key not in moved | added
+    }
+
+
+def test_an_older_policy_is_undeclared_about_structure_and_not_admitted():
+    """The distinction the ruling turns on: v6 and v7 never faced the question, so they read `None`
+    — and `None` is not the same statement as `admitted`, which is a version that considered it and
+    said no. It is also what keeps their recorded fingerprints naming what was measured."""
+    v7 = policy.config_from_rows(policy_rows_v7(), bar_rows())
+    v8 = policy.config_from_rows(policy_rows_v8(), bar_rows() + bar_rows_v2())
+
+    assert v7.distribution.structure is None
+    assert v8.distribution.structure == "compiled"
+    assert "structure" not in v7.distribution.as_dict()
+    assert v7.distribution.as_dict()["rules"] == v8.distribution.as_dict()["rules"]
 
 
 def test_the_mix_is_its_own_kind_and_not_a_setting_of_D():

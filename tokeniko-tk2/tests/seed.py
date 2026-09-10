@@ -49,12 +49,39 @@ def policy_rows() -> list[dict]:
 
 
 def bar_rows() -> list[dict]:
+    """Bar VERSION 1 — the eighteen the whole epic was measured against."""
     return [dict(row) for row in migration(3).BAR_ROWS]
+
+
+def bar_rows_v2() -> list[dict]:
+    """Bar version 2's OWN nineteen (0011). The live bar is v1 + v2: the collection is
+    append-mostly, so a version names what was added, never the whole set."""
+    return [dict(row) for row in migration(11).BAR_ROWS]
+
+
+def _as_declared_against_bar_v1(config):
+    """A migration's DECLARED, with the bar it was DECLARED AGAINST rather than the live one.
+
+    The migrations build their config object with `policy.snapshot_bar()` — the offline pin, read at
+    import — so a `DECLARED` is not a frozen historical record: its bar tracks whatever the snapshot
+    currently holds. That is fine for the migration's own job (it writes POLICY rows; the bar is a
+    separate table with its own versions) and wrong for a fixture that means «the config version N
+    declared», because 0011 grew the bar to thirty-seven and every version before it was declared
+    against eighteen.
+
+    Nothing about the policy half moves here — only the bar is pinned, which is precisely the half
+    these fixtures are not about.
+    """
+    from dataclasses import replace
+
+    from tk2.dictionary import policy as _policy
+
+    return replace(config, bar=_policy.bar_from_rows(bar_rows()))
 
 
 def declared_config():
     """The policy 0003 writes, as the object `config.py` used to hold."""
-    return migration(3).DECLARED
+    return _as_declared_against_bar_v1(migration(3).DECLARED)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -89,7 +116,7 @@ def policy_rows_v2() -> list[dict]:
 
 def ruled_config():
     """The policy v2 writes — purpose ∪ structure, the cap demoted to a rail, bar v1 unchanged."""
-    return migration(5).DECLARED
+    return _as_declared_against_bar_v1(migration(5).DECLARED)
 
 
 def structural_seeds() -> tuple[tuple[str, int, int], ...]:
@@ -112,7 +139,7 @@ def policy_rows_v3() -> list[dict]:
 
 def declared_config_v3():
     """The whole policy v3 declares — v2's seeds and cuts, plus R's weights and the alphabet."""
-    return migration(6).DECLARED
+    return _as_declared_against_bar_v1(migration(6).DECLARED)
 
 
 def relation_policy():
@@ -144,12 +171,12 @@ def policy_rows_v4() -> list[dict]:
 
 def relation_policy_v4():
     """R's declared weights at v4 — including whose lemma may speak."""
-    return migration(7).DECLARED.relations
+    return _as_declared_against_bar_v1(migration(7).DECLARED).relations
 
 
 def declared_config_v4():
     """The policy v4 writes — v3's whole declaration, plus whose lemma may speak."""
-    return migration(7).DECLARED
+    return _as_declared_against_bar_v1(migration(7).DECLARED)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -163,7 +190,7 @@ def policy_rows_v5() -> list[dict]:
 
 def declared_config_v5():
     """The policy v5 writes — v4's whole declaration, plus how a one-sided antonymy is read."""
-    return migration(8).DECLARED
+    return _as_declared_against_bar_v1(migration(8).DECLARED)
 
 
 def relation_policy_v5():
@@ -181,7 +208,7 @@ def policy_rows_v6() -> list[dict]:
 
 def declared_config_v6():
     """The policy v6 writes — v5's whole declaration, plus the nine parameters D is built from."""
-    return migration(9).DECLARED
+    return _as_declared_against_bar_v1(migration(9).DECLARED)
 
 
 def distribution_policy():
@@ -195,6 +222,16 @@ def distribution_policy():
     return newest_policy_migration()[1].DECLARED.distribution
 
 
+def closed_class_forms() -> frozenset[str]:
+    """The closed-class forms the standing walk needs when it reads structure as `compiled`.
+
+    Read from migration 0004, the way every other fixture reads its values from the migration that
+    declares them — and injected rather than defaulted, because that is exactly the seam the ruling
+    of 2026-09-10 built: `closed_classes` is a KB table and `tk2.dictionary` is pure.
+    """
+    return frozenset(row["form"] for row in migration(4).ROWS if " " not in row["form"])
+
+
 # ------------------------------------------------------------------------------------------------
 # 0010 — the dual read ruled, and three values moved: policy version 7
 # ------------------------------------------------------------------------------------------------
@@ -206,7 +243,21 @@ def policy_rows_v7() -> list[dict]:
 
 def declared_config_v7():
     """The policy v7 writes — v6's whole declaration with two numbers moved, plus the mix."""
-    return migration(10).DECLARED
+    return _as_declared_against_bar_v1(migration(10).DECLARED)
+
+
+def policy_rows_v8() -> list[dict]:
+    return [dict(row) for row in migration(12).POLICY_ROWS]
+
+
+def declared_config_v8():
+    """The policy v8 writes — v7's declaration with the structure reading and the mix moved.
+
+    NOT pinned to bar v1: v8 was declared on 2026-09-10, after 0011 grew the bar, and both of its
+    values were ruled against the thirty-seven. Pinning it to eighteen would describe a config
+    nobody measured.
+    """
+    return migration(12).DECLARED
 
 
 def reading_policy():

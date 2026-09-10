@@ -227,11 +227,16 @@ def test_the_overlap_with_the_declared_seeds_is_the_known_one():
     assert seeds & set(closed_class_forms()) == KNOWN_OVERLAP
 
 
-def test_the_bar_names_one_closed_class_form_and_it_is_need():
+def test_the_bar_names_two_closed_class_forms_and_they_are_must_and_need():
     """Requirement 12 makes every bar word a seed, so a bar word that is also a function word is a
-    third witness to the same open question — and here it is `need` again, from the pair
-    `want.v ~ need.v NEAR`. The bar means the VERB; the table means the semi-modal («he need not
-    go»). One spelling, two readings, and nothing here rules on it."""
+    third witness to the same open question. Bar v1 had one — `need`, from `want.v ~ need.v NEAR`.
+    Bar v2 (0011) adds the second by adding `must.n ~ need.n NEAR`, which is the volitional family
+    in its NOUN readings.
+
+    Both are the same shape and neither is ruled here: the bar means the verb and the noun, the
+    table means the modal and the semi-modal («he must go», «he need not go»). One spelling, two
+    readings — a row is about a FORM's structural job, membership is about a READING, and the
+    Captain accepted that overlap on 2026-08-25 when the closed classes landed."""
     from tk2.dictionary.config import bar_words
 
-    assert set(bar_words(policy.snapshot_bar())) & set(closed_class_forms()) == {"need"}
+    assert set(bar_words(policy.snapshot_bar())) & set(closed_class_forms()) == {"must", "need"}
