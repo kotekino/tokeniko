@@ -66,9 +66,14 @@ def standing_policy(db_name: str | None) -> tuple[list[dict], str]:
         return rows, f"{db_name}.dictionary_policy v{policy.policy_version(rows)}"
 
     found, module = newest_policy_migration()
+    # The NEWEST version's rows, selected the same way the database path selects them. Since the
+    # E1b baseline a single migration file carries the WHOLE ledger — all nine versions — where the
+    # old chain carried one version per file, so taking `POLICY_ROWS` whole would hand the reader
+    # nine alphabets and nine of every cut.
+    rows = policy.latest_version([dict(row) for row in module.POLICY_ROWS])
     return (
-        [dict(row) for row in module.POLICY_ROWS],
-        f"db/{found.label} (policy v{module.POLICY_VERSION}, not read from a database)",
+        rows,
+        f"db/{found.label} (policy v{policy.policy_version(rows)}, not read from a database)",
     )
 
 
@@ -104,7 +109,8 @@ def closed_forms(db_name: str | None) -> tuple[tuple[str, ...], str]:
         if rows:
             version = max(r["version"] for r in rows)
             forms = tuple(sorted({r["form"] for r in rows if " " not in r["form"]}))
-            return forms, f"{db_name}.closed_classes v{version}"
+            return forms, f"{db_name}.{ClosedClassDoc.Settings.name} v{version}"
 
-    module = _migration(4).load()
-    return module.FORMS, f"db/0004 v{module.VERSION} (not applied)"
+    found, module = newest_policy_migration()
+    version = max(row["version"] for row in module.CLOSED_CLASS_ROWS)
+    return module.CLOSED_CLASS_FORMS, f"db/{found.label} v{version} (not applied)"

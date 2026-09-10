@@ -90,14 +90,13 @@ def test_the_checksum_follows_the_file(tmp_path):
 
 
 def test_the_real_directory_is_found_by_default():
-    """The package finds `db/` beside itself, so the runner works from any working directory."""
+    """The package finds `db/` beside itself, so the runner works from any working directory.
+
+    ONE migration since E1b: the thirteen that built E1 are in `db/archive/`, which the discovery
+    walk does not descend into — an archived migration must be readable and must never be runnable.
+    """
     found = migrations.discover()
-    assert [m.label for m in found][:4] == [
-        "0001_create_the_world",
-        "0002_bump_the_dictionary_epoch",
-        "0003_the_dictionary_policy_becomes_rows",
-        "0004_the_closed_classes_become_rows",
-    ]
+    assert [m.label for m in found] == ["0001_the_world_and_everything_declared"]
 
 
 # ------------------------------------------------------------------------------------------------
@@ -238,7 +237,7 @@ def test_0001_creates_every_collection(created):
 
 @live
 def test_0001_seeds_the_parameters(created):
-    stored = {r["key"]: r["value"] for r in created["params"].find({})}
+    stored = {r["key"]: r["value"] for r in created["body_params"].find({})}
     assert stored[constants.RCACHE_INTERVAL_PARAM] == constants.RCACHE_INTERVAL_DEFAULT
     assert stored[constants.BODY_TICK_PARAM] == constants.BODY_TICK_DEFAULT
     assert constants.DICTIONARY_EPOCH_PARAM in stored
@@ -248,7 +247,7 @@ def test_0001_seeds_the_parameters(created):
 @live
 def test_every_seeded_param_key_follows_the_house_convention(created):
     """`component.concern.setting` — dotted, most general first."""
-    for row in created["params"].find({}):
+    for row in created["body_params"].find({}):
         assert len(row["key"].split(".")) >= 3, row["key"]
         assert row["key"] == row["key"].lower()
 
@@ -256,7 +255,7 @@ def test_every_seeded_param_key_follows_the_house_convention(created):
 @live
 def test_every_seeded_param_explains_itself(created):
     """These rows are read by human probes; a number with no note is a mystery."""
-    for row in created["params"].find({}):
+    for row in created["body_params"].find({}):
         assert row["note"].strip(), row["key"]
 
 
@@ -292,20 +291,24 @@ def test_mood_and_temperament_cover_the_spheres_only(created):
 def test_0001_seeds_no_knowledge(created):
     """It creates a body, not a mind: no dictionary, no beliefs, no micro-nn instances."""
     assert created["micro_nn_instances"].count_documents({}) == 0
-    assert created["forecasts"].count_documents({}) == 0
-    assert created["derived_points"].count_documents({}) == 0
+    assert created["heart_forecasts"].count_documents({}) == 0
+    assert created["tkzip_derived_points"].count_documents({}) == 0
 
 
 @live
-def test_0002_moves_the_epoch(created):
-    """Both migrations run in `created`; 0002 is what the gate applies to a LIVE body."""
-    row = created["params"].find_one({"key": constants.DICTIONARY_EPOCH_PARAM})
+def test_the_epoch_is_carried_at_the_value_the_body_reached(created):
+    """The archived 0002 seeded the epoch at 0 and then bumped it to 1 — it was E0's gate, proving a
+    param edit lands on a live body with no restart. The baseline carries the value the body
+    ACTUALLY held (1), not the value the first of the two migrations wrote: a rebuild that reproduces
+    a world has to reproduce the world's state, and 0 would be a body one epoch younger than the one
+    it replaced."""
+    row = created["body_params"].find_one({"key": constants.DICTIONARY_EPOCH_PARAM})
     assert row["value"] == 1
 
 
 @live
 def test_the_seeded_params_are_exactly_what_the_migration_declares(created):
-    assert {r["key"] for r in created["params"].find({})} == {r["key"] for r in param_rows()}
+    assert {r["key"] for r in created["body_params"].find({})} == {r["key"] for r in param_rows()}
 
 
 @live
@@ -402,7 +405,7 @@ def test_reading_the_policy_without_naming_a_version_is_refused(created):
 @live
 def test_0004_writes_the_closed_classes_as_declared(created):
     """One table replacing tk1's four hand lists, and E1's exclusion set at the same time."""
-    stored = list(created["closed_classes"].find({}))
+    stored = list(created["language_closed_classes"].find({}))
     declared = closed_class_rows()
 
     assert {(r["form"], r["word_class"], r["role"]) for r in stored} == {
@@ -418,7 +421,7 @@ def test_the_closed_classes_read_back_as_the_exclusion_set(created):
     """What `tools/propose_seeds.py` reads when a body is reachable: the same forms it would have
     read off the migration file, so a proposal measured before the apply and one measured after are
     the same measurement."""
-    stored = list(created["closed_classes"].find({}))
+    stored = list(created["language_closed_classes"].find({}))
     assert {r["form"] for r in stored if " " not in r["form"]} == set(closed_class_forms())
 
 

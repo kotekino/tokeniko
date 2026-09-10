@@ -153,19 +153,23 @@ def test_the_excluded_head_is_the_price_of_one_exclusion(graph, provider):
 
 @pytest.mark.wordnet
 def test_the_ruled_structural_seeds_re_derive_exactly():
-    """Migration 0005 writes 200 structural seeds as a literal, and a literal nobody can regenerate
-    is a paste. This runs the migration's own `derive_structural_seeds()` — the same
-    `structural_ranking` and `structural_seeds` the tool calls, over the whole WordNet digraph — and
-    demands the same 200 words with the same ranks and the same in-degrees.
+    """The baseline writes 200 structural seeds as a literal, and a literal nobody can regenerate is
+    a paste. This runs its own `derive_structural_seeds()` — the same `structural_ranking` and
+    `structural_seeds` the tool calls, over the whole WordNet digraph — and demands the same 200
+    words with the same ranks and the same in-degrees.
 
     It is the most expensive test in the suite (~7s: the digraph is 68,779 nodes) and it earns it.
     Everything else about the ruled policy is checked on the ROWS, which cannot notice that the rows
     were derived from a ranking that no longer says what they claim — a WordNet upgrade, a change in
     `glosses.py`, a widened closed-class table would all move this list silently.
-    """
-    from tests.seed import migration
 
-    module = migration(5)
+    It also holds the E1b squash to account: the derivation crossed from the archived 0005 into the
+    baseline with two seams re-pointed at the baseline's own rows, and «re-pointed» has to mean the
+    same 200 words or the carry was not a carry.
+    """
+    from tests.seed import baseline
+
+    module = baseline()
     assert module.derive_structural_seeds() == tuple(
         tuple(entry) for entry in module.STRUCTURAL_SEEDS
     )

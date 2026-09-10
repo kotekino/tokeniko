@@ -1,7 +1,7 @@
 """Build the base from the standing policy rows, and say what was built.
 
     PYTHONPATH=. ../.venv/bin/python tools/build_dictionary.py [--db NAME] [--json PATH]
-    PYTHONPATH=. ../.venv/bin/python tools/build_dictionary.py --db tokeniko_tk2_body --apply \\
+    PYTHONPATH=. ../.venv/bin/python tools/build_dictionary.py --db tokeniko_tk2 --apply \\
         --authorized "the Captain, 2026-08-26"
 
 THE BUILD, and the one door it writes through. The base is `logic` — the body reads it and never

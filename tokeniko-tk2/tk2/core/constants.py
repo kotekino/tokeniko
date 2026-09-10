@@ -10,16 +10,16 @@ and leaves — that migration is the normal direction of travel, not an exceptio
 
 # The running tk2 body's own database. A SANDBOX until go-live (E10 moves the guard's boundary, and
 # moving it is a deliberate act with the Captain's hand on it — never a config drift).
-TK2_BODY_DB = "tokeniko_tk2_body"
+#
+# RENAMED at E1b (2026-09-10) from `tokeniko_tk2_body`. The old `tokeniko_tk2` was the
+# dictionary-review PROTOTYPE's database — 983 dimensions, superseded whole by the base E1 built —
+# and it was dropped so the name could mean the one thing it should: this generation's body. A
+# database called «_body» beside one that was not a body was a name doing the opposite of its job.
+TK2_BODY_DB = "tokeniko_tk2"
 
 # The tests' database. Named — not patterned — because a guard that accepts a SHAPE accepts every
 # typo that happens to fit it. The test suite creates and drops this one and nothing else.
-TK2_BODY_TEST_DB = "tokeniko_tk2_body_test"
-
-# The dictionary-review instruments' database (`scripts/tk2/`). Named here so it can be recognised,
-# NOT so it can be used: the body never writes it, and its assets cross by migration (E1), never by
-# a live read across the fence.
-TK2_INSTRUMENTS_DB = "tokeniko_tk2"
+TK2_BODY_TEST_DB = "tokeniko_tk2_test"
 
 # tk1's live databases — the BIOGRAPHY. Named here for one reason: so the guard can refuse them by
 # name and a typo in a config can never reach them. Nothing in tk2 opens these.
@@ -29,6 +29,17 @@ TK1_BODY_DBS = ("tokeniko", "tokeniko_mem", "tokeniko_memory")
 # the default, and being allowed is the thing that must be written down. Growing this tuple is a
 # deliberate act; go-live (E10) is the one planned occasion.
 DB_WHITELIST = frozenset({TK2_BODY_DB, TK2_BODY_TEST_DB})
+
+# ------------------------------------------------------------------------------------------------
+# the dictionary's two matrices, by name
+# ------------------------------------------------------------------------------------------------
+
+# A matrix's name is BOTH its collection and the identifier a stored build files it under, so it is
+# declared once here rather than typed as a literal wherever a store is opened. Renamed at E1b from
+# `base_r` / `base_d`: single letters are the shortest possible names and the least readable, and a
+# reader coming to this cold in six months should not have to learn an alphabet first.
+DICTIONARY_RELATIONS = "dictionary_base_relations"
+DICTIONARY_DISTRIBUTION = "dictionary_base_distribution"
 
 # ------------------------------------------------------------------------------------------------
 # the parameter store — the shape the r-cache reads

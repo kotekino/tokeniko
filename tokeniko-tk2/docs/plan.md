@@ -57,6 +57,28 @@ small anchor set and a nearest-anchor fallback so nothing can be missed (the sem
 hand list here is a bug wearing a shortcut's clothes: it is right for the words someone thought of
 and silently wrong for every other.
 
+**A THIRD LAW, ruled 2026-09-10 — a name is written for the human who reads it cold.** Readability
+for an LLM and readability for a person are not the same thing, and only one of them is scarce: a
+model reconstructs `base_r` from context in an instant, a person coming back in six months does not.
+So names are **explicit and a little verbose**, and the cost is paid in typing rather than in
+recall.
+
+- **Collections carry the component that owns them as a prefix**, taken from the register: `heart_`,
+  `dictionary_`, `senses_`, `tkzip_`, `micro_nn_`, `language_`, `body_`. The register is already the
+  project's taxonomy, so naming becomes a RULE rather than a judgement each time. A cross-cutting
+  table that no component owns keeps a bare name and has to argue for it.
+- **The layer is in the name too when there is one**: `dictionary_base_relations`, not
+  `dictionary_relations` — because `dictionary_sense_vectors` is coming and the base is not the
+  whole dictionary. A name that leaves room for what is coming is a name that will not have to move.
+- **No abbreviations that cost a lookup.** `base_r` and `base_d` were the shortest possible names and
+  the least readable in the schema; a reader had to learn an alphabet before reading a row.
+- **The same goes for parameters, variables and functions.** `relational` and `distributional`
+  rather than `R` and `D` outside a formula; a local whose meaning is not in its name is a comment
+  waiting to be written.
+- **The db is named for what it IS.** `tokeniko_tk2` is this generation's body; it used to name the
+  discarded prototype while the body was called `tokeniko_tk2_body`, which is a name doing the
+  opposite of its job.
+
 **A SECOND LAW, ruled 2026-08-25 — content is defined, structure is compiled.** Content words are
 DEFINED: they earn a dimension in the dictionary. Function words are COMPILED: they become structure
 in the zip — roles, quantifiers, moods, negation, binding — and never need a vector at all. A
@@ -324,6 +346,66 @@ and whether R is consulted per sense or per key — tkzip req 11's «rides on th
 problem the moment senses are first-class). Neither belongs to E2 (the zip's schema) or E3 (the
 station): it is **a dictionary task with no epic**, and the plan must gain one rather than let it
 arrive by accident inside another epic's scope. Named here as OPEN, for the Captain to place.
+
+---
+
+## E1b — The names, and one baseline *(done 2026-09-10)*
+
+**Goal:** every collection says what it holds and who owns it, before E1c doubles the dictionary's
+surface. Ruled by the Captain the day E1 closed, on the argument that the naming was itself a source
+of confusion — «is the dictionary complete?» is a harder question to answer when the collection
+holding the answer is called `base_r`.
+
+**What moved.** `base_r`/`base_d`/`base_keys`/`base_seals` → `dictionary_base_*` (the layer is in the
+name because `dictionary_sense_vectors` is coming) · `closed_classes` → `language_closed_classes` ·
+`derived_points` → `tkzip_derived_points` · `channel_registers` → `senses_channel_registers` ·
+`forecasts`/`emotional_log` → `heart_*` · `params` → `body_params`. The db `tokeniko_tk2_body` became
+**`tokeniko_tk2`**, the name having been freed by dropping the 983-dimension PROTOTYPE it used to
+hold — superseded whole by the base E1 built.
+
+**Why it was a REBUILD and not a rename.** Mongo cannot rename a timeseries collection at all
+(`heart_emotional_log` is one, with its `system.buckets` shadow), and moving a database is a copy in
+any case. The cost of a rebuild was measured before it was chosen and it was **nothing**: every heart
+row read `0.0` with `created_at == updated_at ==` the migration's own timestamp. He had been created
+and had never ticked.
+
+**The thirteen migrations became one baseline** (`db/0001_the_world_and_everything_declared`, the
+originals in `db/archive/`), and the ledger did not go with them — **the ledger was never the files**.
+All nine policy versions are written by the baseline with their notes verbatim, out of
+`db/data/declared_rows.json`: v1 still fingerprints to what v1 measured, v4 still argues its own
+lemma scope. What was given up is the SEQUENCE as replayable steps, which survives in git and in the
+notes but not as thirteen runnable files — a price the Captain took knowingly.
+
+**Proved rather than asserted:** the config fingerprint `9824ef46…` reproduces exactly from the
+baseline, and every collection was compared row by row against the old world before it was dropped —
+identical, all of them. The base was rebuilt and read back WHOLE.
+
+**Also landed:** the third standing law (above), and the guard's special case for the prototype's
+database retired — `tokeniko_tk2` is now the one name it allows rather than one it singles out.
+
+---
+
+## E1c — The sense layer *(next)*
+
+**Goal:** the full dictionary. E1 built the BASE — 4,555 POS-split keys, the frame the geometry is
+stated over. The resource carries **68,779 words and 120,475 senses**, and those RIDE ON the base: a
+sense holds a D-vector over base dimensions and consults R through its sense key (the architecture
+guard, tkzip req 11 — **never a senses×senses matrix**).
+
+**Why it comes before E2.** E3's parser resolves a word to a SENSE, not to a POS key, and
+discovering that mid-station would be expensive. The Captain ruled it first on 2026-09-10: «we should
+take care of it before anything else».
+
+**The two decisions E1 deliberately left open** — both are rulings, both need measuring first:
+1. **The sense vector** — how a sense's D-vector over base dims is derived, and whether R is
+   consulted per sense or per key.
+2. **Sense selection** — `senses="primary"` is the standing walk and its rot is measured and
+   documented (task 3 above): `small` reads as «the slender part of the back». That is a BASE
+   problem today and becomes a SENSE problem the moment senses are first-class.
+
+**Answers to:** dictionary req «sense-split seam» (resolved in part at E1 — dimensions stop at POS;
+this is the other half) · tkzip req 9 (a wrong verb sense is a wrong action, so senses must stay
+distinguishable in the dictionary layer).
 
 ---
 

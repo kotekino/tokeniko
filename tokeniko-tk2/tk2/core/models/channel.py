@@ -33,7 +33,7 @@ class ChannelRegisterDoc(KbDocument, Timestamped, Updated):
     strength: float = Field(ge=0.0, le=1.0)
 
     class Settings:
-        name = "channel_registers"
+        name = "senses_channel_registers"
         indexes = [
             # One value per (channel, trait): two rows for the same trait of the same channel would
             # be two answers where the mouth needs one.

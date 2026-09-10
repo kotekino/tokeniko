@@ -33,6 +33,7 @@ import pytest
 
 from tests.seed import (
     bar_rows,
+    baseline,
     migration,
     bar_rows_v2,
     closed_class_forms,
@@ -603,9 +604,9 @@ def test_version_3_carries_version_2_forward_unedited():
     assert carried == v2, "the seeds, the cuts, their families and their reasons cross unchanged"
     assert ruled_config().closure == declared_config_v3().closure
     assert ruled_config().declared_seeds == declared_config_v3().declared_seeds
-    # A POLICY migration writes no bar rows at all — which is the honest form of «the bar
-    # did not move», now that 0011 has grown it and `snapshot_bar()` reads thirty-seven.
-    assert not hasattr(migration(6), "BAR_ROWS")
+    # «The bar did not move with them» — said against the LEDGER since E1b squashed the chain:
+    # policy v3 declares no bar pairs of its own, and the bar's own versions are 1 and 2.
+    assert {row["version"] for row in baseline().BAR_ROWS} == {1, 2}
     assert declared_config_v3().bar == policy.bar_from_rows(bar_rows())
 
 
@@ -747,9 +748,9 @@ def test_version_4_carries_version_3_forward_unedited():
     assert len(v4) == len(v3) + 1
     assert {k: v for k, v in v4.items() if k in v3} == v3
     assert set(v4) - set(v3) == {(policy.KIND_RELATION_SETTING, "lemma_scope")}
-    # A POLICY migration writes no bar rows at all — which is the honest form of «the bar
-    # did not move», now that 0011 has grown it and `snapshot_bar()` reads thirty-seven.
-    assert not hasattr(migration(7), "BAR_ROWS")
+    # «The bar did not move with them» — said against the LEDGER since E1b squashed the chain:
+    # policy v4 declares no bar pairs of its own, and the bar's own versions are 1 and 2.
+    assert {row["version"] for row in baseline().BAR_ROWS} == {1, 2}
     assert declared_config_v4().bar == policy.bar_from_rows(bar_rows())
 
 
@@ -852,9 +853,9 @@ def test_version_5_carries_version_4_forward_unedited():
         (policy.KIND_RELATION_WEIGHT, "antonym_inferred"),
         (policy.KIND_RELATION_SETTING, "antonym_symmetry"),
     }
-    # A POLICY migration writes no bar rows at all — which is the honest form of «the bar
-    # did not move», now that 0011 has grown it and `snapshot_bar()` reads thirty-seven.
-    assert not hasattr(migration(8), "BAR_ROWS")
+    # «The bar did not move with them» — said against the LEDGER since E1b squashed the chain:
+    # policy v5 declares no bar pairs of its own, and the bar's own versions are 1 and 2.
+    assert {row["version"] for row in baseline().BAR_ROWS} == {1, 2}
     assert declared_config_v5().bar == policy.bar_from_rows(bar_rows())
 
 

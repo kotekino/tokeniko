@@ -98,8 +98,8 @@ def load(db_name: str | None, build_label: str | None):
         from tk2.datatier.matrix_store import MongoMatrixStore
 
         store = MongoMatrixStore(database(db_name))
-        relational = store.matrix(build_label, "base_r")
-        distributional = store.matrix(build_label, "base_d")
+        relational = store.matrix(build_label, constants.DICTIONARY_RELATIONS)
+        distributional = store.matrix(build_label, constants.DICTIONARY_DISTRIBUTION)
         built = build.BaseBuild(words=(), dimensions=relational.keys,
                                 relational=relational, distributional=distributional)
         source = f"{db_name} build {build_label!r} (read back, sealed)"

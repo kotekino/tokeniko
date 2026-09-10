@@ -3,7 +3,7 @@
     PYTHONPATH=. ../.venv/bin/python tools/curate_dictionary.py propose [--pairs a.p:b.q,…]
     PYTHONPATH=. ../.venv/bin/python tools/curate_dictionary.py simulate --proposals PATH
     PYTHONPATH=. ../.venv/bin/python tools/curate_dictionary.py approve  --proposals PATH \\
-        --db tokeniko_tk2_body --build … --i-am-the-captain --authorized "the Captain, …"
+        --db tokeniko_tk2 --build … --i-am-the-captain --authorized "the Captain, …"
 
 Requirement 20, the Captain's ruling of 2026-08-12: a manual edge may enter R only when it is
 ANALYTIC — stated in a definition — never when it is contingent. Sayings, slang and context-bound
@@ -62,7 +62,7 @@ def load(args):
         from tk2.datatier.matrix_store import MongoMatrixStore
 
         store = MongoMatrixStore(database(args.db))
-        built = store.matrix(args.build, "base_r")
+        built = store.matrix(args.build, constants.DICTIONARY_RELATIONS)
         print(f"base          {args.db}.base_r build='{args.build}' — {len(built.keys):,} dimensions")
         return config, rows, bar_rows, built
 
@@ -236,7 +236,8 @@ def cmd_approve(args) -> int:
         print("REFUSED: approving writes into a stored base, so it must name one (--db --build).")
         return 2
 
-    from tk2.core.models import DictionaryBuildDoc
+    from tk2.core import constants
+from tk2.core.models import DictionaryBuildDoc
     from tk2.datatier import MigrationWriter, database
     from tk2.datatier.matrix_store import MongoMatrixStore
 

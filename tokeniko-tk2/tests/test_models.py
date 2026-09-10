@@ -60,21 +60,21 @@ def test_collection_names_are_unique():
 
 def test_the_named_collections_are_all_present():
     assert {m.Settings.name for m in ALL_MODELS} == {
-        "params",
+        "body_params",
         "heart_anatomy",
         "micro_nn_instances",
         "heart_levels",
         "heart_targets",
         "heart_mood",
         "heart_temperament",
-        "emotional_log",
-        "forecasts",
-        "derived_points",
+        "heart_emotional_log",
+        "heart_forecasts",
+        "tkzip_derived_points",
         "micro_nn_weights",
-        "channel_registers",
+        "senses_channel_registers",
         "dictionary_policy",
         "dictionary_bar",
-        "closed_classes",
+        "language_closed_classes",
     }
 
 
@@ -88,7 +88,7 @@ def test_the_architecture_is_rows_not_code():
         "micro_nn_instances",
         "dictionary_policy",
         "dictionary_bar",
-        "closed_classes",
+        "language_closed_classes",
     }
 
 
@@ -115,7 +115,7 @@ def test_the_base_is_not_registered_with_the_body_either():
     than it has caching the matrix it vouches for."""
     from tk2.core.models import BASE_MODELS
 
-    assert [m.Settings.name for m in BASE_MODELS] == ["base_keys", "base_r", "base_d", "base_seals"]
+    assert [m.Settings.name for m in BASE_MODELS] == ["dictionary_base_keys", "dictionary_base_relations", "dictionary_base_distribution", "dictionary_base_seals"]
     assert all(m.write_class is WriteClass.LOGIC for m in BASE_MODELS)
     assert not set(BASE_MODELS) & set(ALL_MODELS)
 

@@ -30,6 +30,18 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 words / 120,475 senses ride ON it and are **not built** — an open dictionary task with no epic yet
 (`plan.md` § E1, «what E1 did not build»).*
 
+## E1b — the names ✅ 2026-09-10 — see `landed.md`
+- [x] every collection prefixed by the component that owns it (`dictionary_base_*`, `heart_*`,
+      `language_`, `senses_`, `tkzip_`, `body_params`)
+- [x] `tokeniko_tk2_body` → **`tokeniko_tk2`**; the 983-dim prototype that held the name, dropped
+- [x] thirteen migrations → one baseline; all nine policy versions carried with their notes verbatim
+- [x] rebuilt and proved: `9824ef46…` reproduces, every collection identical row by row
+
+## E1c — the sense layer *(NEXT — before E2, the Captain's ruling)*
+- [ ] the sense vector: how a sense's D-vector over base dims is derived (his ruling)
+- [ ] sense selection: `senses="primary"` and its measured rot (his ruling)
+- [ ] the 120,475 senses built ON the base — never a senses×senses matrix
+
 ## E2 — the format (tkzip v2)
 - [ ] role inventory (VerbNet ref; source; part/determination split)
 - [ ] named rows & scope (Tseitin; row order = scope; RESULT/CAUSE; purpose)

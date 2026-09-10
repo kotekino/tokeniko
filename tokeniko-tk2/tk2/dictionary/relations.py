@@ -60,6 +60,12 @@ from tk2.dictionary.matrix import (
     dimension_index,
 )
 
+#: This matrix's name — its collection AND the identifier a stored build files it under.
+#: Declared here rather than imported from `tk2.core.constants`, because this package is pure
+#: and importing the body's constants would be the first thread of a dependency it must not have.
+#: `tk2.core.constants` names it too, and a test holds the two to each other.
+RELATIONS_MATRIX = "dictionary_base_relations"
+
 #: The diagonal. A dimension owns its own axis; the weight is declared like every other.
 IDENTITY = "identity"
 
@@ -203,7 +209,7 @@ def build(
     dimensions,
     provider: RelationProvider,
     policy: RelationPolicy,
-    name: str = "base_r",
+    name: str = RELATIONS_MATRIX,
     progress=None,
     antonym_symmetry: str | None = None,
 ) -> Matrix:

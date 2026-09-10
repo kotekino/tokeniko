@@ -343,7 +343,7 @@ def _relational(dimensions):
             cells.append(Cell(column=opposed[key], weight=-1.0, relation="antonym",
                               via=(Provenance("antonym", -1.0),)))
         rows.append(MatrixRow(key=key, index=index, cells=tuple(cells)))
-    return Matrix(name="base_r", keys=tuple(dimensions), rows=tuple(rows))
+    return Matrix(name="dictionary_base_relations", keys=tuple(dimensions), rows=tuple(rows))
 
 
 def test_a_mix_of_zero_is_R_alone(dimensions, D):

@@ -21,6 +21,7 @@ import time
 from types import FrameType
 
 from tk2.core import constants
+from tk2.core.models import ParamDoc
 from tk2.core.models import ALL_MODELS
 from tk2.datatier import boot_datatier
 from tk2.datatier.rcache import RCache
@@ -53,7 +54,7 @@ def boot(db_name: str | None = None) -> RCache:
     """Open the database, register the models, load the r-tier. Boot = load the r-tables."""
     db, cache = boot_datatier(ALL_MODELS, db_name=db_name)
 
-    params = len(cache.rows("params"))
+    params = len(cache.rows(ParamDoc.Settings.name))
     anatomy = len(cache.rows("heart_anatomy"))
     _log.info(
         "boot — db=%s · r-cache loaded: %d params, %d anatomy rows · slow tick every %ds",

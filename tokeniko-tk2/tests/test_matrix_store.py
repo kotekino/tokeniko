@@ -56,12 +56,12 @@ def store(clean_db):
 def test_a_matrix_survives_the_trip_whole(store, built):
     assert store.write(built, build="t1") == len(KEYS)
     assert store.keys("t1") == KEYS
-    assert store.matrix("t1", "base_r").rows == built.rows
+    assert store.matrix("t1", "dictionary_base_relations").rows == built.rows
 
 
 def test_the_sign_and_the_provenance_come_back(store, built):
     store.write(built, build="t1")
-    read = store.matrix("t1", "base_r")
+    read = store.matrix("t1", "dictionary_base_relations")
 
     assert read.cell("hungry.a", "full.a").weight < 0, "the antonym sign is the whole primitive"
     assert read.cell("swallow.v", "eat.v").relation == "entailed_by"
@@ -83,7 +83,7 @@ def test_a_curated_cell_keeps_its_hand_and_its_evidence(store, built, policy):
     applied = curation.apply(built, [proposal], policy)
     store.write(applied.matrix, build="t1")
 
-    cell = store.matrix("t1", "base_r").cell("food.n", "eat.v")
+    cell = store.matrix("t1", "dictionary_base_relations").cell("food.n", "eat.v")
     assert cell.source == SOURCE_CURATED
     assert cell.evidence == proposal.evidence
     assert cell.relation == "involves"
@@ -94,7 +94,7 @@ def test_a_key_with_a_dot_in_it_is_stored_as_a_value(store, built, clean_db):
     NAME as a path — a cells map would have written a nested `sleep` document instead of the cell
     anybody meant. The cells are a LIST, and this is what says so."""
     store.write(built, build="t1")
-    stored = clean_db["base_r"].find_one({"build": "t1", "key": "eat.v"})
+    stored = clean_db["dictionary_base_relations"].find_one({"build": "t1", "key": "eat.v"})
 
     assert isinstance(stored["cells"], list)
     assert all(isinstance(cell["column"], str) for cell in stored["cells"])
@@ -108,13 +108,13 @@ def test_two_builds_can_sit_in_one_database(store, built):
     store.write(built, build="t2")
 
     assert set(store.builds()) == {"t1", "t2"}
-    assert store.row("t2", "base_r", "eat.v") == store.row("t1", "base_r", "eat.v")
+    assert store.row("t2", "dictionary_base_relations", "eat.v") == store.row("t1", "dictionary_base_relations", "eat.v")
 
 
 def test_rewriting_a_build_replaces_it_rather_than_doubling_it(store, built, clean_db):
     store.write(built, build="t1")
     store.write(built, build="t1")
-    assert clean_db["base_r"].count_documents({"build": "t1"}) == len(KEYS)
+    assert clean_db["dictionary_base_relations"].count_documents({"build": "t1"}) == len(KEYS)
 
 
 def test_a_second_matrix_may_not_disagree_about_the_dimensions(store, built):
@@ -124,7 +124,7 @@ def test_a_second_matrix_may_not_disagree_about_the_dimensions(store, built):
 
     store.write(built, build="t1")
     shuffled = matrix.Matrix(
-        name="base_r",
+        name="dictionary_base_relations",
         keys=tuple(reversed(KEYS)),
         rows=tuple(
             matrix.MatrixRow(key=key, index=index, cells=())
@@ -139,7 +139,7 @@ def test_the_registry_records_the_dimension_order_and_its_indices(store, built, 
     """The index is stored rather than derived from a sort: it is the position a vector's column
     means, and two readers that sorted differently would read every cell at the wrong column."""
     store.write(built, build="t1")
-    rows = sorted(clean_db["base_keys"].find({"build": "t1"}), key=lambda row: row["index"])
+    rows = sorted(clean_db["dictionary_base_keys"].find({"build": "t1"}), key=lambda row: row["index"])
 
     assert [row["key"] for row in rows] == list(KEYS)
     assert [row["index"] for row in rows] == list(range(len(KEYS)))
@@ -150,7 +150,7 @@ def test_a_stray_cell_never_reaches_the_database(store, policy):
     """`assert_square` runs before a matrix leaves the builder, and this is the shape it refuses: a
     cell naming a column that is not a dimension is a statement about an axis that does not exist."""
     stray = matrix.Matrix(
-        name="base_r",
+        name="dictionary_base_relations",
         keys=("eat.v",),
         rows=(
             matrix.MatrixRow(
@@ -184,17 +184,17 @@ def _distributional():
                 cells.append(Cell(column=column, weight=0.4, relation=GLOSS_OVERLAP,
                                   via=(Provenance(GLOSS_OVERLAP, 0.4),)))
         rows.append(matrix.MatrixRow(key=key, index=index, cells=tuple(cells)))
-    return matrix.Matrix(name="base_d", keys=KEYS, rows=tuple(rows))
+    return matrix.Matrix(name="dictionary_base_distribution", keys=KEYS, rows=tuple(rows))
 
 
 def test_both_matrices_of_a_build_share_one_key_registry(store, built, clean_db):
     """The property the whole architecture rests on: R and D are two geometries over ONE dimension
     order, so the registry is written once and the second matrix does not add a row to it."""
     assert store.write(built, build="t1") == len(KEYS)
-    written = clean_db["base_keys"].count_documents({"build": "t1"})
+    written = clean_db["dictionary_base_keys"].count_documents({"build": "t1"})
 
     assert store.write(_distributional(), build="t1") == len(KEYS)
-    assert clean_db["base_keys"].count_documents({"build": "t1"}) == written
+    assert clean_db["dictionary_base_keys"].count_documents({"build": "t1"}) == written
     assert store.keys("t1") == KEYS
 
 
@@ -202,13 +202,13 @@ def test_D_survives_the_trip_whole_and_stays_unsigned(store, built):
     store.write(built, build="t1")
     store.write(_distributional(), build="t1")
 
-    read = store.matrix("t1", "base_d")
+    read = store.matrix("t1", "dictionary_base_distribution")
     assert read.rows == _distributional().rows
     assert read.cell("eat.v", "food.n").weight == 0.4
     assert read.cell("food.n", "eat.v").weight == 0.4, "overlap is symmetric"
     assert all(cell.weight > 0 for row in read.rows for cell in row.cells)
     # ...and R is untouched beside it: two collections, one build label.
-    assert store.matrix("t1", "base_r").cell("hungry.a", "full.a").weight < 0
+    assert store.matrix("t1", "dictionary_base_relations").cell("hungry.a", "full.a").weight < 0
 
 
 def test_a_D_that_disagrees_about_the_dimensions_is_refused_too(store, built):
@@ -217,7 +217,7 @@ def test_a_D_that_disagrees_about_the_dimensions_is_refused_too(store, built):
 
     store.write(built, build="t1")
     shuffled = matrix.Matrix(
-        name="base_d",
+        name="dictionary_base_distribution",
         keys=tuple(reversed(KEYS)),
         rows=tuple(matrix.MatrixRow(key=key, index=index, cells=())
                    for index, key in enumerate(reversed(KEYS))),
@@ -240,12 +240,12 @@ def test_a_written_matrix_is_sealed_with_its_own_count_and_fingerprint(store, bu
     from tk2.dictionary import matrix as matrix_module
 
     store.write(built, build="t1")
-    seal = store.seal("t1", "base_r")
+    seal = store.seal("t1", "dictionary_base_relations")
 
     assert seal["rows"] == len(KEYS)
     assert seal["cells"] == matrix_module.cell_count(built)
     assert seal["fingerprint"] == matrix_module.fingerprint(built)
-    assert store.seal("t1", "base_keys")["rows"] == len(KEYS), "the registry is sealed too"
+    assert store.seal("t1", "dictionary_base_keys")["rows"] == len(KEYS), "the registry is sealed too"
 
 
 def test_an_unsealed_matrix_does_not_read_at_all(store, built, clean_db):
@@ -254,16 +254,16 @@ def test_an_unsealed_matrix_does_not_read_at_all(store, built, clean_db):
     from tk2.datatier.matrix_store import BaseIncomplete
 
     store.write(built, build="t1")
-    clean_db["base_seals"].delete_many({"build": "t1", "name": "base_r"})
+    clean_db["dictionary_base_seals"].delete_many({"build": "t1", "name": "dictionary_base_relations"})
 
     with pytest.raises(BaseIncomplete):
-        store.matrix("t1", "base_r")
+        store.matrix("t1", "dictionary_base_relations")
     with pytest.raises(BaseIncomplete):
-        store.row("t1", "base_r", "eat.v")
+        store.row("t1", "dictionary_base_relations", "eat.v")
     with pytest.raises(BaseIncomplete):
-        list(store.rows("t1", "base_r"))
+        list(store.rows("t1", "dictionary_base_relations"))
     # ...and the rows are still there to be looked at, which is what makes recovery possible.
-    assert clean_db["base_r"].count_documents({"build": "t1"}) == len(KEYS)
+    assert clean_db["dictionary_base_relations"].count_documents({"build": "t1"}) == len(KEYS)
 
 
 def test_an_unsealed_registry_takes_the_whole_build_down(store, built, clean_db):
@@ -272,12 +272,12 @@ def test_an_unsealed_registry_takes_the_whole_build_down(store, built, clean_db)
     from tk2.datatier.matrix_store import BaseIncomplete
 
     store.write(built, build="t1")
-    clean_db["base_seals"].delete_many({"build": "t1", "name": "base_keys"})
+    clean_db["dictionary_base_seals"].delete_many({"build": "t1", "name": "dictionary_base_keys"})
 
     with pytest.raises(BaseIncomplete):
         store.keys("t1")
     with pytest.raises(BaseIncomplete):
-        store.matrix("t1", "base_r")
+        store.matrix("t1", "dictionary_base_relations")
 
 
 def test_a_rewrite_breaks_the_seal_before_it_touches_a_row(store, built, monkeypatch, clean_db):
@@ -290,14 +290,14 @@ def test_a_rewrite_breaks_the_seal_before_it_touches_a_row(store, built, monkeyp
     original = module.MongoMatrixStore._break_seal
 
     def watch(self, build, name):
-        seen[name] = clean_db["base_r"].count_documents({"build": build})
+        seen[name] = clean_db["dictionary_base_relations"].count_documents({"build": build})
         return original(self, build, name)
 
     store.write(built, build="t1")
     monkeypatch.setattr(module.MongoMatrixStore, "_break_seal", watch)
     store.write(built, build="t1")
 
-    assert seen["base_r"] == len(KEYS), "the seal came off while the old rows were still there"
+    assert seen["dictionary_base_relations"] == len(KEYS), "the seal came off while the old rows were still there"
 
 
 def test_an_interrupted_write_leaves_no_seal_and_the_build_stays_unreadable(store, built, monkeypatch):
@@ -310,7 +310,7 @@ def test_an_interrupted_write_leaves_no_seal_and_the_build_stays_unreadable(stor
     original = module.MigrationWriter.insert_many
 
     def fail_on_the_second(self, model, rows):
-        if model.Settings.name == "base_r":
+        if model.Settings.name == "dictionary_base_relations":
             calls["n"] += 1
             if calls["n"] == 2:
                 raise RuntimeError("the network went away mid-write")
@@ -323,9 +323,9 @@ def test_an_interrupted_write_leaves_no_seal_and_the_build_stays_unreadable(stor
         store.write(built, build="t1")
 
     assert calls["n"] == 2, "the write had already landed one chunk of base_r"
-    assert store.seal("t1", "base_r") is None
+    assert store.seal("t1", "dictionary_base_relations") is None
     with pytest.raises(BaseIncomplete):
-        store.matrix("t1", "base_r")
+        store.matrix("t1", "dictionary_base_relations")
 
 
 def test_a_re_run_of_an_interrupted_write_heals_the_build(store, built, monkeypatch):
@@ -337,7 +337,7 @@ def test_a_re_run_of_an_interrupted_write_heals_the_build(store, built, monkeypa
     original = module.MigrationWriter.insert_many
 
     def fail_once(self, model, rows):
-        if model.Settings.name == "base_r":
+        if model.Settings.name == "dictionary_base_relations":
             calls["n"] += 1
             if calls["n"] == 2:
                 raise RuntimeError("the network went away mid-write")
@@ -350,8 +350,8 @@ def test_a_re_run_of_an_interrupted_write_heals_the_build(store, built, monkeypa
 
     monkeypatch.undo()
     assert store.write(built, build="t1") == len(KEYS)
-    assert store.matrix("t1", "base_r").rows == built.rows
-    assert store.verify("t1", "base_r")["whole"]
+    assert store.matrix("t1", "dictionary_base_relations").rows == built.rows
+    assert store.verify("t1", "dictionary_base_relations")["whole"]
 
 
 def test_the_write_goes_out_in_chunks_and_says_so(store, built, monkeypatch):
@@ -381,13 +381,13 @@ def test_a_row_wider_than_the_budget_still_goes_out_on_its_own(built):
 def test_verify_reads_the_matrix_back_and_recomputes_its_fingerprint(store, built, clean_db):
     """The seal says «all of it arrived»; this says «and it is what left»."""
     store.write(built, build="t1")
-    assert store.verify("t1", "base_r")["whole"]
+    assert store.verify("t1", "dictionary_base_relations")["whole"]
     assert store.verify_keys("t1")["whole"]
 
-    clean_db["base_r"].update_one(
+    clean_db["dictionary_base_relations"].update_one(
         {"build": "t1", "key": "eat.v"}, {"$set": {"cells.0.w": 0.123456}}
     )
-    spoiled = store.verify("t1", "base_r")
+    spoiled = store.verify("t1", "dictionary_base_relations")
     assert not spoiled["whole"]
     assert spoiled["fingerprint"] != spoiled["fingerprint_sealed"]
     assert spoiled["rows"] == spoiled["rows_sealed"], "a count could never have caught this"
@@ -399,6 +399,6 @@ def test_a_dropped_build_loses_its_seals_first(store, built, clean_db):
 
     gone = store.drop("t1")
 
-    assert gone["base_r"] == len(KEYS) and gone["base_keys"] == len(KEYS)
-    assert clean_db["base_seals"].count_documents({"build": "t1"}) == 0
+    assert gone["dictionary_base_relations"] == len(KEYS) and gone["dictionary_base_keys"] == len(KEYS)
+    assert clean_db["dictionary_base_seals"].count_documents({"build": "t1"}) == 0
     assert store.builds() == ()

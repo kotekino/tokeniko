@@ -265,7 +265,7 @@ class BaseKeyDoc(LogicDocument, Timestamped):
     index: int = Field(ge=0)
 
     class Settings:
-        name = "base_keys"
+        name = "dictionary_base_keys"
         indexes = [
             IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
             IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
@@ -294,7 +294,7 @@ class BaseDistributionDoc(LogicDocument, Timestamped):
     cells: list[StoredCell] = Field(default_factory=list)
 
     class Settings:
-        name = "base_d"
+        name = "dictionary_base_distribution"
         indexes = [
             IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
             IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),
@@ -345,7 +345,7 @@ class BaseSealDoc(LogicDocument, Timestamped):
     note: str = ""
 
     class Settings:
-        name = "base_seals"
+        name = "dictionary_base_seals"
         indexes = [
             # One seal per matrix per build. Two would make «is this build complete?» a question
             # with two answers, which is the one thing the seal exists to prevent.
@@ -371,7 +371,7 @@ class BaseRelationDoc(LogicDocument, Timestamped):
     cells: list[StoredCell] = Field(default_factory=list)
 
     class Settings:
-        name = "base_r"
+        name = "dictionary_base_relations"
         indexes = [
             IndexModel([("build", ASCENDING), ("key", ASCENDING)], unique=True),
             IndexModel([("build", ASCENDING), ("index", ASCENDING)], unique=True),

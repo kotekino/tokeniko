@@ -19,20 +19,58 @@ def migration(number: int) -> ModuleType:
     return found.load()
 
 
+# ------------------------------------------------------------------------------------------------
+# reading the ledger, since E1b
+# ------------------------------------------------------------------------------------------------
+#
+# The thirteen migrations these fixtures used to read by NUMBER are in `db/archive/`; the baseline
+# carries the whole ledger. So a fixture names the POLICY VERSION it means, which is what it always
+# meant — «migration 7's rows» was only ever a way of saying «version 4», and the indirection is
+# gone rather than re-pointed.
+
+
+def baseline() -> ModuleType:
+    """The one migration there is: `db/0001_the_world_and_everything_declared`."""
+    return migration(1)
+
+
+def policy_rows_of_version(version: int) -> list[dict]:
+    """One policy version's rows, out of the nine the baseline writes."""
+    return [dict(row) for row in baseline().POLICY_ROWS if row["version"] == version]
+
+
+def bar_rows_of_version(version: int) -> list[dict]:
+    """One BAR version's own rows. The live bar is every unretired row across versions — v2 means
+    v1's eighteen plus v2's nineteen — so this is «what version N added», never «the bar at N»."""
+    return [dict(row) for row in baseline().BAR_ROWS if row["version"] == version]
+
+
+def config_of_version(version: int, bar: list[dict] | None = None):
+    """A policy version assembled as the engine takes it, against bar v1 unless told otherwise.
+
+    Bar v1 by default because eight of the nine versions were DECLARED against the eighteen pairs,
+    and a fixture that read the live bar would move a historical fingerprint every time the bar
+    grows — the opposite of a regression.
+    """
+    from tk2.dictionary import policy as _policy
+
+    return _policy.config_from_rows(policy_rows_of_version(version), bar or bar_rows())
+
+
 def anatomy_rows() -> list[dict]:
-    return list(migration(1).ANATOMY_ROWS)
+    return list(baseline().ANATOMY_ROWS)
 
 
 def param_rows() -> list[dict]:
-    return list(migration(1).PARAM_ROWS)
+    return list(baseline().PARAM_ROWS)
 
 
 def all_poles() -> list[str]:
-    return list(migration(1).ALL_POLES)
+    return list(baseline().ALL_POLES)
 
 
 def sphere_poles() -> list[str]:
-    return list(migration(1).SPHERE_POLES)
+    return list(baseline().SPHERE_POLES)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -45,18 +83,18 @@ def sphere_poles() -> list[str]:
 
 
 def policy_rows() -> list[dict]:
-    return [dict(row) for row in migration(3).POLICY_ROWS]
+    return policy_rows_of_version(1)
 
 
 def bar_rows() -> list[dict]:
     """Bar VERSION 1 — the eighteen the whole epic was measured against."""
-    return [dict(row) for row in migration(3).BAR_ROWS]
+    return bar_rows_of_version(1)
 
 
 def bar_rows_v2() -> list[dict]:
     """Bar version 2's OWN nineteen (0011). The live bar is v1 + v2: the collection is
     append-mostly, so a version names what was added, never the whole set."""
-    return [dict(row) for row in migration(11).BAR_ROWS]
+    return bar_rows_of_version(2)
 
 
 def _as_declared_against_bar_v1(config):
@@ -81,7 +119,7 @@ def _as_declared_against_bar_v1(config):
 
 def declared_config():
     """The policy 0003 writes, as the object `config.py` used to hold."""
-    return _as_declared_against_bar_v1(migration(3).DECLARED)
+    return config_of_version(1)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -93,12 +131,12 @@ def declared_config():
 
 
 def closed_class_rows() -> list[dict]:
-    return [dict(row) for row in migration(4).ROWS]
+    return [dict(row) for row in baseline().CLOSED_CLASS_ROWS]
 
 
 def closed_class_forms() -> tuple[str, ...]:
     """The single-word forms — what E1's seed proposal excludes with."""
-    return tuple(migration(4).FORMS)
+    return tuple(baseline().CLOSED_CLASS_FORMS)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -111,17 +149,17 @@ def closed_class_forms() -> tuple[str, ...]:
 
 
 def policy_rows_v2() -> list[dict]:
-    return [dict(row) for row in migration(5).POLICY_ROWS]
+    return policy_rows_of_version(2)
 
 
 def ruled_config():
     """The policy v2 writes — purpose ∪ structure, the cap demoted to a rail, bar v1 unchanged."""
-    return _as_declared_against_bar_v1(migration(5).DECLARED)
+    return config_of_version(2)
 
 
 def structural_seeds() -> tuple[tuple[str, int, int], ...]:
     """`(word, rank, in_degree)` — the cut of the structural ranking the Captain ruled at k=200."""
-    return tuple(migration(5).STRUCTURAL_SEEDS)
+    return tuple(baseline().STRUCTURAL_SEEDS)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -134,12 +172,12 @@ def structural_seeds() -> tuple[tuple[str, int, int], ...]:
 
 
 def policy_rows_v3() -> list[dict]:
-    return [dict(row) for row in migration(6).POLICY_ROWS]
+    return policy_rows_of_version(3)
 
 
 def declared_config_v3():
     """The whole policy v3 declares — v2's seeds and cuts, plus R's weights and the alphabet."""
-    return _as_declared_against_bar_v1(migration(6).DECLARED)
+    return config_of_version(3)
 
 
 def relation_policy():
@@ -157,7 +195,7 @@ def relation_policy():
 
 def alphabet():
     """The parts of speech policy v3 declares."""
-    return migration(6).ALPHABET
+    return config_of_version(3).alphabet
 
 
 # ------------------------------------------------------------------------------------------------
@@ -166,17 +204,17 @@ def alphabet():
 
 
 def policy_rows_v4() -> list[dict]:
-    return [dict(row) for row in migration(7).POLICY_ROWS]
+    return policy_rows_of_version(4)
 
 
 def relation_policy_v4():
     """R's declared weights at v4 — including whose lemma may speak."""
-    return _as_declared_against_bar_v1(migration(7).DECLARED).relations
+    return config_of_version(4).relations
 
 
 def declared_config_v4():
     """The policy v4 writes — v3's whole declaration, plus whose lemma may speak."""
-    return _as_declared_against_bar_v1(migration(7).DECLARED)
+    return config_of_version(4)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -185,16 +223,16 @@ def declared_config_v4():
 
 
 def policy_rows_v5() -> list[dict]:
-    return [dict(row) for row in migration(8).POLICY_ROWS]
+    return policy_rows_of_version(5)
 
 
 def declared_config_v5():
     """The policy v5 writes — v4's whole declaration, plus how a one-sided antonymy is read."""
-    return _as_declared_against_bar_v1(migration(8).DECLARED)
+    return config_of_version(5)
 
 
 def relation_policy_v5():
-    return migration(8).DECLARED.relations
+    return config_of_version(5).relations
 
 
 # ------------------------------------------------------------------------------------------------
@@ -203,12 +241,12 @@ def relation_policy_v5():
 
 
 def policy_rows_v6() -> list[dict]:
-    return [dict(row) for row in migration(9).POLICY_ROWS]
+    return policy_rows_of_version(6)
 
 
 def declared_config_v6():
     """The policy v6 writes — v5's whole declaration, plus the nine parameters D is built from."""
-    return _as_declared_against_bar_v1(migration(9).DECLARED)
+    return config_of_version(6)
 
 
 def distribution_policy():
@@ -229,7 +267,7 @@ def closed_class_forms() -> frozenset[str]:
     declares them — and injected rather than defaulted, because that is exactly the seam the ruling
     of 2026-09-10 built: `closed_classes` is a KB table and `tk2.dictionary` is pure.
     """
-    return frozenset(row["form"] for row in migration(4).ROWS if " " not in row["form"])
+    return frozenset(baseline().CLOSED_CLASS_FORMS)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -238,16 +276,16 @@ def closed_class_forms() -> frozenset[str]:
 
 
 def policy_rows_v7() -> list[dict]:
-    return [dict(row) for row in migration(10).POLICY_ROWS]
+    return policy_rows_of_version(7)
 
 
 def declared_config_v7():
     """The policy v7 writes — v6's whole declaration with two numbers moved, plus the mix."""
-    return _as_declared_against_bar_v1(migration(10).DECLARED)
+    return config_of_version(7)
 
 
 def policy_rows_v8() -> list[dict]:
-    return [dict(row) for row in migration(12).POLICY_ROWS]
+    return policy_rows_of_version(8)
 
 
 def declared_config_v8():
@@ -257,11 +295,14 @@ def declared_config_v8():
     values were ruled against the thirty-seven. Pinning it to eighteen would describe a config
     nobody measured.
     """
-    return migration(12).DECLARED
+    # Against the GROWN bar: v8 was declared on 2026-09-10, after 0011, and both of its values
+    # were ruled against the thirty-seven. Pinning it to eighteen would describe a config nobody
+    # measured.
+    return config_of_version(8, bar_rows() + bar_rows_v2())
 
 
 def policy_rows_v9() -> list[dict]:
-    return [dict(row) for row in migration(13).POLICY_ROWS]
+    return policy_rows_of_version(9)
 
 
 def declared_config_v9():
@@ -270,7 +311,9 @@ def declared_config_v9():
     Not pinned to bar v1: v9 was ruled on 2026-09-10 against the thirty-seven, and the floors are
     the one thing in the policy that is ABOUT the bar.
     """
-    return migration(13).DECLARED
+    # Against the grown bar, for v8's reason — and the floors are the one part of the policy
+    # that is ABOUT the bar.
+    return config_of_version(9, bar_rows() + bar_rows_v2())
 
 
 def reading_policy():

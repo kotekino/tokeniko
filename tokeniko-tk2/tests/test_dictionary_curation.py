@@ -224,7 +224,7 @@ def test_an_overwrite_is_never_silent(policy, provider):
     """A curated cell landing where the resource already spoke is a hand disagreeing with WordNet —
     a thing the Captain may well want to do, and never a thing he should discover afterwards."""
     mined = Matrix(
-        name="base_r",
+        name="dictionary_base_relations",
         keys=("bed.n", "sleep.v"),
         rows=(
             MatrixRow("bed.n", 0, (Cell(column="sleep.v", weight=0.6, relation="meronym"),)),

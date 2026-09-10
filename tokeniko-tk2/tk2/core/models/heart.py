@@ -346,7 +346,7 @@ class EmotionalLogDoc(KbDocument):
     cause: Parent | None = None
 
     class Settings:
-        name = "emotional_log"
+        name = "heart_emotional_log"
         timeseries = TimeSeriesConfig(
             time_field="at",
             meta_field="pole",

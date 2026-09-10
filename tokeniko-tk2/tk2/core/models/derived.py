@@ -59,4 +59,4 @@ class DerivedPointDoc(KbDocument, Provenance, EpochStamped, Timestamped):
     epoch: Annotated[int, Indexed()]
 
     class Settings:
-        name = "derived_points"
+        name = "tkzip_derived_points"

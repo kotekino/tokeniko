@@ -22,18 +22,18 @@ forever by default (`--max-ticks`/SIGTERM to bound).*
 
 *Sixteen commits (`34e43c8 → 0678054`). The base is built, sealed and on the body.*
 
-**What stands, in `tokeniko_tk2_body`** — one sealed build, `config 9824ef46…`, policy v9, bar v2,
+**What stands, in `tokeniko_tk2`** *(renamed at E1b; the table below already uses the new names)* — one sealed build, `config 9824ef46…`, policy v9, bar v2,
 authorized and applied by the Captain 2026-09-10, read back whole by `tools/verify_base.py`:
 
 | collection | class | what it holds |
 |---|---|---|
-| `base_keys` | logic (r) | the **4,555 POS-split dimensions**, contiguous, sealed |
-| `base_r` | logic (r) | **51,564 relation cells** — every one naming its relation(s), weight and source |
-| `base_d` | logic (r) | **473,262 gloss-overlap cells**, unsigned and symmetric |
-| `base_seals` | logic (r) | one row per (build, matrix): rows written, cells, content fingerprint |
+| `dictionary_base_keys` | logic (r) | the **4,555 POS-split dimensions**, contiguous, sealed |
+| `dictionary_base_relations` | logic (r) | **51,564 relation cells** — every one naming its relation(s), weight and source |
+| `dictionary_base_distribution` | logic (r) | **473,262 gloss-overlap cells**, unsigned and symmetric |
+| `dictionary_base_seals` | logic (r) | one row per (build, matrix): rows written, cells, content fingerprint |
 | `dictionary_policy` | logic (r) | **nine versions**, a ledger — v1's fingerprint still names what v1 measured |
 | `dictionary_bar` | logic (r) | the acceptance bar, **37 pairs across two versions**, append-mostly, epoch-stamped |
-| `closed_classes` | logic (r) | **383 typed rows** — English's closed classes, replacing tk1's four code lists |
+| `language_closed_classes` | logic (r) | **383 typed rows** — English's closed classes, replacing tk1's four code lists |
 | `dictionary_builds` | logic (ledger) | the manifest: which policy and bar version+fingerprint a build was measured against |
 
 **The reading:** 68,779-word lexicon → 3,172 words → 4,555 dimensions, `stopped=depth`. Dual read
@@ -59,3 +59,40 @@ if it is ever resolved, the floor is re-measured and not inherited · `measure` 
 unruled BY DEFAULT rather than by decision (they were unobservable behind the old cap and are
 observable now) · a transient `OperationFailure: Operation not permitted` appears in long live test
 runs against the `tk-atlas` container and passes on retry.*
+
+---
+
+## E1b — the names, and one baseline ✅ 2026-09-10
+
+*Ruled and executed the day E1 closed, for a reason the Captain named himself: «is the dictionary
+complete?» is a harder question to answer when the collection holding the answer is called `base_r`.*
+
+**The rename**, by the rule that every collection carries the component that owns it:
+`dictionary_base_keys` · `dictionary_base_relations` · `dictionary_base_distribution` ·
+`dictionary_base_seals` · `language_closed_classes` · `tkzip_derived_points` ·
+`senses_channel_registers` · `heart_forecasts` · `heart_emotional_log` · `body_params`. The db
+`tokeniko_tk2_body` became **`tokeniko_tk2`** — the name freed by dropping the 983-dimension
+prototype that held it, superseded whole by the base E1 built.
+
+**A rebuild, not a rename, and the reason is worth keeping:** mongo cannot rename a TIMESERIES
+collection at all (`heart_emotional_log` is one), and moving a database is a copy in any case. The
+cost was measured before it was chosen and it was **nothing** — every heart row read `0.0` with
+`created_at == updated_at ==` the migration's own timestamp. He had been created and had never
+ticked; there was no biography to lose.
+
+**Thirteen migrations became one baseline**, the originals in `db/archive/`. The ledger did not go
+with them, because **the ledger was never the files** — all nine policy versions are written by the
+baseline out of `db/data/declared_rows.json`, notes verbatim. What was given up is the SEQUENCE as
+replayable steps; it survives in git and in the notes, and the Captain took that price knowingly.
+
+**Proved, not asserted:** config fingerprint `9824ef46…` reproduces exactly; every collection
+compared row by row against the old world before it was dropped — **identical, all of them**; the
+base rebuilt and read back WHOLE. The matrices' own content fingerprints DID move, and that is
+correct: a matrix's name is inside its content hash, and the name changed.
+
+**Also landed:** the **third standing law** — *a name is written for the human who reads it cold*
+(`plan.md`, before the epics) — and the guard's special case for the prototype's database retired.
+
+*Inherited flags: `db/archive/` must stay readable and never runnable — `discover()` does not descend
+into it, and a test holds that · `db/data/declared_rows.json` is 744 KB of curated rows and its diff
+is the audit trail: a changed NOTE shows there as plainly as a changed value.*

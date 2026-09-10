@@ -53,6 +53,12 @@ from tk2.dictionary.matrix import (
     dimension_index,
 )
 
+#: This matrix's name — its collection AND the identifier a stored build files it under.
+#: Declared here rather than imported from `tk2.core.constants`, because this package is pure
+#: and importing the body's constants would be the first thread of a dependency it must not have.
+#: `tk2.core.constants` names it too, and a test holds the two to each other.
+DISTRIBUTION_MATRIX = "dictionary_base_distribution"
+
 #: The diagonal. Declared by D's own policy rather than borrowed from R's `identity` weight: they
 #: are two geometries, and a shared row would tie one matrix's axis to the other's weight table.
 IDENTITY = "identity"
@@ -234,7 +240,7 @@ def build(
     dimensions,
     provider,
     policy: DistributionPolicy,
-    name: str = "base_d",
+    name: str = DISTRIBUTION_MATRIX,
     progress=None,
     closed=None,
 ) -> Matrix:

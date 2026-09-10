@@ -117,7 +117,7 @@ class ClosedClassDoc(LogicDocument, Timestamped):
     position: int = Field(ge=0)
 
     class Settings:
-        name = "closed_classes"
+        name = "language_closed_classes"
         indexes = [
             # One row per job per form per version, where a job is (class, role): `his` is a
             # possessive determiner AND a possessive pronoun, `that` a demonstrative determiner AND

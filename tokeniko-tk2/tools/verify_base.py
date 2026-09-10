@@ -1,7 +1,7 @@
 """Read a stored base back out and check that it is the base that was written.
 
-    PYTHONPATH=. ../.venv/bin/python tools/verify_base.py --db tokeniko_tk2_body
-    PYTHONPATH=. ../.venv/bin/python tools/verify_base.py --db tokeniko_tk2_body --build 3940735d6b18
+    PYTHONPATH=. ../.venv/bin/python tools/verify_base.py --db tokeniko_tk2
+    PYTHONPATH=. ../.venv/bin/python tools/verify_base.py --db tokeniko_tk2 --build 3940735d6b18
     PYTHONPATH=. ../.venv/bin/python tools/verify_base.py --db … --build … --drop-unsealed
 
 THE OTHER HALF OF THE APPLY. `tools/build_dictionary.py --apply` writes each matrix in chunks,
@@ -33,6 +33,7 @@ import sys
 import time
 from pathlib import Path
 
+from tk2.core import constants
 from tk2.core.models import BaseKeyDoc, DictionaryBuildDoc
 from tk2.datatier import database
 from tk2.datatier.guard import DatabaseRefused
@@ -105,7 +106,7 @@ def verify(build: str, store: MongoMatrixStore) -> dict:
         # The manifest counts what the BUILD counted (stated cells, the axis excluded); the seal
         # counts what was STORED (the diagonal included). They are two different numbers on purpose
         # and are printed side by side rather than asserted equal.
-        for name, key in (("base_r", "r_cells"), ("base_d", "d_cells")):
+        for name, key in ((constants.DICTIONARY_RELATIONS, "r_cells"), (constants.DICTIONARY_DISTRIBUTION, "d_cells")):
             if key in counts and name in findings["matrices"]:
                 stored = findings["matrices"][name]["cells"]
                 print(f"    {'':<16} {name}: manifest states {counts[key]:,} cells, "

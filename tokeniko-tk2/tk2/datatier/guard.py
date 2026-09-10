@@ -45,13 +45,6 @@ def guard_db_name(name: str) -> str:
             f"migration (E9), under the Captain's hand."
         )
 
-    if name == constants.TK2_INSTRUMENTS_DB:
-        raise DatabaseRefused(
-            f"REFUSING to open '{name}': that is the dictionary-review instruments' sandbox, not "
-            f"the body's. The body never writes it; its assets arrive by migration (E1), never by "
-            f"a live read across the fence."
-        )
-
     if name not in constants.DB_WHITELIST:
         allowed = ", ".join(sorted(constants.DB_WHITELIST))
         raise DatabaseRefused(

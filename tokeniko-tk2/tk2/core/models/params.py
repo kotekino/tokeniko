@@ -38,7 +38,7 @@ class ParamDoc(ParamDocument, Timestamped, Updated):
     note: str = Field(default="")
 
     class Settings:
-        name = "params"
+        name = "body_params"
 
 
 # Asserted at import so a rename of either side is caught here, at the seam, rather than as an empty

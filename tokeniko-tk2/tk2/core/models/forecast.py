@@ -59,4 +59,4 @@ class ForecastDoc(KbDocument, Provenance, Timestamped):
     resolved_at: int | None = None
 
     class Settings:
-        name = "forecasts"
+        name = "heart_forecasts"

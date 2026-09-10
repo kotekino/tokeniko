@@ -34,14 +34,17 @@ def test_tk1_is_refused_even_if_someone_whitelists_it(monkeypatch, name):
         guard_db_name(name)
 
 
-def test_the_instruments_sandbox_is_refused_with_its_own_reason():
-    """A comprehensible mistake — it IS a tk2 database — with an incomprehensible fix if it lands."""
-    with pytest.raises(DatabaseRefused) as excinfo:
-        guard_db_name(constants.TK2_INSTRUMENTS_DB)
-    assert "migration" in str(excinfo.value)
+def test_the_prototypes_old_database_is_refused_like_any_other_stranger():
+    """`tokeniko_tk2` used to name the dictionary-review PROTOTYPE's sandbox and had its own named
+    refusal. At E1b the prototype was dropped and the name was given to the BODY, so the special
+    case went with it — and the name is now the one thing the guard allows rather than the one
+    thing it singles out. `tokeniko_tk2_body`, the body's old name, is a stranger now."""
+    assert constants.TK2_BODY_DB == "tokeniko_tk2"
+    with pytest.raises(DatabaseRefused):
+        guard_db_name("tokeniko_tk2_body")
 
 
-@pytest.mark.parametrize("name", ["admin", "local", "config", "tokeniko_tk2_bodyy", "whatever"])
+@pytest.mark.parametrize("name", ["admin", "local", "config", "tokeniko_tk22", "whatever"])
 def test_anything_not_whitelisted_is_refused(name):
     with pytest.raises(DatabaseRefused):
         guard_db_name(name)
