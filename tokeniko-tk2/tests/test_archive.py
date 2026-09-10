@@ -13,12 +13,17 @@ from pathlib import Path
 from tk2 import migrations
 
 
-def test_the_runner_sees_only_the_baseline():
-    """`discover()` does not descend into subdirectories, so the archive is invisible to it — and
-    the one migration there is carries everything the thirteen declared."""
+def test_the_runner_does_not_descend_into_the_archive():
+    """`discover()` does not walk subdirectories, so the archive is invisible to it. The chain since
+    E1b starts at the baseline and grows normally — 0002 re-ruled the NEAR floor hours later — so
+    what is held here is that no ARCHIVED number ever reappears in the live chain."""
     found = migrations.discover()
+    labels = [m.label for m in found]
 
-    assert [m.label for m in found] == ["0001_the_world_and_everything_declared"]
+    assert labels[0] == "0001_the_world_and_everything_declared"
+    assert [m.number for m in found] == sorted(m.number for m in found)
+    archived = {p.name for p in (Path(migrations.DEFAULT_DIRECTORY) / "archive").glob("0*.py")}
+    assert not {label + ".py" for label in labels} & archived
 
 
 def test_the_archive_is_still_there_and_still_thirteen():

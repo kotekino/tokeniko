@@ -45,6 +45,7 @@ from tests.seed import (
     declared_config_v7,
     declared_config_v8,
     declared_config_v9,
+    declared_config_v10,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -54,6 +55,7 @@ from tests.seed import (
     policy_rows_v7,
     policy_rows_v8,
     policy_rows_v9,
+    policy_rows_v10,
     ruled_config,
     structural_seeds,
 )
@@ -1033,7 +1035,12 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
 #: is now v1's eighteen plus v2's nineteen. It differs from `V7_FINGERPRINT` for exactly one reason
 #: — the bar grew — and that difference is the mechanism working: a build measured against
 #: thirty-seven pairs must not be able to present the hash of one measured against eighteen.
-STANDING_FINGERPRINT = "9824ef465c86f0f689d4a5220b4d6a0d46d2a6ff8ba7e9d4630539472f16bd71"
+STANDING_FINGERPRINT = "685af0388d3abd25656f6ba507e2c31fef3bf33ed6f004b9edbd84d304718641"
+
+#: v9's own hash — the verdict function as it was FIRST ruled, before the floor was re-fitted hours
+#: later. Kept because the correction is the interesting part: this is the number the base was built
+#: and sealed under, and `dictionary_builds` still records it.
+V9_FINGERPRINT = "9824ef465c86f0f689d4a5220b4d6a0d46d2a6ff8ba7e9d4630539472f16bd71"
 
 #: v8's own hash — the walk ruling without the verdict function. Kept so the floors' arrival is
 #: visible as a number of its own, the way `V7_AGAINST_BAR_V2` keeps the bar's growth visible.
@@ -1137,11 +1144,47 @@ def test_policy_v9_turns_a_cosine_into_a_verdict():
     config = policy.config_from_rows(policy_rows_v9(), bar_rows() + bar_rows_v2())
 
     assert config == declared_config_v9()
-    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.fingerprint() == V9_FINGERPRINT
     assert config.reading == ReadingPolicy(mix=0.15, near_floor=0.27, far_ceiling=0.0)
     assert config.reading.verdict(0.30) == "NEAR"
     assert config.reading.verdict(0.10) == "ABSTAIN"
     assert config.reading.verdict(-0.05) == "FAR"
+
+
+def test_policy_v10_refits_the_near_floor_to_the_base_that_was_actually_applied():
+    """The correction, and the coupling behind it. `compass.n~compass.v` is a declared FAR that read
+    +0.2721 on the APPLIED base against a floor of +0.27, so the policy called it NEAR — and the
+    floor had been fitted to that same pair reading +0.2668 on a 4,445-dimension base that no longer
+    existed. Requirement 12 makes every bar word a seed, bar v2 added nineteen pairs, and the base
+    grew to 4,555: THE BAR AND THE FLOORS ARE COUPLED, and growing one moves the other.
+
+    0.28 sits in the gap between the wall (+0.2721) and the lowest declared NEAR (+0.2843) rather
+    than on either endpoint — a floor sitting exactly on the lowest NEAR fails when that pair moves
+    by a thousandth, which is precisely how the first one failed.
+    """
+    config = policy.config_from_rows(policy_rows_v10(), bar_rows() + bar_rows_v2())
+
+    assert config == declared_config_v10()
+    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.reading.near_floor == 0.28
+    assert config.reading.verdict(0.2721) == "ABSTAIN", "the wall no longer reads NEAR"
+    assert config.reading.verdict(0.2843) == "NEAR", "the lowest declared NEAR still decides"
+    # Only the fitted half moved. The theorem did not, and the walk did not.
+    assert config.reading.far_ceiling == 0.0
+    assert config.distribution == declared_config_v9().distribution
+    assert config.reading.mix == declared_config_v9().reading.mix
+
+
+def test_v10_moved_one_value_and_the_notes_carry_the_reason():
+    v9 = {(r["kind"], r["name"]): (r["value"], r["note"]) for r in policy_rows_v9()}
+    v10 = {(r["kind"], r["name"]): (r["value"], r["note"]) for r in policy_rows_v10()}
+
+    moved = {key for key in v9 if v9[key][0] != v10[key][0]}
+    assert moved == {(policy.KIND_READING, "near_floor")}
+    assert set(v10) == set(v9), "nothing arrived and nothing left"
+    # The note has to say WHY, or the ledger records a number nobody can argue with.
+    reason = v10[(policy.KIND_READING, "near_floor")][1]
+    assert "compass" in reason and "4,555" in reason and "COUPLED" in reason
 
 
 def test_the_far_edge_is_zero_because_D_cannot_reach_below_it():

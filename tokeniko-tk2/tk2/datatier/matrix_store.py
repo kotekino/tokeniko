@@ -217,6 +217,28 @@ class MongoMatrixStore:
         }])
         return stored
 
+    def origin(self, build: str, policy_version: int | None = None):
+        """THE DIRTY-CHECK: what a loaded space would have to match to still be current.
+
+        ONE query over `dictionary_base_seals`, which is three or four rows — measured at about the
+        cost of a single row read (6.8 ms against the body over the network) against the seven
+        seconds a reload costs. That ratio is the whole reason this exists: a tick can afford to ASK
+        every time and no tick can afford to reload, so the question and the answer live apart.
+
+        The seals are the right thing to compare, and not the build label alone, because a curated
+        edge changes a matrix's content UNDER the same label — `curate_dictionary.py approve` calls
+        `write`, and `write` re-seals. A check that watched only the label would go on serving a
+        base the Captain had already corrected by hand.
+        """
+        from tk2.dictionary.space import SpaceOrigin
+
+        found = self.seals(build)
+        return SpaceOrigin(
+            build=build,
+            seals=tuple(sorted((name, seal.get("fingerprint", "")) for name, seal in found.items())),
+            policy_version=policy_version,
+        )
+
     def senses(self, build: str, base: str | None = None) -> list[dict]:
         """The sense layer back, or just the readings of one base dimension.
 

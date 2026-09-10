@@ -316,6 +316,22 @@ def declared_config_v9():
     return config_of_version(9, bar_rows() + bar_rows_v2())
 
 
+def policy_rows_v10() -> list[dict]:
+    """Version 10's rows — the first ruling of the post-E1b chain (`db/0002`)."""
+    return [dict(row) for row in migration(2).POLICY_ROWS]
+
+
+def declared_config_v10():
+    """The policy v10 writes — v9's declaration with the NEAR floor re-fitted to the applied base.
+
+    Against the grown bar, like v8 and v9: the floors are the one part of the policy that is ABOUT
+    the bar, and this version exists because the bar's growth had moved the base under them.
+    """
+    from tk2.dictionary import policy as _policy
+
+    return _policy.config_from_rows(policy_rows_v10(), bar_rows() + bar_rows_v2())
+
+
 def reading_policy():
     """The dual read AS IT STANDS — the newest policy version, whichever that is, for
     `distribution_policy`'s reason: a fixture with a version number in it would have to be edited

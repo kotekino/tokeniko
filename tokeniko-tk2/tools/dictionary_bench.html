@@ -1,0 +1,338 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>the dictionary bench</title>
+<style>
+  :root{
+    --ink:#1a1a1c; --dim:#6a6a72; --faint:#a0a0aa; --line:#e2e2e6; --bg:#fbfbfc;
+    --panel:#fff; --near:#0f7b3f; --far:#a8321e; --abstain:#8a8a94;
+    --r:#2b5fa8; --d:#b8860b; --mark:#f4f4f6;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace}
+  header{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel);
+         display:flex;gap:22px;align-items:baseline;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+  h1{font-size:14px;margin:0;font-weight:600;letter-spacing:.02em}
+  .meta{color:var(--dim);font-size:11px;display:flex;gap:16px;flex-wrap:wrap}
+  .meta b{color:var(--ink);font-weight:600}
+  main{padding:18px;display:grid;gap:18px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+       max-width:1500px}
+  @media (max-width:1000px){main{grid-template-columns:minmax(0,1fr)}}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;
+          min-width:0}
+  section.wide{grid-column:1/-1}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);
+     margin:0 0 10px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
+  .ms{color:var(--faint);font-weight:400;text-transform:none;letter-spacing:0;font-size:10px}
+  form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  input,select,button{font:inherit;padding:6px 9px;border:1px solid var(--line);border-radius:4px;
+                      background:#fff;color:inherit}
+  input{min-width:120px}
+  button{cursor:pointer;background:var(--mark)}
+  button:hover{border-color:var(--dim)}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;font-weight:600;color:var(--dim);font-size:10px;text-transform:uppercase;
+     letter-spacing:.06em;padding:3px 8px 3px 0;border-bottom:1px solid var(--line)}
+  td{padding:3px 8px 3px 0;border-bottom:1px solid #f2f2f5;vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .k{cursor:pointer;text-decoration:underline;text-decoration-color:var(--line);
+     text-underline-offset:2px}
+  .k:hover{text-decoration-color:var(--ink)}
+  .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .NEAR{color:var(--near)} .FAR{color:var(--far)} .ABSTAIN{color:var(--abstain)}
+  .rel{color:var(--r)} .gloss{color:var(--d)}
+  .def{color:var(--dim)}
+  .wrong{background:#fdeeeb}
+  .sense{border-left:2px solid var(--line);padding:5px 0 5px 10px;margin:7px 0}
+  .sense b{font-weight:600}
+  .empty{color:var(--faint);font-style:italic}
+  canvas{width:100%;height:420px;display:block;border:1px solid var(--line);border-radius:4px;
+         background:#fff;cursor:crosshair}
+  .legend{display:flex;gap:14px;color:var(--dim);font-size:10px;margin-top:7px;flex-wrap:wrap}
+  .bad{color:var(--far)}
+  .note{color:var(--faint);font-size:10.5px;line-height:1.5;margin-top:9px}
+</style>
+
+<header>
+  <h1>the dictionary bench</h1>
+  <div class="meta" id="about">loading…</div>
+</header>
+
+<main>
+  <section class="wide">
+    <h2>a word — every dimension it occupies, every reading it has <span class="ms" id="ms-resolve"></span></h2>
+    <form onsubmit="resolve(this.word.value);return false">
+      <input name="word" placeholder="bank · devour · land · small" value="bank" autofocus>
+      <button>resolve</button>
+      <button type="button" onclick="resolve('devour')">devour (not a dimension)</button>
+      <button type="button" onclick="resolve('land')">land</button>
+    </form>
+    <div id="resolve"></div>
+  </section>
+
+  <section>
+    <h2>nearest — memory proposes by cosine <span class="ms" id="ms-neighbours"></span></h2>
+    <form onsubmit="neighbours(this.key.value);return false">
+      <input name="key" id="nkey" placeholder="eat.v" value="eat.v">
+      <button>neighbours</button>
+    </form>
+    <div id="neighbours"></div>
+  </section>
+
+  <section>
+    <h2>two keys — the dual read and the verdict <span class="ms" id="ms-compare"></span></h2>
+    <form onsubmit="compare(this.a.value,this.b.value);return false">
+      <input name="a" value="eat.v"><input name="b" value="food.n"><button>compare</button>
+    </form>
+    <div id="compare"></div>
+    <div class="note" id="floors"></div>
+  </section>
+
+  <section>
+    <h2>the semantic catch — any word to the nearest anchor <span class="ms" id="ms-anchor"></span></h2>
+    <form onsubmit="anchor(this.word.value,this.anchors.value);return false">
+      <input name="word" value="devour" placeholder="any word">
+      <input name="anchors" value="eat.v,sleep.v,go.v,want.v,kill.v" style="min-width:230px">
+      <button>catch</button>
+    </form>
+    <div id="anchor"></div>
+    <div class="note">A word need not be a dimension. Its readings reach the space through their
+      own vectors — the half E1c added.</div>
+  </section>
+
+  <section>
+    <h2>the bar, live <span class="ms" id="ms-bar"></span></h2>
+    <button type="button" onclick="bar()">read the bar</button>
+    <button type="button" onclick="staleness()">the dirty-check</button>
+    <div id="bar"></div>
+    <div id="staleness" class="note"></div>
+  </section>
+
+  <section class="wide">
+    <h2>the map — position from the blend, click a point <span class="ms" id="ms-map"></span></h2>
+    <canvas id="map"></canvas>
+    <div class="legend" id="maplegend"></div>
+  </section>
+</main>
+
+<script>
+let ABOUT = null, KEYS = [], SEL = null, HOVER = null;
+
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const num = (v, d=3) => v === null || v === undefined ? '—'
+  : (v >= 0 ? '+' : '') + Number(v).toFixed(d);
+
+async function get(path, params){
+  const url = new URL(path, location.origin);
+  Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
+  const started = performance.now();
+  const body = await (await fetch(url)).json();
+  body.roundtrip = performance.now() - started;
+  return body;
+}
+function timing(id, body){
+  document.getElementById(id).textContent =
+    `${body.ms} ms in the space · ${body.roundtrip.toFixed(0)} ms round trip`;
+}
+const keyCell = k => `<span class="k" onclick="pick('${k}')">${esc(k)}</span>`;
+window.pick = k => { document.getElementById('nkey').value = k; neighbours(k); select(k); };
+
+// ---- resolve ---------------------------------------------------------------------------------
+async function resolve(word){
+  const body = await get('/resolve', {word}); timing('ms-resolve', body);
+  const target = document.getElementById('resolve');
+  if (body.error) return target.innerHTML = `<div class="bad">${esc(body.error)}</div>`;
+
+  let html = '';
+  if (!body.dimensions.length){
+    html += `<p class="empty">“${esc(word)}” is not a base dimension — most words are not.
+      Its readings are placed below, through their own vectors.</p>`;
+  }
+  for (const dim of body.dimensions){
+    html += `<h3 style="font-size:13px;margin:12px 0 4px">${keyCell(dim.key)}
+      <span class="def">— ${dim.senses.length} reading(s)</span></h3>`;
+    if (dim.relations.length){
+      html += `<div class="rel" style="font-size:11.5px">R states: ` +
+        dim.relations.slice(0,10).map(r => `${esc(r.relation)} ${keyCell(r.column)}`).join(' · ') +
+        (dim.relations.length > 10 ? ` … ${dim.relations.length} in all` : '') + `</div>`;
+    }
+    for (const s of dim.senses){
+      html += `<div class="sense"><b>${esc(s.key)}</b>
+        <span class="def">${esc(s.synset)}</span><br>${esc(s.definition)}`;
+      html += s.relations.length
+        ? `<br><span class="rel">${s.relations.map(r =>
+             `${esc(r.relation)} ${keyCell(r.column)}`).join(' · ')}</span>`
+        : `<br><span class="empty">this reading states nothing the base can hold</span>`;
+      html += `</div>`;
+    }
+  }
+  const placed = Object.entries(body.placed || {});
+  if (placed.length){
+    html += `<h3 style="font-size:13px;margin:14px 0 4px">each reading, placed among the
+      dimensions</h3><table><tr><th>sense</th><th>nearest dimensions</th></tr>`;
+    for (const [sense, near] of placed){
+      html += `<tr><td><b>${esc(sense)}</b></td><td>` + (near.length
+        ? near.map(n => `${keyCell(n.key)} <span class="num ${n.verdict}">${num(n.cosine)}</span>`)
+              .join(' · ')
+        : `<span class="empty">unplaced — the station will ABSTAIN on this reading</span>`)
+        + `</td></tr>`;
+    }
+    html += `</table>`;
+  }
+  target.innerHTML = html;
+}
+
+// ---- neighbours ------------------------------------------------------------------------------
+async function neighbours(key){
+  const body = await get('/neighbours', {key, count: 15}); timing('ms-neighbours', body);
+  const target = document.getElementById('neighbours');
+  if (!body.held) return target.innerHTML =
+    `<p class="empty">${esc(key)} is not a dimension. Try a word in the resolve box above —
+     its readings can still be placed.</p>`;
+  target.innerHTML = `<table><tr><th>key</th><th class="num">dual read</th><th>verdict</th></tr>` +
+    body.neighbours.map(n => `<tr><td>${keyCell(n.key)}</td>
+      <td class="num">${num(n.cosine)}</td>
+      <td class="${n.verdict}">${n.verdict}</td></tr>`).join('') + `</table>`;
+  select(key);
+}
+
+// ---- compare ---------------------------------------------------------------------------------
+async function compare(a, b){
+  const body = await get('/compare', {a, b}); timing('ms-compare', body);
+  document.getElementById('compare').innerHTML =
+    `<table><tr><td>${keyCell(a)} ~ ${keyCell(b)}</td>
+       <td class="num">${num(body.cosine, 4)}</td>
+       <td class="${body.verdict}">${body.verdict}</td></tr>` +
+    (body.stated.length ? `<tr><td colspan="3" class="rel">R states:
+       ${body.stated.map(s => `${esc(s.relation)} ${num(s.weight, 2)}`).join(' · ')}</td></tr>`
+      : `<tr><td colspan="3" class="empty">R states nothing between them — this is D talking</td></tr>`)
+    + `</table>`;
+}
+
+// ---- the catch -------------------------------------------------------------------------------
+async function anchor(word, anchors){
+  const body = await get('/anchor', {word, anchors}); timing('ms-anchor', body);
+  const target = document.getElementById('anchor');
+  if (body.direct){
+    return target.innerHTML = `<table><tr><td>${esc(word)} is itself a dimension</td>
+      <td>${keyCell(body.direct.anchor)}</td>
+      <td class="num">${num(body.direct.cosine)}</td>
+      <td class="${body.direct.verdict}">${body.direct.verdict}</td></tr></table>`;
+  }
+  const rows = Object.entries(body.by_sense || {});
+  target.innerHTML = rows.length
+    ? `<table><tr><th>reading</th><th>nearest anchor</th><th class="num">cosine</th>
+        <th>verdict</th></tr>` + rows.map(([sense, hit]) =>
+        `<tr><td>${esc(sense)}</td><td>${keyCell(hit.anchor)}</td>
+         <td class="num">${num(hit.cosine)}</td>
+         <td class="${hit.verdict}">${hit.verdict}</td></tr>`).join('') + `</table>`
+    : `<p class="empty">nothing caught — no reading of “${esc(word)}” has a vector, or no anchor
+       is a dimension</p>`;
+}
+
+// ---- the bar ---------------------------------------------------------------------------------
+async function bar(){
+  const body = await get('/bar'); timing('ms-bar', body);
+  document.getElementById('bar').innerHTML =
+    `<p class="def">${body.decided} of ${body.pairs.length} decided ·
+     <b class="${body.wrong ? 'bad' : 'NEAR'}">${body.wrong} wrong</b></p>` +
+    `<table><tr><th>pair</th><th>declared</th><th class="num">read</th><th>verdict</th></tr>` +
+    body.pairs.map(p => `<tr class="${p.wrong ? 'wrong' : ''}">
+      <td>${keyCell(p.a)} ~ ${keyCell(p.b)}</td>
+      <td class="${p.expected}">${p.expected}</td>
+      <td class="num">${num(p.cosine)}</td>
+      <td class="${p.verdict}">${p.verdict}</td></tr>`).join('') + `</table>`;
+}
+
+// ---- the dirty-check ------------------------------------------------------------------------
+async function staleness(){
+  const body = await get('/staleness'); timing('ms-bar', body);
+  document.getElementById('staleness').innerHTML = body.stale
+    ? `<span class="bad">STALE</span> — ${body.moved.map(esc).join(' · ')}. A reload is seven
+       seconds, so it belongs to a phase and not to a tick.`
+    : `current — build <b>${esc(body.loaded.build)}</b>, policy v${body.loaded.policy_version},
+       ${body.loaded.seals.length} seals. This check is what a tick can afford to ask; the reload
+       is what only a phase can afford to do.`;
+}
+
+// ---- the map ---------------------------------------------------------------------------------
+function select(key){ SEL = KEYS.indexOf(key); drawMap(); }
+
+function drawMap(){
+  const canvas = document.getElementById('map');
+  const scale = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth, height = canvas.clientHeight;
+  canvas.width = width * scale; canvas.height = height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  ctx.clearRect(0, 0, width, height);
+  if (!ABOUT) return;
+
+  const pad = 18, xy = ABOUT.layout.xy;
+  const px = p => [pad + (p[0] + 1) / 2 * (width - 2 * pad),
+                   pad + (1 - (p[1] + 1) / 2) * (height - 2 * pad)];
+
+  ctx.fillStyle = 'rgba(40,40,50,.22)';
+  xy.forEach(p => { const [x, y] = px(p); ctx.fillRect(x - 1, y - 1, 2, 2); });
+
+  if (SEL >= 0){
+    const [x, y] = px(xy[SEL]);
+    ctx.strokeStyle = '#2b5fa8'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y, 6, 0, 7); ctx.stroke();
+    ctx.fillStyle = '#1a1a1c'; ctx.font = '600 11px ui-monospace,monospace';
+    ctx.fillText(KEYS[SEL], x + 9, y + 4);
+  }
+  if (HOVER >= 0 && HOVER !== SEL){
+    const [x, y] = px(xy[HOVER]);
+    ctx.fillStyle = '#a8321e';
+    ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 7); ctx.fill();
+    ctx.font = '11px ui-monospace,monospace';
+    ctx.fillText(KEYS[HOVER], x + 8, y + 4);
+  }
+}
+
+function nearestPoint(event){
+  const canvas = document.getElementById('map');
+  const box = canvas.getBoundingClientRect();
+  const pad = 18, width = box.width, height = box.height;
+  const mx = event.clientX - box.left, my = event.clientY - box.top;
+  let best = -1, bestDistance = 220;
+  ABOUT.layout.xy.forEach((p, i) => {
+    const x = pad + (p[0] + 1) / 2 * (width - 2 * pad);
+    const y = pad + (1 - (p[1] + 1) / 2) * (height - 2 * pad);
+    const d = (x - mx) ** 2 + (y - my) ** 2;
+    if (d < bestDistance){ bestDistance = d; best = i; }
+  });
+  return best;
+}
+
+// ---- boot ------------------------------------------------------------------------------------
+(async function(){
+  const body = await get('/about');
+  ABOUT = body; KEYS = body.keys;
+  document.getElementById('about').innerHTML = [
+    `build <b>${esc(body.build)}</b>`,
+    `<b>${body.dimensions.toLocaleString()}</b> dimensions`,
+    `<b>${body.senses.toLocaleString()}</b> senses`,
+    `<b>${body.resident_mb}</b> MB resident, loaded in <b>${body.load_seconds}</b>s`,
+    `mix <b>${body.mix}</b>`,
+    `NEAR ≥ <b>${body.near_floor}</b> · FAR &lt; <b>${body.far_ceiling}</b>`,
+    `config <b>${esc(body.config_fingerprint.slice(0, 12))}</b>`,
+  ].join('');
+  document.getElementById('floors').textContent =
+    `NEAR at or above ${body.near_floor}, FAR below ${body.far_ceiling}, ABSTAIN between — ` +
+    `the policy's own verdict function, not the page's.`;
+  document.getElementById('maplegend').innerHTML =
+    `PCA on the blended rows · keeps <b>${body.layout.kept}%</b> of the variance, so distance here ` +
+    `is a hint and the numbers above are the answer · ${body.dimensions.toLocaleString()} points`;
+
+  const canvas = document.getElementById('map');
+  canvas.addEventListener('mousemove', e => { const h = nearestPoint(e);
+    if (h !== HOVER){ HOVER = h; drawMap(); } });
+  canvas.addEventListener('click', e => { const h = nearestPoint(e);
+    if (h >= 0) pick(KEYS[h]); });
+  window.addEventListener('resize', drawMap);
+
+  drawMap(); resolve('bank'); neighbours('eat.v'); compare('eat.v', 'food.n'); bar();
+})();
+</script>

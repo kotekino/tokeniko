@@ -92,11 +92,14 @@ def test_the_checksum_follows_the_file(tmp_path):
 def test_the_real_directory_is_found_by_default():
     """The package finds `db/` beside itself, so the runner works from any working directory.
 
-    ONE migration since E1b: the thirteen that built E1 are in `db/archive/`, which the discovery
-    walk does not descend into — an archived migration must be readable and must never be runnable.
+    The chain starts at the E1b baseline: the thirteen that built E1 are in `db/archive/`, which the
+    discovery walk does not descend into — an archived migration must be readable and never
+    runnable. It grows normally from there (0002 re-ruled the NEAR floor hours later), so what is
+    held here is the FIRST label and the ordering, not a fixed length.
     """
     found = migrations.discover()
-    assert [m.label for m in found] == ["0001_the_world_and_everything_declared"]
+    assert [m.label for m in found][0] == "0001_the_world_and_everything_declared"
+    assert [m.number for m in found] == sorted(m.number for m in found)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -825,13 +828,22 @@ def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(c
     # pinned to bar v1 elsewhere; the standing reading is pinned to nothing but the newest rows.
     config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
 
-    assert policy.policy_version(stored) == 9
+    # The NEWEST version, whatever it is — this test is about the standing policy declaring a
+    # complete reading, and pinning a number here would make every later ruling a test failure.
+    # The versions themselves are held to account one by one in `test_dictionary_policy.py`.
+    assert policy.policy_version(stored) >= 9
     assert len(config.bar) == 37
     assert config.distribution.structure == "compiled"
     assert config.reading.mix == 0.15
     # The verdict function arrived with v9 and it is what a build is finally read THROUGH.
     assert config.reading.decides
-    assert (config.reading.near_floor, config.reading.far_ceiling) == (0.27, 0.0)
+    # The FAR edge is pinned because it is a theorem: D is unsigned, so nothing but R's sign can
+    # put a reading below zero, and no measurement can move it. The NEAR floor is a FIT and moved
+    # within hours of being ruled (0002), so it is held to a shape rather than to a number — the
+    # number itself is pinned in `test_dictionary_policy.py`, version by version, where a change is
+    # supposed to be visible.
+    assert config.reading.far_ceiling == 0.0
+    assert config.reading.near_floor > config.reading.far_ceiling
     assert config.fingerprint() == STANDING_FINGERPRINT
     assert config.reading is not None and config.reading.mix == 0.15
     assert config.distribution.min_shared == 1
