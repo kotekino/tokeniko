@@ -240,6 +240,19 @@ and D are built once, against a base whose policy is already settled.)*
    question (IDF-shaped down-weight), not a membership one.
 4. **Inflection-collision fix** — req 21 proper (`left`/leave, `use.v`/`used.v`): lemma-normalize at
    gloss-mining time.
+**LANDED 2026-09-10 — THE BASE IS BUILT AND ON THE BODY.** `tokeniko_tk2_body` holds the first
+sealed base: **4,555 dimensions · R 51,564 cells · D 473,262 cells**, config fingerprint
+`9824ef46…`, policy v9, bar v2, authorized and applied by the Captain's own hand. Read back whole by
+`tools/verify_base.py` — every matrix's content fingerprint recomputed from what came back and
+matched against its seal.
+
+**THE SCOPE BOUNDARY, stated here because it is the thing most easily misread:** what E1 built is
+the **BASE** — the 4,555 POS-split keys the geometry is *stated over*. It is NOT the full dictionary:
+the resource carries **68,779 words and 120,475 senses**, and those ride ON the base (a sense holds a
+D-vector over base dimensions and consults R through its sense key — the epic brief's architecture
+guard, tkzip req 11). **The base is complete; the sense layer is not built and was never E1's.** It
+has no home in the plan yet — see «what E1 did not build» below.
+
 5. **The bar, grown** — the 18-pair bar becomes a curated regression suite **as rows** (standing
    law, category 2): epoch-stamped, append-mostly, every build recording the bar version and
    fingerprint it was measured against, so «declared before the run» is machine-checkable rather
@@ -300,7 +313,17 @@ and D are built once, against a base whose policy is already settled.)*
 
 **Done when:** the full base builds reproducibly from scripts; bar green on both reads; the policy
 the build used is readable as rows and recorded in its manifest; the Captain has walked the map
-without finding a new `left`.
+without finding a new `left`. — **ALL MET 2026-09-10.**
+
+**What E1 did NOT build, and where it goes.** The base is the *frame* of the geometry; the full
+dictionary is the 120,475 senses read against it. Building that layer needs two things E1
+deliberately did not decide: the **sense vector** (how a sense's D-vector over base dims is derived,
+and whether R is consulted per sense or per key — tkzip req 11's «rides on the base») and the
+**sense selection** (`senses="primary"` was measured and kept, and its rot is documented in task 3 —
+`small` reading as «the slender part of the back» is a *base* problem today and becomes a *sense*
+problem the moment senses are first-class). Neither belongs to E2 (the zip's schema) or E3 (the
+station): it is **a dictionary task with no epic**, and the plan must gain one rather than let it
+arrive by accident inside another epic's scope. Named here as OPEN, for the Captain to place.
 
 ---
 

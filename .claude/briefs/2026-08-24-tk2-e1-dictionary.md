@@ -1,5 +1,14 @@
 # Work order: tk2 E1 — THE DICTIONARY AT SCALE
 
+> **EPIC CLOSED 2026-09-10.** The base is built, sealed and on the body: 4,555 dimensions ·
+> R 51,564 cells · D 473,262 · config `9824ef46…` · policy v9 · bar v2. Sixteen commits,
+> `34e43c8 → 0678054`. This brief is kept as the record of what was ordered; the record of what
+> LANDED is `tokeniko-tk2/docs/landed.md` § E1, and it is the one to read.
+>
+> **Scope, because this brief's title overstates it:** «the dictionary at scale» built the BASE —
+> the frame the geometry is stated over. The 68,779 words and 120,475 senses ride ON it and are not
+> built. See `plan.md` § E1, «what E1 did not build».
+
 *QM brief, 2026-08-24. Second epic (`tokeniko-tk2/docs/plan.md` § E1). Same cadence as E0: ONE task
 at a time, STOP and report; QM validates, the Captain green-lights each commit; you never commit.*
 

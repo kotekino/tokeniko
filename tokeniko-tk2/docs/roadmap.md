@@ -11,7 +11,7 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 
 ## E0 — the keel ✅ 2026-08-23 — see `landed.md`
 
-## E1 — the dictionary at scale
+## E1 — the dictionary at scale ✅ COMPLETE 2026-09-10 — see `landed.md`
 - [x] closure engine (keys as law, ring boundary visible, policy fingerprinted) — `34e43c8`
 - [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
 - [x] proper-noun/abbreviation refusal (`or`=Oregon out of the base) — `1e7cad3`
@@ -20,8 +20,15 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [x] R at scale + curation pipeline (Captain's hand on approve) — `f71baa3`
 - [x] lemma scope ruled (v4) + inferred opposition ruled (v5) — `7da676f`
 - [x] D at scale + the dual read ruled (min_shared 1 · derivational 0.45 · mix 0.5) — `b8f325e`
-- [ ] **T5 = THE E1 GATE**: acceptance floors (his ruling) · bar grown from 18 (his ruling) ·
-      the map walked · the safe 218MB write · then the live build and the epic push
+- [x] the bar grown 18 → 37 as rows; the closed-class filter and the mix re-ruled against it — `e1dbdd2`
+- [x] the seal, the verifier, the map — a base can say "I am complete" — `a4b13f1`
+- [x] acceptance floors ruled: NEAR ≥ +0.27 · FAR < 0 · ABSTAIN between — `0678054`
+- [x] **THE BASE IS BUILT AND SEALED ON THE BODY** (4,555 dims · R 51,564 · D 473,262 ·
+      `9824ef46…`, applied by the Captain 2026-09-10, read back whole)
+
+*Scope note: E1 built the BASE (4,555 POS-split keys), not the sense layer. The resource's 68,779
+words / 120,475 senses ride ON it and are **not built** — an open dictionary task with no epic yet
+(`plan.md` § E1, «what E1 did not build»).*
 
 ## E2 — the format (tkzip v2)
 - [ ] role inventory (VerbNet ref; source; part/determination split)
