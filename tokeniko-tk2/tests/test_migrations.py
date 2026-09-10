@@ -790,6 +790,26 @@ def test_the_bar_growing_moved_version_sevens_hash_without_touching_its_policy(c
 
 
 @live
+def test_0013_writes_the_verdict_function_beside_the_eight_before_it(created):
+    """The last policy ruling of E1, live: nine versions in one ledger, and the newest is the first
+    that can turn a cosine into a NEAR, an ABSTAIN or a FAR."""
+    from tk2.dictionary import policy
+
+    stored = list(created["dictionary_policy"].find({}))
+
+    assert {1, 2, 3, 4, 5, 6, 7, 8, 9} <= {r["version"] for r in stored}
+    v9 = [r for r in stored if r["version"] == 9]
+    assert len([r for r in v9 if r["kind"] == policy.KIND_READING]) == 3
+    assert {r["name"] for r in v9 if r["kind"] == policy.KIND_READING} == {
+        "mix", "near_floor", "far_ceiling"
+    }
+    # Eight versions before it, and not one of them acquires a floor by being read today.
+    for older in range(1, 9):
+        rows = [r for r in stored if r["version"] == older]
+        assert not [r for r in rows if r["name"] in ("near_floor", "far_ceiling")]
+
+
+@live
 def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(created):
     """The end of the chain, live: the newest rows name every value both matrices need AND the one
     value that says how to read them as one number — with nothing left for a default in code."""
@@ -802,10 +822,13 @@ def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(c
     # pinned to bar v1 elsewhere; the standing reading is pinned to nothing but the newest rows.
     config = policy.config_from_rows(stored, list(created["dictionary_bar"].find({})))
 
-    assert policy.policy_version(stored) == 8
+    assert policy.policy_version(stored) == 9
     assert len(config.bar) == 37
     assert config.distribution.structure == "compiled"
     assert config.reading.mix == 0.15
+    # The verdict function arrived with v9 and it is what a build is finally read THROUGH.
+    assert config.reading.decides
+    assert (config.reading.near_floor, config.reading.far_ceiling) == (0.27, 0.0)
     assert config.fingerprint() == STANDING_FINGERPRINT
     assert config.reading is not None and config.reading.mix == 0.15
     assert config.distribution.min_shared == 1

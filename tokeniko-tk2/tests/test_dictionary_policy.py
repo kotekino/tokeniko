@@ -43,6 +43,7 @@ from tests.seed import (
     declared_config_v6,
     declared_config_v7,
     declared_config_v8,
+    declared_config_v9,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -51,6 +52,7 @@ from tests.seed import (
     policy_rows_v6,
     policy_rows_v7,
     policy_rows_v8,
+    policy_rows_v9,
     ruled_config,
     structural_seeds,
 )
@@ -1030,7 +1032,11 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
 #: is now v1's eighteen plus v2's nineteen. It differs from `V7_FINGERPRINT` for exactly one reason
 #: — the bar grew — and that difference is the mechanism working: a build measured against
 #: thirty-seven pairs must not be able to present the hash of one measured against eighteen.
-STANDING_FINGERPRINT = "cac116244d11f45b0ef9e086a752f87de3a16e3a61cf31d9ea3a7895b5321a30"
+STANDING_FINGERPRINT = "9824ef465c86f0f689d4a5220b4d6a0d46d2a6ff8ba7e9d4630539472f16bd71"
+
+#: v8's own hash — the walk ruling without the verdict function. Kept so the floors' arrival is
+#: visible as a number of its own, the way `V7_AGAINST_BAR_V2` keeps the bar's growth visible.
+V8_FINGERPRINT = "cac116244d11f45b0ef9e086a752f87de3a16e3a61cf31d9ea3a7895b5321a30"
 
 #: What policy v7 hashes to against the GROWN bar — the standing reading between 0011 and 0012, and
 #: kept because it is the only place the bar's growth is visible as a number on its own: same policy
@@ -1088,7 +1094,7 @@ def test_policy_v8_is_the_structure_ruling_and_the_re_ruled_mix():
     config = policy.config_from_rows(policy_rows_v8(), bar_rows() + bar_rows_v2())
 
     assert config == declared_config_v8()
-    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.fingerprint() == V8_FINGERPRINT
     assert config.distribution.structure == "compiled"
     assert config.reading == ReadingPolicy(mix=0.15)
     assert len(config.bar) == 37
@@ -1121,6 +1127,62 @@ def test_an_older_policy_is_undeclared_about_structure_and_not_admitted():
     assert v8.distribution.structure == "compiled"
     assert "structure" not in v7.distribution.as_dict()
     assert v7.distribution.as_dict()["rules"] == v8.distribution.as_dict()["rules"]
+
+
+def test_policy_v9_turns_a_cosine_into_a_verdict():
+    """The last ruling of E1: NEAR at or above +0.27, FAR below zero, ABSTAIN between. Held back
+    all epic on purpose — every earlier reading was threshold-free, because a number fitted to a bar
+    that cannot see the space is worse than no number."""
+    config = policy.config_from_rows(policy_rows_v9(), bar_rows() + bar_rows_v2())
+
+    assert config == declared_config_v9()
+    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.reading == ReadingPolicy(mix=0.15, near_floor=0.27, far_ceiling=0.0)
+    assert config.reading.verdict(0.30) == "NEAR"
+    assert config.reading.verdict(0.10) == "ABSTAIN"
+    assert config.reading.verdict(-0.05) == "FAR"
+
+
+def test_the_far_edge_is_zero_because_D_cannot_reach_below_it():
+    """Not a calibration: D is unsigned, so a negative dual read IS R's sign. The row is written
+    anyway — a later ruling may want a margin, and a threshold in code is the defect the standing
+    law exists to prevent."""
+    config = policy.config_from_rows(policy_rows_v9(), bar_rows() + bar_rows_v2())
+
+    assert config.reading.far_ceiling == 0.0
+    assert config.reading.verdict(-1e-9) == "FAR"
+    assert config.reading.verdict(0.0) == "ABSTAIN"
+
+
+def test_a_policy_that_never_ruled_the_floors_refuses_to_judge():
+    """v7 and v8 read the bar threshold-free and have no verdict to give. Refusing is the point:
+    inventing one here would put an acceptance threshold in code."""
+    v8 = policy.config_from_rows(policy_rows_v8(), bar_rows() + bar_rows_v2())
+
+    assert not v8.reading.decides
+    assert "near_floor" not in v8.reading.as_dict()
+    with pytest.raises(ValueError, match="no acceptance floors"):
+        v8.reading.verdict(0.5)
+
+
+def test_the_two_edges_are_declared_together_or_not_at_all():
+    """One without the other is a verdict function with a side it cannot answer on — and a crossed
+    pair would make some reading both NEAR and FAR."""
+    with pytest.raises(ValueError, match="together or not at all"):
+        ReadingPolicy(mix=0.15, near_floor=0.27)
+    with pytest.raises(ValueError, match="must sit ABOVE"):
+        ReadingPolicy(mix=0.15, near_floor=-0.1, far_ceiling=0.0)
+
+
+def test_v9_moved_nothing_and_only_added_the_two_edges():
+    v8 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v8()}
+    v9 = {(r["kind"], r["name"]): (r["value"], r["family"], r["note"]) for r in policy_rows_v9()}
+
+    assert set(v9) - set(v8) == {
+        (policy.KIND_READING, "near_floor"),
+        (policy.KIND_READING, "far_ceiling"),
+    }
+    assert {k: v9[k] for k in v8} == v8
 
 
 def test_the_mix_is_its_own_kind_and_not_a_setting_of_D():

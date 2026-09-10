@@ -428,14 +428,29 @@ class ReadingPolicy:
     two different geometries. `RelationPolicy` and `DistributionPolicy` each carry their walk's date
     for exactly this, and the dual read is the third walk.
 
-    ONE FIELD TODAY, and not for long: the acceptance floors the bar is scored against are T5's and
-    the Captain's, and they are the same category — a reading of two matrices rather than a property
-    of either. They land here when they are ruled.
+    THREE FIELDS since v9: the mix, and the two acceptance floors that turn a cosine into a
+    verdict. The floors are the same category as the mix — a reading of two matrices rather than a
+    property of either — and they were held back until T5 for the reason the mix was: a number
+    fitted to a bar that cannot see the space is worse than no number at all.
+
+    THE VERDICT IS THREE-VALUED, and that is the shape the Captain ruled on 2026-09-10:
+    NEAR / ABSTAIN / FAR. Two-valued was measured and cannot be made to work — no single threshold
+    decides all thirty-seven pairs, and forcing the undecidable ones costs errors where a silence
+    would have cost nothing. ABSTAIN is first-class everywhere else in this project (it is the
+    evaluator's own verdict) and it is first-class here.
     """
 
     #: How loudly D speaks: D's columns are scaled by this before the cosine. `0.0` is R alone and
     #: is a real declaration, not an absence — «the dual read is R» is a thing a policy may say.
     mix: float
+    #: At or above this, the verdict is NEAR. `None` is UNDECLARED — versions 7 and 8 read the bar
+    #: threshold-free on purpose, and must keep hashing as they did.
+    near_floor: float | None = None
+    #: Below this, the verdict is FAR. Ruled 0.0 and that is a THEOREM rather than a calibration: D
+    #: is unsigned, so nothing but R's sign can put a reading below zero. It survives a rebuild, a
+    #: re-scale and a change of dimensionality, which no fitted number does — and it is declared as
+    #: a row anyway, because a later ruling may want a margin below zero rather than zero itself.
+    far_ceiling: float | None = None
 
     def __post_init__(self):
         if self.mix < 0:
@@ -443,9 +458,50 @@ class ReadingPolicy:
                 f"a negative mix ({self.mix}) would flip every D cell's sign. D is unsigned by "
                 f"construction — the sign is R's alone, and it is the antonym column-read primitive."
             )
+        if (self.near_floor is None) != (self.far_ceiling is None):
+            raise ValueError(
+                "the acceptance floors are declared together or not at all: one without the other "
+                "is a verdict function with a side it cannot answer on."
+            )
+        if self.near_floor is not None and self.near_floor <= self.far_ceiling:
+            raise ValueError(
+                f"the NEAR floor ({self.near_floor}) must sit ABOVE the FAR ceiling "
+                f"({self.far_ceiling}) — they are the two edges of the abstention band, and a "
+                f"crossed pair would make some reading both NEAR and FAR."
+            )
+
+    @property
+    def decides(self) -> bool:
+        """Whether this reading can issue a verdict at all. False for v7 and v8, which read the bar
+        threshold-free — and that is a readable state, not a broken one."""
+        return self.near_floor is not None
+
+    def verdict(self, cosine: float) -> str:
+        """NEAR, FAR, or ABSTAIN — the one place a number becomes a judgement.
+
+        Refuses rather than guessing when the floors are undeclared: a policy that never ruled them
+        has no verdict to give, and inventing one here would put a threshold in code, which is the
+        whole thing the standing law of 2026-08-25 exists to prevent.
+        """
+        if not self.decides:
+            raise ValueError(
+                "this policy declares no acceptance floors, so it cannot turn a cosine into a "
+                "verdict. Policy v9 (db/0013) is what rules them."
+            )
+        if cosine >= self.near_floor:
+            return "NEAR"
+        if cosine < self.far_ceiling:
+            return "FAR"
+        return "ABSTAIN"
 
     def as_dict(self) -> dict:
-        return {"rules": READING_RULES, "mix": self.mix}
+        out = {"rules": READING_RULES, "mix": self.mix}
+        # Omitted when undeclared, so v7's and v8's fingerprints do not move under a question they
+        # never faced — the rule `structure` and `reading` itself both follow.
+        if self.near_floor is not None:
+            out["near_floor"] = self.near_floor
+            out["far_ceiling"] = self.far_ceiling
+        return out
 
 
 @dataclass(frozen=True, slots=True)

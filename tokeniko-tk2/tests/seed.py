@@ -260,6 +260,19 @@ def declared_config_v8():
     return migration(12).DECLARED
 
 
+def policy_rows_v9() -> list[dict]:
+    return [dict(row) for row in migration(13).POLICY_ROWS]
+
+
+def declared_config_v9():
+    """The policy v9 writes — v8's declaration plus the two acceptance floors.
+
+    Not pinned to bar v1: v9 was ruled on 2026-09-10 against the thirty-seven, and the floors are
+    the one thing in the policy that is ABOUT the bar.
+    """
+    return migration(13).DECLARED
+
+
 def reading_policy():
     """The dual read AS IT STANDS — the newest policy version, whichever that is, for
     `distribution_policy`'s reason: a fixture with a version number in it would have to be edited

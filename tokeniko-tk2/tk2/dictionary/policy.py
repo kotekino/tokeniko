@@ -139,6 +139,12 @@ KIND_READING = "reading"
 #: `DISTRIBUTION_SETTINGS`' reason: an undeclared mix is a refusal, never a silent 1.0.
 READING_SETTINGS = ("mix",)
 
+#: The dual read's settings a version MAY declare — the acceptance floors, ruled at v9 (2026-09-10)
+#: after T5 measured them against the grown bar. Absent for v7 and v8, which read the bar
+#: threshold-free on purpose, and their absence is «undeclared» rather than «missing»: a policy that
+#: never ruled a verdict function has none, and `ReadingPolicy.verdict` refuses rather than guessing.
+READING_OPTIONAL = ("near_floor", "far_ceiling")
+
 #: One part of speech that exists. `name` is the letter, `value` the long name, `position` the order
 #: a multi-POS word's keys are listed in. Since policy v3 — the Captain's ruling of 2026-08-25: the
 #: alphabet is WordNet's answer about English, not the key grammar.
@@ -370,7 +376,7 @@ def reading_from_rows(rows: Iterable[Row]) -> ReadingPolicy | None:
     if not declared:
         return None
 
-    unknown = sorted(set(declared) - set(READING_SETTINGS))
+    unknown = sorted(set(declared) - set(READING_SETTINGS) - set(READING_OPTIONAL))
     if unknown:
         raise PolicyRowsInvalid(
             f"reading rows name settings the policy has no field for: {unknown}. "
@@ -385,7 +391,13 @@ def reading_from_rows(rows: Iterable[Row]) -> ReadingPolicy | None:
         )
 
     try:
-        return ReadingPolicy(mix=float(declared["mix"]))
+        return ReadingPolicy(
+            mix=float(declared["mix"]),
+            # Absent for v7 and v8, which never ruled a verdict function. `None` there is the
+            # honest reading and it is what keeps their fingerprints where they were.
+            near_floor=None if "near_floor" not in declared else float(declared["near_floor"]),
+            far_ceiling=None if "far_ceiling" not in declared else float(declared["far_ceiling"]),
+        )
     except ValueError as error:
         raise PolicyRowsInvalid(str(error)) from error
 
@@ -767,9 +779,14 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
         ]
 
     if config.reading is not None:
+        # An optional setting is written only when the version declares it: a row saying
+        # `near_floor = None` would be v8 claiming to have ruled a verdict it never faced.
+        read = [*READING_SETTINGS, *(
+            name for name in READING_OPTIONAL if getattr(config.reading, name) is not None
+        )]
         rows += [
             entry(KIND_READING, name, getattr(config.reading, name), i, family="dual")
-            for i, name in enumerate(READING_SETTINGS)
+            for i, name in enumerate(read)
         ]
 
     if config.alphabet is not None:
