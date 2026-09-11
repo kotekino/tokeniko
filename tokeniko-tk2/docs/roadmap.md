@@ -54,7 +54,10 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] **role inventory CLOSED** — 17 boxes + the predicate, cut from VerbNet (29 roles) ·
       PropBank (112,917 annotated sentences) · FrameNet (1,221 frames), cross-checked against the
       Captain's own first draft; noun-phrase record = 5 fields; OQ2/3/4/5/13 answered, OQ7 part
-- [ ] named rows & scope (Tseitin; row order = scope; RESULT/CAUSE; purpose)
+- [x] **named rows & scope DONE** — flat list + Tseitin; row order = scope with a FIVE-element
+      prefix (quantifier · negation · modality · attitude · domain); CAUSE/RESULT/PURPOSE all
+      dissolve into IMPLY + the theatre; the operator set is the TEN truth functions, frame;
+      OQ6/OQ8 answered, req 6 satisfied with no new machinery
 - [ ] binding states & moods (question/imperative; supposition; FORECAST)
 - [ ] confidence + provenance fields
 - [ ] sparse storage, epoch stamp

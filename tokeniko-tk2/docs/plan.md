@@ -468,9 +468,16 @@ mood/imperative field, third-memory-tier framing).
    determination · relation · noun). OQ2, OQ3, OQ4, OQ5, OQ13 answered; OQ7's quantity/determination
    split answered, its definiteness-as-scoping half carried into task 2.
    **Decision record: `docs/tkzip/202609111051_notes.md`; requirements 18–32.**
-2. **Named rows & scope** — the Tseitin convention (OQ8) for nesting, attitudes, variables; row
-   order = scope order (OQ6); secondary predication with explicit RESULT/CAUSE (OQ5); purpose
-   encoding decided (OQ3 — the withdrawn IMPLY replaced).
+2. ~~**Named rows & scope**~~ **— DONE 2026-09-11.** A zip is a FLAT LIST; nesting is naming
+   (Tseitin, OQ8). **Row order = scope order** (OQ6), and the prefix carries FIVE scope-bearing
+   elements — `quantifier · negation · modality · attitude · domain` — so row order is never free for
+   anything else. Quantification uses BINDER ROWS: one binding mechanism for quantification,
+   questions, equations and naming. **CAUSE, RESULT and PURPOSE all dissolve** into `IMPLY` + the
+   theatre's arrow of time (premise: in a deterministic world a cause is what implies its effect);
+   «because» vs «if» is carried by ASSERTION STATUS, «only» converts IMPLY→EQ. **The operator set is
+   the TEN non-degenerate binary truth functions — frame, closed by mathematics, never trimmed to
+   what English marks.** `domain` satisfies req 6 with no new machinery.
+   **Decision record: `docs/tkzip/202609111511_notes.md`; requirements 33–46, req 29 rewritten.**
 3. **Binding states & moods** — unbound ≠ 0; statement/question/imperative scalar; supposition and
    FORECAST (confidence + future spacetime, heart 17) as first-class readings.
 4. **Confidence + provenance fields** — the station's scalar (parser-compiler 4) and the provenance
@@ -479,6 +486,10 @@ mood/imperative field, third-memory-tier framing).
 6. **THE FIFTY-SENTENCE DRILL** — drilled BY HAND through the draft schema, awkward cases included;
    the no-abstention coverage bar set in advance (§8 test 4). The v1 microscope's residue feeds the
    sentence list (findings are assets).
+   **Required clusters, ruled as they were found:** **«only»** gets its own cluster (task 2 — it
+   scopes, it converts IMPLY→EQ, and it is the exact word v1 dropped entirely, req 8) · existential
+   `be` («there is a cat») · the structural adverbs *never · hardly · almost* · «twice a week» (the
+   `count` field) · de re / de dicto.
 
 **Done when:** the drill passes its pre-set bar on paper and the schema is frozen v2.0 (changes
 after freeze are migrations, not edits).

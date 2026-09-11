@@ -28,6 +28,22 @@ of a binary spreadsheet and was linked from nothing. The rebuild independently r
 draft already had. *An origin that cannot be read is not documentation.* If a decision was made
 somewhere unreadable, **transcribe it into the chapter** — don't work around it.
 
+## PEDANTRY APPLIES TO DIRECTION, NOT ONLY TO OPERATIONS (the Captain, 2026-09-11, PRIO 1)
+
+> *«You should be as pedantic with the CORE project as you are with deploys and db operations. No
+> easy solutions, no result-oriented mindset — accuracy and deepness is the polar star. We are not in
+> a hurry, we don't have a product or a company to please. We are doing science and accuracy takes
+> time.»*
+
+A wrong deploy is revertible; a wrong schema decision is not. So on any core-design question:
+
+- **establish the criteria and the test bench BEFORE proposing an answer** — enumerate the cases a
+  mechanism must handle, then test candidates against them; never pick the tidy one and defend it
+- **state costs in both directions**, including for the option being recommended
+- **never let «what does the next layer need» decide what the FRAME is** — that is how a contingent
+  fact about one language ends up in code
+- re-steering costs the Captain real time; being right the second time is not the goal
+
 ## Non-obvious sources
 
 - `doc/notes.xlsx` (repo root) — the Captain's original working spreadsheet. The `TKZIP2` tab is
