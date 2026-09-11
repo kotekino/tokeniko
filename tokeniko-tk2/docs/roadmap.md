@@ -3,6 +3,13 @@
 *The concise mirror of `plan.md` — where we are, what's ahead. One item, one status; done moves to
 `landed.md`. ⚑ = vertical proof slice under the Captain's eye.*
 
+> ### ⚠ THE ROADMAP IS THE OVERARCHING PLAN ONLY
+> **The reasoning that decides anything lives in `docs/<chapter>/`** — `requirements.md`, the dated
+> `_notes.md` beside it, and any `origin-*.md`. That is the **decision record**, not background:
+> a great deal of argument between the Captain and the QM is there and nowhere else, including
+> positions tried and refuted. **Read the chapter, in full, before elaborating any point in it.**
+> *(The Captain's ruling, 2026-09-11 — see `CLAUDE.md` for what produced it.)*
+
 *Standing law since 2026-08-25 (`plan.md`, before the epics): a closed set is **frame** (code — the
 shape in which things are stated, revisable only by migration), **curation** (db rows,
 generated-then-curated, recorded in the manifest — the bar included), or **open** (geometry with a
@@ -44,7 +51,9 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] the manifest names its own build (a T5 finding that became real when two builds shared a policy)
 
 ## E2 — the format (tkzip v2)
-- [ ] role inventory (VerbNet ref; source; part/determination split)
+- [x] **role inventory CLOSED** — 17 boxes + the predicate, cut from VerbNet (29 roles) ·
+      PropBank (112,917 annotated sentences) · FrameNet (1,221 frames), cross-checked against the
+      Captain's own first draft; noun-phrase record = 5 fields; OQ2/3/4/5/13 answered, OQ7 part
 - [ ] named rows & scope (Tseitin; row order = scope; RESULT/CAUSE; purpose)
 - [ ] binding states & moods (question/imperative; supposition; FORECAST)
 - [ ] confidence + provenance fields

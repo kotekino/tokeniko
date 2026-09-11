@@ -5,6 +5,13 @@
 > what is still open, in what order we investigate, and how we would know the result is *better*
 > rather than merely *newer*.
 
+> ### ⚠ THE ROADMAP IS THE OVERARCHING PLAN ONLY
+> **The reasoning that decides anything lives in `docs/<chapter>/`** — `requirements.md`, the dated
+> `_notes.md` beside it, and any `origin-*.md`. That is the **decision record**, not background:
+> a great deal of argument between the Captain and the QM is there and nowhere else, including
+> positions tried and refuted. **Read the chapter, in full, before elaborating any point in it.**
+> *(The Captain's ruling, 2026-09-11 — see `CLAUDE.md` for what produced it.)*
+
 ## What this directory is — and is not
 
 `doc/tk2/` holds the conception work for the next architecture. Everything here is **reference
@@ -242,18 +249,18 @@ decided*.
 | # | Question | Owner | State |
 |---|---|---|---|
 | 1 | Imprint ceiling — the mechanism by which trust stops being pinned | Cap | **answered in principle** (yes, he must be able to outgrow), mechanism open |
-| 2 | Active/passive: normalize to deep roles, or keep surface topicality | Cap | **suspended** — implementation detail, deliberately deferred |
-| 3 | Purpose encoding — `goal` slot vs. rows glued by an operator | both | open; the IMPLY encoding in the draft is **unsound** (it would derive that an intended outcome occurred) and is withdrawn |
-| 4 | `source` — the missing dual of `destination` | — | **agreed: add** |
-| 5 | Secondary predication («painted the door red») — new slot, or two rows | both | open; the equation form is preferred but must carry an explicit `RESULT`/`CAUSE` operator, since temporal succession is not causation |
+| 2 | Active/passive: normalize to deep roles, or keep surface topicality | Cap | **ANSWERED 2026-09-11 (E2 t1)** — *both*: roles normalize to deep roles (forced by named, verb-independent roles), and topicality survives as one NON-GEOMETRIC marker so the renderer speaks it back in the voice it was heard. tkzip reqs 19, 27 |
+| 3 | Purpose encoding — `goal` slot vs. rows glued by an operator | both | **ANSWERED 2026-09-11 (E2 t1)** — an OPERATOR between rows, never a box, so «for money» and «to save money» are the same zip. The IMPLY form stays withdrawn as unsound. tkzip req 28 |
+| 4 | `source` — the missing dual of `destination` | — | **DONE 2026-09-11 (E2 t1)** — `source` is in the closed inventory; VerbNet's `Material` folds into it |
+| 5 | Secondary predication («painted the door red») — new slot, or two rows | both | **ANSWERED 2026-09-11 (E2 t1)** — a SECOND ROW: depictive co-asserted (AND), resultative joined by an explicit `RESULT`. tkzip req 29 |
 | 6 | Scope and binders | both | open; leaning **row order = scope order** (prenex normal form) — costs one convention, no columns |
-| 7 | `part` conflates two axes | both | open; **quantity** and **determination** are orthogonal, and the draft column currently *loses* a distinction v1 already makes (the five-way quantifier: universal / existential / negative / definite / generic). Definiteness is part of the scoping mechanism |
+| 7 | `part` conflates two axes | both | **PART-ANSWERED 2026-09-11 (E2 t1)**: the noun-phrase record is ADOPTED (every nominal box = quantifier · relation · noun, **per noun phrase**, not one per clause — tkzip req 26). The quantity/determination split itself is still OPEN and belongs to E2 task 2, with v1's `TKQuantifier` (now SEVEN values: universal · negated_universal · existential · indefinite · negative · definite · generic) as the thing that must not be lost |
 | 8 | Nesting via named rows | — | **agreed** — the Captain's `[Y = A AND B, Y IMPLY C]`; this is the Tseitin transformation, and it also solves nested attitudes (POV beyond depth 1) and gives variables a home |
 | 9 | Storage width | — | proposed: **fixed arity is a property of the schema, not of the storage** — store sparse (most slots are `*`), densify on demand for batch work |
 | 10 | Depth-weighted revision cost | both | proposed (§3) |
 | 11 | Self-modifying rule detection | both | proposed (§3) |
 | 12 | Plurality of sources / enclosure resistance | both | flagged (§3) |
-| 13 | Role inventory completeness | both | open — VerbNet/PropBank thematic roles are the reference inventory; the draft already maps onto them almost one-to-one |
+| 13 | Role inventory completeness | both | **CLOSED 2026-09-11 (E2 t1)** — 17 boxes + the predicate, cut from VerbNet (29 roles / 429 classes), PropBank (112,917 annotated sentences) and FrameNet (1,221 frames), cross-checked against the Captain's own first draft. `comitative` was found in neither computational inventory and in the draft. See `tkzip/202609111051_notes.md` |
 
 ---
 

@@ -6,6 +6,13 @@ sixteen of sixteen. This file is the context-keeper across sessions — verbose 
 The concise, checkable mirror is `roadmap.md`; what finishes moves to `landed.md` (same status
 invariants as tk1's trio: one item, one status, one doc; reconcile at every commit).*
 
+> ### ⚠ THE ROADMAP IS THE OVERARCHING PLAN ONLY
+> **The reasoning that decides anything lives in `docs/<chapter>/`** — `requirements.md`, the dated
+> `_notes.md` beside it, and any `origin-*.md`. That is the **decision record**, not background:
+> a great deal of argument between the Captain and the QM is there and nowhere else, including
+> positions tried and refuted. **Read the chapter, in full, before elaborating any point in it.**
+> *(The Captain's ruling, 2026-09-11 — see `CLAUDE.md` for what produced it.)*
+
 **How to read this plan.** Each epic names: its goal, what it depends on, the tasks (mirrored in
 `roadmap.md`), the requirements it answers to (its acceptance contract), and what carried-in/ideas
 items it absorbs. Officer briefs are cut FROM this file at dispatch time, per task — never written in
@@ -453,8 +460,14 @@ question the blueprint carries.
 mood/imperative field, third-memory-tier framing).
 
 **Tasks**
-1. **Role inventory** — fixed slots against VerbNet/PropBank reference (OQ13); the noun-phrase
-   record; `source` added (OQ4); part/determination split (OQ7 — keep v1's five-way quantifier).
+1. ~~**Role inventory**~~ **— DONE 2026-09-11.** Seventeen boxes plus the predicate, cut from
+   VerbNet (29 roles / 429 classes), PropBank (112,917 annotated sentences) and FrameNet (1,221
+   frames), and cross-checked against the Captain's own first draft (`docs/tkzip/origin-the-excel-draft.md`).
+   The inventory is **FRAME** — code, fixed, exhaustive; a miss is a bug, never a migration. Roles are
+   **named and verb-independent**. The noun-phrase record is five fields (quantity · count ·
+   determination · relation · noun). OQ2, OQ3, OQ4, OQ5, OQ13 answered; OQ7's quantity/determination
+   split answered, its definiteness-as-scoping half carried into task 2.
+   **Decision record: `docs/tkzip/202609111051_notes.md`; requirements 18–32.**
 2. **Named rows & scope** — the Tseitin convention (OQ8) for nesting, attitudes, variables; row
    order = scope order (OQ6); secondary predication with explicit RESULT/CAUSE (OQ5); purpose
    encoding decided (OQ3 — the withdrawn IMPLY replaced).
