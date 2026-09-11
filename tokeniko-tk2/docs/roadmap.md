@@ -58,7 +58,10 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
       prefix (quantifier · negation · modality · attitude · domain); CAUSE/RESULT/PURPOSE all
       dissolve into IMPLY + the theatre; the operator set is the TEN truth functions, frame;
       OQ6/OQ8 answered, req 6 satisfied with no new machinery
-- [ ] binding states & moods (question/imperative; supposition; FORECAST)
+- [x] **binding states & moods DONE** — **mood is not a field**: question = something OPEN,
+      imperative = POV(want), supposition = POV(suppose), forecast = a future theatre; irony goes
+      to the figurative layer. Net addition: binding state (BOUND · OPEN · EMPTY) on any slot,
+      a prior on open slots, and the record's sixth field (`sense`)
 - [ ] confidence + provenance fields
 - [ ] sparse storage, epoch stamp
 - [ ] ⚑ fifty-sentence drill BY HAND — bar set in advance, schema frozen v2.0

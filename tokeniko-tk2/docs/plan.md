@@ -478,10 +478,21 @@ mood/imperative field, third-memory-tier framing).
    the TEN non-degenerate binary truth functions — frame, closed by mathematics, never trimmed to
    what English marks.** `domain` satisfies req 6 with no new machinery.
    **Decision record: `docs/tkzip/202609111511_notes.md`; requirements 33–46, req 29 rewritten.**
-3. **Binding states & moods** — unbound ≠ 0; statement/question/imperative scalar; supposition and
-   FORECAST (confidence + future spacetime, heart 17) as first-class readings.
+3. ~~**Binding states & moods**~~ **— DONE 2026-09-11.** The largest collapse of the epic:
+   **mood is not a field.** Question = something OPEN (a box, or the row's TRUTH for polar questions)
+   · imperative = POV(want) over an unasserted row · supposition = POV(suppose), which is what
+   heart 16's imagination gain reads · forecast = a future theatre + confidence in the truth slot
+   (heart 17, verbatim) · irony = the figurative layer, not the schema. A question and an equation
+   are the SAME zip (the Captain's own 2026-08-11 ruling, found in the notes).
+   **Net addition: the binding state (`BOUND` · `OPEN` · `EMPTY`) on any slot, a PRIOR on an open
+   slot, and the nominal record's sixth field (`sense`).** Scalar wherever there is a quantity.
+   **Decision record: `docs/tkzip/202609111607_notes.md`; requirements 47–57, req 26 extended.**
 4. **Confidence + provenance fields** — the station's scalar (parser-compiler 4) and the provenance
    links (brain 4) ride the schema.
+   **Inherited from task 3 and not re-decidable: three quantities, two slots.** `truth` and
+   `forecast confidence` share the row's truth slot (disambiguated by the theatre's tense, heart 17);
+   `parse confidence` is a property of the WHOLE ZIP and separate — a zip can be perfectly understood
+   and probably false.
 5. **Storage** — sparse rows, densify on demand (OQ9); the epoch stamp for derived points.
 6. **THE FIFTY-SENTENCE DRILL** — drilled BY HAND through the draft schema, awkward cases included;
    the no-abstention coverage bar set in advance (§8 test 4). The v1 microscope's residue feeds the
