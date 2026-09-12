@@ -62,7 +62,10 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
       imperative = POV(want), supposition = POV(suppose), forecast = a future theatre; irony goes
       to the figurative layer. Net addition: binding state (BOUND · OPEN · EMPTY) on any slot,
       a prior on open slots, and the record's sixth field (`sense`)
-- [ ] confidence + provenance fields
+- [x] **confidence + provenance DONE** — net addition is ONE field (`parse_confidence`, one
+      scalar per zip, may be EMPTY); provenance / `derived_by` / `original` / forecast resolution
+      are all document-level and already built at E0. Two findings handed to data-modeling and
+      datatier (their req 7 each)
 - [ ] sparse storage, epoch stamp
 - [ ] ⚑ fifty-sentence drill BY HAND — bar set in advance, schema frozen v2.0
 

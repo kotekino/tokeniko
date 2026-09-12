@@ -487,12 +487,19 @@ mood/imperative field, third-memory-tier framing).
    **Net addition: the binding state (`BOUND` · `OPEN` · `EMPTY`) on any slot, a PRIOR on an open
    slot, and the nominal record's sixth field (`sense`).** Scalar wherever there is a quantity.
    **Decision record: `docs/tkzip/202609111607_notes.md`; requirements 47–57, req 26 extended.**
-4. **Confidence + provenance fields** — the station's scalar (parser-compiler 4) and the provenance
-   links (brain 4) ride the schema.
-   **Inherited from task 3 and not re-decidable: three quantities, two slots.** `truth` and
-   `forecast confidence` share the row's truth slot (disambiguated by the theatre's tense, heart 17);
-   `parse confidence` is a property of the WHOLE ZIP and separate — a zip can be perfectly understood
-   and probably false.
+4. ~~**Confidence + provenance fields**~~ **— DONE 2026-09-12.** Mostly an audit: almost everything
+   expected here was already built at E0 or answered by task 3. **Net addition: ONE field,
+   `parse_confidence` — one scalar on the whole zip, and a slot, so it may be EMPTY** (self-talk
+   invokes no parser; 1.0 would claim perfect understanding of an utterance that never happened).
+   One number because its calibration signal («did the speaker correct me?») arrives per UTTERANCE;
+   per-part doubt is already carried by binding state + prior — a half-heard word is `OPEN`, never
+   `BOUND` to a guess. Provenance, `derived_by`, `original` and forecast resolution are all
+   DOCUMENT-level and all four exist since E0. A resolved forecast mints a new belief; the stored zip
+   never mutates.
+   **Two findings handed to their own chapters rather than decided here** (the Captain's ruling,
+   2026-09-12): `docs/data-modeling/` req 7 — what a PARSED belief's parents are; `docs/datatier/`
+   req 7 — the retreat cascade has no reverse index on `parents.id`.
+   **Decision record: `docs/tkzip/202609121556_notes.md`; requirements 58–60.**
 5. **Storage** — sparse rows, densify on demand (OQ9); the epoch stamp for derived points.
 6. **THE FIFTY-SENTENCE DRILL** — drilled BY HAND through the draft schema, awkward cases included;
    the no-abstention coverage bar set in advance (§8 test 4). The v1 microscope's residue feeds the

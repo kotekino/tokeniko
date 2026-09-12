@@ -9,3 +9,4 @@
 4. **Three write-classes, declared per collection** — kb (rw) · parameters (r) · hardwired-logic tables (r); the everything-is-rows seam is a schema property.
 5. **Provenance is a first-class field everywhere** — every derived thing names its parents; summaries retreat with them.
 6. **Schemas live with the entities** (pydantic models remain the single source of shape); a dimension change is a migration, never a cast.
+7. **A parsed belief names the UTTERANCE it came from** — provenance is the retreat mechanism, so «somebody said it» must say who, where and when, or the belief can never be retreated when the source proves untrustworthy. Whether the utterance is itself a row is this chapter's to decide (`202609121556_notes.md`, raised from E2 task 4). `derived_by` carries the STATION VERSION, so a station later found buggy has its zips findable and re-parseable.
