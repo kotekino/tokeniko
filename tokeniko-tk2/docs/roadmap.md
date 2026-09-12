@@ -66,7 +66,9 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
       scalar per zip, may be EMPTY); provenance / `derived_by` / `original` / forecast resolution
       are all document-level and already built at E0. Two findings handed to data-modeling and
       datatier (their req 7 each)
-- [ ] sparse storage, epoch stamp
+- [x] **storage DONE (OQ9)** — sparse (measured: ~80% of every row is EMPTY); the KEY is the
+      truth and the VECTOR an epoch-stamped cache, so a dictionary rebuild never touches the
+      biography; ~60× smaller than v1 per sentence; seventh record field `marker` added
 - [ ] ⚑ fifty-sentence drill BY HAND — bar set in advance, schema frozen v2.0
 
 ## E3 — the station (parser/compiler)

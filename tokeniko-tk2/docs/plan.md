@@ -500,14 +500,25 @@ mood/imperative field, third-memory-tier framing).
    2026-09-12): `docs/data-modeling/` req 7 — what a PARSED belief's parents are; `docs/datatier/`
    req 7 — the retreat cascade has no reverse index on `parents.id`.
    **Decision record: `docs/tkzip/202609121556_notes.md`; requirements 58–60.**
-5. **Storage** — sparse rows, densify on demand (OQ9); the epoch stamp for derived points.
+5. ~~**Storage**~~ **— DONE 2026-09-12.** Decided by measurement: PropBank's 112,917 predicate
+   instances give **mean 2.59 roles per row of 18 slots — ~80% of every row is EMPTY** — so storage is
+   **sparse** and fixed arity is a property of the schema, not of the storage (OQ9). **The KEY is the
+   truth, the VECTOR is an epoch-stamped cache** (dictionary req 13), which is affordable because
+   E1c's sense vectors average **6.78 cells of 4,555**: roughly **60×** smaller than v1 per sentence.
+   **The consequence that matters: a dictionary rebuild invalidates only the cache, so E9's
+   translation night is for a SCHEMA change and never for a new base.** The theatre is a cache on the
+   same pattern. Row names are zip-local, so a zip is self-contained — whether it is EMBEDDED is
+   data-modeling's call. Case 7 added a seventh record field (`marker`).
+   **Decision record: `docs/tkzip/202609121807_notes.md`; requirements 61–66, req 26 extended.**
 6. **THE FIFTY-SENTENCE DRILL** — drilled BY HAND through the draft schema, awkward cases included;
    the no-abstention coverage bar set in advance (§8 test 4). The v1 microscope's residue feeds the
    sentence list (findings are assets).
    **Required clusters, ruled as they were found:** **«only»** gets its own cluster (task 2 — it
    scopes, it converts IMPLY→EQ, and it is the exact word v1 dropped entirely, req 8) · existential
    `be` («there is a cat») · the structural adverbs *never · hardly · almost* · «twice a week» (the
-   `count` field) · de re / de dicto.
+   `count` field) · de re / de dicto · **«to / toward / into / onto / as far as»** (task 5 — the
+   marker carries meaning the box does not, and the cluster must decide whether `direction` is a
+   MISSING BOX distinct from `destination`, which PropBank and FrameNet both keep separate).
 
 **Done when:** the drill passes its pre-set bar on paper and the schema is frozen v2.0 (changes
 after freeze are migrations, not edits).
