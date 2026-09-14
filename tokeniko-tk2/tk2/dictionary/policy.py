@@ -143,7 +143,13 @@ READING_SETTINGS = ("mix",)
 #: after T5 measured them against the grown bar. Absent for v7 and v8, which read the bar
 #: threshold-free on purpose, and their absence is «undeclared» rather than «missing»: a policy that
 #: never ruled a verdict function has none, and `ReadingPolicy.verdict` refuses rather than guessing.
-READING_OPTIONAL = ("near_floor", "far_ceiling", "mode")
+READING_OPTIONAL = ("near_floor", "far_ceiling", "mode", "cell_decides",
+                    "structural_relations", "reference_relations")
+
+#: Reading settings whose value is a SET of relation names. Stored comma-joined, because a policy
+#: row is one name and one value and a list column would be a second shape for one ledger to carry.
+#: Greppable in the database, which a nested document would not be.
+READING_RELATION_SETS = ("structural_relations", "reference_relations")
 
 #: One part of speech that exists. `name` is the letter, `value` the long name, `position` the order
 #: a multi-POS word's keys are listed in. Since policy v3 — the Captain's ruling of 2026-08-25: the
@@ -364,6 +370,23 @@ def distribution_from_rows(rows: Iterable[Row]) -> DistributionPolicy | None:
         raise PolicyRowsInvalid(str(error)) from error
 
 
+def _reading_value(reading, name):
+    """One reading setting as a ROW VALUE. The relation sets travel comma-joined — one name, one
+    value, and a string a person can read straight out of the collection."""
+    value = getattr(reading, name)
+    return ",".join(value) if name in READING_RELATION_SETS else value
+
+
+def _relation_set(value) -> tuple[str, ...] | None:
+    """A comma-joined reading row back into a tuple. `None` stays `None` — undeclared is not empty."""
+    if value is None:
+        return None
+    if isinstance(value, (list, tuple)):
+        return tuple(str(v) for v in value)
+    text = str(value).strip()
+    return tuple(part.strip() for part in text.split(",") if part.strip())
+
+
 def reading_from_rows(rows: Iterable[Row]) -> ReadingPolicy | None:
     """The dual read as these rows declare it, or `None` when they declare none.
 
@@ -400,6 +423,10 @@ def reading_from_rows(rows: Iterable[Row]) -> ReadingPolicy | None:
             # Absent for v7-v10, which ruled the mix and never faced the question. UNDECLARED, not
             # «blended» — and it is what keeps those four fingerprints where they are.
             mode=None if "mode" not in declared else str(declared["mode"]),
+            cell_decides=(None if "cell_decides" not in declared
+                          else bool(declared["cell_decides"])),
+            structural_relations=_relation_set(declared.get("structural_relations")),
+            reference_relations=_relation_set(declared.get("reference_relations")),
         )
     except ValueError as error:
         raise PolicyRowsInvalid(str(error)) from error
@@ -792,7 +819,7 @@ def policy_rows_of(config: DictionaryConfig, version: int, families: Mapping[str
             name for name in READING_OPTIONAL if getattr(config.reading, name) is not None
         )]
         rows += [
-            entry(KIND_READING, name, getattr(config.reading, name), i, family="dual")
+            entry(KIND_READING, name, _reading_value(config.reading, name), i, family="dual")
             for i, name in enumerate(read)
         ]
 

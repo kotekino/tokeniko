@@ -19,7 +19,7 @@ would be the standing law arriving by omission.
 
 from dataclasses import dataclass, field
 
-from tk2.dictionary import closure, distribution, glosses, relations, senses
+from tk2.dictionary import closure, distribution, glosses, references, relations, senses
 from tk2.dictionary.closure import Digraph, SeedClosure
 from tk2.dictionary.config import DictionaryConfig
 from tk2.dictionary.matrix import Matrix
@@ -143,8 +143,34 @@ def build_base(
     # run that names one is reproducing a non-standing reading and may not be STORED; the tool
     # refuses that at its own door.
     relational = relations.build(
-        dimensions, provider, config.relations, antonym_symmetry=antonym_symmetry
+        dimensions, provider, config.relations, antonym_symmetry=antonym_symmetry,
     )
+
+    # GLOSS REFERENCES — R's repair for requirement 2 (E1d T3, 2026-09-14). «eat's definition NAMES
+    # food» is a stated, directional, quotable claim that D was never going to carry, because D
+    # measures what two definitions SHARE and these two share nothing. The gloss seam is D's own, so
+    # the reduction carries requirement 21's repair, the stop-list ruling, the name refusal and the
+    # closed-class filter — a second reading of the same glosses would re-open all four, quietly.
+    #
+    # Recomputed here rather than threaded through `distribution.build`'s signature: it is 0.1s on
+    # the full base and deterministic, and a changed signature would be paid by every caller.
+    if config.reading is not None and config.reading.reference_relations:
+        if config.distribution is None:
+            raise ValueError(
+                "the policy declares reference relations and no gloss walk to mine them from — "
+                "a reference is read out of a DEFINITION, and D is what says how a definition is read"
+            )
+        _step(progress, "references")
+        weights = dict(config.relations.weights)
+        relational = references.merged_into(
+            relational,
+            references.reference_cells(
+                distribution.gloss_vectors(dimensions, provider, config.distribution, closed_forms),
+                dimensions,
+                weight=weights[references.GLOSS_REFERENCE],
+                reciprocal_weight=weights[references.GLOSS_REFERENCE_RECIPROCAL],
+            ),
+        )
 
     # D over the SAME `dimensions` tuple — not a second key space computed the same way, the same
     # object — so the two matrices can be read cell for cell and the store's registry describes

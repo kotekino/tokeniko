@@ -390,3 +390,78 @@ def test_a_projection_names_the_half_it_read():
     assert not np.allclose(stated, proposed), "the two halves are different vectors"
     assert stated[held._index["eat.v"]] > 0
     assert proposed[held._index["food.n"]] > 0
+
+
+# ------------------------------------------------------------------------------------------------
+# the cell decides — requirement 19, honoured at last (policy v12)
+# ------------------------------------------------------------------------------------------------
+
+
+def cell_first(near=0.28, structural=("derivational",), reference=("gloss_reference",)):
+    """A world where R's COSINE says nothing and a stated cell says everything — which is `eat.v ~
+    food.n` on the real base: D cosine +0.0484, D direct cell 0.0000, and the only true statement is
+    that eat's definition NAMES food."""
+    config = DictionaryConfig(
+        closure=ClosurePolicy(max_depth=2, max_size=100, senses="primary"),
+        declared_seeds=("eat",),
+        bar=(BarPair("eat.v", "food.n", "NEAR", "the Captain's line"),),
+        reading=ReadingPolicy(mix=0.15, near_floor=near, far_ceiling=0.0, mode=READING_SEPARATE,
+                              cell_decides=True, structural_relations=structural,
+                              reference_relations=reference),
+    )
+    relations = [
+        {"key": "eat.v", "cells": [cell("eat.v", 1.0, "identity"),
+                                   cell("food.n", 0.9, "gloss_reference")]},
+        {"key": "food.n", "cells": [cell("food.n", 1.0, "identity")]},
+        {"key": "land.n", "cells": [cell("land.n", 1.0, "identity"),
+                                    cell("land.v", 0.45, "derivational")]},
+        {"key": "land.v", "cells": [cell("land.v", 1.0, "identity"),
+                                    cell("land.n", 0.45, "derivational")]},
+    ]
+    return DictionarySpace(config, ("eat.v", "food.n", "land.n", "land.v"), relations, [])
+
+
+def test_a_stated_cell_decides_where_the_cosine_is_silent():
+    """REQUIREMENT 2, CLOSED. The reader used to consult the cell only to ask whether R SPOKE — never
+    what it SAID — which is why a stated 0.9 could still abstain."""
+    held = cell_first()
+
+    found = held.read("eat.v", "food.n")
+    assert found.verdict == "NEAR"
+    assert found.source == SOURCE_RELATIONAL
+    assert found.relational_relation == "gloss_reference"
+    assert found.relational_cosine == pytest.approx(0.0), "the cosine had nothing to say"
+
+
+def test_a_structural_relation_may_not_decide():
+    """`derivational` states «same root», not «same meaning» — which is exactly why land.n~land.v,
+    compass.n~compass.v and play.n~play.v are declared FAR and read positive (req 16).
+
+    Held by comparing two policies that differ ONLY in whether the relation is structural, with the
+    NEAR floor put out of the cosine's reach so the cell is the only thing that could decide."""
+    excluded = cell_first(near=0.99, structural=("derivational",))
+    admitted = cell_first(near=0.99, structural=())
+
+    assert excluded.read("land.n", "land.v").relational_cell == pytest.approx(0.45), "recorded"
+    assert excluded.verdict("land.n", "land.v") == "ABSTAIN", "and not allowed to decide"
+    assert admitted.verdict("land.n", "land.v") == "NEAR", "the same cell, admitted, decides"
+
+
+def test_a_reference_cell_stays_out_of_the_relational_cosine():
+    """MEASURED, not preferred: with reference cells in the cosine and the reciprocal on,
+    land.n~land.v, state.n~state.v and play.n~play.v all flip to a wrong NEAR."""
+    inside = cell_first(reference=())
+    outside = cell_first()
+
+    assert inside.relational("eat.v", "food.n") > 0
+    assert outside.relational("eat.v", "food.n") == pytest.approx(0.0)
+
+
+def test_a_policy_that_never_ruled_the_cell_rule_reads_as_it_always_read():
+    """v7-v11 are still readable, and a default here would be a reading the manifest cannot vouch
+    for. The cell still says whether R SPEAKS; it just may not decide."""
+    held = space(near=0.1)
+
+    found = held.read("eat.v", "devour.v")
+    assert found.source == SOURCE_RELATIONAL
+    assert found.relational_cosine > 0, "the COSINE answered, as it did before v12"

@@ -475,6 +475,22 @@ class ReadingPolicy:
     #: WHY IT IS A ROW AND NOT A FLAG IN CODE: it decides what a verdict MEANS, which is the
     #: definition of curation under the standing law of 2026-08-25.
     mode: str | None = None
+    #: Whether a STATED CELL may issue a verdict on its own. Requirement 19 says a verdict reads
+    #: both the cosine and the direct cell, and until policy v12 the reader used the cell only to
+    #: decide whether R spoke at all — so `eat.v -> food.n` could be a stated claim and still abstain.
+    #: Ruled `True` at v12 (2026-09-14), which is what closes requirement 2.
+    cell_decides: bool | None = None
+    #: Relations whose cells may NEVER decide, though they still build the cosine. `derivational`
+    #: states «same root», not «same meaning» — it is why `land.n~land.v`, `compass.n~compass.v` and
+    #: `play.n~play.v` are declared FAR and read positive — and `gloss_reference_ambiguous` is a
+    #: claim about one of several readings that the gloss does not choose between.
+    structural_relations: tuple[str, ...] | None = None
+    #: Relations whose cells are claims about a PAIR rather than statements about a key's relational
+    #: profile, and therefore never enter the relational cosine. MEASURED, not preferred: with
+    #: reference cells in the cosine and the reciprocal on, `land.n~land.v`, `state.n~state.v` and
+    #: `play.n~play.v` all flip to a wrong NEAR, because reciprocal references inflate POS-sibling
+    #: profiles.
+    reference_relations: tuple[str, ...] | None = None
 
     def __post_init__(self):
         if self.mix < 0:
@@ -522,6 +538,14 @@ class ReadingPolicy:
             return "FAR"
         return "ABSTAIN"
 
+    def decides_by_cell(self, relation: str) -> bool:
+        """Whether a cell of this relation may issue a verdict on its own."""
+        return bool(self.cell_decides) and relation not in (self.structural_relations or ())
+
+    def enters_the_cosine(self, relation: str) -> bool:
+        """Whether a cell of this relation shapes the key's relational profile."""
+        return relation not in (self.reference_relations or ())
+
     @property
     def reads_separately(self) -> bool:
         """Whether the verdict comes from R ALONE, with D reporting beside it as a proposal.
@@ -542,6 +566,11 @@ class ReadingPolicy:
             out["far_ceiling"] = self.far_ceiling
         if self.mode is not None:
             out["mode"] = self.mode
+        # Omitted when undeclared, so every version before v12 keeps hashing as it did.
+        if self.cell_decides is not None:
+            out["cell_decides"] = self.cell_decides
+            out["structural_relations"] = list(self.structural_relations or ())
+            out["reference_relations"] = list(self.reference_relations or ())
         return out
 
 

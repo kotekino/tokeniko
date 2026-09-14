@@ -186,9 +186,20 @@ def assert_coherent(
     provider: RelationProvider,
     policy: RelationPolicy,
     antonym_symmetry: str,
+    produced_elsewhere=(),
 ) -> None:
-    """The two sides name the same relations. Called before anything is mined."""
-    declared = set(policy.relations)
+    """The two sides name the same relations. Called before anything is mined.
+
+    `produced_elsewhere` names the relations a DIFFERENT miner writes into R — since policy v12 the
+    gloss references (`tk2.dictionary.references`), which are read out of definitions rather than
+    off the relation graph. Without it this check fires on its own success: it cannot see a miner it
+    does not call, and would refuse a weight that takes effect perfectly well.
+
+    Injected rather than imported, and named by the CALLER, because the alternative is this module
+    learning about every future miner — and the check's whole value is that it knows exactly which
+    relations it is responsible for.
+    """
+    declared = set(policy.relations) - set(produced_elsewhere)
     known = set(known_relations(provider, antonym_symmetry))
     unweighted = sorted(known - declared)
     unknown = sorted(declared - known)
@@ -212,6 +223,7 @@ def build(
     name: str = RELATIONS_MATRIX,
     progress=None,
     antonym_symmetry: str | None = None,
+    produced_elsewhere=None,
 ) -> Matrix:
     """Fill R over `dimensions` — THE call the build tool makes.
 
@@ -221,7 +233,16 @@ def build(
     inventing an axis for it would be membership by side effect.
     """
     antonym_symmetry = resolve_symmetry(policy, antonym_symmetry)
-    assert_coherent(provider, policy, antonym_symmetry)
+    # R HAS TWO MINERS and the coherence check is about both: this one walks the relation graph,
+    # `references` reads definitions. A check that knew only its own miner would fire on its own
+    # success — it did, the moment policy v12 weighted the gloss references — so the sibling is
+    # named here rather than left to every caller to remember, which the first attempt proved they
+    # will not. A caller may still override it to hold a narrower scope.
+    if produced_elsewhere is None:
+        from tk2.dictionary import references
+
+        produced_elsewhere = references.RELATIONS
+    assert_coherent(provider, policy, antonym_symmetry, produced_elsewhere)
     index = dimension_index(dimensions)
     order = tuple(index)
 

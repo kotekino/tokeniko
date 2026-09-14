@@ -27,6 +27,27 @@ def _migration(number: int):
     return found
 
 
+def newest_migration_declaring(attribute: str):
+    """The newest migration file that declares `attribute`, and the module itself.
+
+    NOT «the newest migration»: a later version declares only what it CHANGES. `0002` re-ruled one
+    floor and `0003` ruled the reading mode; neither carries the closed classes, which only the
+    baseline declares. Asking the newest policy migration for them raised `AttributeError` from the
+    day `0002` landed, and nothing noticed until the offline mine asked — the offline path is the
+    one that runs before a migration is applied, so it is exactly the path that must not assume.
+    """
+    from tk2.migrations import discover
+
+    best = None
+    for found in discover():
+        module = found.load()
+        if hasattr(module, attribute) and (best is None or found.number > best[0].number):
+            best = (found, module)
+    if best is None:
+        raise LookupError(f"no migration declares {attribute}")
+    return best
+
+
 def newest_policy_migration():
     """The migration file declaring the newest policy version — 0003 wrote v1, 0005 v2, 0006 v3.
 
@@ -111,6 +132,6 @@ def closed_forms(db_name: str | None) -> tuple[tuple[str, ...], str]:
             forms = tuple(sorted({r["form"] for r in rows if " " not in r["form"]}))
             return forms, f"{db_name}.{ClosedClassDoc.Settings.name} v{version}"
 
-    found, module = newest_policy_migration()
+    found, module = newest_migration_declaring("CLOSED_CLASS_ROWS")
     version = max(row["version"] for row in module.CLOSED_CLASS_ROWS)
     return module.CLOSED_CLASS_FORMS, f"db/{found.label} v{version} (not applied)"

@@ -854,4 +854,9 @@ def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(c
 
     assert config.reading.mode == READING_SEPARATE
     assert config.reading.reads_separately
+    # Since v12 it also rules whether a STATED CELL may decide, and which relations may not —
+    # requirement 19 honoured, and requirement 2's repair.
+    assert config.reading.cell_decides is True
+    assert not config.reading.decides_by_cell("derivational")
+    assert not config.reading.enters_the_cosine("gloss_reference")
     assert dict(config.relations.weights)["derivational"] == 0.45

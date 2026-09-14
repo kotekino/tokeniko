@@ -133,6 +133,9 @@ class Reading:
     verdict: str
     source: str
     proposal: str | None = None
+    #: The relation that set the stated cell, when there is one — «every answer naming its source»
+    #: taken one step further than the layer: which CLAIM answered, not merely which matrix.
+    relational_relation: str = ""
 
     @property
     def relational_speaks(self) -> bool:
@@ -194,9 +197,10 @@ class DictionarySpace:
         #: The DIRECT cells, sparse. Requirement 19: a verdict reads both the cosine AND the stated
         #: cell, and the cosine alone would have called the first curation round useless. Sparse
         #: dicts rather than two more dense matrices — 4,555² float32 is 83 MB apiece.
-        self._relational_cells: dict[tuple[str, str], float] = {}
+        self._relational_cells: dict[tuple[str, str], tuple[float, str]] = {}
         self._distributional_cells: dict[tuple[str, str], float] = {}
 
+        reading = config.reading
         for row in relation_rows:
             i = self._index.get(row["key"])
             if i is None:
@@ -206,10 +210,17 @@ class DictionarySpace:
                 j = self._index.get(cell["column"])
                 if j is None:
                     continue
-                relational[i, j] += cell["w"]
-                if cell.get("rel") != "identity":
-                    stated.append((cell["column"], cell.get("rel", ""), float(cell["w"])))
-                    self._relational_cells[(row["key"], cell["column"])] = float(cell["w"])
+                relation = cell.get("rel", "")
+                # REFERENCE CELLS ARE CLAIMS ABOUT A PAIR, NOT STATEMENTS ABOUT A PROFILE, so they
+                # are recorded and kept out of the cosine. Measured (E1d T3): with them in, and the
+                # reciprocal on, `land.n~land.v`, `state.n~state.v` and `play.n~play.v` all flip to
+                # a wrong NEAR, because reciprocal references inflate POS-sibling profiles.
+                if reading is None or reading.enters_the_cosine(relation):
+                    relational[i, j] += cell["w"]
+                if relation != "identity":
+                    stated.append((cell["column"], relation, float(cell["w"])))
+                    self._relational_cells[(row["key"], cell["column"])] = (
+                        float(cell["w"]), relation)
             self._relations[row["key"]] = tuple(stated)
 
         for row in distribution_rows:
@@ -355,8 +366,28 @@ class DictionarySpace:
 
         relational_cosine = self.relational(left, right)
         distributional_cosine = self.distributional(left, right)
-        relational_cell = self._relational_cells.get((left, right), 0.0)
+        relational_cell, relation = self._relational_cells.get((left, right), (0.0, ""))
         distributional_cell = self._distributional_cells.get((left, right), 0.0)
+
+        # THE CELL IS ASKED BEFORE THE COSINE — requirement 19, which says a verdict reads BOTH, and
+        # which this module honoured only halfway until policy v12: the cell decided whether R spoke
+        # and never what it said. That is why `eat.v -> food.n` could be a STATED claim and still
+        # abstain, and closing it is what finally satisfies requirement 2.
+        #
+        # A structural relation may not decide: `derivational` states «same root», not «same
+        # meaning» — it is exactly why `land.n~land.v`, `compass.n~compass.v` and `play.n~play.v`
+        # are declared FAR and read positive — and `gloss_reference_ambiguous` is a claim about one
+        # of several readings that the gloss itself does not choose between.
+        if relational_cell != 0.0 and reading.decides_by_cell(relation):
+            verdict = "FAR" if relational_cell < 0 else "NEAR"
+            return Reading(
+                left=left, right=right,
+                relational_cell=relational_cell, relational_cosine=relational_cosine,
+                relational_relation=relation,
+                distributional_cell=distributional_cell,
+                distributional_cosine=distributional_cosine,
+                verdict=verdict, source=SOURCE_RELATIONAL, proposal=None,
+            )
 
         speaks = relational_cell != 0.0 or relational_cosine != 0.0
         if speaks:
@@ -369,6 +400,7 @@ class DictionarySpace:
         return Reading(
             left=left, right=right,
             relational_cell=relational_cell, relational_cosine=relational_cosine,
+            relational_relation=relation,
             distributional_cell=distributional_cell, distributional_cosine=distributional_cosine,
             verdict=verdict, source=source, proposal=proposal,
         )

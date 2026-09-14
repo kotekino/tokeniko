@@ -47,6 +47,7 @@ from tests.seed import (
     declared_config_v9,
     declared_config_v10,
     declared_config_v11,
+    declared_config_v12,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -58,6 +59,7 @@ from tests.seed import (
     policy_rows_v9,
     policy_rows_v10,
     policy_rows_v11,
+    policy_rows_v12,
     ruled_config,
     structural_seeds,
 )
@@ -1033,11 +1035,13 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
     assert dict(config.relations.weights)["derivational"] == 0.45
 
 
-#: THE STANDING POLICY'S HASH — policy v11 against the live thirty-seven-pair bar. It moved from
-#: v10's for exactly one reason: `reading.mode` arrived, and what a verdict MEANS is part of what a
-#: build is measured under. A build read apart must not be able to present the hash of one read
-#: blended — that difference is the whole point of the fingerprint.
-STANDING_FINGERPRINT = "25a3cd7e425e2a48afbdaa5b11d8637bccbe671cfcc7506c079352d9cb094ca3"
+#: THE STANDING POLICY'S HASH — policy v12 against the live thirty-seven-pair bar.
+STANDING_FINGERPRINT = "b400f6c8aa236f605eb826642f918d2c9a22ad0d4b422edb6b72e97eb807cc2e"
+
+#: v11's own hash — the two matrices ruled apart, before gloss references were mined into R. A
+#: build read apart must not be able to present the hash of one read blended, and one mining
+#: references must not present the hash of one that never did.
+V11_FINGERPRINT = "25a3cd7e425e2a48afbdaa5b11d8637bccbe671cfcc7506c079352d9cb094ca3"
 
 #: v10's own hash — the re-fitted NEAR floor, and what the reader ran under while it was still
 #: blending. Kept because the build that is sealed on the body was read through it.
@@ -1397,7 +1401,7 @@ def test_policy_v11_rules_the_reading_mode_and_moves_nothing_else():
     assert config == declared_config_v11()
     assert config.reading.mode == READING_SEPARATE
     assert config.reading.reads_separately
-    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.fingerprint() == V11_FINGERPRINT
 
     # the ledger's promise: v10 still hashes to what v10 measured
     assert declared_config_v10().fingerprint() == V10_FINGERPRINT
@@ -1432,3 +1436,95 @@ def test_the_earlier_versions_never_declared_a_mode_and_must_keep_saying_nothing
         assert reading.mode is None
         assert not reading.reads_separately
         assert "mode" not in reading.as_dict()
+
+
+# ------------------------------------------------------------------------------------------------
+# v12 — a definition that names a word is stating something
+# ------------------------------------------------------------------------------------------------
+
+
+def test_policy_v12_mines_gloss_references_and_lets_a_stated_cell_decide():
+    """E1d T3. Requirement 2 was REFUTED at scale — `eat.v~food.n` reads D cosine +0.0484 and D
+    direct cell 0.0000, because their definitions share nothing. The relation is that eat's
+    definition NAMES food, which is R's kind of claim and was never mined."""
+    from tk2.dictionary import references
+
+    config = policy.config_from_rows(policy_rows_v12(), bar_rows() + bar_rows_v2())
+    weights = dict(config.relations.weights)
+
+    assert config == declared_config_v12()
+    assert weights[references.GLOSS_REFERENCE] == 0.9
+    assert weights[references.GLOSS_REFERENCE_RECIPROCAL] == 0.54
+    assert config.reading.cell_decides is True
+    assert config.fingerprint() == STANDING_FINGERPRINT
+
+
+def test_v12_says_which_relations_may_not_decide_and_which_stay_out_of_the_cosine():
+    from tk2.dictionary import references
+
+    reading = policy.config_from_rows(policy_rows_v12(), bar_rows()).reading
+
+    # `derivational` states «same root», not «same meaning» — req 16, and the reason land.n~land.v,
+    # compass.n~compass.v and play.n~play.v are declared FAR and read positive.
+    assert not reading.decides_by_cell("derivational")
+    assert not reading.decides_by_cell(references.GLOSS_REFERENCE_AMBIGUOUS)
+    assert reading.decides_by_cell(references.GLOSS_REFERENCE)
+    assert reading.decides_by_cell("hypernym_1")
+
+    # Reference cells are claims about a PAIR. Measured: with them in the cosine and the reciprocal
+    # on, land.n~land.v, state.n~state.v and play.n~play.v all flip to a wrong NEAR.
+    assert not reading.enters_the_cosine(references.GLOSS_REFERENCE)
+    assert not reading.enters_the_cosine(references.GLOSS_REFERENCE_RECIPROCAL)
+    assert reading.enters_the_cosine("derivational"), "structural, but still a profile statement"
+    assert reading.enters_the_cosine("antonym")
+
+
+def test_v12_adds_rows_and_takes_none_away():
+    """A first draft of `db/0004` rebuilt `RelationPolicy` field by field and DROPPED `defaults`,
+    which silently un-declared six `curation_default` rows. Caught by counting kinds, not by reading
+    the code — so the count is held here from now on."""
+    from collections import Counter
+
+    before = Counter(r["kind"] for r in policy_rows_v11())
+    after = Counter(r["kind"] for r in policy_rows_v12())
+
+    assert all(after[kind] >= before[kind] for kind in before), "a version may not un-declare"
+    assert after["relation_weight"] - before["relation_weight"] == 3
+    assert after["reading"] - before["reading"] == 3
+
+
+def test_the_relation_sets_travel_as_readable_rows():
+    """One name, one value: a nested document would not be greppable in the collection."""
+    rows = {(r["kind"], r["name"]): r["value"] for r in policy_rows_v12()}
+
+    assert rows[(policy.KIND_READING, "structural_relations")] == \
+        "derivational,gloss_reference_ambiguous"
+    assert "gloss_reference_reciprocal" in rows[(policy.KIND_READING, "reference_relations")]
+
+
+def test_every_version_before_twelve_keeps_saying_nothing_about_the_cell_rule():
+    for rows in (policy_rows_v9(), policy_rows_v10(), policy_rows_v11()):
+        reading = policy.reading_from_rows(rows)
+        assert reading.cell_decides is None
+        assert reading.structural_relations is None
+        assert not reading.decides_by_cell("hypernym_1"), "undeclared means the cell cannot decide"
+        assert reading.enters_the_cosine("anything"), "and nothing is held out of the cosine"
+
+
+def test_the_closed_classes_are_found_even_when_the_newest_migration_never_declares_them():
+    """A LATENT BUG, live from the day `db/0002` landed and found by E1d T3 on 2026-09-14.
+
+    `closed_forms(None)` asked the NEWEST POLICY migration for the closed-class rows — but a later
+    version declares only what it CHANGES, and only the baseline declares those. It raised
+    `AttributeError` for four days and nothing noticed, because the offline path is the one that
+    runs BEFORE a migration is applied, which is exactly the path that must not assume.
+    """
+    from tk2.datatier.policy_source import closed_forms, newest_migration_declaring
+
+    forms, source = closed_forms(None)
+
+    assert len(forms) > 200 and "the" in forms
+    assert "0001" in source, "the baseline is what declares them"
+
+    found, module = newest_migration_declaring("POLICY_ROWS")
+    assert found.number >= 4, "and the newest POLICY is still found the other way"
