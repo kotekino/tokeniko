@@ -50,26 +50,7 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] **120,475 senses placed (96.9%), 816,309 cells, sealed and read back whole**
 - [x] the manifest names its own build (a T5 finding that became real when two builds shared a policy)
 
-## E2 — the format (tkzip v2)
-- [x] **role inventory CLOSED** — 17 boxes + the predicate, cut from VerbNet (29 roles) ·
-      PropBank (112,917 annotated sentences) · FrameNet (1,221 frames), cross-checked against the
-      Captain's own first draft; noun-phrase record = 5 fields; OQ2/3/4/5/13 answered, OQ7 part
-- [x] **named rows & scope DONE** — flat list + Tseitin; row order = scope with a FIVE-element
-      prefix (quantifier · negation · modality · attitude · domain); CAUSE/RESULT/PURPOSE all
-      dissolve into IMPLY + the theatre; the operator set is the TEN truth functions, frame;
-      OQ6/OQ8 answered, req 6 satisfied with no new machinery
-- [x] **binding states & moods DONE** — **mood is not a field**: question = something OPEN,
-      imperative = POV(want), supposition = POV(suppose), forecast = a future theatre; irony goes
-      to the figurative layer. Net addition: binding state (BOUND · OPEN · EMPTY) on any slot,
-      a prior on open slots, and the record's sixth field (`sense`)
-- [x] **confidence + provenance DONE** — net addition is ONE field (`parse_confidence`, one
-      scalar per zip, may be EMPTY); provenance / `derived_by` / `original` / forecast resolution
-      are all document-level and already built at E0. Two findings handed to data-modeling and
-      datatier (their req 7 each)
-- [x] **storage DONE (OQ9)** — sparse (measured: ~80% of every row is EMPTY); the KEY is the
-      truth and the VECTOR an epoch-stamped cache, so a dictionary rebuild never touches the
-      biography; ~60× smaller than v1 per sentence; seventh record field `marker` added
-- [ ] ⚑ fifty-sentence drill BY HAND — bar set in advance, schema frozen v2.0
+## E2 — the format (tkzip v2) ✅ COMPLETE 2026-09-14 — see `landed.md`
 
 ## E3 — the station (parser/compiler)
 - [ ] skeleton adapter (stanza, swappable)

@@ -1,0 +1,637 @@
+"""THE ZIP — one thought, as a flat list of fixed-shape rows.
+
+This module is **frame** under the standing law of 2026-08-25: it is the shape in which anything can
+be stated, it moves only by migration, and a change here is never a cast. Everything it *refers* to —
+which words mark which role, which attitude verbs exist, which senses a word has — is knowledge and
+lives in rows.
+
+--------------------------------------------------------------------------------------------------
+THE FIVE THINGS THIS SHAPE IS FOR
+--------------------------------------------------------------------------------------------------
+1. **Fixed arity, so two thoughts compare by arithmetic** (req 1). Every row has every box; a box
+   that is not used is ABSENT FROM STORAGE and present in the shape. Fixed arity is a property of
+   the schema, not of the storage (req 61) — measured: ~80% of every row is empty.
+2. **An unbound slot is a VARIABLE, never a zero** (req 2). A missing agent, an unresolved sense and
+   an unanswered question are the same thing at three depths, and the evaluator solves them with one
+   search (evaluator req 5).
+3. **Rows point at rows by NAME, never by nesting** (req 33). Nesting has no non-arbitrary depth
+   limit; naming has none to choose. This is the Tseitin transformation.
+4. **Row order is SCOPE order** (req 35), and the prefix carries five scope-bearing elements —
+   quantifier, negation, modality, attitude, domain. Row order is therefore NEVER free for anything
+   else, which is why `CONV` is its own operator and not `IMPLY` with the rows swapped (req 42).
+5. **Content is defined, structure is compiled** (the second standing law). Function words become
+   rows, operators, quantifiers and markers here; they never ask the dictionary a question.
+
+--------------------------------------------------------------------------------------------------
+WHAT IS DELIBERATELY NOT HERE
+--------------------------------------------------------------------------------------------------
+- **No mood field.** A question is «something is OPEN»; an imperative is POV(want) over an unasserted
+  row; a supposition is POV(suppose); a forecast is a future theatre. Nothing was found that mood
+  would have to store (req 48).
+- **No cause, purpose or result relation.** All three are `IMPLY` read with the theatre's arrow of
+  time (reqs 37, 40) — premise, stated rather than assumed: *in a deterministic world, a cause is
+  what implies its effect*.
+- **No catch-all slot, ever** (req 21). A typed `other` is the database option by the back door.
+  Material that fits no box is a DIAGNOSTIC, outside the geometry, never compared.
+- **No provenance, no `derived_by`, no `original`** (req 59). Those describe the BELIEF and live on
+  the document; this describes the THOUGHT.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import Annotated, Literal, Union
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+# The frozen shape. A change to anything in this module changes this number, and a zip carries the
+# number it was compiled against (req 22) — E9's translation night has to know what it is translating.
+SCHEMA_VERSION = 2
+
+
+# --------------------------------------------------------------------------------------------------
+# keys — what a slot points at when it is bound to a word
+# --------------------------------------------------------------------------------------------------
+
+# A base key is a word plus a part of speech: `eat.v`, `small.a`. It names a DIMENSION of the base
+# (E1: 4,555 of them). A sense key is finer — `eat.v.01` — and names a row of the sense layer (E1c).
+# Both are strings because the dictionary owns their grammar; this module only carries them.
+BaseKey = Annotated[str, Field(min_length=1)]
+SenseKey = Annotated[str, Field(min_length=1)]
+
+# The name of a row, and the name of a variable a binder introduces. Short and zip-local: Tseitin
+# names never cross thoughts (req 64), so a cross-thought reference is a document id, not a name.
+RowName = Annotated[str, Field(min_length=1)]
+VarName = Annotated[str, Field(min_length=1)]
+
+
+# --------------------------------------------------------------------------------------------------
+# binding — the three states, expressed so that EMPTY costs nothing to store
+# --------------------------------------------------------------------------------------------------
+
+
+class Open(BaseModel):
+    """OPEN — a variable nobody binds: the thing to solve for.
+
+    «Who ate the fish?» has an OPEN agent. «Is the cat hungry?» has an OPEN truth. An unresolved
+    sense is an OPEN sense. They are one problem (evaluator req 5), and the brain may bind any of
+    them by asking, by remembering, or by inference — which source is a choice made later, never a
+    shape (req 49).
+
+    `prior` is the one genuinely new scalar the drill bench found (req 50): «It's cold, isn't it?» is
+    OPEN with a high expectation of *yes*; «Is it cold?» is OPEN with none. Not parse confidence —
+    real semantic content.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    prior: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class Var(BaseModel):
+    """BOUND — to a variable introduced by a binder row, not to a word.
+
+    «Someone ate the fish» binds an existential and puts it in the agent box: the agent is KNOWN TO
+    EXIST and unidentified, which is not the same as being asked about. That distinction is why
+    `EMPTY`, `Var` and `Open` are three different things and v1's single `*` was not enough.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: VarName
+
+
+class Ref(BaseModel):
+    """BOUND — to another ROW of this zip, by name.
+
+    Requirement 34 says a box may hold a row name, valued by that row's derived point; the first cut
+    of this module had no type for it, and the drill found the hole:
+
+        «Cognition is the psychological result OF PERCEPTION AND LEARNING AND REASONING»
+
+    The `relation` of *result* is a three-way coordination — a join row — not a word. Without `Ref`
+    the row name would validate as a bare string and the evaluator would go looking for «j2» in the
+    dictionary. FORCED BY THE DRILL, 2026-09-14.
+
+    Distinct from `Var`: a variable is bound by a prefix row and ranges; a reference names a
+    proposition already written down.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    row: RowName
+
+
+# EMPTY is the absence of the field. There is no `Empty` marker and there must not be: a stored
+# marker for «nothing here» would cost a field on every unused slot, and ~80% of every row is unused.
+
+
+# --------------------------------------------------------------------------------------------------
+# the closed alphabets — frame, because mathematics or shape, never because English happens to mark it
+# --------------------------------------------------------------------------------------------------
+
+
+class Role(str, Enum):
+    """The seventeen boxes. FRAME: fixed, exhaustive, and a miss is a bug to be fixed by redesigning
+    the frame — never a migration (req 18, the Captain's ruling of 2026-09-11).
+
+    Cut from VerbNet (29 thematic roles over 429 classes), PropBank (112,917 annotated sentences) and
+    FrameNet (1,221 frames), then cross-checked against the Captain's own first draft — which already
+    had `comitative`, a box neither computational inventory carries.
+
+    Named and VERB-INDEPENDENT (req 19): box N means the same thing in every zip. PropBank's numbered
+    convention (`ARG2` = recipient for *give*, substance for *fill*) would make «I gave the book to
+    Anna» and «I filled the glass with water» compare Anna against water.
+    """
+
+    # participants
+    AGENT = "agent"
+    PATIENT = "patient"
+    EXPERIENCER = "experiencer"
+    RECIPIENT = "recipient"
+    BENEFICIARY = "beneficiary"
+    INSTRUMENT = "instrument"
+    SOURCE = "source"
+    DESTINATION = "destination"
+    COMPLEMENT = "complement"
+    TOPIC = "topic"
+    MEASURE = "measure"
+    # circumstances
+    LOCATION = "location"
+    # FORCED BY THE DRILL, 2026-09-14 — «He looked UP» · «She turned LEFT». A direction with no
+    # endpoint: not a destination (he does not arrive at *up*), not a path (it is not a route), not a
+    # manner. The marker cannot rescue it because there is no box to mark. PropBank keeps ARGM-DIR
+    # separate (1,419 uses) and FrameNet has Direction beside Path and Goal; the first cut of this
+    # inventory had source, path and destination and simply missed the fourth.
+    DIRECTION = "direction"
+    TIME = "time"
+    MANNER = "manner"
+    DURATION = "duration"
+    PATH = "path"
+    COMITATIVE = "comitative"
+
+
+class Operator(str, Enum):
+    """The ten non-degenerate binary truth functions. FRAME, closed by MATHEMATICS (req 41).
+
+    Not trimmed to the six English marks. Trimming would restrict what tokeniko can THINK to what
+    English can SAY, and he computes operators nobody uttered — self-talk, derived thought, a chained
+    theorem. Which of these English marks is knowledge and lives in `language_closed_classes`.
+
+    Six of the sixteen binary functions are excluded because they are degenerate — `TRUE`, `FALSE`,
+    `A`, `¬A`, `B`, `¬B` ignore an input and are not joins at all. Negation of a single row is a
+    property of that row, not an operator.
+
+    `CONV` is NOT `IMPLY` with the operands swapped: row order carries scope (req 35, 42).
+    """
+
+    AND = "and"
+    NAND = "nand"
+    OR = "or"
+    NOR = "nor"
+    XOR = "xor"
+    EQ = "eq"
+    IMPLY = "imply"
+    NIMPLY = "nimply"
+    CONV = "conv"
+    NCONV = "nconv"
+
+
+class Quantity(str, Enum):
+    """Logical force. Split from determination because the two are ORTHOGONAL (req 26, OQ7): «the
+    three cats» is definite AND counted, «not all the cats» is negated-universal AND definite, and
+    v1's single seven-valued field could say only one of the two at a time."""
+
+    UNIVERSAL = "universal"
+    NEGATED_UNIVERSAL = "negated_universal"
+    EXISTENTIAL = "existential"
+    NEGATIVE = "negative"
+
+
+class Determination(str, Enum):
+    """Which ones — orthogonal to how many. Definiteness is also part of the scoping mechanism."""
+
+    DEFINITE = "definite"
+    INDEFINITE = "indefinite"
+    GENERIC = "generic"
+
+
+class Modality(str, Enum):
+    """□ and ◇. A modal claim is not a crisp assertion — `◇P ∧ ◇¬P` is consistent — so the kernel
+    never treats it as P and the extractor never mints a rule from it."""
+
+    NECESSITY = "necessity"
+    POSSIBILITY = "possibility"
+
+
+# --------------------------------------------------------------------------------------------------
+# the box — seven fields, because a noun phrase is not one cell
+# --------------------------------------------------------------------------------------------------
+
+
+class Box(BaseModel):
+    """One filled role: the Captain's own noun-phrase record, from the first draft (`part` · `rel` ·
+    the noun), grown to seven fields as later tasks found what it was missing.
+
+    The record is PER NOUN PHRASE, not one per clause read off the subject — v1's limit, which cannot
+    say «all cats eat some fish».
+
+    Every field is independently bindable (req 47): `head` may be BOUND while `sense` is OPEN (the
+    parser emits the lemma with the sense slot open — brain req 7), `count` may be OPEN («how many
+    cats?»), `relation` may be OPEN («whose cat?»). A field that is absent is EMPTY.
+
+    `head` is req 26's `noun`, renamed for what it actually holds: a `manner` box holds an adverb and
+    a `complement` box holds an adjective, so `noun` would be a name doing the wrong job for two of
+    the seventeen. Same field, clearer name.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    quantity: Quantity | Open | None = None
+    count: int | Var | Open | None = None
+    determination: Determination | Open | None = None
+
+    # The possessor: «my cat» → `relation` = the key for *me*. A relation, not a role: it holds
+    # BETWEEN this phrase and something else, which is why it lives inside the record.
+    relation: BaseKey | Var | Ref | Open | None = None
+
+    head: BaseKey | Var | Ref | Open | None = None
+    sense: SenseKey | Open | None = None
+
+    # The preposition actually used, as a lemma (req 65). The marker words are already
+    # `language_closed_classes` rows, so this records WHICH ROW WAS MATCHED, not new knowledge.
+    # Without it «I walk TO the station» and «I walk TOWARD the station» are the same zip, and they
+    # do not mean the same thing. v1 carries markers for exactly this reason and says so.
+    marker: str | None = None
+
+    # Degree rides what it modifies rather than earning a box (req 23): «very tall» attaches to the
+    # complement, «very slowly» to the manner. It is an intensifier on another part, not a part.
+    degree: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class Pov(BaseModel):
+    """The point of view — the Captain's own column, from the first draft: «my cat is cute» carries
+    POV `me / think`.
+
+    This is SHORTHAND for an attitude at one fixed prefix position (req 45), not a second mechanism.
+    When a quantifier has to scope in or out of the attitude — de re versus de dicto — the attitude
+    takes an explicit `AttitudeRow` instead, and the two readings become row order like everything
+    else. A flat-only POV does not abstain on that distinction: it silently forces DE RE, and would
+    put a unicorn in the KB as existing.
+
+    `strength` is where the gradation of «close the door» → «would you mind closing the door» lives:
+    the strength of the wanting, not a mood scalar (req 51).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    holder: Box
+    verb: BaseKey
+    strength: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+# --------------------------------------------------------------------------------------------------
+# the rows
+# --------------------------------------------------------------------------------------------------
+
+
+class _Row(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: RowName
+
+
+class _Claimable(_Row):
+    """A row that can carry a truth claim.
+
+    THE TRUTH SLOT IS THE ASSERTION STATUS, and the two turned out to be one field with three
+    readings — which is why nothing else in this schema records «is this asserted?»:
+
+      BOUND (a float)  the row is CLAIMED, fuzzily. When the theatre is future this same slot holds
+                       forecast CONFIDENCE — «confidence where truth will later sit» (heart 17). A
+                       resolved forecast mints a NEW belief; this value is never rewritten (req 60).
+      OPEN             the row is ASKED. «Is the cat hungry?» has every box bound and its truth open.
+      EMPTY (absent)   the row is STATED BUT NOT CLAIMED — the antecedent of «if it rains, I stay
+                       home». The join is what is asserted there, not the halves.
+
+    That last line is what separates «because» from «if» (req 38): same `IMPLY`, rows claimed or not.
+    And it is read by the HEART as well as the evaluator — suppositions fire at the imagination gain
+    (heart 16) — so it must be first-class and visible, never an internal detail of a search (req 56).
+    """
+
+    truth: float | Open | None = None
+
+
+class ContentRow(_Claimable):
+    """An atom: a predicate and its boxes.
+
+    `predicate` is absent for plain copular `be`, which compiles to structure and earns no dimension
+    (req 31) — so «the cat is cute» comes out as *cat + cute, no verb*, exactly as the first draft had
+    it, while `become`, `seem` and `remain` keep a home. Existential `be` («there is a cat») is
+    content, not glue, and does fill it.
+
+    `boxes` is SPARSE by construction: only filled roles appear. Measured on PropBank's 112,917
+    predicate instances, the mean is 2.59 roles of eighteen slots.
+    """
+
+    kind: Literal["content"] = "content"
+
+    predicate: BaseKey | Var | Open | None = None
+    predicate_sense: SenseKey | Open | None = None
+
+    boxes: dict[Role, Box] = Field(default_factory=dict)
+
+    pov: Pov | None = None
+
+
+class JoinRow(_Claimable):
+    """`Y = A AND B` — the Tseitin combination, and the only way rows are joined.
+
+    Every join is explicit and names its operands, so nothing depends on an implicit «previous row».
+    Row order is already carrying scope (req 35) and cannot be asked to carry adjacency as well.
+
+    The join is itself claimable, and that is load-bearing:
+
+        «if it rains, I stay home»          join CLAIMED, both halves EMPTY
+        «I stayed home because it rained»   join CLAIMED, both halves CLAIMED
+        «it rained and I stayed home»       AND, both halves CLAIMED
+
+    All three are distinguishable, with one operator set and no relation field.
+    """
+
+    kind: Literal["join"] = "join"
+
+    operator: Operator
+    operands: Annotated[list[RowName], Field(min_length=2, max_length=2)]
+
+
+class _PrefixRow(_Row):
+    """A scope-bearing element: quantifier · negation · modality · attitude · domain (req 35).
+
+    `scopes` NAMES THE ROW THIS APPLIES TO — forced by the drill, 2026-09-14, from the Captain's own
+    traffic:
+
+        «software CAN be minds and humans MUST be minds»
+
+    `◇A ∧ □B`: two different modalities over two conjuncts. An element that scoped over «everything
+    after it» could not express that — put ◇ first and it swallows B as well. The same shape breaks
+    for attitudes («Anna thinks X and Bob thinks Y») and for domains («legally P but actually Q»).
+
+    Because a named row may itself be a JOIN covering a whole subtree, naming the target gives
+    arbitrary nesting for free — the Tseitin machinery paying for itself a second time.
+
+    **Row order = scope order survives, refined**: it orders prefix elements relative to each other
+    WHEN THEY SCOPE THE SAME TARGET. «Every man loves a woman» is still two binders over one content
+    row, and their order is still the difference between ∀>∃ and ∃>∀.
+
+    `scopes` NAMES A MATRIX — a content row or a join row — and NEVER another prefix row. That is the
+    constraint that keeps «row order = scope order» true: nesting among prefix elements is their
+    ORDER, and `scopes` only says which matrix they are nesting over. Without it, `¬∀` could be
+    spelled two ways — by chaining pointers, or by sibling order — and two spellings of one reading is
+    the thing this schema keeps refusing.
+
+        ¬∀X P    neg, then ∀X, both scoping P
+        ∀X ¬P    ∀X, then neg, both scoping P
+        ◇A ∧ □B  ◇ scoping A, □ scoping B — different matrices, so order between them says nothing
+
+    Required, never defaulted: a default of «everything after» would be a third spelling.
+    """
+
+    scopes: RowName
+
+
+class QuantifierRow(_PrefixRow):
+    """A binder: introduces a variable and restricts it.
+
+    «All cats are mammals» becomes a binder for X restricted to cats, then a content row saying X is a
+    mammal. That costs an indirection on every quantified comparison — the variable dereferences to
+    its binder's derived point — and buys ONE binding mechanism for quantification, questions,
+    equations and naming (req 36). Under the alternative, a quantified noun phrase is not a variable
+    at all and the evaluator has to synthesise one the schema never wrote down.
+    """
+
+    kind: Literal["quantifier"] = "quantifier"
+
+    binds: VarName
+    quantity: Quantity
+    count: int | Open | None = None
+    determination: Determination | None = None
+
+    # «all CATS» — the restriction on the variable's range.
+    restriction: Box
+
+
+class NegationRow(_PrefixRow):
+    """¬ in the prefix, so «not all that glitters is gold» and «nothing that glitters is gold» are two
+    zips rather than one.
+
+    **NOT for negating a single row.** «I'm not a software but I am a mind» negates one half of a
+    conjunction, and that is `truth = 0.0` — claimed false. This row is for negation that must scope
+    OVER another prefix element, which is the only case where the order matters. The drill settled
+    the division and it costs no new field.
+
+    v1 had no prefix and patched a single ¬/∀ combination into its quantifier enum
+    (`NEGATED_UNIVERSAL`). A prefix handles the whole class, and the enum value survives here only for
+    the reading where the negation genuinely belongs to the quantifier.
+    """
+
+    kind: Literal["negation"] = "negation"
+
+
+class ModalityRow(_PrefixRow):
+    """□ / ◇ in the prefix — because modality SCOPES.
+
+    «Every student must pass» has two readings (∀>□, each is required; □>∀, it is required that all
+    do). That is scope-bench case C, and it is why modality could not remain a flat clause field as
+    v1 has it — a constraint task 3 inherited rather than chose.
+    """
+
+    kind: Literal["modality"] = "modality"
+
+    modality: Modality
+
+
+class AttitudeRow(_PrefixRow):
+    """An attitude in the prefix — the explicit form of `Pov`, used when a quantifier must scope in or
+    out of it.
+
+        de dicto:  [he thinks] [∃X cat] | X in garden      ← no cat asserted
+        de re:     [∃X cat] [he thinks] | X in garden      ← cat asserted
+
+    `verb` is a key, not a member of an enum. v1's four-valued `klass` (factive · doxastic ·
+    desiderative · reportative) is a category-3 set wearing a list's clothes: attitude verbs are open
+    — think, believe, suppose, want, fear, pretend, hope, doubt — so the classification is nearest-
+    anchor geometry over a small anchor set, and never misses the verb nobody thought of (req 55).
+    """
+
+    kind: Literal["attitude"] = "attitude"
+
+    holder: Box
+    verb: BaseKey
+    strength: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class DomainRow(_PrefixRow):
+    """The context a claim holds in — «legally» · «in chess» · «as a doctor» · «in Italy».
+
+    This is requirement 6 («scope rides inside, so a contextual defeat is never relearned») satisfied
+    with NO NEW MACHINERY: a domain is simply the fifth prefix element. It is what lets «as a doctor I
+    disagree; as a father I understand» be two positions honestly held rather than a KB contradiction
+    (rules reqs 6-7).
+
+    There is no `type` column — jurisdiction, game, capacity, framework. Nothing reasons differently
+    across them; the evaluator treats every one as «P holds indexed to D», and a type column would be
+    a category-3 set enumerated in code.
+
+    Provably not the `location` box: «In Italy, you may drive IN FRANCE with a foreign licence» needs
+    both at once.
+    """
+
+    kind: Literal["domain"] = "domain"
+
+    domain: Box
+
+
+Row = Annotated[
+    Union[
+        ContentRow,
+        JoinRow,
+        QuantifierRow,
+        NegationRow,
+        ModalityRow,
+        AttitudeRow,
+        DomainRow,
+    ],
+    Field(discriminator="kind"),
+]
+
+
+# --------------------------------------------------------------------------------------------------
+# the caches — derived, epoch-stamped, and never the truth
+# --------------------------------------------------------------------------------------------------
+
+
+class Theatre(BaseModel):
+    """The clause's spacetime, as four axis pairs — `[t_from,t_to][x][y][z]` — the Captain's own
+    column from the first draft, and the same width as v1's denormalization map.
+
+    DERIVED, not a replacement for the boxes (req 25). «I went from Rome to Genoa» keeps Rome and
+    Genoa as fillers, because *«Genoa is a thing you can reason about: it's a city, somebody is born
+    there»* — the evaluator must answer «where does he work?» with *the kitchen*, not with
+    coordinates.
+
+    Stored as a CACHE (req 63): recomputing «yesterday» years later needs the utterance timestamp AND
+    the station's version-dependent resolution logic. Truth is the filler plus the timestamp.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    interval: Annotated[list[float], Field(min_length=8, max_length=8)]
+    epoch: int
+
+
+class GeometryCache(BaseModel):
+    """The role vectors, sparse, keyed by `<row name>.<role>`.
+
+    THE KEY IS THE TRUTH; THE VECTOR IS A CACHE (dictionary req 13 — «derived vectors are a cache in
+    the zip, recomputable, so cosine runs in the DB»). The consequence is the one that matters: a
+    dictionary rebuild invalidates only this object, never the meaning, so E9's translation night is
+    for a SCHEMA change and never for a new base. Re-derivation is ~9 lookups per sentence.
+
+    Affordable because E1c's sense vectors average 6.78 cells of 4,555 — the cache costs less than a
+    doubling of the zip.
+
+    ONE epoch for the whole cache, not one per vector: every vector here was derived at the same time
+    against the same base, and a per-vector stamp would restate that on every entry. Redundancy that
+    can disagree with itself is worse than no stamp, because the reader cannot tell which half lies —
+    the same argument that kept `sphere` off the heart's level rows and `epoch_layer` off the derived
+    points.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    epoch: int
+    vectors: dict[str, list[tuple[int, float]]] = Field(default_factory=dict)
+
+
+# --------------------------------------------------------------------------------------------------
+# the zip
+# --------------------------------------------------------------------------------------------------
+
+
+class Zip(BaseModel):
+    """One thought.
+
+    A flat list of rows, ordered by scope, joined by name. Self-contained: Tseitin names never cross
+    thoughts, so a cross-thought reference is a document id and this object can be embedded whole
+    (req 64).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: int = SCHEMA_VERSION
+
+    rows: Annotated[list[Row], Field(min_length=1)]
+
+    # Which role the speaker foregrounded (req 27). Roles NORMALIZE — «the fish was eaten by the cat»
+    # compiles with cat as agent, so it compares as one thought with «the cat ate the fish» — and this
+    # one marker keeps what normalization would otherwise destroy: that the speaker chose to talk
+    # about the fish. It enters no arithmetic; the renderer reads it to speak the sentence back in the
+    # voice it was heard in (req 9).
+    topicality: Role | None = None
+
+    # «This zip IS what I received» — coverage, repairs taken, self-round-trip, aggregated and
+    # calibrated (parser-compiler req 4). ONE number for the whole zip, because its calibration signal
+    # — «did the speaker correct me?» — arrives per utterance: a per-row scalar would have no training
+    # signal and could never come to MEAN anything. Per-part doubt is carried by binding state and
+    # prior instead: a half-heard word is OPEN, never BOUND to a guess with a low number.
+    #
+    # EMPTY when no parse happened — self-talk invokes no parser, and 1.0 would claim perfect
+    # understanding of an utterance that never existed (req 58).
+    parse_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    theatre: Theatre | None = None
+    geometry_cache: GeometryCache | None = None
+
+    # Material no box fits: recorded, never compared, never given a position (req 21). NOT a slot and
+    # not a typed `other` — the moment two leftovers need to know whether they are the same kind of
+    # leftover, a role registry has been built by accident, un-curated and unsealed. The compiler is
+    # the thing that knows it failed to place these words; throwing that away means re-deriving it
+    # later, expensively and imperfectly.
+    unplaced: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check_names_and_scopes(self) -> "Zip":
+        """Three invariants that cost nothing here and would cost a great deal downstream."""
+        names = [r.name for r in self.rows]
+        if len(names) != len(set(names)):
+            raise ValueError("row names must be unique within a zip")
+
+        claimable = {r.name for r in self.rows if isinstance(r, (ContentRow, JoinRow))}
+        for r in self.rows:
+            if isinstance(r, _PrefixRow) and r.scopes not in claimable:
+                raise ValueError(
+                    f"row {r.name!r} scopes {r.scopes!r}, which is not a content or join row — a "
+                    "prefix element nests over a MATRIX; nesting among prefix elements is row order"
+                )
+            if isinstance(r, ContentRow):
+                for role, box in r.boxes.items():
+                    for slot in (box.head, box.relation):
+                        if isinstance(slot, Ref) and slot.row not in names:
+                            raise ValueError(
+                                f"row {r.name!r} box {role.value!r} references unknown row "
+                                f"{slot.row!r}"
+                            )
+            if isinstance(r, JoinRow):
+                for operand in r.operands:
+                    if operand not in names:
+                        raise ValueError(f"join {r.name!r} names unknown operand {operand!r}")
+        return self
+
+    def row(self, name: str) -> Row | None:
+        """The row with this name, or None. Names are zip-local, so this never leaves the thought."""
+        for r in self.rows:
+            if r.name == name:
+                return r
+        return None

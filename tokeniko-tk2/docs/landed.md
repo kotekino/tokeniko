@@ -147,3 +147,36 @@ measured over base-to-base cosines, and whether a sense-to-base reading is judge
 is E3's question · `dictionary_builds` gained a `build` field: the T5 finding that a manifest could
 not name its own rows became real the moment two builds shared one policy, and the two pre-fix rows
 are left in the ledger because a ledger records what happened.*
+
+---
+
+## E2 — the format ✅ 2026-09-14 (tkzip v2.0, FROZEN)
+
+*Limit B dies on paper before any code — and it did, in seventy-eight sentences. Six tasks, all run
+in the Captain's Socratic shape; from task 2 onward under his standing instruction: **be as pedantic
+with core design as with deploys — bench first, candidates second, no recommendation before the test.***
+
+- [x] **the role inventory — 17 boxes, FRAME** — cut from VerbNet (29 roles / 429 classes), PropBank (112,917 annotated sentences) and FrameNet (1,221 frames), then cross-checked against the Captain's own first draft, which already had `comitative` — a box neither computational inventory carries. Ruled **named and verb-independent**: PropBank's `ARG2` means recipient for *give* and substance for *fill*, which would compare Anna against water. Settles OQ2 — passive normalizes to deep roles, topicality survives as one non-geometric marker. **No catch-all slot, ever**: the Captain refuted the QM's typed `other` as «the db option by the back door».
+- [x] **named rows & scope — the collapse** — his rule: *collapse into math everything we can, into fields or variables what remains.* **Nothing survived as a relation.** CAUSE is `IMPLY` read with the theatre's arrow (premise stated, not assumed: *in a deterministic world a cause is what implies its effect*); PURPOSE is POV(want) + IMPLY; RESULT goes with them. «because» and «if» are one IMPLY separated by **assertion status**; «only» converts IMPLY→EQ and is a marker word, a KB row. **The operator set is the ten non-degenerate truth functions — frame, closed by mathematics, never trimmed to what English marks.** Row order = scope order, with a five-element prefix. OQ3, OQ5, OQ6, OQ8 answered.
+- [x] **binding states & moods — the largest collapse** — **mood is not a field.** Question = something OPEN (a box, or the row's TRUTH for polar questions) · imperative = POV(want) over an unasserted row · supposition = POV(suppose), which heart 16's imagination gain reads · forecast = a future theatre (heart 17 verbatim) · irony leaves for the figurative layer. A question and an equation are the SAME zip — the Captain's own 2026-08-11 ruling, found by reading the notes. Net addition: binding state (`BOUND · OPEN · EMPTY`), a PRIOR on open slots, and the record's sixth field.
+- [x] **confidence & provenance — an audit that added one field** — `parse_confidence`, one scalar per zip and a slot, so it may be EMPTY. Provenance, `derived_by`, `original` and forecast resolution are all document-level and were all built at E0. Two findings handed to `data-modeling` and `datatier` (req 7 each) rather than decided inside E2.
+- [x] **storage (OQ9) — decided by measurement** — mean 2.59 roles per row of 18 slots, so **~80% of every row is EMPTY**; sparse, and fixed arity is a property of the schema. **The KEY is the truth, the VECTOR is an epoch-stamped cache** (dictionary req 13) — affordable because E1c's sense vectors average 6.78 cells of 4,555. **~60× smaller than v1 per sentence.** The consequence that matters: a dictionary rebuild invalidates only the cache, so **E9's translation night is for a SCHEMA change and never for a new base.**
+- [x] **⚑ THE DRILL — 78 sentences, 97.4% no-abstention, 0 silent-wrong, BAR MET** — bar and scoring rules declared and committed *before* the drill existed (`1a68337`). All 28 sentences drawn from his own stored journeys zipped clean. **Three schema changes forced**, each named with the sentence that forced it: `direction` (the 18th role — «He looked up») · `scopes` on prefix rows («software can be minds and humans must be minds») · `Ref` («the result of perception and learning and reasoning»). The only abstention is **`almost`**, on two witnesses, amending req 23.
+- [x] **tkzip FROZEN at v2.0** — `tk2/tkzip/schema.py`. Changes from here are migrations, never edits.
+
+**The world it can now hold:** «my cat is cute» is *cat + cute, no verb* — his first draft verbatim ·
+«every man loves a woman» is two zips · de re and de dicto are two zips · «as a doctor I disagree; as
+a father I understand» is not a contradiction · a passive and its active differ by one non-geometric
+marker · and «the cat sleeps» stores in **130 bytes**.
+
+*Two method rulings came out of this epic and now govern the project: **the chapter docs are the
+decision record** (`CLAUDE.md`, after the QM rebuilt the role inventory without reading the Captain's
+own draft — «an origin that cannot be read is not documentation»), and **pedantry applies to
+direction, not only to operations** (PRIO 1 — bench first, state costs both ways, never let «what the
+next layer needs» decide what the frame is).*
+
+*Open, named rather than left to be discovered: **`almost`** has no home and the format says so ·
+the derived point's DENSITY follows from a composition operator that is not yet defined for all ten
+(req 43) · whether a zip is EMBEDDED in its document is data-modeling's call · and the drill's
+«to / toward» cluster left `direction`'s marker semantics (arrival entailment) to E3's closed-class
+rows.*

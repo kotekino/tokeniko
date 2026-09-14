@@ -451,7 +451,7 @@ whether a sense-to-base reading is judged by the same numbers is E3's question, 
 
 ---
 
-## E2 — The format *(tkzip v2)*
+## E2 — The format *(tkzip v2)* — ✅ **COMPLETE 2026-09-14**
 
 **Goal:** the fixed-arity zip — limit B dies on paper before any code. The schema answers every open
 question the blueprint carries.
@@ -510,15 +510,17 @@ mood/imperative field, third-memory-tier framing).
    same pattern. Row names are zip-local, so a zip is self-contained — whether it is EMBEDDED is
    data-modeling's call. Case 7 added a seventh record field (`marker`).
    **Decision record: `docs/tkzip/202609121807_notes.md`; requirements 61–66, req 26 extended.**
-6. **THE FIFTY-SENTENCE DRILL** — drilled BY HAND through the draft schema, awkward cases included;
-   the no-abstention coverage bar set in advance (§8 test 4). The v1 microscope's residue feeds the
-   sentence list (findings are assets).
-   **Required clusters, ruled as they were found:** **«only»** gets its own cluster (task 2 — it
-   scopes, it converts IMPLY→EQ, and it is the exact word v1 dropped entirely, req 8) · existential
-   `be` («there is a cat») · the structural adverbs *never · hardly · almost* · «twice a week» (the
-   `count` field) · de re / de dicto · **«to / toward / into / onto / as far as»** (task 5 — the
-   marker carries meaning the box does not, and the cluster must decide whether `direction` is a
-   MISSING BOX distinct from `destination`, which PropBank and FrameNet both keep separate).
+6. ~~**THE DRILL**~~ **— DONE 2026-09-14. ⚑ 78 sentences, 97.4% no-abstention, 0 silent-wrong,
+   BAR MET.** Bar and scoring rules declared and committed BEFORE the drill existed (`1a68337`).
+   Raised 50 → 75 (drilled 78). **All 28 sentences drawn from his own stored journeys zipped clean.**
+   **Three schema changes forced, each named with the sentence that forced it** — `direction` (the
+   18th role: «He looked up») · `scopes` on prefix rows («software can be minds and humans must be
+   minds») · `Ref` («the result of perception and learning and reasoning»). The only abstention is
+   **`almost`**, on two witnesses, which amends req 23. The drill also caught SEVEN QM encoding
+   errors, none of them the schema's fault — attributive adjectives are second rows.
+   **Deliverables: `tk2/tkzip/schema.py` (frame, frozen v2.0) · `tests/fixtures/drill.py` ·
+   `tests/test_tkzip_schema.py` · `tests/test_drill.py`. 796 checks green.**
+   **Decision record: `docs/tkzip/202609141009_notes.md`; requirements 67–73.**
 
 **Done when:** the drill passes its pre-set bar on paper and the schema is frozen v2.0 (changes
 after freeze are migrations, not edits).
