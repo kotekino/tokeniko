@@ -402,3 +402,27 @@ def test_a_dropped_build_loses_its_seals_first(store, built, clean_db):
     assert gone["dictionary_base_relations"] == len(KEYS) and gone["dictionary_base_keys"] == len(KEYS)
     assert clean_db["dictionary_base_seals"].count_documents({"build": "t1"}) == 0
     assert store.builds() == ()
+
+
+def test_a_dropped_build_takes_its_SENSE_LAYER_with_it(store, built, clean_db):
+    """FOUND ON THE BODY, 2026-09-14. `drop` listed the keys and the two square matrices and not the
+    sense layer, so dropping the superseded build left 120,475 orphaned sense rows: rows under a
+    build label whose keys, matrices and seals were gone — unusable by any reader and invisible to
+    the verifier, which lists builds by their KEYS."""
+    from tk2.dictionary.senses import SenseVector
+
+    store.write(built, build="t1")
+    store.write_senses(
+        [SenseVector(key="eat.v.01", base="eat.v", ordinal=1, synset="eat.v.01",
+                     definition="take in solid food",
+                     distribution=(Cell(column="food.n", weight=0.5, relation="gloss_overlap"),),
+                     relations=(Cell(column="swallow.v", weight=0.8, relation="entails"),))],
+        build="t1",
+    )
+    assert clean_db["dictionary_sense_vectors"].count_documents({"build": "t1"}) == 1
+
+    gone = store.drop("t1")
+
+    assert gone["dictionary_sense_vectors"] == 1
+    assert clean_db["dictionary_sense_vectors"].count_documents({"build": "t1"}) == 0
+    assert clean_db["dictionary_base_seals"].count_documents({"build": "t1"}) == 0

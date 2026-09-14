@@ -320,9 +320,16 @@ class MongoMatrixStore:
         readable half. Returns what went, by collection, because a drop that removed nothing is a
         build label somebody mistyped.
         """
+        from tk2.core.models import SenseVectorDoc
+
         self._writer.collection(BaseSealDoc).delete_many({"build": build})
         gone = {}
-        for model in (BaseKeyDoc, *MATRIX_MODELS.values()):
+        # THE SENSE LAYER IS PART OF A BUILD AND WAS MISSING FROM THIS LIST until 2026-09-14, when
+        # dropping the superseded build left 120,475 orphaned sense rows behind — rows under a build
+        # label whose keys, matrices and seals were gone, which no reader can use and no verifier
+        # would ever mention. `MATRIX_MODELS` is the two SQUARE matrices by design (the sense layer
+        # rides on the dimensions and is never square), so it is named here explicitly.
+        for model in (BaseKeyDoc, *MATRIX_MODELS.values(), SenseVectorDoc):
             gone[model.Settings.name] = self._writer.collection(model).delete_many(
                 {"build": build}
             ).deleted_count

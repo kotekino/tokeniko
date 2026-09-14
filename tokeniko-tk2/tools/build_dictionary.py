@@ -431,6 +431,76 @@ def report_distribution(built: build.BaseBuild, vectors, config: DictionaryConfi
 # ------------------------------------------------------------------------------------------------
 
 
+def report_reading(built: build.BaseBuild, config: DictionaryConfig) -> dict:
+    """THE BAR AS THE ENGINE READS IT — through `DictionarySpace`, the same object the body uses.
+
+    This replaced the blend sweep on the default path on 2026-09-14. The sweep called one of its
+    seven columns «the declared reading», and since policy v11 there is no blend to declare: R
+    decides, D proposes, and a stated cell decides before either. A report that scored a reading
+    nobody runs is a report that can only mislead — it printed `mental.a~physical.a`, a declared FAR
+    with a stated antonym, at +0.105.
+
+    Built from the matrices in hand rather than from the database, so a DRY RUN is scored exactly as
+    the applied build would be: the rows are the same rows, one `as_row()` away from storage.
+    """
+    from tk2.dictionary.space import DictionarySpace
+
+    if config.reading is None or not config.reading.reads_separately:
+        print()
+        print("THE BAR AS THE READER SCORES IT — not available: this policy version declares no "
+              "`mode = separate`. Policy v11 (db/0003) is what rules it.")
+        return {}
+
+    def rows_of(matrix_):
+        return [] if matrix_ is None else [
+            {"key": row.key, "cells": [cell.as_row() for cell in row.cells]}
+            for row in matrix_.rows
+        ]
+
+    space = DictionarySpace(config, built.dimensions,
+                            rows_of(built.relational), rows_of(built.distributional))
+
+    print()
+    print("=" * 96)
+    print("THE BAR AS THE READER SCORES IT — R decides · D proposes · ABSTAIN when R is silent")
+    print("=" * 96)
+    print(f"  NEAR floor {config.reading.near_floor}   FAR below {config.reading.far_ceiling}   "
+          f"(a stated cell decides first, except {list(config.reading.structural_relations or ())})")
+    print(f"  {'pair':<26} {'exp':<5} {'read':<8} {'by':<11} {'R cos':>8} {'cell':>7}  {'what decided':<26}")
+    print(f"  {'-' * 26} {'-' * 5} {'-' * 8} {'-' * 11} {'-' * 8} {'-' * 7}  {'-' * 26}")
+
+    decided = wrong = abstained = 0
+    pairs = []
+    for pair in config.bar:
+        reading = space.read(pair.a, pair.b)
+        if reading is None:
+            verdict, source, cosine, cell, by = "ABSTAIN", "unknown key", None, None, ""
+        else:
+            verdict, source = reading.verdict, reading.source
+            cosine, cell, by = reading.relational_cosine, reading.relational_cell, reading.relational_relation
+        if verdict == "ABSTAIN":
+            abstained += 1
+            mark = ""
+        elif verdict == pair.verdict:
+            decided += 1
+            mark = ""
+        else:
+            wrong += 1
+            mark = "  <- WRONG"
+        pairs.append({"a": pair.a, "b": pair.b, "expected": pair.verdict, "verdict": verdict,
+                      "source": source, "relational_cosine": cosine, "relational_cell": cell,
+                      "relation": by})
+        print(f"  {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5} {verdict:<8} {source:<11} "
+              f"{_number(cosine):>8} {_number(cell):>7}  {by or '':<26}{mark}")
+
+    total = len(config.bar)
+    print()
+    print(f"  DECIDED {decided} of {total} · WRONG {wrong} · ABSTAIN {abstained}")
+    print(f"  an ABSTENTION is not a miss — «R is silent on this pair» is a diagnosis, and R is "
+          f"silent on {sum(1 for p in pairs if p['source'] == 'silent')} of them")
+    return {"decided": decided, "wrong": wrong, "abstain": abstained, "pairs": pairs}
+
+
 def report_dual(built: build.BaseBuild, config: DictionaryConfig, vectors=None, mixes=MIXES,
                 standing: float | None = None) -> dict:
     """The bar under both geometries and their blend — the reading T5's gate will be built on.
@@ -824,182 +894,137 @@ def sign_survival(built: build.BaseBuild, vectors, index, mix: float, shown: int
 
 
 def report_floors(built: build.BaseBuild, config: DictionaryConfig, gloss_vectors, mix: float) -> dict:
-    """THE T5 measurement: where the bar sits in its own population, and what every candidate shape
-    would decide. Nothing here rules anything — see the section head."""
+    """THE FLOOR MEASUREMENT, through the reader. Nothing here rules anything — the floor is the
+    Captain's.
+
+    REWRITTEN 2026-09-14 for policy v11. It used to measure a BLENDED population and assert its own
+    arithmetic against `matrix.blended_cosine`; under separate reads there is no blend to measure,
+    and a floor fitted to one would describe a geometry the engine does not run.
+
+    What a floor can and cannot do is the whole point: a stated cell decides before any threshold,
+    so the floor governs exactly the pairs R speaks about through its COSINE — and the honest
+    report names the two walls it sits between.
+    """
     import numpy as np
 
-    vectors, index = dual_vectors(built, mix)
-    n = vectors.shape[0]
+    from tk2.dictionary.space import DictionarySpace
+
+    if config.reading is None or not config.reading.reads_separately:
+        print()
+        print("REFUSED: this policy declares no `mode = separate`, so there is no reading to fit a "
+              "floor to. Policy v11 (db/0003) is what rules it.")
+        return {}
+
+    def rows_of(matrix_):
+        return [] if matrix_ is None else [
+            {"key": row.key, "cells": [cell.as_row() for cell in row.cells]}
+            for row in matrix_.rows
+        ]
+
+    relation_rows, distribution_rows = rows_of(built.relational), rows_of(built.distributional)
+    dimensions = built.dimensions
 
     print()
     print("=" * 96)
-    print("THE ACCEPTANCE FLOORS — MEASURED, NOT RULED (the floors are the Captain's)")
+    print("THE ACCEPTANCE FLOOR — MEASURED, NOT RULED (the floor is the Captain's)")
     print("=" * 96)
-    print(f"  reading           R and D concatenated at mix {mix}"
-          f"{'  (the declared reading)' if config.reading and mix == config.reading.mix else '  (a variant)'}")
-    print(f"  dimensions        {n:,}")
+    print(f"  reading           R decides · D proposes · ABSTAIN when R is silent")
+    print(f"  dimensions        {len(dimensions):,}")
+    print(f"  standing floor    {config.reading.near_floor}")
 
-    # The densified read must BE the engine's read, and the bar is where that is checked: a floor
-    # measured against a second implementation of the cosine would be calibrated on arithmetic
-    # nobody else runs.
+    # WHERE THE BASE SITS, on R alone — the population the floor is a threshold in.
+    space = DictionarySpace(config, dimensions, relation_rows, distribution_rows)
+    population_matrix = space._relational                      # the reader's own normalised rows
+    sample = population_matrix @ population_matrix.T
+    upper = sample[np.triu_indices(len(dimensions), k=1)]
+    print()
+    print("  WHERE THE WHOLE BASE SITS — R's cosine over every pair of dimensions")
+    print("    " + "  ".join(f"p{q:g} {np.percentile(upper, q):+.3f}"
+                             for q in (50, 90, 99, 99.9)))
+    print(f"    negative {int((upper < 0).sum()):,} of {upper.size:,} "
+          f"({100 * (upper < 0).mean():.4f}%) — every one of them R's own sign")
+
+    # THE SWEEP: what each candidate floor decides, and what it gets wrong.
+    print()
+    print("  WHAT EACH CANDIDATE FLOOR DECIDES")
+    print(f"    {'floor':>7} {'decided':>8} {'WRONG':>6} {'abstain':>8}   first misses")
+    # Each pair is READ ONCE and the floors are applied to the numbers. Re-reading per floor would
+    # rebuild a 166 MB space nine times over to arrive at the same arithmetic.
+    once = []
     for pair in config.bar:
-        mine = float(vectors[index[pair.a]] @ vectors[index[pair.b]])
-        theirs = matrix.blended_cosine(built.relational, built.distributional, pair.a, pair.b, mix)
-        if theirs is not None and abs(mine - theirs) > 5e-4:
-            raise AssertionError(
-                f"the densified dual read disagrees with the engine's on {pair.a}~{pair.b}: "
-                f"{mine:+.5f} against {theirs:+.5f}"
-            )
+        reading = space.read(pair.a, pair.b)
+        if reading is None:
+            once.append((pair, None, None))
+            continue
+        settled = (reading.verdict if (reading.relational_cell
+                                       and config.reading.decides_by_cell(reading.relational_relation))
+                   or reading.source != "relational"
+                   or reading.relational_cosine < config.reading.far_ceiling
+                   else None)
+        once.append((pair, settled, reading.relational_cosine))
 
-    stats = population(vectors)
-    total = stats["pairs"]
-    print(f"  population        {total:,} pairs")
-    print()
-    print("  WHERE THE WHOLE BASE SITS — the dual read over every pair of dimensions")
-    print("    " + "  ".join(f"p{q * 100:g} {value:+.3f}" for q, value in stats["quantiles"].items()))
-    print()
-    print(f"    {'at or above':<14}{'pairs':>14}{'share':>10}")
-    for threshold in FLOOR_GRID:
-        count = stats["above"][threshold]
-        print(f"    {threshold:>+11.2f}   {count:>14,}{100 * count / total:>9.4f}%")
-    print(f"    {'negative':>11}   {stats['negative']:>14,}{100 * stats['negative'] / total:>9.4f}%")
-    print()
-    print("  THE SIGN — the only thing in this geometry that is not a calibration")
-    sign = sign_survival(built, vectors, index, mix)
-    print(f"    D is UNSIGNED, so no gloss overlap can push a cosine below zero on its own: a "
-          f"negative")
-    print(f"    reading is R's sign and nothing else. Of the {stats['negative']:,} pairs that read "
-          f"below zero,")
-    print(f"    {sign['direct_negative']:,} are pairs R states an opposition BETWEEN; the other "
-          f"{sign['third_party']:,} disagree in sign about a")
-    print(f"    third dimension, which is the antonym column-read working at second order.")
-    print(f"    BUT THE SIGN DOES NOT ALWAYS SURVIVE THE BLEND. R states an opposition for "
-          f"{sign['opposed_pairs']:,} pairs;")
-    print(f"    {sign['negative_in_r']:,} of them read below zero on R alone and only "
-          f"{sign['negative_in_dual']:,} still do at mix {mix} — "
-          f"{sign['lifted']:,} are")
-    print(f"    lifted to zero or above by D. The loudest of them:")
-    for row in sign["worst"]:
-        print(f"      {row['a'] + ' ~ ' + row['b']:<30} R {row['r']:+.3f} -> R+D {row['dual']:+.3f}")
-    print()
-    print("  THE BAR IN THAT POPULATION")
-    print(f"    {'pair':<26} {'exp':<5} {'cosine':>9} {'nearer than':>12} {'rank a':>8} {'rank b':>8}")
-    readings: list[tuple[str, str, float]] = []
-    measured = []
+    measured = {}
+    for floor in FLOOR_GRID:
+        if floor <= config.reading.far_ceiling:
+            continue
+        decided = wrong = abstained = 0
+        misses = []
+        for pair, settled, cosine in once:
+            if settled is not None:
+                verdict = settled
+            elif cosine is None:
+                verdict = "ABSTAIN"
+            else:
+                verdict = "NEAR" if cosine >= floor else "ABSTAIN"
+            if verdict == "ABSTAIN":
+                abstained += 1
+            elif verdict == pair.verdict:
+                decided += 1
+            else:
+                wrong += 1
+                misses.append(f"{pair.a}~{pair.b}")
+        measured[floor] = {"decided": decided, "wrong": wrong, "abstain": abstained}
+        standing = "  <- the standing floor" if floor == config.reading.near_floor else ""
+        print(f"    {floor:>+7.2f} {decided:>8} {wrong:>6} {abstained:>8}   "
+              f"{' '.join(misses[:2])}{standing}")
+
+    # THE TWO WALLS. A floor is only ever between them, and `db/0002` failed by sitting on one.
+    governed = []
     for pair in config.bar:
-        i, j = index[pair.a], index[pair.b]
-        value = float(vectors[i] @ vectors[j])
-        row_i, row_j = vectors[i] @ vectors.T, vectors[j] @ vectors.T
-        rank_i, rank_j = int((row_i > value).sum()), int((row_j > value).sum())
-        share = stats["_above"](value) / total
-        readings.append((f"{pair.a}~{pair.b}", pair.verdict, value))
-        measured.append({"a": pair.a, "b": pair.b, "verdict": pair.verdict, "cosine": value,
-                         "nearer_than_pct": 100 * (1 - share), "rank_a": rank_i, "rank_b": rank_j})
-        print(f"    {pair.a + ' ~ ' + pair.b:<26} {pair.verdict:<5} {value:>+9.4f} "
-              f"{100 * (1 - share):>11.2f}% {rank_i:>8,} {rank_j:>8,}")
-    print("    «nearer than» is the share of all pairs this one out-scores; the ranks are its place")
-    print("    in each row's own neighbourhood, which is the scale-free reading of the same fact")
-
-    near = [value for _label, verdict, value in readings if verdict == "NEAR"]
-    far = [value for _label, verdict, value in readings if verdict == "FAR"]
-    wall = max(far)
-    wall_pair = next(label for label, verdict, value in readings if value == wall)
-
-    print()
-    print("  ONE THRESHOLD — the prototype's shape, recalibrated (no abstention)")
-    best = 0
-    cuts = sorted({round(value, 6) for _l, _v, value in readings})
-    for cut in [(x + y) / 2 for x, y in zip(cuts, cuts[1:])]:
-        right = sum(1 for _l, verdict, value in readings if (value >= cut) == (verdict == "NEAR"))
-        best = max(best, right)
-    for cut in [(x + y) / 2 for x, y in zip(cuts, cuts[1:])]:
-        right = sum(1 for _l, verdict, value in readings if (value >= cut) == (verdict == "NEAR"))
-        if right < best:
+        reading = space.read(pair.a, pair.b)
+        if reading is None or reading.source != "relational":
             continue
-        missed = [label for label, verdict, value in readings if (value >= cut) != (verdict == "NEAR")]
-        print(f"    {cut:>+9.4f}   {right} of {len(readings)}   misses: {', '.join(missed)}")
-    print(f"    NO single number does better than {best} of {len(readings)} on this base. The wall is "
-          f"{wall_pair} at {wall:+.4f} —")
-    print(f"    the highest-reading declared FAR — and {sum(1 for v in near if v < wall)} declared NEAR "
-          f"pairs read below it.")
-
+        if reading.relational_cell and config.reading.decides_by_cell(reading.relational_relation):
+            continue                                   # its cell decides; no floor touches it
+        governed.append((reading.relational_cosine, pair.verdict, f"{pair.a}~{pair.b}"))
+    below = sorted((row for row in governed if row[1] == "FAR"), reverse=True)
+    wall = below[0][0] if below else config.reading.far_ceiling
+    # The wall ABOVE is the lowest declared NEAR that a floor could still admit — one BELOW the FAR
+    # wall is not a wall at all, it is a pair no floor can ever decide, and saying otherwise would
+    # invite someone to fit a floor to it and get a wrong answer instead of an abstention.
+    above = sorted(row for row in governed if row[1] == "NEAR" and row[0] > wall)
+    unreachable = sorted(row for row in governed if row[1] == "NEAR" and 0 < row[0] <= wall)
     print()
-    print("  A NEAR FLOOR AND A FAR CEILING, WITH AN ABSTENTION BAND BETWEEN")
-    print("    (ABSTAIN is first-class: a decided-wrong is a failure, an abstention is a silence)")
-    print(f"    {'wrong':>5} {'decided':>7} {'abstain':>7}   {'NEAR floor':>10} {'FAR ceiling':>11}   what it gets wrong")
-    seen = set()
-    frontier = floor_frontier(readings)
-    for row in frontier:
-        signature = (row["wrong"], row["decided"])
-        if signature in seen or row["wrong"] > 2:
-            continue
-        seen.add(signature)
-        print(f"    {row['wrong']:>5} {row['decided']:>7} {row['abstained']:>7}   "
-              f"{row['near']:>+10.4f} {row['far']:>+11.4f}   {'; '.join(row['errors']) or '—'}")
-
-    decided_prototype = _score_floors(readings, *PROTOTYPE_FLOORS)
-    print()
-    print(f"    THE PROTOTYPE'S OWN PAIR (NEAR >= {PROTOTYPE_FLOORS[0]}, FAR <= {PROTOTYPE_FLOORS[1]}), "
-          f"measured here rather than inherited:")
-    print(f"    {decided_prototype['wrong']:>5} {decided_prototype['decided']:>7} "
-          f"{decided_prototype['abstained']:>7}   {PROTOTYPE_FLOORS[0]:>+10.4f} "
-          f"{PROTOTYPE_FLOORS[1]:>+11.4f}   {'; '.join(decided_prototype['errors']) or '—'}")
-
-    zero = [row for row in frontier if row["wrong"] == 0]
-    best_zero = zero[0] if zero else None
-    candidates = sorted({round(row["near"], 4) for row in frontier[:1] } |
-                        ({round(best_zero["near"], 4)} if best_zero else set()) |
-                        {PROTOTYPE_FLOORS[0], round(wall, 4)})
-
-    print()
-    print("  WHAT A CANDIDATE NEAR FLOOR ADMITS — the population an acceptance verdict is issued over")
-    composed = {}
-    for floor in candidates:
-        composed[floor] = floor_composition(built, vectors, gloss_vectors, index, floor)
-        made = composed[floor]["made_of"]
-        sampled = max(1, composed[floor]["sampled"])
-        pairs = composed[floor]["pairs"]
-        print(f"    NEAR >= {floor:+.4f}   {pairs:>10,} pairs ({100 * pairs / total:5.2f}% of the base) · "
-              f"{composed[floor]['with_relation']:,} of them "
-              f"({100 * composed[floor]['with_relation'] / max(1, pairs):.2f}%) have ANY R cell")
-        print(f"    {'':>16}   of {composed[floor]['sampled']:,} sampled: "
-              f"{100 * made['only_junk'] / sampled:.1f}% share NOTHING but {sorted(JUNK_WORDS)} · "
-              f"{100 * made['a_real_word'] / sampled:.1f}% share a real word · "
-              f"{100 * made['nothing_direct'] / sampled:.1f}% share no word at all")
-
-    show = best_zero["near"] if best_zero else max(candidates)
-    witnesses = composed[round(show, 4)] if round(show, 4) in composed else composed[max(composed)]
-    print()
-    print(f"  WITNESSES — {FLOOR_WITNESSES} pairs drawn at random from what NEAR >= "
-          f"{witnesses['floor']:+.4f} admits")
-    for row in witnesses["witnesses"]:
-        shared = " ".join(row["shared"]) if row["shared"] else "(no word in common)"
-        print(f"    {row['cosine']:>+7.3f}  {row['a'] + ' ~ ' + row['b']:<34} "
-              f"R:{(row['relation'] or '—'):<14} shared: {shared}")
-
-    print()
-    print(f"  {wall_pair} — D's worst false positive, a declared FAR — reads {wall:+.4f}, nearer than "
-          f"{100 * (1 - stats['_above'](wall) / total):.2f}% of the base.")
-    print(f"  It is the ceiling every candidate NEAR floor has to clear, and the "
-          f"{sum(1 for v in near if v < wall)} declared NEAR pairs below it are what a floor above "
-          f"it cannot decide.")
-
-    return {
-        "mix": mix,
-        "population": {"pairs": total, "negative": stats["negative"],
-                       "quantiles": {str(q): v for q, v in stats["quantiles"].items()},
-                       "above": {str(t): c for t, c in stats["above"].items()}},
-        "bar": measured,
-        "sign": {k: v for k, v in sign.items() if k != "worst"} | {"worst": sign["worst"]},
-        "best_single": best,
-        "wall": {"pair": wall_pair, "cosine": wall},
-        "frontier": [row for row in frontier if row["wrong"] <= 2][:40],
-        "prototype": decided_prototype,
-        "admits": {str(floor): {k: v for k, v in row.items() if k != "witnesses"}
-                   for floor, row in composed.items()},
-        "witnesses": witnesses["witnesses"],
-    }
-
+    print("  THE TWO WALLS — the floor governs the pairs R speaks about through its COSINE")
+    if below:
+        print(f"    below   {below[0][2]:<24} FAR  {below[0][0]:+.4f}")
+    if above:
+        print(f"    above   {above[0][2]:<24} NEAR {above[0][0]:+.4f}")
+    else:
+        print(f"    above   (nothing) — no declared NEAR reads above the FAR wall")
+    if unreachable:
+        print(f"    NO FLOOR CAN DECIDE these declared NEARs: they read at or below the FAR wall —")
+        for cosine, _verdict, pair in unreachable[:4]:
+            print(f"      {pair:<24} NEAR {cosine:+.4f}")
+        print(f"    they are abstentions by geometry, not by threshold, and moving the floor down to")
+        print(f"    reach them buys a WRONG answer on {below[0][2] if below else 'a FAR pair'} first")
+    if below and above and below[0][0] < above[0][0]:
+        print(f"    the gap is {above[0][0] - below[0][0]:+.4f} wide — a floor belongs in the MIDDLE "
+              f"of it, never on a wall")
+        print(f"    (db/0002's floor sat 0.0079 above a FAR pair and failed the first time the base "
+              f"moved)")
+    return {"floors": measured,
+            "walls": {"below": below[0] if below else None, "above": above[0] if above else None}}
 
 def _score_floors(readings, near: float, far: float) -> dict:
     """One named pair of floors, scored the way the frontier scores its own."""
@@ -1090,6 +1115,22 @@ def compare_derivational(config: DictionaryConfig, scope: str, weights, closed=N
     return {"r": built, "d": built_d, "dimensions": dimensions}
 
 
+def _superseded_reading_notice(what: str) -> None:
+    """Printed by every instrument that still scores a BLEND.
+
+    Policy v11 abolished the blend: R decides, D proposes, and a stated cell decides before either.
+    These comparisons are kept because they are how their rulings were measured and how they would
+    be re-measured — but a reader meeting their numbers today must know the verdict column is not
+    the one the engine runs.
+    """
+    print()
+    print(f"  NOTE: {what} is scored under the BLENDED reading, which policy v11 (db/0003) "
+          f"superseded.")
+    print(f"        The engine reads R and D APART. These columns are a measurement of a reading "
+          f"nobody runs;")
+    print(f"        `--floors` and the default report score through the engine's own reader.")
+
+
 def report_derivational(measured: dict, config: DictionaryConfig, mix: float) -> dict:
     """The candidates side by side: the two target pairs first, then the whole bar, then the cost.
 
@@ -1097,6 +1138,7 @@ def report_derivational(measured: dict, config: DictionaryConfig, mix: float) ->
     — `derivational` is 11.7% of R's cells — so what every candidate does to the OTHER seventeen
     pairs is printed pair by pair, and the summary says plainly which ones each one costs.
     """
+    _superseded_reading_notice("the derivational sweep")
     built = measured["r"]
     built_d = measured["d"]
     weights = list(built)
@@ -1250,6 +1292,7 @@ def compare_weighting(config: DictionaryConfig, scope: str, closed=None) -> dict
 
 def report_weighting(measured: dict, config: DictionaryConfig, mix: float) -> dict:
     """Uniform against idf: what the down-weight does to D's cells, to the junk, and to the bar."""
+    _superseded_reading_notice("the weighting comparison")
     built = measured["d"]
     relational = measured["r"]
     modes = ["uniform", "idf"]
@@ -1379,6 +1422,7 @@ def compare_senses(config: DictionaryConfig, scope: str, closed=None) -> dict:
 
 def report_senses(built: dict, config: DictionaryConfig, provider, mix: float, closed=None) -> dict:
     """Two bases side by side — and the membership question said out loud if it moved."""
+    _superseded_reading_notice("the sense-mode comparison")
     modes = ["primary", "all"]
 
     print()
@@ -1552,6 +1596,7 @@ OVERWRITTEN_BY_SYMMETRY = (
 
 def report_symmetry(built: dict, config: DictionaryConfig) -> dict:
     """The three readings side by side, and the four cells the middle one broke."""
+    _superseded_reading_notice("the antonym-symmetry comparison")
     stated = built[relations.SYMMETRY_OFF]
     modes = list(relations.ANTONYM_SYMMETRIES)
     stats = {mode: built[mode].stats() for mode in modes}
@@ -1674,6 +1719,7 @@ def report_two(left, right, labels, config: DictionaryConfig, title: str) -> dic
     The two columns are LABELLED rather than named A and B in the code, because which reading is
     which is the Captain's business and this only counts.
     """
+    _superseded_reading_notice("this comparison")
     left_label, right_label = labels
     stats = {left_label: left.stats(), right_label: right.stats()}
 
@@ -2228,7 +2274,11 @@ def run(argv: list[str] | None = None) -> int:
         )
         d_stats = report_distribution(built, vectors, config)
     bar_reading = report_bar(built.relational, config.bar)
-    if built.distributional is not None:
+    reading = report_reading(built, config)
+    if args.mix is not None and built.distributional is not None:
+        # A NAMED mix is a measurement of a reading nobody has ruled, and the blend sweep is the
+        # instrument for exactly that. It is no longer printed by default: policy v11 abolished the
+        # blend, and a default report that scored one was the misleading half of this tool.
         dual = report_dual(built, config, vectors, mix_columns(mix), standing=mix)
     counts = built.counts()
 
@@ -2258,6 +2308,7 @@ def run(argv: list[str] | None = None) -> int:
                     "r": stats,
                     "d": d_stats,
                     "bar": bar_reading,
+                    "reading": reading,
                     "dual": dual,
                     "manifest": {k: v for k, v in manifest.items() if k != "policy"},
                 },
