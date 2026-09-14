@@ -103,13 +103,51 @@ class SpaceOrigin:
         return tuple(moved)
 
 
+#: Which layer an answer came from. Requirement 10: «every answer naming its source».
+SOURCE_RELATIONAL = "relational"
+SOURCE_DISTRIBUTIONAL = "distributional"
+#: R had nothing to say. Not an error and not a shrug — a DIAGNOSIS, and the one E1d T3 must fix.
+SOURCE_SILENT = "silent"
+
+
+@dataclass(frozen=True, slots=True)
+class Reading:
+    """What both layers say about one pair, APART, each naming itself.
+
+    Four numbers rather than one, because requirement 19 asks for both the cosine AND the stated
+    cell on each side — the first curation round flipped a cell read while the cosine stayed mute,
+    and a cosine-only verdict would have called that curation useless.
+
+    `verdict` is R's, always. `proposal` is what D WOULD have said, present only where R is silent,
+    and it is NOT a verdict: where R says nothing, D cannot separate a declared NEAR from a declared
+    FAR (`eat.v~hungry.a` reads 0.338 against `bed.n~cause.n` at 0.326, on identical cells of 0.5).
+    A caller that promotes a proposal to a verdict is doing the thing the blend was doing.
+    """
+
+    left: str
+    right: str
+    relational_cell: float
+    relational_cosine: float
+    distributional_cell: float
+    distributional_cosine: float
+    verdict: str
+    source: str
+    proposal: str | None = None
+
+    @property
+    def relational_speaks(self) -> bool:
+        return self.source == SOURCE_RELATIONAL
+
+
 @dataclass(frozen=True, slots=True)
 class Neighbour:
-    """One answer to «what is near this», with the verdict the policy issues on it."""
+    """One answer to «what is near this», with the verdict the policy issues on it and the LAYER it
+    came from — because an answer that does not name its source is the thing requirement 10 forbids."""
 
     key: str
     cosine: float
     verdict: str
+    source: str = SOURCE_DISTRIBUTIONAL
 
     @property
     def is_near(self) -> bool:
@@ -143,10 +181,21 @@ class DictionarySpace:
         self._keys = tuple(dimensions)
         self._index = {key: i for i, key in enumerate(self._keys)}
 
-        mix = config.reading.mix if config.reading is not None else 1.0
         size = len(self._keys)
-        blended = np.zeros((size, size), dtype=np.float32)
+
+        # TWO MATRICES, NEVER ONE. Requirement 10 has said since 2026-08-12 that R and D are
+        # «consulted separately, every answer naming its source, never blended into one float», and
+        # this module used to return `cos(R + mix*D)` in flat contradiction of it — found by the E1
+        # audit of 2026-09-14 and ruled by the Captain the same day. Policy v11 declares the mode.
+        relational = np.zeros((size, size), dtype=np.float32)
+        distributional = np.zeros((size, size), dtype=np.float32)
+
         self._relations: dict[str, tuple[tuple[str, str, float], ...]] = {}
+        #: The DIRECT cells, sparse. Requirement 19: a verdict reads both the cosine AND the stated
+        #: cell, and the cosine alone would have called the first curation round useless. Sparse
+        #: dicts rather than two more dense matrices — 4,555² float32 is 83 MB apiece.
+        self._relational_cells: dict[tuple[str, str], float] = {}
+        self._distributional_cells: dict[tuple[str, str], float] = {}
 
         for row in relation_rows:
             i = self._index.get(row["key"])
@@ -157,13 +206,12 @@ class DictionarySpace:
                 j = self._index.get(cell["column"])
                 if j is None:
                     continue
-                blended[i, j] += cell["w"]
+                relational[i, j] += cell["w"]
                 if cell.get("rel") != "identity":
                     stated.append((cell["column"], cell.get("rel", ""), float(cell["w"])))
+                    self._relational_cells[(row["key"], cell["column"])] = float(cell["w"])
             self._relations[row["key"]] = tuple(stated)
 
-        # D's contribution is scaled HERE, once, rather than at every query: the ruled mix says how
-        # loudly D speaks and it is a property of the space, not of the question being asked.
         for row in distribution_rows:
             i = self._index.get(row["key"])
             if i is None:
@@ -171,14 +219,19 @@ class DictionarySpace:
             for cell in row.get("cells", ()):
                 j = self._index.get(cell["column"])
                 if j is not None:
-                    blended[i, j] += cell["w"] * mix
+                    distributional[i, j] += cell["w"]
+                    self._distributional_cells[(row["key"], cell["column"])] = float(cell["w"])
 
-        norms = np.linalg.norm(blended, axis=1, keepdims=True)
-        # A silent row has no direction. Dividing by one keeps it at zero rather than at nan — and
-        # zero is the honest answer: a dimension nothing reaches is near nothing.
-        norms[norms == 0] = 1.0
-        self._unit = blended / norms
-        self._resident_bytes = int(blended.nbytes)
+        def _unit_of(matrix):
+            norms = np.linalg.norm(matrix, axis=1, keepdims=True)
+            # A silent row has no direction. Dividing by one keeps it at zero rather than at nan —
+            # and zero is the honest answer: a dimension nothing reaches is near nothing.
+            norms[norms == 0] = 1.0
+            return matrix / norms
+
+        self._relational = _unit_of(relational)
+        self._distributional = _unit_of(distributional)
+        self._resident_bytes = int(relational.nbytes + distributional.nbytes)
 
         self._senses: dict[str, list[SenseReading]] = {}
         self._by_sense: dict[str, SenseReading] = {}
@@ -218,7 +271,8 @@ class DictionarySpace:
             "resident_bytes": self._resident_bytes,
             "senses": len(self._by_sense),
             "bases_with_senses": len(self._senses),
-            "mix": self._config.reading.mix if self._config.reading else None,
+            "mix": self._config.reading.mix,
+            "mode": self._config.reading.mode if self._config.reading else None,
         }
 
     def holds(self, key: str) -> bool:
@@ -255,8 +309,8 @@ class DictionarySpace:
         found = keys.normalize_word(word)
         return tuple(key for key in self._keys if keys.word_of(key) == found)
 
-    def similarity(self, left: str, right: str) -> float | None:
-        """The dual read of two dimensions, or `None` when either is not one.
+    def relational(self, left: str, right: str) -> float | None:
+        """R's cosine — what the RESOURCE STATES about these two, and nothing else.
 
         `None` rather than 0.0, and the difference is load-bearing: «these two are unrelated» and «I
         have never heard of one of these» are different answers, and a caller that could not tell
@@ -265,30 +319,86 @@ class DictionarySpace:
         i, j = self._index.get(left), self._index.get(right)
         if i is None or j is None:
             return None
-        return float(self._unit[i] @ self._unit[j])
+        return float(self._relational[i] @ self._relational[j])
+
+    def distributional(self, left: str, right: str) -> float | None:
+        """D's cosine — what their DEFINITIONS SHARE. A proposal. Never a verdict."""
+        i, j = self._index.get(left), self._index.get(right)
+        if i is None or j is None:
+            return None
+        return float(self._distributional[i] @ self._distributional[j])
+
+    def read(self, left: str, right: str) -> Reading | None:
+        """BOTH LAYERS, APART, EACH NAMING ITSELF — the shape requirement 10 asked for.
+
+        The procedure, ruled 2026-09-14 and declared by policy v11:
+
+          **R is asked first.** Where R speaks — a stated cell, or any cosine at all — R DECIDES, and
+          the reading names R as its source. **Where R is silent the verdict is ABSTAIN**, and D's
+          number comes back beside it as a `proposal` that no caller may promote.
+
+        Measured rather than preferred. R alone decides 15 of the 18 bar pairs it speaks on, and its
+        one failure mode is the `derivational` edge (requirement 16, open). Where R is silent, D
+        cannot separate a declared NEAR from a declared FAR: `eat.v~hungry.a` (NEAR) reads 0.338 and
+        `bed.n~cause.n` (FAR) reads 0.326 on identical cells, and 7 of 8 declared NEARs sit at or
+        below the highest declared FAR. **D may propose and may never decide.**
+        """
+        if left not in self._index or right not in self._index:
+            return None
+        reading = self._config.reading
+        if reading is None or not reading.reads_separately:
+            raise ValueError(
+                "this policy does not declare `mode = separate`, so the two matrices have no ruled "
+                "way of being read apart. Policy v11 (db/0003) is what rules it — and a default in "
+                "code would be exactly the reading the manifest cannot vouch for."
+            )
+
+        relational_cosine = self.relational(left, right)
+        distributional_cosine = self.distributional(left, right)
+        relational_cell = self._relational_cells.get((left, right), 0.0)
+        distributional_cell = self._distributional_cells.get((left, right), 0.0)
+
+        speaks = relational_cell != 0.0 or relational_cosine != 0.0
+        if speaks:
+            verdict, source, proposal = reading.verdict(relational_cosine), SOURCE_RELATIONAL, None
+        else:
+            # R has nothing to say. That is a DIAGNOSIS, not a shrug — and it is what T3 has to fix.
+            verdict, source = "ABSTAIN", SOURCE_SILENT
+            proposal = reading.verdict(distributional_cosine)
+
+        return Reading(
+            left=left, right=right,
+            relational_cell=relational_cell, relational_cosine=relational_cosine,
+            distributional_cell=distributional_cell, distributional_cosine=distributional_cosine,
+            verdict=verdict, source=source, proposal=proposal,
+        )
 
     def verdict(self, left: str, right: str) -> str:
-        """NEAR, ABSTAIN or FAR — the policy's verdict on the dual read, never this module's.
+        """NEAR, ABSTAIN or FAR — R's verdict, or ABSTAIN when R is silent or the key is unknown.
 
-        ABSTAIN also covers «not a dimension»: the same answer for a different reason, and the right
+        ABSTAIN covers «not a dimension» too: the same answer for a different reason, and the right
         one either way, because the geometry has nothing to say.
         """
-        reading = self.similarity(left, right)
-        if reading is None:
-            return "ABSTAIN"
-        return self._config.reading.verdict(reading)
+        reading = self.read(left, right)
+        return "ABSTAIN" if reading is None else reading.verdict
 
-    def neighbours(self, key: str, count: int = 12, floor: float | None = None) -> list[Neighbour]:
+    def neighbours(self, key: str, count: int = 12, floor: float | None = None,
+                   source: str = SOURCE_DISTRIBUTIONAL) -> list[Neighbour]:
         """The nearest dimensions to this one — «memory proposes by cosine» (brain req. 12).
 
-        One matrix-vector product and a partial sort: 1.58 ms at 4,555 dimensions. The key itself is
+        DEFAULTS TO D, and that is the architecture rather than a convenience: proposing is exactly
+        what D is for, and the verdict on any proposal is R's (`read`). Ask for `relational` to see
+        what the resource STATES around a key — a different question, honestly answered.
+
+        One matrix-vector product and a partial sort: ~1.6 ms at 4,555 dimensions. The key itself is
         dropped, because a thing being nearest to itself is a property of the identity axis rather
         than an answer.
         """
         i = self._index.get(key)
         if i is None:
             return []
-        sims = self._unit @ self._unit[i]
+        space = self._relational if source == SOURCE_RELATIONAL else self._distributional
+        sims = space @ space[i]
         sims[i] = -np.inf
         take = min(count, len(self._keys) - 1)
         best = np.argpartition(-sims, take)[:take]
@@ -301,6 +411,7 @@ class DictionarySpace:
                 key=self._keys[position],
                 cosine=reading,
                 verdict=self._config.reading.verdict(reading),
+                source=source,
             ))
         return out
 
@@ -317,12 +428,23 @@ class DictionarySpace:
             return None
         i = self._index[key]
         rows = np.array([self._index[a] for a in candidates])
-        sims = self._unit[rows] @ self._unit[i]
+
+        # THE SAME R-FIRST RULE AS `read`, so there is one procedure in this module and not two.
+        # Where R speaks about this key it decides which anchor is nearest; where R is silent the
+        # catch still has to name one — that is what «never-miss» means — and it names it from D,
+        # saying so in `source` and leaving the verdict to say how much to trust it.
+        # STATED relations, not the raw row: every row carries its own identity axis, so a
+        # row that says nothing about anything else is still non-zero. Identity is a property
+        # of being a dimension, never an answer about a pair.
+        source = SOURCE_RELATIONAL if self._relations.get(key) else SOURCE_DISTRIBUTIONAL
+        space = self._relational if source == SOURCE_RELATIONAL else self._distributional
+        sims = space[rows] @ space[i]
         best = int(np.argmax(sims))
         reading = float(sims[best])
-        return Neighbour(candidates[best], reading, self._config.reading.verdict(reading))
+        return Neighbour(candidates[best], reading,
+                         self._config.reading.verdict(reading), source=source)
 
-    def project(self, sense: str) -> np.ndarray | None:
+    def project(self, sense: str, source: str = SOURCE_DISTRIBUTIONAL) -> np.ndarray | None:
         """One SENSE as a unit vector in the base's space — how a word outside the base gets in.
 
         THE GAP THIS CLOSES, found by probing the layer above: `nearest_anchor` could only start
@@ -332,25 +454,25 @@ class DictionarySpace:
         dictionary could not keep.
 
         A sense already carries cells over base dimensions: that IS a vector in this space, and
-        projecting it is reading it as one. The relations half is included at full weight and the
-        distribution half at the ruled `mix`, exactly as a base row is blended — one law at both
-        floors, so a sense and a dimension are comparable by construction rather than by coincidence.
+        projecting it is reading it as one. IT NAMES WHICH HALF IT IS READING, because a sense has
+        both floors and folding them together here would be the blend rebuilt one layer down —
+        exactly what policy v11 ruled out. `distributional` by default, because placing a word is a
+        PROPOSAL; ask for `relational` to place it by what its synset states.
         """
         reading = self._by_sense.get(sense)
         if reading is None:
             return None
-        mix = self._config.reading.mix if self._config.reading is not None else 1.0
         vector = np.zeros(len(self._keys), dtype=np.float32)
-        for column, _relation, weight in reading.relations:
-            j = self._index.get(column)
-            if j is not None:
-                vector[j] += weight
-        # The layer stores the distribution half separately; a sense that names a dimension is
-        # stating a D-shaped claim about it and is scaled like one.
-        for column, weight in self._distribution_of(sense):
-            j = self._index.get(column)
-            if j is not None:
-                vector[j] += weight * mix
+        if source == SOURCE_RELATIONAL:
+            for column, _relation, weight in reading.relations:
+                j = self._index.get(column)
+                if j is not None:
+                    vector[j] += weight
+        else:
+            for column, weight in self._distribution_of(sense):
+                j = self._index.get(column)
+                if j is not None:
+                    vector[j] += weight
         norm = float(np.linalg.norm(vector))
         return None if norm == 0 else vector / norm
 
@@ -375,7 +497,9 @@ class DictionarySpace:
         """
         if vector is None:
             return []
-        sims = self._unit @ vector
+        # Likewise a proposal: any word reaches the space through its senses, and
+        # what comes back are candidates, never verdicts.
+        sims = self._distributional @ vector
         take = min(count, len(self._keys))
         best = np.argpartition(-sims, take - 1)[:take]
         return [

@@ -143,7 +143,7 @@ READING_SETTINGS = ("mix",)
 #: after T5 measured them against the grown bar. Absent for v7 and v8, which read the bar
 #: threshold-free on purpose, and their absence is «undeclared» rather than «missing»: a policy that
 #: never ruled a verdict function has none, and `ReadingPolicy.verdict` refuses rather than guessing.
-READING_OPTIONAL = ("near_floor", "far_ceiling")
+READING_OPTIONAL = ("near_floor", "far_ceiling", "mode")
 
 #: One part of speech that exists. `name` is the letter, `value` the long name, `position` the order
 #: a multi-POS word's keys are listed in. Since policy v3 — the Captain's ruling of 2026-08-25: the
@@ -397,6 +397,9 @@ def reading_from_rows(rows: Iterable[Row]) -> ReadingPolicy | None:
             # honest reading and it is what keeps their fingerprints where they were.
             near_floor=None if "near_floor" not in declared else float(declared["near_floor"]),
             far_ceiling=None if "far_ceiling" not in declared else float(declared["far_ceiling"]),
+            # Absent for v7-v10, which ruled the mix and never faced the question. UNDECLARED, not
+            # «blended» — and it is what keeps those four fingerprints where they are.
+            mode=None if "mode" not in declared else str(declared["mode"]),
         )
     except ValueError as error:
         raise PolicyRowsInvalid(str(error)) from error

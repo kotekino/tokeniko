@@ -847,4 +847,11 @@ def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(c
     assert config.fingerprint() == STANDING_FINGERPRINT
     assert config.reading is not None and config.reading.mix == 0.15
     assert config.distribution.min_shared == 1
+    # Since v11 the standing policy also declares HOW the two are read. A build whose policy never
+    # ruled the mode has no ruled way of being read apart, and `DictionarySpace.read` refuses rather
+    # than defaulting — which is the same refusal `ReadingPolicy.verdict` makes about the floors.
+    from tk2.dictionary.config import READING_SEPARATE
+
+    assert config.reading.mode == READING_SEPARATE
+    assert config.reading.reads_separately
     assert dict(config.relations.weights)["derivational"] == 0.45

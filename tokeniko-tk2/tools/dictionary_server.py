@@ -93,7 +93,7 @@ def projection(space) -> dict:
     restart and a t-SNE is minutes. What it keeps of D's variance is printed on the page, because a
     projection that does not say how much it threw away is a picture pretending to be a measurement.
     """
-    matrix = space._unit  # the blended unit rows — the bench is allowed to look inside
+    matrix = space._distributional  # D's unit rows — the map is a PROPOSAL, and D is what proposes
     centred = matrix - matrix.mean(axis=0)
     U, S, _ = np.linalg.svd(centred, full_matrices=False)
     xy = U[:, :2] * S[:2]
@@ -210,13 +210,20 @@ class Bench(BaseHTTPRequestHandler):
         }
 
     def _api_compare(self, query):
-        """Two keys, the dual read, and the policy's verdict on it."""
+        """Two keys, BOTH LAYERS APART, and the verdict — which is R's alone (policy v11)."""
         left, right = query.get("a", ""), query.get("b", "")
-        reading = self.space.similarity(left, right)
+        reading = self.space.read(left, right)
+        if reading is None:
+            return {"a": left, "b": right, "verdict": "ABSTAIN", "known": False, "stated": []}
         return {
-            "a": left, "b": right,
-            "cosine": None if reading is None else round(reading, 4),
-            "verdict": self.space.verdict(left, right),
+            "a": left, "b": right, "known": True,
+            "verdict": reading.verdict,
+            "source": reading.source,
+            "proposal": reading.proposal,
+            "relational": {"cosine": round(reading.relational_cosine, 4),
+                           "cell": round(reading.relational_cell, 4)},
+            "distributional": {"cosine": round(reading.distributional_cosine, 4),
+                               "cell": round(reading.distributional_cell, 4)},
             "stated": [
                 {"column": c, "relation": r, "weight": w}
                 for c, r, w in self.space.relations_of(left) if c == right
@@ -242,7 +249,7 @@ class Bench(BaseHTTPRequestHandler):
                 if not held:
                     continue
                 scored = sorted(
-                    ((a, float(vector @ self.space._unit[self.space._index[a]])) for a in held),
+                    ((a, float(vector @ self.space._distributional[self.space._index[a]])) for a in held),
                     key=lambda pair: -pair[1],
                 )
                 best, reading = scored[0]
@@ -278,11 +285,13 @@ class Bench(BaseHTTPRequestHandler):
         """The declared bar, read live — the acceptance suite as the page sees it."""
         out = []
         for pair in self.config.bar:
-            reading = self.space.similarity(pair.a, pair.b)
-            verdict = self.space.verdict(pair.a, pair.b)
+            reading = self.space.read(pair.a, pair.b)
+            verdict = "ABSTAIN" if reading is None else reading.verdict
             out.append({
                 "a": pair.a, "b": pair.b, "expected": pair.verdict,
-                "cosine": None if reading is None else round(reading, 4),
+                "relational": None if reading is None else round(reading.relational_cosine, 4),
+                "distributional": None if reading is None else round(reading.distributional_cosine, 4),
+                "source": None if reading is None else reading.source,
                 "verdict": verdict,
                 "wrong": verdict != "ABSTAIN" and verdict != pair.verdict,
                 "why": pair.why,

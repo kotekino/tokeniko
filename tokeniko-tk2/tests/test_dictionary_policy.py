@@ -46,6 +46,7 @@ from tests.seed import (
     declared_config_v8,
     declared_config_v9,
     declared_config_v10,
+    declared_config_v11,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -56,6 +57,7 @@ from tests.seed import (
     policy_rows_v8,
     policy_rows_v9,
     policy_rows_v10,
+    policy_rows_v11,
     ruled_config,
     structural_seeds,
 )
@@ -1031,11 +1033,15 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
     assert dict(config.relations.weights)["derivational"] == 0.45
 
 
-#: The fingerprint of what a build actually RUNS after 0011: policy v7 against the LIVE bar, which
-#: is now v1's eighteen plus v2's nineteen. It differs from `V7_FINGERPRINT` for exactly one reason
-#: — the bar grew — and that difference is the mechanism working: a build measured against
-#: thirty-seven pairs must not be able to present the hash of one measured against eighteen.
-STANDING_FINGERPRINT = "685af0388d3abd25656f6ba507e2c31fef3bf33ed6f004b9edbd84d304718641"
+#: THE STANDING POLICY'S HASH — policy v11 against the live thirty-seven-pair bar. It moved from
+#: v10's for exactly one reason: `reading.mode` arrived, and what a verdict MEANS is part of what a
+#: build is measured under. A build read apart must not be able to present the hash of one read
+#: blended — that difference is the whole point of the fingerprint.
+STANDING_FINGERPRINT = "25a3cd7e425e2a48afbdaa5b11d8637bccbe671cfcc7506c079352d9cb094ca3"
+
+#: v10's own hash — the re-fitted NEAR floor, and what the reader ran under while it was still
+#: blending. Kept because the build that is sealed on the body was read through it.
+V10_FINGERPRINT = "685af0388d3abd25656f6ba507e2c31fef3bf33ed6f004b9edbd84d304718641"
 
 #: v9's own hash — the verdict function as it was FIRST ruled, before the floor was re-fitted hours
 #: later. Kept because the correction is the interesting part: this is the number the base was built
@@ -1165,7 +1171,7 @@ def test_policy_v10_refits_the_near_floor_to_the_base_that_was_actually_applied(
     config = policy.config_from_rows(policy_rows_v10(), bar_rows() + bar_rows_v2())
 
     assert config == declared_config_v10()
-    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.fingerprint() == V10_FINGERPRINT
     assert config.reading.near_floor == 0.28
     assert config.reading.verdict(0.2721) == "ABSTAIN", "the wall no longer reads NEAR"
     assert config.reading.verdict(0.2843) == "NEAR", "the lowest declared NEAR still decides"
@@ -1369,3 +1375,60 @@ def test_a_dual_read_written_back_out_as_rows_reads_back_the_same():
     config = declared_config_v7()
     written = policy.policy_rows_of(config, version=7)
     assert policy.config_from_rows(written, policy.bar_rows_of(config.bar, 1)) == config
+
+
+# ------------------------------------------------------------------------------------------------
+# v11 — the two matrices are read APART
+# ------------------------------------------------------------------------------------------------
+
+
+def test_policy_v11_rules_the_reading_mode_and_moves_nothing_else():
+    """E1d T2. Requirement 10 has said since 2026-08-12 that R and D are «consulted separately,
+    every answer naming its source, never blended into one float» — and the reader returned
+    `cos(R + 0.15*D)` for a month. The E1 audit found it; the Captain ruled `separate`.
+
+    ONE VALUE ARRIVES AND NOTHING ELSE MOVES: the mix, both floors, the walks and the seeds are all
+    v10's. What changes is what a VERDICT MEANS, which is exactly why it is a row.
+    """
+    from tk2.dictionary.config import READING_SEPARATE
+
+    config = policy.config_from_rows(policy_rows_v11(), bar_rows() + bar_rows_v2())
+
+    assert config == declared_config_v11()
+    assert config.reading.mode == READING_SEPARATE
+    assert config.reading.reads_separately
+    assert config.fingerprint() == STANDING_FINGERPRINT
+
+    # the ledger's promise: v10 still hashes to what v10 measured
+    assert declared_config_v10().fingerprint() == V10_FINGERPRINT
+    assert config.fingerprint() != V10_FINGERPRINT, "a mode change is a different reading"
+
+
+def test_v11_carries_every_v10_value_untouched():
+    v10 = {(r["kind"], r["name"]): r["value"] for r in policy_rows_v10()}
+    v11 = {(r["kind"], r["name"]): r["value"] for r in policy_rows_v11()}
+
+    arrived = set(v11) - set(v10)
+    assert arrived == {(policy.KIND_READING, "mode")}, "one row arrives and none leaves"
+    assert not {k for k in v10 if v10[k] != v11[k]}, "no v10 value moved"
+
+
+def test_v11s_note_carries_the_measurement_that_settled_it():
+    """A ruling without the number that produced it is an opinion with a version attached."""
+    note = next(r["note"] for r in policy_rows_v11()
+                if (r["kind"], r["name"]) == (policy.KIND_READING, "mode"))
+
+    assert "never blended into one float" in note, "the requirement it repairs"
+    assert "0.338" in note and "0.326" in note, "the pair that proves D cannot decide"
+    assert "15 of the 18" in note, "what R alone decides"
+    assert "thick.a~thin.a" in note, "the sign the blend was drowning"
+
+
+def test_the_earlier_versions_never_declared_a_mode_and_must_keep_saying_nothing():
+    """UNDECLARED is not «blended». v7-v10 ruled the mix and never faced this question, and a
+    default here would be a reading the manifest cannot vouch for."""
+    for rows in (policy_rows_v7(), policy_rows_v8(), policy_rows_v9(), policy_rows_v10()):
+        reading = policy.reading_from_rows(rows)
+        assert reading.mode is None
+        assert not reading.reads_separately
+        assert "mode" not in reading.as_dict()

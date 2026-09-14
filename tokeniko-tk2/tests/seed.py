@@ -321,6 +321,22 @@ def policy_rows_v10() -> list[dict]:
     return [dict(row) for row in migration(2).POLICY_ROWS]
 
 
+def policy_rows_v11() -> list[dict]:
+    """Version 11's rows — the two matrices ruled APART (`db/0003`)."""
+    return [dict(row) for row in migration(3).POLICY_ROWS]
+
+
+def declared_config_v11():
+    """The policy v11 writes — v10's declaration plus the reading MODE.
+
+    One value arrives and nothing else moves: the mix, the floors, the walks and the seeds are all
+    v10's. What changes is what a verdict MEANS, which is why it is a row at all.
+    """
+    from tk2.dictionary import policy as _policy
+
+    return _policy.config_from_rows(policy_rows_v11(), bar_rows() + bar_rows_v2())
+
+
 def declared_config_v10():
     """The policy v10 writes — v9's declaration with the NEAR floor re-fitted to the applied base.
 

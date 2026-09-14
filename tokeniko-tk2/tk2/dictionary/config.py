@@ -413,6 +413,15 @@ class DistributionPolicy:
 READING_RULES = "2026-09-09"
 
 
+#: The one declared way to read the two matrices: R decides, D proposes, ABSTAIN when R is silent.
+#: A string rather than a bool because a later ruling may name a third way, and a bool would force
+#: that ruling to be a schema change instead of a row.
+READING_SEPARATE = "separate"
+
+#: Every mode a `reading` row may name. Strict: an unknown mode is a refusal, never a fallback.
+READING_MODES = frozenset({READING_SEPARATE})
+
+
 @dataclass(frozen=True, slots=True)
 class ReadingPolicy:
     """How R and D are read TOGETHER. Neither matrix's policy, and that is why it is its own object.
@@ -450,7 +459,22 @@ class ReadingPolicy:
     #: is unsigned, so nothing but R's sign can put a reading below zero. It survives a rebuild, a
     #: re-scale and a change of dimensionality, which no fitted number does — and it is declared as
     #: a row anyway, because a later ruling may want a margin below zero rather than zero itself.
+    #:
+    #: UNDER `separate` IT IS A CLEANER THEOREM STILL: only R is read, so the sign below zero is the
+    #: resource's own statement and nothing is diluting it.
     far_ceiling: float | None = None
+    #: HOW the two matrices are read — `separate` or `None` for UNDECLARED. Ruled at policy v11
+    #: (2026-09-14) after the E1 audit found the reader contradicting requirement 10, which says R
+    #: and D are «consulted separately, every answer naming its source, never blended into one
+    #: float» — while `space.py` returned `cos(R + 0.15·D)`.
+    #:
+    #: `None` for v7–v10, and it means UNDECLARED rather than «blended»: those versions ruled the
+    #: mix and said nothing about the mode, so a config assembled from their rows must keep saying
+    #: nothing. That is also what keeps their fingerprints where they are.
+    #:
+    #: WHY IT IS A ROW AND NOT A FLAG IN CODE: it decides what a verdict MEANS, which is the
+    #: definition of curation under the standing law of 2026-08-25.
+    mode: str | None = None
 
     def __post_init__(self):
         if self.mix < 0:
@@ -462,6 +486,10 @@ class ReadingPolicy:
             raise ValueError(
                 "the acceptance floors are declared together or not at all: one without the other "
                 "is a verdict function with a side it cannot answer on."
+            )
+        if self.mode is not None and self.mode not in READING_MODES:
+            raise ValueError(
+                f"unknown reading mode {self.mode!r}. The declared modes are {sorted(READING_MODES)}."
             )
         if self.near_floor is not None and self.near_floor <= self.far_ceiling:
             raise ValueError(
@@ -494,13 +522,26 @@ class ReadingPolicy:
             return "FAR"
         return "ABSTAIN"
 
+    @property
+    def reads_separately(self) -> bool:
+        """Whether the verdict comes from R ALONE, with D reporting beside it as a proposal.
+
+        Measured, not preferred (the E1 audit, 2026-09-14): where R speaks it decides 15 of 18 bar
+        pairs, and where R is SILENT, D cannot separate a declared NEAR from a declared FAR —
+        `eat~hungry` (NEAR) reads D 0.338 and `bed~cause` (FAR) reads D 0.326, on identical cells.
+        So D may propose and may never decide, and the blend was averaging a decider with a proposer.
+        """
+        return self.mode == READING_SEPARATE
+
     def as_dict(self) -> dict:
         out = {"rules": READING_RULES, "mix": self.mix}
         # Omitted when undeclared, so v7's and v8's fingerprints do not move under a question they
-        # never faced — the rule `structure` and `reading` itself both follow.
+        # never faced — the rule `structure`, `mode` and `reading` itself all follow.
         if self.near_floor is not None:
             out["near_floor"] = self.near_floor
             out["far_ceiling"] = self.far_ceiling
+        if self.mode is not None:
+            out["mode"] = self.mode
         return out
 
 
