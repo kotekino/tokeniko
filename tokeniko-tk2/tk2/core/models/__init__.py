@@ -26,6 +26,7 @@ from tk2.core.models.dictionary import (
     BaseRelationDoc,
     BaseSealDoc,
     SenseVectorDoc,
+    CuratedEdgeDoc,
     DictionaryBarDoc,
     DictionaryBuildDoc,
     DictionaryPolicyDoc,
@@ -62,6 +63,10 @@ LOGIC_MODELS = [
     DictionaryPolicyDoc,
     DictionaryBarDoc,
     ClosedClassDoc,
+    # CURATION, and an INPUT to a build rather than an output of one — which is the whole reason it
+    # is a collection. Two approved edges were lost in the E1b rebuild because they existed only as
+    # cells in a matrix that gets regenerated; outputs get regenerated, inputs survive.
+    CuratedEdgeDoc,
 ]
 
 #: Everything the r-cache snapshots at boot.
@@ -116,6 +121,7 @@ __all__ = [
     "ChannelRegisterDoc",
     "ClosedClassDoc",
     "DerivedPointDoc",
+    "CuratedEdgeDoc",
     "DictionaryBarDoc",
     "DictionaryBuildDoc",
     "DictionaryPolicyDoc",

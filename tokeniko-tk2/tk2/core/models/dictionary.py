@@ -153,6 +153,69 @@ class DictionaryBarDoc(LogicDocument, Timestamped):
         ]
 
 
+class CuratedEdgeDoc(LogicDocument, Timestamped):
+    """logic (r) — ONE analytic edge the Captain approved, as an INPUT to a build.
+
+    --------------------------------------------------------------------------------------------
+    WHY THIS COLLECTION EXISTS: two approved edges were lost, and no check could have saved them
+    --------------------------------------------------------------------------------------------
+    On 2026-08-12 the Captain approved two curated edges — `bed.n -> sleep.v` («furniture that
+    provides a place to *sleep*») and `hungry.a -> eat.v` — with the authorization recorded on the
+    cells and in the manifest. The E1 audit of 2026-09-14 found the built base carrying **zero
+    curated cells**: `mined` 51,564, `axis` 4,555, `curated` 0.
+
+    The cause is structural rather than an oversight. `curation.py` produced proposals, `cells_of`
+    turned them into cells, and the cells went into R — so **a curated edge was an OUTPUT of a
+    build and never an INPUT to one.** E1b dropped the prototype database, the rebuild regenerated R
+    from WordNet, and the edges were simply not among the things being regenerated. A guard would
+    have reported the loss; it could not have prevented it, because the decision had nowhere to live.
+
+    **Outputs get regenerated. Inputs survive.** That is the whole of this file's argument.
+
+    --------------------------------------------------------------------------------------------
+    APPEND-MOSTLY, LIKE THE BAR
+    --------------------------------------------------------------------------------------------
+    An edge that has to go is WITHDRAWN (`withdrawn_at`), never deleted — the Captain's standing
+    rule that a wrong belief is retreated and not erased, applied to his own rulings. A collection
+    that can lose a row silently is a collection whose history means nothing, and this one exists
+    precisely because something was lost silently once.
+
+    `evidence` is the definition VERBATIM with the naming token marked (requirement 20): a
+    paraphrase is the curator arguing rather than the dictionary speaking, and it is what a later
+    reader argues WITH when an edge looks wrong.
+    """
+
+    source_key: Annotated[str, Indexed()] = Field(min_length=1)
+    target_key: str = Field(min_length=1)
+
+    #: The curated relation this edge claims, from the closed vocabulary the policy declares
+    #: (`used_for`, `state_of`, …). A curator who may invent a relation per edge is writing prose.
+    relation: str = Field(min_length=1)
+    weight: float
+
+    #: The sense whose definition speaks, and that definition with the naming token marked.
+    sense: str = Field(min_length=1)
+    evidence: str = Field(min_length=1)
+
+    #: Whether a hand moved the relation off the miner's guess — so an approved edge can say
+    #: whether the machine or the reader chose its name.
+    relabelled: bool = False
+
+    #: WHO authorized it and WHEN. Not decoration: an edge is admitted because a person decided,
+    #: and an edge that cannot say who decided is a cell claiming an authority it cannot show.
+    approved_by: str = Field(min_length=1)
+    approved_at: int = Field(ge=0)
+
+    #: Unix seconds when it was withdrawn, or None while it stands.
+    withdrawn_at: int | None = None
+
+    class Settings:
+        name = "dictionary_curated_edges"
+        indexes = [
+            IndexModel([("source_key", ASCENDING), ("target_key", ASCENDING)], unique=True),
+        ]
+
+
 # ------------------------------------------------------------------------------------------------
 # the manifest
 # ------------------------------------------------------------------------------------------------

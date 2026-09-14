@@ -44,7 +44,12 @@ import time
 from dataclasses import fields, replace
 from pathlib import Path
 
-from tk2.datatier.policy_source import closed_forms, standing_bar, standing_policy
+from tk2.datatier.policy_source import (
+    closed_forms,
+    standing_bar,
+    standing_curated_edges,
+    standing_policy,
+)
 from tk2.dictionary import build, closure, distribution, glosses, keys, matrix, policy, relations, senses
 from tk2.dictionary.config import DictionaryConfig, bar_words
 from tk2.dictionary.wordnet import (
@@ -83,8 +88,19 @@ VOCABULARY_SHOWN = 20
 JUNK_WORDS = frozenset({"in", "be", "by", "as"})
 
 
+class CuratedEdgesLost(SystemExit):
+    """A build was asked to carry an approved edge it cannot place. LOUD, and it stops the run.
+
+    Two edges the Captain approved in August were lost in E1b's rebuild and nothing noticed for a
+    month. A rebuild changes MEMBERSHIP — the closure's cut moves — so an approved edge can name a
+    key the new base does not have, and that is a decision about to be dropped. The build refuses
+    rather than printing a warning nobody reads: this is precisely the silence E1d exists to end.
+    """
+
+
 def build_base(config: DictionaryConfig, lemma_scope: str,
-               antonym_symmetry: str | None = None, closed=None, with_senses: bool = False):
+               antonym_symmetry: str | None = None, closed=None, with_senses: bool = False,
+               curated_edges=None):
     """The base as the rows describe it, with the resource named out loud on the way through.
 
     The assembly itself is `tk2.dictionary.build`, so it is the same steps a test can run on a
@@ -107,13 +123,29 @@ def build_base(config: DictionaryConfig, lemma_scope: str,
 
     built = build.build_base(
         config, provider, say, antonym_symmetry=antonym_symmetry, closed_forms=closed,
-        with_senses=with_senses,
+        with_senses=with_senses, curated_edges=curated_edges,
     )
     print(f"  {built.graph_stats['nodes']:,} nodes · {built.graph_stats['edges']:,} edges · "
           f"{built.graph_stats['silent']:,} silent definitions")
     print(f"  closure: {len(built.words):,} words -> {len(built.dimensions):,} dimensions "
           f"(stopped: {built.closure.stopped}, {len(built.one_ring_past):,} one ring past the cut)")
     print(f"  R: {built.relational.stats()['nonzero']:,} cells in {time.time() - started:.0f}s")
+    if built.curated is not None:
+        merge = built.curated
+        print(f"  curated: {merge.edges} edges -> {merge.cells} cells"
+              + (f" · {merge.withdrawn} withdrawn" if merge.withdrawn else ""))
+        for source, column, relation in merge.overrode_mined:
+            # A DISCOVERY, not an error: the resource stated something and a person disagreed.
+            print(f"    override  {source} -> {column}  was `{relation}` (mined)")
+        if merge.unresolvable:
+            for source, target, why in merge.unresolvable:
+                print(f"    LOST      {source} -> {target}  {why}")
+            raise CuratedEdgesLost(
+                f"{len(merge.unresolvable)} approved edge(s) name dimensions this base does not "
+                f"have. A rebuild moves the closure's cut, so an edge can outlive its dimension — "
+                f"and dropping an approved decision quietly is the failure E1d was opened to end. "
+                f"Withdraw them (`withdrawn_at`) or re-approve them against the new base."
+            )
     if built.distributional is not None:
         print(f"  D: {built.distributional.stats()['nonzero']:,} cells in "
               f"{time.time() - started:.0f}s")
@@ -2056,8 +2088,10 @@ def run(argv: list[str] | None = None) -> int:
         if scope is None:
             print("REFUSED: no lemma scope declared and none named — see --lemma-scope.")
             return 2
+        curated, curated_source = standing_curated_edges(args.db)
+        print(f"curated       {curated_source}")
         built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms,
-                                 with_senses=args.senses_layer)
+                                 with_senses=args.senses_layer, curated_edges=curated)
         vectors = distribution.gloss_vectors(
             built.dimensions, provider, config.distribution, structure_forms
         )
@@ -2172,8 +2206,12 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.antonym_symmetry is not None:
         config = replace(config, relations=relations.policy_for(config.relations, args.antonym_symmetry))
+    # THE APPROVED EDGES, read as INPUTS. Offline runs carry none and say so; a run against a
+    # database carries every standing approval, and refuses if one of them cannot be placed.
+    curated, curated_source = standing_curated_edges(args.db)
+    print(f"curated       {curated_source}")
     built, provider = build_base(config, scope, args.antonym_symmetry, closed=structure_forms,
-                                 with_senses=args.senses_layer)
+                                 with_senses=args.senses_layer, curated_edges=curated)
     stats = report_shape(built.relational)
     d_stats = None
     dual = None

@@ -135,3 +135,26 @@ def closed_forms(db_name: str | None) -> tuple[tuple[str, ...], str]:
     found, module = newest_migration_declaring("CLOSED_CLASS_ROWS")
     version = max(row["version"] for row in module.CLOSED_CLASS_ROWS)
     return module.CLOSED_CLASS_FORMS, f"db/{found.label} v{version} (not applied)"
+
+
+def standing_curated_edges(db_name: str | None):
+    """The Captain's approved edges AS THEY STAND, and where they were read from.
+
+    NO MIGRATION FALLBACK, unlike the policy and the bar, and that is the shape of the thing rather
+    than an omission: a curated edge is approved against a BASE — it names two dimensions and quotes
+    the definition that justified it — so it belongs to the database a build runs against, not to a
+    file that ships with the code.
+
+    An offline run therefore carries none, and says so. That is honest: a build with no database has
+    no approvals to honour, and one that invented some would be claiming an authority it cannot show.
+    """
+    if not db_name:
+        return [], "no database named — an offline build carries no approvals"
+
+    from tk2.core.models import CuratedEdgeDoc
+    from tk2.datatier import traps
+
+    rows = [r.model_dump() for r in traps.find_all(CuratedEdgeDoc)]
+    standing = [r for r in rows if not r.get("withdrawn_at")]
+    return rows, (f"{db_name}.{CuratedEdgeDoc.Settings.name} — {len(standing)} standing"
+                  + (f", {len(rows) - len(standing)} withdrawn" if len(rows) != len(standing) else ""))

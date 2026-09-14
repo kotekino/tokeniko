@@ -480,15 +480,25 @@ chapter as written, never against what was ruled later.**
    the signal is already computed by `glosses.lexicon_words_in` and thrown away. Measured caveats:
    roughly doubles R, and carries noise (`bed`'s gloss also names *furniture, ground, plants*).
    **The Captain rules the weight AFTER the measurement, never before.**
-4. **THE CURATION GUARD** — the built base has zero curated cells: both hand-approved edges lived in
-   the prototype db, which E1b dropped, and nothing checked. A rebuild must not be able to drop
-   curated rows silently.
-5. **RE-APPROVE THE TWO LOST EDGES** — `sleep~bed` (`used_for`) and `eat~hungry` (`state_of`), the
-   Captain's hand, reciprocal at 0.60 per the standing convention.
+4. ~~**THE CURATION GUARD**~~ **— DONE 2026-09-14, and it is a structural repair rather than a
+   check.** `curation.py` produced cells that went into R, so a curated edge was an OUTPUT of a
+   build and never an INPUT to one; E1b dropped the prototype db and the rebuild regenerated R
+   without them. **No check could have saved them** — the decision had nowhere to live. So:
+   **`dictionary_curated_edges`**, append-mostly (withdrawn, never deleted), consumed by
+   `build_base`, with the manifest finally recording `curated_edges` / `cells` / `withdrawn` /
+   `unresolvable`. **A build REFUSES** when an approved edge names a dimension this base does not
+   have — a rebuild moves the closure's cut, so an edge can outlive its dimension, and that is
+   precisely the silence E1d exists to end. A curated cell OVERRIDES a mined one and the override
+   is reported, because «the resource stated otherwise and a person disagreed» is a discovery.
+5. ~~**RE-APPROVE THE TWO LOST EDGES**~~ **— WRITTEN 2026-09-14 (`db/0005`, unapplied).**
+   `bed.n→sleep.v` (`used_for`) and `hungry.a→eat.v` (`state_of`), with the ORIGINAL authorization
+   and date carried, because this restores a decision rather than making a new one. **`sleep~bed`
+   closes** — the pair the 2026-08-12 review called the one only R gets right.
 
-**Done when:** the bar is re-scored under separate reads with `gloss_reference` mined and the curated
-edges restored, and every requirement that this audit marked REFUTED, LOST or CONTRADICTED is either
-satisfied or re-ruled out loud.
+**Done when:** ~~the bar is re-scored…~~ **MEASURED 2026-09-14: 13 → 18 of 37 decided, 0 wrong**,
+with requirements 2, 10, 14, 19 and 20 satisfied and 16 the only one still open. **What remains is
+the Captain's hand**: apply `0003`, `0004`, `0005`, then REBUILD and reseal. The bar and the floors
+are coupled (`db/0002`'s lesson), so the frontier is re-measured AFTER the rebuild, never before.
 
 *T2 precedes T3: «did it close?» cannot be answered while the verdict is a blend.*
 

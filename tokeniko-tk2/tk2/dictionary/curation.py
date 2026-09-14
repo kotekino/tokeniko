@@ -459,3 +459,110 @@ __all__ = [
     "relabel",
     "self_reference_skips",
 ]
+
+
+# ------------------------------------------------------------------------------------------------
+# curated edges as an INPUT to a build — the E1d T4 repair
+# ------------------------------------------------------------------------------------------------
+
+
+@dataclass(frozen=True, slots=True)
+class CuratedMerge:
+    """What consuming the curated edges did. Every field exists because something was once silent.
+
+    `unresolvable` is the one that matters. A rebuild changes MEMBERSHIP — the closure's cut moves,
+    a word joins or leaves — so an approved edge can name a key the new base does not have. Dropping
+    it quietly is exactly the class of silence this whole epic came from, so it is returned, counted
+    and printed, and the build says so out loud.
+
+    `overrode_mined` is a DISCOVERY, not an error: the resource already stated something about that
+    pair and a human decided otherwise. Worth reading every time it happens.
+    """
+
+    edges: int
+    cells: int
+    withdrawn: int
+    unresolvable: tuple[tuple[str, str, str], ...] = ()
+    overrode_mined: tuple[tuple[str, str, str], ...] = ()
+
+    @property
+    def is_clean(self) -> bool:
+        return not self.unresolvable
+
+
+def proposal_of_row(row) -> Proposal:
+    """A stored curated edge back into the shape `cells_of` already knows how to write.
+
+    The row is the record; the `Proposal` is the shape. Keeping one writer means an edge approved in
+    August and an edge approved today cannot land as two different cells.
+    """
+    return Proposal(
+        source_key=row["source_key"],
+        target_key=row["target_key"],
+        relation=row["relation"],
+        weight=float(row["weight"]),
+        sense=row.get("sense", ""),
+        # The row stores the evidence already marked up; `Proposal.evidence` would rebuild it from
+        # a definition and a token the row no longer carries separately.
+        definition=row.get("evidence", ""),
+        naming_token="",
+        relabelled=bool(row.get("relabelled", False)),
+    )
+
+
+def merge_curated(matrix, rows, policy: RelationPolicy) -> tuple[object, CuratedMerge]:
+    """R with every standing curated edge written into it, and a report of what that took.
+
+    **A CURATED CELL OVERRIDES A MINED ONE.** It is the only cell in the system carrying a human
+    authorization and verbatim evidence, and an approval that loses to the walk it was written to
+    correct would be theatre. It is reported when it happens, because «the resource said otherwise
+    and a person disagreed» is a thing worth reading.
+
+    A WITHDRAWN edge is skipped and counted — `withdrawn_at` is the «mostly» in append-mostly, and a
+    withdrawal is a fact with a date rather than an absence.
+
+    Pure: `rows` are plain mappings, so the same function serves a live database, a fixture and a
+    build nobody applied yet.
+    """
+    from dataclasses import replace
+
+    known = set(matrix.keys)
+    written: dict[str, list[Cell]] = {}
+    unresolvable: list[tuple[str, str, str]] = []
+    withdrawn = 0
+    edges = 0
+
+    for row in rows:
+        if row.get("withdrawn_at"):
+            withdrawn += 1
+            continue
+        missing = [k for k in (row["source_key"], row["target_key"]) if k not in known]
+        if missing:
+            unresolvable.append((row["source_key"], row["target_key"],
+                                 f"not a dimension of this base: {', '.join(missing)}"))
+            continue
+        edges += 1
+        for key, cell in cells_of(proposal_of_row(row), policy):
+            written.setdefault(key, []).append(cell)
+
+    overrode: list[tuple[str, str, str]] = []
+    out_rows = []
+    for row in matrix.rows:
+        additions = written.get(row.key, ())
+        if not additions:
+            out_rows.append(row)
+            continue
+        replaced = {cell.column: cell for cell in additions}
+        for cell in row.cells:
+            if cell.column in replaced and cell.source != SOURCE_CURATED:
+                overrode.append((row.key, cell.column, cell.relation))
+        kept = [c for c in row.cells if c.column not in replaced]
+        out_rows.append(replace(row, cells=(*kept, *additions)))
+
+    return replace(matrix, rows=tuple(out_rows)), CuratedMerge(
+        edges=edges,
+        cells=sum(len(v) for v in written.values()),
+        withdrawn=withdrawn,
+        unresolvable=tuple(unresolvable),
+        overrode_mined=tuple(overrode),
+    )

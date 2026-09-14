@@ -19,7 +19,15 @@ would be the standing law arriving by omission.
 
 from dataclasses import dataclass, field
 
-from tk2.dictionary import closure, distribution, glosses, references, relations, senses
+from tk2.dictionary import (
+    closure,
+    curation,
+    distribution,
+    glosses,
+    references,
+    relations,
+    senses,
+)
 from tk2.dictionary.closure import Digraph, SeedClosure
 from tk2.dictionary.config import DictionaryConfig
 from tk2.dictionary.matrix import Matrix
@@ -61,6 +69,10 @@ class BaseBuild:
     closure: SeedClosure = None
     graph_stats: dict = field(default_factory=dict)
     one_ring_past: tuple[str, ...] = ()
+    #: What consuming the Captain's approved edges took. `None` means none were offered, which is
+    #: a different fact from «none applied» — two approved edges were lost once because nothing
+    #: could tell those apart.
+    curated: "curation.CuratedMerge | None" = None
 
     def counts(self) -> dict[str, int]:
         """What the manifest records. `DictionaryBuildDoc.counts` is a free dict for exactly this
@@ -75,6 +87,17 @@ class BaseBuild:
             "r_silent_rows": stats["silent_rows"],
             "one_ring_past": len(self.one_ring_past),
         }
+        if self.curated is not None:
+            # THE NUMBER THAT WAS MISSING. The manifest recorded r_cells, r_negative, r_silent_rows
+            # and d_cells and said NOTHING about curation — so «was this build curated?» had no
+            # answer, and a build that had silently lost two approved edges looked exactly like one
+            # that never had any.
+            counted |= {
+                "curated_edges": self.curated.edges,
+                "curated_cells": self.curated.cells,
+                "curated_withdrawn": self.curated.withdrawn,
+                "curated_unresolvable": len(self.curated.unresolvable),
+            }
         if self.distributional is not None:
             d_stats = self.distributional.stats()
             counted |= {
@@ -98,6 +121,7 @@ def build_base(
     antonym_symmetry: str | None = None,
     closed_forms=None,
     with_senses: bool = False,
+    curated_edges=None,
 ) -> BaseBuild:
     """THE build: the definition digraph, the seed closure, the dimensions, and R over them.
 
@@ -172,6 +196,21 @@ def build_base(
             ),
         )
 
+    # THE CAPTAIN'S APPROVED EDGES, consumed as INPUTS — the E1d T4 repair. Until 2026-09-14 a
+    # curated edge was an OUTPUT of a build (a cell in R) and never an input to one, so E1b's
+    # rebuild regenerated R from WordNet and the two edges he had approved were simply not among
+    # the things being regenerated. Outputs get regenerated; inputs survive.
+    #
+    # Last, and after the references, so a human decision is written over anything the two miners
+    # said about the same pair — and `CuratedMerge` reports every such override, because «the
+    # resource stated otherwise and a person disagreed» is worth reading.
+    curated_report = None
+    if curated_edges is not None:
+        _step(progress, "curated")
+        relational, curated_report = curation.merge_curated(
+            relational, curated_edges, config.relations
+        )
+
     # D over the SAME `dimensions` tuple — not a second key space computed the same way, the same
     # object — so the two matrices can be read cell for cell and the store's registry describes
     # both. A policy with no gloss walk builds no D rather than a default one; the tool says so.
@@ -201,6 +240,7 @@ def build_base(
         closure=result,
         graph_stats=graph_stats,
         one_ring_past=result.one_ring_past(graph),
+        curated=curated_report,
     )
 
 
