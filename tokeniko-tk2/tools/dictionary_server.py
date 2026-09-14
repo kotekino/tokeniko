@@ -197,15 +197,25 @@ class Bench(BaseHTTPRequestHandler):
         }
 
     def _api_neighbours(self, query):
-        """«memory proposes by cosine» — the operation the brain performs most."""
+        """«memory proposes by cosine» — the operation the brain performs most.
+
+        R PROPOSES since the ruling of 2026-09-14, and each answer names the layer it came from: a
+        page that showed a ranking without saying whose cosine made it is the same defect as the
+        build tool's old bar report.
+        """
         key = query.get("key", "")
         count = int(query.get("count", 15))
+        found = self.space.neighbours(key, count)
         return {
             "key": key,
             "held": self.space.holds(key),
+            # Empty with the key held is a real answer and not a bug: R states nothing about 14 of
+            # the 4,555 dimensions, and nothing is proposed for them.
+            "source": found[0].source if found else None,
             "neighbours": [
-                {"key": n.key, "cosine": round(n.cosine, 4), "verdict": n.verdict}
-                for n in self.space.neighbours(key, count)
+                {"key": n.key, "cosine": round(n.cosine, 4), "verdict": n.verdict,
+                 "source": n.source}
+                for n in found
             ],
         }
 

@@ -71,3 +71,37 @@ flagged in `../tkzip/requirements.md` rather than designed around quietly at E3.
 *The measurement is `$CLAUDE_JOB_DIR/tmp/dbench.py`'s; it reads the body read-only and rebuilds each
 candidate D through `distribution.build`, so every column is the real builder rather than a
 re-implementation.*
+
+---
+
+## THE RULING — R ONLY, NO FALLBACK *(the Captain, 2026-09-14)*
+
+Asked whether to adopt R-first with D as the fallback, or R alone: **«R only, no D fallback».**
+
+**AND THE MEASUREMENT VINDICATES IT.** The fallback was worth less than the earlier figure suggested:
+
+- **R is silent on 14 of 4,555 dimensions — 0.3%**, not the 7.5% first quoted. That number was the
+  manifest's `r_silent_rows`, counted BEFORE gloss references were mined into R; most of those rows
+  now state something. The fourteen: `bitter.r · boiling.r · east.r · express.r · first.r · iron.a ·
+  last.r · little.r · model.a · precious.r · sand.v · signal.a · surface.a · though.r`.
+- **For those fourteen, D's cosines are +0.000.** The «fallback» was `argmax` over zeros — the first
+  candidate, dressed as a measurement. Removing it costs nothing and stops one class of wrong answer.
+
+**WHAT CHANGED IN THE CODE.** `neighbours()` defaults to R and returns EMPTY where R is silent;
+`nearest_anchor()` follows the same rule and returns `None`. D is still reachable by asking for it,
+because «whose definitions look like this one» is a real question — nothing defaults to it.
+
+**THIS NARROWS «NEVER-MISS», deliberately.** The semantic catch used to name an anchor whatever
+happened. It now refuses where R is silent, joining the two refusals it already had (the key is not a
+dimension; no anchor is). A caller that must always have an answer has the sense layer, which is
+where arbitrary input belongs anyway.
+
+**NOT A COST OF THIS RULING, and worth stating because it looks like one:** `dog.n`, `happy.a` and
+`devour.v` propose nothing — they are **not dimensions**. The base is 4,555 closure keys, not all of
+English, and those words reach the space through `place()` and the sense layer. That is a different
+fact from R being silent.
+
+**STILL OPEN, flagged rather than decided:** `place()` and `project()` still read the DISTRIBUTIONAL
+half of a sense, because **40.2% of senses carry no relations at all** (48,416 of 120,475). Reading
+them relations-only would place nothing for two senses in five — a different and much larger silence
+than 0.3%, and its own ruling.

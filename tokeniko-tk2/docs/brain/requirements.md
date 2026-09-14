@@ -13,7 +13,7 @@
 9. **Seeding is the default** — no hardwired fallback rules; the seed is stored rules, and they MAY change like everything in kb.
 10. **Catatonia is a legal state** — the dna loop ticks on empty; rescue comes only from outside, through the senses.
 11. **Phases are kb reweighting** — dna knows only that they exist; summarize and retreat are (sub-)phases.
-12. **Memory proposes by cosine; chaining runs on the working set** — a small «in mind» set, geometrically refreshed.
+12. **Memory proposes by cosine — R'S cosine (ruled 2026-09-14); chaining runs on the working set** — a small «in mind» set, geometrically refreshed. **[WHOSE cosine was never said, and it matters: D's was benched as a proposer and cannot rank — 5.9% precision@10 against gold, 36.6% junk, and no variant of D helps, because `eat.v` shares 49 of its ~50 gloss columns with `lead.v` on the word «take». R scores 28.7%. **R proposes and there is no fallback**: where R is silent (14 of 4,555 dimensions, 0.3%) NOTHING is proposed, because the fallback it replaces was offering cosines of +0.000. Evidence: `../dictionary/202609141853_d-cannot-propose.md`.]**
 13. **Truth is the deterministic invariant** — fuzziness grants the shades there; unpredictability lives in CHOICE only (tie-breaks, sampling, what to wonder next).
 14. **Urge decay is physiological** — dna physics, never moved by experience.
 15. **Everything is rows**: kb → db (rw) · parameters → db (r) · hardwired logic → db (r); the body is an INTERPRETER of the db, deploys are migrations; r-data cached at boot, refreshed on a slow tick.

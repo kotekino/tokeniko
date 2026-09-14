@@ -291,18 +291,30 @@ def test_resolve_returns_every_part_of_speech_and_picks_none():
     assert held.resolve("banana") == ()
 
 
-def test_neighbours_answer_from_the_layer_they_were_asked_and_say_which():
-    """«What is near this» is TWO questions. D proposes (brain req 12, the working set); R states.
-    The space answers the one it was asked and names it."""
+def test_R_PROPOSES_and_d_has_to_be_asked_for():
+    """THE RULING OF 2026-09-14. Brain req 12 says memory proposes by cosine and does not say whose;
+    D's was benched and cannot rank — 5.9% precision@10 against R's 28.7%, and no variant of D
+    helps. So R is the default and D is a question a caller must ask explicitly."""
     held = space(near=0.1)
 
     proposed = held.neighbours("eat.v", count=3)
-    assert proposed[0].key == "food.n", "D's answer: what their definitions share"
-    assert proposed[0].source == SOURCE_DISTRIBUTIONAL
+    assert proposed[0].key == "devour.v", "R's answer: what the resource states"
+    assert proposed[0].source == SOURCE_RELATIONAL
 
-    stated = held.neighbours("eat.v", count=3, source=SOURCE_RELATIONAL)
-    assert stated[0].key == "devour.v", "R's answer: what the resource states"
-    assert stated[0].source == SOURCE_RELATIONAL
+    asked = held.neighbours("eat.v", count=3, source=SOURCE_DISTRIBUTIONAL)
+    assert asked[0].key == "food.n", "D still answers «whose definitions look like this one»"
+    assert asked[0].source == SOURCE_DISTRIBUTIONAL
+
+
+def test_where_R_is_silent_NOTHING_is_proposed():
+    """No fallback. On the real base R is silent for 14 of 4,555 dimensions (0.3%), and the D
+    fallback this replaces was offering them cosines of +0.000 — an arbitrary ordering of zeros
+    dressed as an answer. An abstention is honest; a wrong proposal is not."""
+    held = space(near=0.1)
+
+    assert held.relations_of("food.n") == (), "R states nothing about it but its own axis"
+    assert held.neighbours("food.n") == []
+    assert held.neighbours("food.n", source=SOURCE_DISTRIBUTIONAL), "D is still there to be asked"
 
 
 def test_neighbours_drop_the_key_itself():
@@ -348,10 +360,14 @@ def test_relations_are_stated_separately_from_the_geometry():
 # ------------------------------------------------------------------------------------------------
 
 
-def test_the_catch_follows_the_same_R_first_rule_as_the_reader():
-    """One procedure in this module, not two: where R speaks about the key it decides which anchor
-    is nearest; where R is silent the catch still names one — «never-miss» — and says it came from D
-    so the caller knows how much to trust it."""
+def test_the_catch_follows_THE_SAME_RULE_as_the_proposer():
+    """One procedure in this module, not two: R decides which anchor is nearest, and where R is
+    silent the catch REFUSES.
+
+    This narrows «never-miss» deliberately. The catch used to name an anchor whatever happened,
+    falling back to D — but D's cosines where R is silent are +0.000, so «the nearest» was `argmax`
+    over zeros: the first candidate, dressed as a measurement. `None` joins the two refusals that
+    were already here (the key is not a dimension; no anchor is)."""
     held = space(near=0.1)
 
     caught = held.nearest_anchor("devour.v", ["eat.v", "sleep.v"])
@@ -359,11 +375,9 @@ def test_the_catch_follows_the_same_R_first_rule_as_the_reader():
     assert caught.source == SOURCE_RELATIONAL
     assert caught.verdict == "NEAR"
 
-    # `food.n` states nothing but its own axis — and the identity axis is not an answer about a
-    # pair, so R is SILENT about it and D is what has anything to say.
-    fallen_back = held.nearest_anchor("food.n", ["eat.v", "sleep.v"])
-    assert fallen_back.key == "eat.v"
-    assert fallen_back.source == SOURCE_DISTRIBUTIONAL
+    # `food.n` states nothing but its own axis, and the identity axis is not an answer about a pair.
+    assert held.relations_of("food.n") == ()
+    assert held.nearest_anchor("food.n", ["eat.v", "sleep.v"]) is None
 
 
 def test_the_catch_refuses_when_it_has_nothing_to_measure_against():

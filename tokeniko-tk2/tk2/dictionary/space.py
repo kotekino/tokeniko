@@ -415,19 +415,34 @@ class DictionarySpace:
         return "ABSTAIN" if reading is None else reading.verdict
 
     def neighbours(self, key: str, count: int = 12, floor: float | None = None,
-                   source: str = SOURCE_DISTRIBUTIONAL) -> list[Neighbour]:
+                   source: str = SOURCE_RELATIONAL) -> list[Neighbour]:
         """The nearest dimensions to this one — «memory proposes by cosine» (brain req. 12).
 
-        DEFAULTS TO D, and that is the architecture rather than a convenience: proposing is exactly
-        what D is for, and the verdict on any proposal is R's (`read`). Ask for `relational` to see
-        what the resource STATES around a key — a different question, honestly answered.
+        **R PROPOSES, AND THERE IS NO FALLBACK** (the Captain's ruling, 2026-09-14). Brain req 12
+        says memory proposes by cosine; it does not say whose, and D's was benched and cannot rank.
+        Measured over 300 sampled keys against gold (synonyms + same-hypernym siblings): D 5.9%
+        precision@10 with 36.6% junk, R 28.7% with 9.8% — and NO variant of D helps, because D's
+        cosine asks «which common gloss word do you contain» and `eat.v` shares 49 of its ~50
+        columns with `lead.v` and `bring.v` on the word «take».
 
-        One matrix-vector product and a partial sort: ~1.6 ms at 4,555 dimensions. The key itself is
+        **Where R is silent, nothing is proposed.** That is 14 of 4,555 dimensions (0.3%), and the
+        fallback it replaces was offering them cosines of +0.000 — an arbitrary ordering of zeros
+        dressed as an answer. An abstention is honest; a wrong proposal is not.
+
+        `source` is kept because «what does the resource STATE around this key» and «whose
+        definitions look like this one» are two real questions, and D still answers the second.
+        Nothing DEFAULTS to it any more.
+
+        One matrix-vector product and a partial sort: ~2 ms at 4,555 dimensions. The key itself is
         dropped, because a thing being nearest to itself is a property of the identity axis rather
         than an answer.
         """
         i = self._index.get(key)
         if i is None:
+            return []
+        if source == SOURCE_RELATIONAL and not self._relations.get(key):
+            # R states nothing about this dimension, so it proposes nothing. The identity axis is
+            # not an answer about a pair, which is why the STATED relations are what is asked.
             return []
         space = self._relational if source == SOURCE_RELATIONAL else self._distributional
         sims = space @ space[i]
@@ -458,26 +473,36 @@ class DictionarySpace:
         candidates = [a for a in anchors if a in self._index]
         if not candidates or key not in self._index:
             return None
+
+        # R ONLY, NO FALLBACK — the same ruling as `neighbours`, so this module has ONE procedure
+        # rather than two. STATED relations, not the raw row: every row carries its own identity
+        # axis, so a row that says nothing about anything else is still non-zero, and identity is a
+        # property of being a dimension rather than an answer about a pair.
+        #
+        # THIS NARROWS «NEVER-MISS», and the narrowing is deliberate. The catch used to name an
+        # anchor whatever happened — falling back to D where R was silent — but D's cosines there
+        # are +0.000, so «the nearest» was `argmax` over zeros: the first candidate, dressed as a
+        # measurement. `None` is the honest answer, and it joins the two refusals already here
+        # (the key is not a dimension; no anchor is).
+        if not self._relations.get(key):
+            return None
         i = self._index[key]
         rows = np.array([self._index[a] for a in candidates])
-
-        # THE SAME R-FIRST RULE AS `read`, so there is one procedure in this module and not two.
-        # Where R speaks about this key it decides which anchor is nearest; where R is silent the
-        # catch still has to name one — that is what «never-miss» means — and it names it from D,
-        # saying so in `source` and leaving the verdict to say how much to trust it.
-        # STATED relations, not the raw row: every row carries its own identity axis, so a
-        # row that says nothing about anything else is still non-zero. Identity is a property
-        # of being a dimension, never an answer about a pair.
-        source = SOURCE_RELATIONAL if self._relations.get(key) else SOURCE_DISTRIBUTIONAL
-        space = self._relational if source == SOURCE_RELATIONAL else self._distributional
-        sims = space[rows] @ space[i]
+        sims = self._relational[rows] @ self._relational[i]
         best = int(np.argmax(sims))
         reading = float(sims[best])
         return Neighbour(candidates[best], reading,
-                         self._config.reading.verdict(reading), source=source)
+                         self._config.reading.verdict(reading), source=SOURCE_RELATIONAL)
 
     def project(self, sense: str, source: str = SOURCE_DISTRIBUTIONAL) -> np.ndarray | None:
         """One SENSE as a unit vector in the base's space — how a word outside the base gets in.
+
+        NOT TOUCHED BY THE 2026-09-14 PROPOSER RULING, and the reason is a measurement rather than
+        an oversight: that ruling is about proposing from a BASE KEY, which is what the bench
+        measured. A SENSE has both floors and **40.2% of senses carry no relations at all**
+        (48,416 of 120,475), so reading this relations-only would place nothing for two senses in
+        five — a different and much larger silence than the 0.3% of base keys R is quiet about.
+        Flagged for its own ruling; `source` is how either reading is asked for.
 
         THE GAP THIS CLOSES, found by probing the layer above: `nearest_anchor` could only start
         from a key that was already a dimension, and the semantic catch exists for ARBITRARY input.
