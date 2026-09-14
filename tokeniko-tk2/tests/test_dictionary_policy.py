@@ -49,6 +49,7 @@ from tests.seed import (
     declared_config_v11,
     declared_config_v12,
     declared_config_v13,
+    declared_config_v14,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -62,6 +63,7 @@ from tests.seed import (
     policy_rows_v11,
     policy_rows_v12,
     policy_rows_v13,
+    policy_rows_v14,
     ruled_config,
     structural_seeds,
 )
@@ -1037,8 +1039,12 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
     assert dict(config.relations.weights)["derivational"] == 0.45
 
 
-#: THE STANDING POLICY'S HASH — policy v13 against the live thirty-seven-pair bar.
-STANDING_FINGERPRINT = "969766250c02208048433ee34ecf9ade1c0463c2ee23f67033eb0c5654b99e7a"
+#: THE STANDING POLICY'S HASH — policy v14 against the live thirty-seven-pair bar.
+STANDING_FINGERPRINT = "ffea9ed1d429d2bb2b8894c0b189c52be6b115fc37bc9a47520cbb09b375885d"
+
+#: v13's own hash — derivational at primary-sense resolution, the floor still at +0.28. It is the
+#: label of the build on the body, `969766250c02`, which was built and sealed under it.
+V13_FINGERPRINT = "969766250c02208048433ee34ecf9ade1c0463c2ee23f67033eb0c5654b99e7a"
 
 #: v12's own hash — gloss references and the deciding cell, still mining `derivational` word-wide.
 V12_FINGERPRINT = "b400f6c8aa236f605eb826642f918d2c9a22ad0d4b422edb6b72e97eb807cc2e"
@@ -1551,7 +1557,7 @@ def test_policy_v13_mines_derivational_at_primary_sense_resolution():
 
     assert config == declared_config_v13()
     assert config.relations.derivational_resolution == DERIVATIONAL_PRIMARY_SENSE
-    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.fingerprint() == V13_FINGERPRINT
     assert declared_config_v12().fingerprint() == V12_FINGERPRINT, "the ledger's promise"
 
 
@@ -1589,3 +1595,38 @@ def test_the_earlier_versions_keep_saying_nothing_about_the_resolution():
         relations = policy.relation_policy_from_rows(rows)
         assert relations.derivational_resolution is None
         assert "derivational_resolution" not in relations.as_dict()
+
+
+# ------------------------------------------------------------------------------------------------
+# v14 — the floor sits in the middle of the gap, fitted to the base that exists
+# ------------------------------------------------------------------------------------------------
+
+
+def test_policy_v14_moves_the_near_floor_to_the_middle_of_the_gap():
+    """Fitted AFTER the rebuild (`db/0002`'s order): compass.n~compass.v FAR +0.0948 below,
+    walk.v~run.v NEAR +0.2116 above, and 0.15 sits in the middle rather than on either wall."""
+    config = policy.config_from_rows(policy_rows_v14(), bar_rows() + bar_rows_v2())
+
+    assert config == declared_config_v14()
+    assert config.reading.near_floor == 0.15
+    assert 0.0948 < config.reading.near_floor < 0.2116
+    assert config.reading.far_ceiling == 0.0, "the FAR edge is a theorem and does not move"
+    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert declared_config_v13().fingerprint() == V13_FINGERPRINT, "the ledger's promise"
+
+
+def test_v14_moves_exactly_one_value():
+    v13 = {(r["kind"], r["name"]): r["value"] for r in policy_rows_v13()}
+    v14 = {(r["kind"], r["name"]): r["value"] for r in policy_rows_v14()}
+
+    assert set(v14) == set(v13), "nothing arrived and nothing left"
+    assert {k for k in v13 if v13[k] != v14[k]} == {(policy.KIND_READING, "near_floor")}
+
+
+def test_v14s_note_names_both_walls_and_the_order_it_was_measured_in():
+    note = next(r["note"] for r in policy_rows_v14()
+                if (r["kind"], r["name"]) == (policy.KIND_READING, "near_floor"))
+
+    assert "compass.n~compass.v" in note and "walk.v~run.v" in note, "both walls"
+    assert "969766250c02" in note, "the base it was fitted to"
+    assert "MIDDLE of the gap" in note

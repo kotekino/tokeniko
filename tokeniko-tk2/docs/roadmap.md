@@ -50,7 +50,7 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] **120,475 senses placed (96.9%), 816,309 cells, sealed and read back whole**
 - [x] the manifest names its own build (a T5 finding that became real when two builds shared a policy)
 
-## E1d — the audit's repairs *(opened 2026-09-14; bar 13 → 18 of 37 decided, 0 wrong)*
+## E1d — the audit's repairs ✅ 2026-09-14 *(bar 13 → 19 of 37 decided, 0 wrong)*
 - [x] the audit written into the chapter, 21 statuses corrected — `docs/dictionary/202609141115_the-e1-audit.md`
 - [ ] **T2 — SEPARATE READS** (req 10): the reader returns two answers, each naming its source;
       `space.py` stops returning `cos(R + 0.15·D)`
@@ -67,9 +67,12 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] **REQUIREMENT 16 — `derivational` at primary-sense resolution** (policy v13, `db/0006`,
       unapplied). Down-weighting was measured impossible; the defect was a resolution mismatch.
       On a real rebuild of R: best zero-wrong floor 0.10 on a plateau to 0.20, 19 of 37 decided
-- [ ] **THE CAPTAIN'S HAND**: apply `0003` · `0004` · `0005` · `0006`, then REBUILD and reseal
-- [ ] **re-rule the NEAR floor AFTER the rebuild** — the bar and the floors are coupled; at the
-      standing 0.28, v13 decides 17 (one fewer than T5's 18: `buy.n~buy.v` falls to +0.246)
+- [x] **APPLIED + REBUILT 2026-09-14** (on the Captain's order): `0003`–`0006` on the body; base
+      rebuilt as `969766250c02` with the sense layer, read back WHOLE against all four seals;
+      membership unchanged (4,555 dimensions)
+- [x] **NEAR floor re-ruled +0.28 → +0.15** (policy v14, `db/0007`, applied) — measured on the
+      stored build, in the middle of the gap between `compass.n~compass.v` FAR +0.095 and
+      `walk.v~run.v` NEAR +0.212. **BAR: 19 of 37 decided, 0 wrong** (13 when E1d opened)
 
 ## E2 — the format (tkzip v2) ✅ COMPLETE 2026-09-14 — see `landed.md`
 

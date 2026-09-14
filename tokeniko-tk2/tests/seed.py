@@ -326,6 +326,18 @@ def policy_rows_v11() -> list[dict]:
     return [dict(row) for row in migration(3).POLICY_ROWS]
 
 
+def policy_rows_v14() -> list[dict]:
+    """Version 14's rows — the NEAR floor re-fitted to the rebuilt base (`db/0007`)."""
+    return [dict(row) for row in migration(7).POLICY_ROWS]
+
+
+def declared_config_v14():
+    """The policy v14 writes — v13 with one reading value moved."""
+    from tk2.dictionary import policy as _policy
+
+    return _policy.config_from_rows(policy_rows_v14(), bar_rows() + bar_rows_v2())
+
+
 def policy_rows_v13() -> list[dict]:
     """Version 13's rows — `derivational` mined at primary-sense resolution (`db/0006`)."""
     return [dict(row) for row in migration(6).POLICY_ROWS]

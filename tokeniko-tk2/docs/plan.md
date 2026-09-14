@@ -453,7 +453,7 @@ whether a sense-to-base reading is judged by the same numbers is E3's question, 
 
 ---
 
-## E1d — The audit's repairs *(opened 2026-09-14)*
+## E1d — The audit's repairs *(opened and closed 2026-09-14)*
 
 **Why it exists.** At E2's close the Captain called in a parked order: *«go through all the docs of
 `tokeniko-tk2/docs/<chapter>` and see if we missed something in the old requirements.»* The
@@ -508,10 +508,20 @@ chapter as written, never against what was ruled later.**
    after the rebuild is a real dependency.
    **Decision record: `docs/dictionary/202609141714_requirement-16.md`.**
 
-**Done when:** ~~the bar is re-scored…~~ **MEASURED 2026-09-14: every requirement the audit marked
-REFUTED, LOST, CONTRADICTED or open is now closed** — 2, 10, 14, 16, 19, 20. **What remains is the
-Captain's hand**: apply `0003`, `0004`, `0005`, `0006`, then REBUILD and reseal, then **re-measure the
-frontier and rule the NEAR floor** against the base that actually exists (`db/0002`'s lesson).
+7. ~~**APPLY, REBUILD, RE-MEASURE, RULE THE FLOOR**~~ **— DONE 2026-09-14, on the Captain's order.**
+   `0003`–`0006` applied; the base rebuilt as **`969766250c02`** with the sense layer and read back
+   WHOLE against all four seals; membership unchanged at 4,555 dimensions, so the frontier measured on
+   the rebuild of R still described the base. Re-measured through the verdict reader on the stored
+   build: zero-wrong from 0.10 to 0.20, 19 of 37. **The floor governs one gap** — `compass.n~compass.v`
+   FAR +0.0948 below, `walk.v~run.v` NEAR +0.2116 above — and the Captain ruled **+0.15, the middle of
+   it** (policy v14, `db/0007`, applied). `db/0002`'s order was followed this time: rebuild, then
+   measure, then rule.
+
+**Done when:** ✅ **MET 2026-09-14.** Every requirement the audit marked REFUTED, LOST, CONTRADICTED or
+open is closed — 2, 10, 14, 16, 19, 20 — and it is TRUE ON THE BODY, not only in code. **Bar: 13 → 19
+of 37 decided, 0 wrong.** Carried forward, named: the old build `9824ef465c86` is still on the body and
+the bench's loader may pick it (pass `--build`); the build tool's printed bar report still scores the
+pre-v11 blended reading; D's neighbourhood is noise at the top.
 
 *T2 precedes T3: «did it close?» cannot be answered while the verdict is a blend.*
 
