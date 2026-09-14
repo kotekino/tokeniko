@@ -48,6 +48,13 @@ class World(FixtureGlossProvider):
     def relations(self):
         return self._relations.relations()
 
+    def primary_sense_of_key(self, key):
+        senses = self.senses_of_key(key)
+        return senses[0] if senses else None
+
+    def relations_of_sense(self, sense):
+        return self._relations.relations_of_sense(sense)
+
 
 def config(relations=None, distribution=None, **closure):
     """A whole declared policy for the fixture world. Stated, never defaulted — since T4b there is

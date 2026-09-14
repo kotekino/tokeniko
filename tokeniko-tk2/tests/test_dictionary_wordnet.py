@@ -500,3 +500,28 @@ def test_only_the_two_lemma_stated_relations_can_be_scoped(relation_provider):
     assert wn_adapter.LEMMA_SCOPED_RELATIONS == ("antonym", "derivational")
     with pytest.raises(ValueError):
         relation_provider.lemma_sources("eat.v", "entails")
+
+
+def test_wordnet_links_the_primary_senses_of_the_near_siblings_and_not_the_far_ones(relation_provider):
+    """REQUIREMENT 16'S WITNESS, against the resource itself. The bar declares cause/fast/buy NEAR
+    and land/compass/play/state FAR; at primary-sense resolution WordNet agrees on all seven with no
+    threshold. If nltk moves under us, this is where it shows."""
+    words = ["cause", "fast", "land", "compass", "play", "state"]
+    provider = wn_adapter.WordNetProvider(words, lemma_scope=wn_adapter.SCOPE_WORD)
+
+    def primary_link(word):
+        derived = provider.relations_of_sense(f"{word}.n.01").get("derivational", frozenset())
+        return provider.primary_sense_of_key(f"{word}.v") in derived
+
+    assert primary_link("cause")
+    assert primary_link("fast")
+    for far in ("land", "compass", "play", "state"):
+        assert not primary_link(far), far
+
+
+def test_the_primary_sense_is_named_in_the_resources_own_vocabulary(relation_provider):
+    """`relations` compares it against the targets `relations_of_key` returns, so it must be the
+    same kind of identifier — a synset name, not a tk2 sense key."""
+    assert relation_provider.primary_sense_of_key("land.v") in relation_provider.senses_of_key("land.v")
+    # `hungry` is in this provider's lexicon and has no verb reading: no primary sense to name.
+    assert relation_provider.primary_sense_of_key("hungry.v") is None

@@ -81,7 +81,7 @@ KIND_CURATED_RELATION = "curated_relation"
 KIND_RELATION_SETTING = "relation"
 
 #: The `RelationPolicy` fields a `relation` row may name. Strict for `CLOSURE_SETTINGS`' reason.
-RELATION_SETTINGS = ("lemma_scope", "antonym_symmetry")
+RELATION_SETTINGS = ("lemma_scope", "antonym_symmetry", "derivational_resolution")
 
 #: A setting of the curation mechanism itself — today only the reciprocal weight.
 KIND_CURATION = "curation"
@@ -319,6 +319,8 @@ def relation_policy_from_rows(rows: Iterable[Row]) -> RelationPolicy | None:
             defaults=tuple(defaults),
             lemma_scope=mining.get("lemma_scope"),
             antonym_symmetry=mining.get("antonym_symmetry"),
+            # Absent for v12 and earlier, which mined `derivational` at word resolution.
+            derivational_resolution=mining.get("derivational_resolution"),
         )
     except ValueError as error:
         raise PolicyRowsInvalid(str(error)) from error

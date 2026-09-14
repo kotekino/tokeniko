@@ -64,8 +64,12 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] **T4 — curated edges are INPUTS**, not outputs: `dictionary_curated_edges`, consumed by the
       build, and a build REFUSES when an approved edge names a dimension the base no longer has
 - [x] **T5 — the two lost edges restored as rows** (`db/0005`, unapplied) — `sleep~bed` CLOSED
-- [ ] **THE CAPTAIN'S HAND**: apply `0003` · `0004` · `0005`, then REBUILD and reseal. The bar and
-      the floors are coupled, so re-measure the frontier AFTER the rebuild, never before
+- [x] **REQUIREMENT 16 — `derivational` at primary-sense resolution** (policy v13, `db/0006`,
+      unapplied). Down-weighting was measured impossible; the defect was a resolution mismatch.
+      On a real rebuild of R: best zero-wrong floor 0.10 on a plateau to 0.20, 19 of 37 decided
+- [ ] **THE CAPTAIN'S HAND**: apply `0003` · `0004` · `0005` · `0006`, then REBUILD and reseal
+- [ ] **re-rule the NEAR floor AFTER the rebuild** — the bar and the floors are coupled; at the
+      standing 0.28, v13 decides 17 (one fewer than T5's 18: `buy.n~buy.v` falls to +0.246)
 
 ## E2 — the format (tkzip v2) ✅ COMPLETE 2026-09-14 — see `landed.md`
 

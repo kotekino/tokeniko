@@ -326,6 +326,18 @@ def policy_rows_v11() -> list[dict]:
     return [dict(row) for row in migration(3).POLICY_ROWS]
 
 
+def policy_rows_v13() -> list[dict]:
+    """Version 13's rows — `derivational` mined at primary-sense resolution (`db/0006`)."""
+    return [dict(row) for row in migration(6).POLICY_ROWS]
+
+
+def declared_config_v13():
+    """The policy v13 writes — v12 plus one mining setting. The floor is deliberately NOT moved."""
+    from tk2.dictionary import policy as _policy
+
+    return _policy.config_from_rows(policy_rows_v13(), bar_rows() + bar_rows_v2())
+
+
 def policy_rows_v12() -> list[dict]:
     """Version 12's rows — gloss references, and a stated cell that may decide (`db/0004`)."""
     return [dict(row) for row in migration(4).POLICY_ROWS]

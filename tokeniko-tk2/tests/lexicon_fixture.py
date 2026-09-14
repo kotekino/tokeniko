@@ -475,6 +475,21 @@ class FixtureRelationProvider:
     def relations(self):
         return self._relations
 
+    # -- what primary-sense mining asks (policy v13) --------------------------------------------
+
+    def primary_sense_of_key(self, key):
+        senses = self._senses.get(key, ())
+        return senses[0] if senses else None
+
+    def relations_of_sense(self, sense):
+        """This world states its edges PER KEY, and a key's edges are read as those of its primary
+        sense — which is the only sense-level claim the fixture can make honestly. Any other
+        ordinal states nothing, rather than borrowing the key's edges."""
+        from tk2.dictionary import keys
+
+        _word, _pos, ordinal = keys.split_sense_key(sense)
+        return dict(self._edges.get(keys.base_of(sense), {})) if ordinal == 1 else {}
+
 
 #: What `tk2.dictionary.wordnet.RELATIONS` says, restated here so the pure tests need no corpus.
 #: A `wordnet`-marked test asserts the two agree — a fixture that had drifted from the resource

@@ -859,4 +859,8 @@ def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(c
     assert config.reading.cell_decides is True
     assert not config.reading.decides_by_cell("derivational")
     assert not config.reading.enters_the_cosine("gloss_reference")
+    # Since v13, `derivational` is mined at the dimension's own resolution — requirement 16.
+    from tk2.dictionary.config import DERIVATIONAL_PRIMARY_SENSE
+
+    assert config.relations.derivational_resolution == DERIVATIONAL_PRIMARY_SENSE
     assert dict(config.relations.weights)["derivational"] == 0.45

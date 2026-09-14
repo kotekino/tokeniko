@@ -48,6 +48,7 @@ from tests.seed import (
     declared_config_v10,
     declared_config_v11,
     declared_config_v12,
+    declared_config_v13,
     policy_rows,
     policy_rows_v2,
     policy_rows_v3,
@@ -60,6 +61,7 @@ from tests.seed import (
     policy_rows_v10,
     policy_rows_v11,
     policy_rows_v12,
+    policy_rows_v13,
     ruled_config,
     structural_seeds,
 )
@@ -1035,8 +1037,11 @@ def test_the_dual_read_is_a_row_and_the_ruling_is_the_three_values():
     assert dict(config.relations.weights)["derivational"] == 0.45
 
 
-#: THE STANDING POLICY'S HASH — policy v12 against the live thirty-seven-pair bar.
-STANDING_FINGERPRINT = "b400f6c8aa236f605eb826642f918d2c9a22ad0d4b422edb6b72e97eb807cc2e"
+#: THE STANDING POLICY'S HASH — policy v13 against the live thirty-seven-pair bar.
+STANDING_FINGERPRINT = "969766250c02208048433ee34ecf9ade1c0463c2ee23f67033eb0c5654b99e7a"
+
+#: v12's own hash — gloss references and the deciding cell, still mining `derivational` word-wide.
+V12_FINGERPRINT = "b400f6c8aa236f605eb826642f918d2c9a22ad0d4b422edb6b72e97eb807cc2e"
 
 #: v11's own hash — the two matrices ruled apart, before gloss references were mined into R. A
 #: build read apart must not be able to present the hash of one read blended, and one mining
@@ -1456,7 +1461,7 @@ def test_policy_v12_mines_gloss_references_and_lets_a_stated_cell_decide():
     assert weights[references.GLOSS_REFERENCE] == 0.9
     assert weights[references.GLOSS_REFERENCE_RECIPROCAL] == 0.54
     assert config.reading.cell_decides is True
-    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert config.fingerprint() == V12_FINGERPRINT
 
 
 def test_v12_says_which_relations_may_not_decide_and_which_stay_out_of_the_cosine():
@@ -1528,3 +1533,59 @@ def test_the_closed_classes_are_found_even_when_the_newest_migration_never_decla
 
     found, module = newest_migration_declaring("POLICY_ROWS")
     assert found.number >= 4, "and the newest POLICY is still found the other way"
+
+
+# ------------------------------------------------------------------------------------------------
+# v13 — a dimension is its primary sense, and so is its derivation
+# ------------------------------------------------------------------------------------------------
+
+
+def test_policy_v13_mines_derivational_at_primary_sense_resolution():
+    """REQUIREMENT 16, open since 2026-08-12. The closure reads `senses = "primary"`, so a dimension
+    IS its primary sense — and `derivational` was mined across every sense of the word. Requirement
+    16's own proposed fix (down-weighting the edge) was measured impossible: a weight is a monotone
+    rescale, and `compass.n~compass.v` (FAR) sits above `buy` and `cause` (NEAR) at every scale."""
+    from tk2.dictionary.config import DERIVATIONAL_PRIMARY_SENSE
+
+    config = policy.config_from_rows(policy_rows_v13(), bar_rows() + bar_rows_v2())
+
+    assert config == declared_config_v13()
+    assert config.relations.derivational_resolution == DERIVATIONAL_PRIMARY_SENSE
+    assert config.fingerprint() == STANDING_FINGERPRINT
+    assert declared_config_v12().fingerprint() == V12_FINGERPRINT, "the ledger's promise"
+
+
+def test_v13_does_not_move_the_floor_it_makes_movable():
+    """THE CAPTAIN'S RULING. The 0.10 the measurement proposes was fitted to an APPROXIMATION of the
+    rebuild, and `db/0002`'s lesson is that a floor fitted before the base exists describes a base
+    that is gone. So v13 declares the mining and leaves the floor exactly where v12 had it."""
+    v12 = policy.config_from_rows(policy_rows_v12(), bar_rows()).reading
+    v13 = policy.config_from_rows(policy_rows_v13(), bar_rows()).reading
+
+    assert v13 == v12
+
+
+def test_v13_adds_one_row_and_takes_none_away():
+    from collections import Counter
+
+    before = Counter(r["kind"] for r in policy_rows_v12())
+    after = Counter(r["kind"] for r in policy_rows_v13())
+
+    assert all(after[kind] >= before[kind] for kind in before), "a version may not un-declare"
+    assert sum(after.values()) - sum(before.values()) == 1
+    assert after[policy.KIND_RELATION_SETTING] - before[policy.KIND_RELATION_SETTING] == 1
+
+
+def test_an_unknown_derivational_resolution_is_refused():
+    from dataclasses import replace
+
+    with pytest.raises(ValueError, match="derivational resolution"):
+        replace(declared_config_v13().relations, derivational_resolution="most_senses")
+
+
+def test_the_earlier_versions_keep_saying_nothing_about_the_resolution():
+    """UNDECLARED is not «every_sense», though it reads as the walk those versions ran."""
+    for rows in (policy_rows_v10(), policy_rows_v11(), policy_rows_v12()):
+        relations = policy.relation_policy_from_rows(rows)
+        assert relations.derivational_resolution is None
+        assert "derivational_resolution" not in relations.as_dict()

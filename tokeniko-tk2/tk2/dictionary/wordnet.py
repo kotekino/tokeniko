@@ -348,6 +348,16 @@ class WordNetProvider:
         found = [s for s in self.lemma_synsets(word) if keys.normalize_pos(s.pos()) == pos]
         return found[:1] if senses == "primary" and found else found
 
+    def primary_sense_of_key(self, key: str) -> str | None:
+        """The resource's name for a dimension's PRIMARY sense (`land.v` -> `land.v.01`), or None.
+
+        The sense a dimension IS under the closure's `senses = "primary"` reading, named in the same
+        vocabulary `senses_of_key` and `relations_of_key` speak, so `relations` can ask «is this
+        target the column's own primary sense?» without learning what a synset is.
+        """
+        found = self.synsets_of_key(key, "primary")
+        return found[0].name() if found else None
+
     # -- the RelationProvider: what R is filled from ---------------------------------------------
 
     def senses_of_key(self, key: str) -> tuple[str, ...]:

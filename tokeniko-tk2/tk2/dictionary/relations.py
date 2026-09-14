@@ -48,7 +48,7 @@ from dataclasses import replace
 from typing import Mapping, Protocol, runtime_checkable
 
 from tk2.dictionary import keys
-from tk2.dictionary.config import RelationPolicy
+from tk2.dictionary.config import DERIVATIONAL_PRIMARY_SENSE, RelationPolicy
 from tk2.dictionary.matrix import (
     SOURCE_AXIS,
     SOURCE_MINED,
@@ -330,6 +330,46 @@ def _speakers_of_sense(order, provider: RelationProvider) -> dict[str, list[str]
     return speakers
 
 
+#: The one lemma-stated relation whose sense resolution is a policy row (v13). Named here rather
+#: than spelled inline, because the walk below compares against it twice.
+DERIVATIONAL = "derivational"
+
+
+def _primary_senses_of(order, provider) -> dict[str, str | None]:
+    """dimension -> its primary sense, or a refusal when the provider cannot say.
+
+    Only asked when the policy mines `derivational` at primary-sense resolution, so a fixture that
+    never declares it need not answer — and one that declares it without being able to answer is a
+    policy describing a walk this resource cannot run.
+    """
+    missing = [name for name in ("primary_sense_of_key", "relations_of_sense")
+               if not hasattr(provider, name)]
+    if missing:
+        raise RelationsIncoherent(
+            f"the policy mines `derivational` at primary-sense resolution and this provider cannot "
+            f"answer {missing}. A resolution the resource cannot state is not a resolution."
+        )
+    return {key: provider.primary_sense_of_key(key) for key in order}
+
+
+def _derivational_at_primary_sense(key, stated, provider, primary_of):
+    """`stated` with `derivational` re-read from the dimension's PRIMARY SENSE only — the SOURCE half
+    of the v13 ruling (the target half is in `_candidates`, where the column is known).
+
+    Through `relations_of_sense`, the provider's own one-synset walk: the same walk the sense layer
+    reads, with the same lemma scope, so there is no second set of decisions to drift.
+    """
+    stated = dict(stated)
+    stated.pop(DERIVATIONAL, None)
+    if primary_of.get(key) is None:
+        return stated
+    word, pos = keys.split_key(key)
+    derived = provider.relations_of_sense(keys.sense_key(word, pos, 1)).get(DERIVATIONAL)
+    if derived:
+        stated[DERIVATIONAL] = derived
+    return stated
+
+
 def _candidates(
     order, provider, policy, speakers, progress, antonym_symmetry: str
 ) -> dict[str, dict[str, list[Provenance]]]:
@@ -359,8 +399,19 @@ def _candidates(
                 for column in spoken_by:
                     add(row, column, SYNONYM, synonym)
 
+    # REQUIREMENT 16 (policy v13). A dimension IS its primary sense under the closure's reading,
+    # and `derivational` used to be mined across every sense of the word — which is how
+    # `land.n~land.v`, `compass.n~compass.v` and `play.n~play.v` came to read positive though
+    # WordNet links none of their primary senses. Both ends are restricted: the source here, the
+    # target where the column is known.
+    primary_only = policy.derivational_resolution == DERIVATIONAL_PRIMARY_SENSE
+    primary_of = _primary_senses_of(order, provider) if primary_only else {}
+
     for position, key in enumerate(order, 1):
-        for relation, targets in provider.relations_of_key(key).items():
+        stated = provider.relations_of_key(key)
+        if primary_only:
+            stated = _derivational_at_primary_sense(key, stated, provider, primary_of)
+        for relation, targets in stated.items():
             weight = policy.weight_of(relation)
             reverse = REVERSE_OF.get(relation)
             reverse_weight = policy.weight_of(reverse) if reverse in policy.relations else 0.0
@@ -368,6 +419,10 @@ def _candidates(
                 continue
             for sense in targets:
                 for column in speakers.get(sense, ()):
+                    if primary_only and relation == DERIVATIONAL and primary_of.get(column) != sense:
+                        # The target half: a derivation lands only on the column whose OWN primary
+                        # sense it names — not on every dimension that merely speaks that synset.
+                        continue
                     add(key, column, relation, weight)
                     if reverse:
                         add(column, key, reverse, reverse_weight)

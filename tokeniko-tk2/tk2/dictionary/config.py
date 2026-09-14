@@ -158,6 +158,13 @@ class ClosurePolicy:
 # fingerprint is left describing a walk nobody can reproduce.
 RELATION_RULES = "2026-08-26"
 
+#: `derivational` mined as the prototype did: any sense of the word to any sense of the other.
+DERIVATIONAL_EVERY_SENSE = "every_sense"
+#: `derivational` mined at the dimension's own resolution: its primary sense to the column's.
+DERIVATIONAL_PRIMARY_SENSE = "primary_sense"
+#: Every resolution a `relation` row may name. Strict: an unknown one is a refusal, never a fallback.
+DERIVATIONAL_RESOLUTIONS = frozenset({DERIVATIONAL_EVERY_SENSE, DERIVATIONAL_PRIMARY_SENSE})
+
 
 @dataclass(frozen=True, slots=True)
 class RelationPolicy:
@@ -200,8 +207,35 @@ class RelationPolicy:
     #: separate the three, so it was never a measurement question but whether this being may hold an
     #: opposition the resource never wrote down. `None` for policy v4 and earlier.
     antonym_symmetry: str | None = None
+    #: AT WHICH SENSE RESOLUTION `derivational` IS MINED — `every_sense` (any sense of the word
+    #: derivationally linked to any sense of the other) or `primary_sense` (the dimension's primary
+    #: sense linked to the column's primary sense). Ruled `primary_sense` at policy v13
+    #: (2026-09-14), closing requirement 16.
+    #:
+    #: THE DEFECT WAS A RESOLUTION MISMATCH. The closure reads `senses = "primary"`, so a dimension
+    #: IS its primary sense — while `derivational` was mined across every sense of the word. WordNet
+    #: states derivation between LEMMAS OF SENSES, and it already knows that `land.n.01` («the solid
+    #: part of the earth») is not derivationally related to `land.v.01` («reach or come to rest»).
+    #: Measured over every POS-sibling pair in the base (1,626): 24.1% linked at primary resolution,
+    #: 75.9% not, 0% unanswerable — and on the bar it separates all seven declared siblings, 3 NEAR
+    #: linked and 4 FAR unlinked, with no threshold at all.
+    #:
+    #: Requirement 16's own proposed fix — down-weighting the edge — was measured IMPOSSIBLE: a
+    #: weight is a monotone rescale, and `compass.n~compass.v` (FAR) sits above `buy` and `cause`
+    #: (both NEAR) at every weight.
+    #:
+    #: `None` for policy v12 and earlier, which mined at word resolution and must keep hashing as
+    #: they did. UNDECLARED, not «every_sense» — though it READS as every_sense, because that is
+    #: the walk those versions actually ran.
+    derivational_resolution: str | None = None
 
     def __post_init__(self):
+        if (self.derivational_resolution is not None
+                and self.derivational_resolution not in DERIVATIONAL_RESOLUTIONS):
+            raise ValueError(
+                f"unknown derivational resolution {self.derivational_resolution!r}. The declared "
+                f"resolutions are {sorted(DERIVATIONAL_RESOLUTIONS)}."
+            )
         names = [name for name, _weight in self.weights]
         if len(set(names)) != len(names):
             raise ValueError(f"a relation is weighted twice: {sorted({n for n in names if names.count(n) > 1})}")
@@ -255,6 +289,8 @@ class RelationPolicy:
             out["lemma_scope"] = self.lemma_scope
         if self.antonym_symmetry is not None:
             out["antonym_symmetry"] = self.antonym_symmetry
+        if self.derivational_resolution is not None:
+            out["derivational_resolution"] = self.derivational_resolution
         return out
 
 

@@ -13,8 +13,8 @@ Captain moves it.
 
 import pytest
 
-from tests.lexicon_fixture import FixtureRelationProvider
-from tests.seed import relation_policy_v4, relation_policy_v5
+from tests.lexicon_fixture import WORDNET_RELATION_NAMES, FixtureRelationProvider
+from tests.seed import relation_policy, relation_policy_v4, relation_policy_v5
 from tk2.dictionary import keys, matrix, relations
 from tk2.dictionary.config import RelationPolicy
 
@@ -465,3 +465,85 @@ def test_the_fingerprint_moves_when_the_key_space_is_re_ordered(R):
     assert matrix.fingerprint(
         matrix.Matrix(name=R.name, keys=tuple(reversed(R.keys)), rows=R.rows)
     ) != matrix.fingerprint(R)
+
+
+# ------------------------------------------------------------------------------------------------
+# REQUIREMENT 16 — `derivational` at primary-sense resolution (policy v13)
+# ------------------------------------------------------------------------------------------------
+
+
+def _primary_world():
+    """Two POS siblings whose derivation runs between the WRONG senses, and one pair whose primary
+    senses are genuinely linked. `land.n`'s primary is «the solid ground»; the fixture's
+    `derivational` edge from it points at `land.v.02`, a secondary verb sense — exactly the shape
+    WordNet gives `land`, `compass` and `play`."""
+    senses = {
+        "land.n": ("land.n.01",),
+        "land.v": ("land.v.01", "land.v.02"),
+        "cause.n": ("cause.n.01",),
+        "cause.v": ("cause.v.01",),
+    }
+    edges = {
+        "land.n": {"derivational": frozenset({"land.v.02"})},
+        "cause.n": {"derivational": frozenset({"cause.v.01"})},
+    }
+    return FixtureRelationProvider(senses=senses, edges=edges)
+
+
+def _policy_at(resolution):
+    from dataclasses import replace
+
+    return replace(relation_policy(), derivational_resolution=resolution)
+
+
+def test_a_derivation_between_secondary_senses_does_not_reach_the_primary_ones():
+    """`land.n~land.v` is declared FAR and read +0.410 in the prototype — requirement 16. The
+    derivation WordNet states is between senses the dimensions do not mean."""
+    from tk2.dictionary.config import DERIVATIONAL_EVERY_SENSE, DERIVATIONAL_PRIMARY_SENSE
+
+    keys_ = ("land.n", "land.v", "cause.n", "cause.v")
+    wide = relations.build(keys_, _primary_world(), _policy_at(DERIVATIONAL_EVERY_SENSE))
+    narrow = relations.build(keys_, _primary_world(), _policy_at(DERIVATIONAL_PRIMARY_SENSE))
+
+    assert wide.rows[0].cell("land.v") is not None, "word-wide, the secondary sense lands"
+    assert narrow.rows[0].cell("land.v") is None, "at primary resolution it does not"
+
+
+def test_a_derivation_between_primary_senses_survives_the_narrowing():
+    """`cause.n.01 <-> cause.v.01` is linked, and the declared NEAR must not be lost."""
+    from tk2.dictionary.config import DERIVATIONAL_PRIMARY_SENSE
+
+    keys_ = ("land.n", "land.v", "cause.n", "cause.v")
+    narrow = relations.build(keys_, _primary_world(), _policy_at(DERIVATIONAL_PRIMARY_SENSE))
+
+    kept = narrow.rows[2].cell("cause.v")
+    assert kept is not None and kept.relation == "derivational"
+
+
+def test_primary_resolution_is_refused_by_a_provider_that_cannot_name_a_primary_sense():
+    """A resolution the resource cannot state is not a resolution — and a default here would be a
+    walk the manifest cannot vouch for."""
+    from tk2.dictionary.config import DERIVATIONAL_PRIMARY_SENSE
+
+    class Blind:
+        def senses_of_key(self, key):
+            return ("x.n.01",)
+
+        def relations_of_key(self, key):
+            return {}
+
+        def relations(self):
+            return WORDNET_RELATION_NAMES
+
+    with pytest.raises(relations.RelationsIncoherent, match="primary-sense resolution"):
+        relations.build(("x.n",), Blind(), _policy_at(DERIVATIONAL_PRIMARY_SENSE))
+
+
+def test_every_other_relation_is_untouched_by_the_resolution():
+    """Only `derivational` is re-read. `entails`, `causes` and the rest keep their walk."""
+    from tk2.dictionary.config import DERIVATIONAL_EVERY_SENSE, DERIVATIONAL_PRIMARY_SENSE
+
+    wide = relations.build(KEYS, FixtureRelationProvider(), _policy_at(DERIVATIONAL_EVERY_SENSE))
+    narrow = relations.build(KEYS, FixtureRelationProvider(), _policy_at(DERIVATIONAL_PRIMARY_SENSE))
+
+    assert matrix.fingerprint(wide) == matrix.fingerprint(narrow)

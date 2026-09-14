@@ -495,10 +495,23 @@ chapter as written, never against what was ruled later.**
    and date carried, because this restores a decision rather than making a new one. **`sleep~bed`
    closes** — the pair the 2026-08-12 review called the one only R gets right.
 
-**Done when:** ~~the bar is re-scored…~~ **MEASURED 2026-09-14: 13 → 18 of 37 decided, 0 wrong**,
-with requirements 2, 10, 14, 19 and 20 satisfied and 16 the only one still open. **What remains is
-the Captain's hand**: apply `0003`, `0004`, `0005`, then REBUILD and reseal. The bar and the floors
-are coupled (`db/0002`'s lesson), so the frontier is re-measured AFTER the rebuild, never before.
+6. ~~**REQUIREMENT 16**~~ **— CLOSED 2026-09-14 (policy v13, `db/0006`, unapplied).** Requirement
+   16's own proposed fix — down-weighting `derivational` — was measured IMPOSSIBLE: a weight is a
+   monotone rescale and `compass.n~compass.v` (FAR) sits above `buy` and `cause` (NEAR) at every
+   scale. A D threshold failed on the population (it landed on the median of 1,626 sibling pairs).
+   **The defect was a resolution mismatch**: the closure reads `senses = "primary"`, so a dimension IS
+   its primary sense, while `derivational` was mined across every sense. Mined at primary-sense
+   resolution it separates all seven declared siblings with no threshold. On a real rebuild of R:
+   `derivational` 5,964 → 1,719 cells, `compass` +0.273 → +0.095, and the best zero-wrong floor is
+   0.10 on a plateau to 0.20 (19 of 37). **The floor is NOT moved** (the Captain's ruling): at the
+   standing 0.28 v13 decides 17, one fewer than T5 (`buy.n~buy.v` falls to +0.246), so the re-ruling
+   after the rebuild is a real dependency.
+   **Decision record: `docs/dictionary/202609141714_requirement-16.md`.**
+
+**Done when:** ~~the bar is re-scored…~~ **MEASURED 2026-09-14: every requirement the audit marked
+REFUTED, LOST, CONTRADICTED or open is now closed** — 2, 10, 14, 16, 19, 20. **What remains is the
+Captain's hand**: apply `0003`, `0004`, `0005`, `0006`, then REBUILD and reseal, then **re-measure the
+frontier and rule the NEAR floor** against the base that actually exists (`db/0002`'s lesson).
 
 *T2 precedes T3: «did it close?» cannot be answered while the verdict is a blend.*
 

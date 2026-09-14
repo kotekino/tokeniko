@@ -49,6 +49,13 @@ def R(provider, policy):
         def relations(self):
             return WORDNET_RELATION_NAMES
 
+        def primary_sense_of_key(self, key):
+            senses = provider.senses_of_key(key)
+            return senses[0] if senses else None
+
+        def relations_of_sense(self, sense):
+            return {}
+
     return relations.build(("bed.n", "furniture.n", "left.a", "left.n", "sleep.v"), _Silent(), policy)
 
 
