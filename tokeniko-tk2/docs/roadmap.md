@@ -50,6 +50,16 @@ words / 120,475 senses ride ON it and are **not built** — an open dictionary t
 - [x] **120,475 senses placed (96.9%), 816,309 cells, sealed and read back whole**
 - [x] the manifest names its own build (a T5 finding that became real when two builds shared a policy)
 
+## E1d — the audit's repairs *(opened 2026-09-14, after the `docs/dictionary/` audit)*
+- [x] the audit written into the chapter, 21 statuses corrected — `docs/dictionary/202609141115_the-e1-audit.md`
+- [ ] **T2 — SEPARATE READS** (req 10): the reader returns two answers, each naming its source;
+      `space.py` stops returning `cos(R + 0.15·D)`
+- [ ] **T3 — mine `gloss_reference` into R** and measure against the bar (req 2: «eat's definition
+      NAMES food» is the signal D was never going to carry); the Captain rules the weight after
+      the measurement
+- [ ] **T4 — the curation guard**: a rebuild cannot silently drop curated rows
+- [ ] **T5 — re-approve the two lost edges** (`sleep~bed`, `eat~hungry`) — the Captain's hand
+
 ## E2 — the format (tkzip v2) ✅ COMPLETE 2026-09-14 — see `landed.md`
 
 ## E3 — the station (parser/compiler)

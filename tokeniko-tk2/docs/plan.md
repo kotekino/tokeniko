@@ -451,6 +451,47 @@ whether a sense-to-base reading is judged by the same numbers is E3's question, 
 
 ---
 
+---
+
+## E1d — The audit's repairs *(opened 2026-09-14)*
+
+**Why it exists.** At E2's close the Captain called in a parked order: *«go through all the docs of
+`tokeniko-tk2/docs/<chapter>` and see if we missed something in the old requirements.»* The
+`docs/dictionary/` audit measured all 21 requirements against the sealed build and found **11 clean ·
+6 partial · 2 lost · 1 contradicted by construction · 1 superseded**.
+
+**His framing, and it governs the epic:** *«as you were wrong in not taking into consideration the
+full list of reqs, so was I. We are not searching the blame. I would like to not have bias: if we
+ruled in some direction, it is not relevant. What is relevant is the final status, how much it differs
+from all the original requirements, and what we can do to fix.»* **So E1d is judged against the
+chapter as written, never against what was ruled later.**
+
+**Tasks**
+1. ~~**The audit, written in**~~ **— DONE 2026-09-14.** `docs/dictionary/202609141115_the-e1-audit.md`;
+   21 statuses corrected in place, the original wording left untouched because what a requirement SAID
+   is part of the record.
+2. **SEPARATE READS (req 10)** — the requirement says R and D are *«consulted separately, every answer
+   naming its source, never blended into one float»*, and `distribution.py`'s own docstring repeats it,
+   while `space.py` returns `cos(R + 0.15·D)`. **Ruled 2026-09-14: separate.** The verdict shape
+   changes; req 19's dual read (cosine AND direct cell) becomes what the verdict actually uses.
+3. **MINE `gloss_reference` INTO R (req 2)** — `eat~food` is refuted at scale because their glosses
+   share nothing: D measures what two definitions SHARE, and the real relation is that *eat's
+   definition NAMES food*. Both edges the Captain curated by hand are instances of that one rule, and
+   the signal is already computed by `glosses.lexicon_words_in` and thrown away. Measured caveats:
+   roughly doubles R, and carries noise (`bed`'s gloss also names *furniture, ground, plants*).
+   **The Captain rules the weight AFTER the measurement, never before.**
+4. **THE CURATION GUARD** — the built base has zero curated cells: both hand-approved edges lived in
+   the prototype db, which E1b dropped, and nothing checked. A rebuild must not be able to drop
+   curated rows silently.
+5. **RE-APPROVE THE TWO LOST EDGES** — `sleep~bed` (`used_for`) and `eat~hungry` (`state_of`), the
+   Captain's hand, reciprocal at 0.60 per the standing convention.
+
+**Done when:** the bar is re-scored under separate reads with `gloss_reference` mined and the curated
+edges restored, and every requirement that this audit marked REFUTED, LOST or CONTRADICTED is either
+satisfied or re-ruled out loud.
+
+*T2 precedes T3: «did it close?» cannot be answered while the verdict is a blend.*
+
 ## E2 — The format *(tkzip v2)* — ✅ **COMPLETE 2026-09-14**
 
 **Goal:** the fixed-arity zip — limit B dies on paper before any code. The schema answers every open
