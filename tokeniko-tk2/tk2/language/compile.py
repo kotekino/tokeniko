@@ -63,7 +63,7 @@ RELATION_FILLS_ROLE: dict[str, Role] = {
 }
 
 #: UD POS → the dictionary's POS letter. Only the content classes: a function word never earns a key.
-POS_LETTER = {"NOUN": "n", "PROPN": "n", "VERB": "v", "ADJ": "a", "ADV": "r"}
+POS_LETTER = {"NOUN": "n", "PROPN": "n", "VERB": "v", "AUX": "v", "ADJ": "a", "ADV": "r"}
 
 #: The relations that hang a NOMINAL off a head — the candidates for a box.
 NOMINAL_DEPS = frozenset({"nsubj", "obj", "iobj", "obl", "nmod"})
@@ -132,23 +132,45 @@ class Compiler:
         abstained: list[str] = []
         prefix_rows: list = []
         content: dict[int, ContentRow] = {}
+        open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
+        wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
 
         for position, head in enumerate(heads):
             mine = {i for i, h in owner.items() if h == head.index}
             content[head.index] = self._clause(
-                skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}")
+                skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
+                open_truth, wants_antecedent)
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
+        extra = self._ask(content, joins, open_truth, wants_antecedent)
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
 
-        rows = [*prefix_rows, *content.values(), *joins]
+        rows = [*prefix_rows, *content.values(), *extra, *joins]
         return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
                         abstained=tuple(abstained))
 
     # -- the clauses ------------------------------------------------------------------------------
+
+    def _is_copular_root(self, head: Word, skeleton: Skeleton, marks: dict) -> bool:
+        """Is this root `be` doing COPULAR work, and therefore earning no predicate (req 31)?
+
+        «Where is the cat?» has `be` as its root because there is no other verb — and it is still
+        glue: the question is a LOCATION box on a row about the cat. But **existential `be` IS
+        content** and req 31 says so («there is a cat»), so the expletive is what separates them.
+
+        The row for `be` already states the conditional («structure when `cop`»); this is the same
+        judgement one dependency further out, where the word is the root and there is no `cop` to
+        read.
+        """
+        if head.upos != "AUX":
+            return False
+        match = marks.get(head.index)
+        if match is None or match.compiled.get("when") != "cop":
+            return False
+        return not any(child.bare_dep == "expl" for child in skeleton.children(head.index))
 
     def _clause_heads(self, skeleton: Skeleton) -> list[Word]:
         """The root, and every word that opens a clause of its own — in sentence order.
@@ -184,14 +206,21 @@ class Compiler:
         return owner
 
     def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
-                covered: set[int], prefix_rows: list, abstained: list, name: str) -> ContentRow:
+                covered: set[int], prefix_rows: list, abstained: list, name: str,
+                open_truth: set, wants_antecedent: set) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
         predicate = None
         copular = False
 
-        if head.upos in ("VERB", "AUX"):
+        if self._is_copular_root(head, skeleton, marks):
+            # `be` as root, doing copular work: it earns NO predicate (req 31) and no box either —
+            # it is glue, and «Where is the cat?» is a LOCATION question about the cat, not a claim
+            # about `be`. The subject becomes the topic through `copular` below.
+            covered.add(head.index)
+            copular = True
+        elif head.upos in ("VERB", "AUX"):
             predicate = self._key(head)
             covered.add(head.index)
         else:
@@ -206,7 +235,8 @@ class Compiler:
             match = marks.get(index)
             if match is not None:
                 covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
-                                                    abstained, copular, name))
+                                                    abstained, copular, name,
+                                                    open_truth, wants_antecedent))
                 continue
             role = self._role_of(word, skeleton, marks, copular)
             if role is not None and role not in boxes:
@@ -292,6 +322,34 @@ class Compiler:
             if row.truth is None and row.name not in unasserted:
                 row.truth = CLAIMED
         return joins
+
+    def _ask(self, content: dict, joins: list, open_truth: set, wants_antecedent: set) -> list:
+        """The two questions that are not boxes: an OPEN truth, and an unknown antecedent.
+
+        Both are done after the clauses exist, because both are about a ROW rather than about a word:
+        «whether» opens the truth of the clause it introduces, and «why» needs a second row to imply
+        the first.
+        """
+        raised = []
+        by_name = {row.name: row for row in content.values()}
+
+        for name in open_truth:
+            row = by_name.get(name)
+            if row is not None:
+                # «Is the cat hungry?» — every box bound, and the TRUTH is what is asked (E2).
+                row.truth = Open()
+
+        for name in wants_antecedent:
+            row = by_name.get(name)
+            if row is None:
+                continue
+            # A wholly OPEN row implying the one that was asserted. There is no cause box (req 37),
+            # and this is the shape the collapse left in place of one.
+            unknown = ContentRow(name=f"{name}_why", predicate=Open())
+            raised.append(unknown)
+            joins.append(JoinRow(name=f"j{len(joins)}", operator=Operator.IMPLY,
+                                 operands=[unknown.name, row.name], truth=CLAIMED))
+        return raised
 
     def _enclosing(self, skeleton: Skeleton, head: Word, content: dict) -> Word | None:
         """The clause this one hangs off — its head's own clause."""
@@ -433,6 +491,11 @@ class Compiler:
             elif kind == "field" and match.compiled.get("field") == "relation":
                 # the possessive clitic: «the Chair 's office» — the possessor is a FIELD (req 26)
                 covered.add(child.index)
+            elif kind == "open" and match.compiled.get("opens") == "field":
+                # «WHOSE cat sleeps?» — the possessor is asked. It is a FIELD of the record (req 26),
+                # so the question opens the field rather than adding a box.
+                relation = Open()
+                covered.add(child.index)
             elif kind == "entity" and child.dep in ("nmod:poss", "det:poss"):
                 # «MY friend» — a possessive pronoun is indexical, so the possessor is OPEN and
                 # resolved from context, never `my.n`.
@@ -463,10 +526,14 @@ class Compiler:
 
     def _compile_closed(self, word: Word, match, skeleton: Skeleton, boxes: dict,
                         prefix_rows: list, abstained: list,
-                        copular: bool = False, scopes: str = "r0") -> set[int]:
+                        copular: bool = False, scopes: str = "r0",
+                        open_truth: set | None = None,
+                        wants_antecedent: set | None = None) -> set[int]:
         """What a closed-class form does to the zip. Returns the token indices it accounted for."""
         kind = match.kind
         taken = {word.index + n for n in range(match.length)}
+        open_truth = open_truth if open_truth is not None else set()
+        wants_antecedent = wants_antecedent if wants_antecedent is not None else set()
 
         if kind == "prefix":
             element = match.compiled.get("element")
@@ -494,6 +561,43 @@ class Compiler:
             if not match.settled_role and len(match.roles) > 1:
                 abstained.append(f"{match.form}: {'|'.join(match.roles)}")
             return taken
+
+        if kind == "open" and match.compiled.get("opens"):
+            # **A QUESTION IS SOMETHING OPEN** — there is no mood field (E2). Which slot, the row
+            # says; five kinds, and three of them are not boxes at all.
+            opens = match.compiled["opens"]
+
+            if opens == "box":
+                boxes[Role(match.compiled["role"])] = Box(head=Open(), sense=Open())
+                return taken
+
+            if opens == "participant":
+                # The role arrives by RELATION, exactly as it does for every other nominal
+                # (req 12): «WHO sleeps» is `nsubj` and «WHAT did you eat» is `obj`.
+                role = (RELATION_FILLS_ROLE.get(word.dep)
+                        or RELATION_FILLS_ROLE.get(word.bare_dep))
+                if role is not None and role not in boxes:
+                    boxes[role] = Box(head=Open(), sense=Open())
+                    return taken
+                abstained.append(f"{match.form}: a participant, and the relation does not say which")
+                return set()
+
+            if opens == "truth":
+                # The polar question, in its subordinate spelling: every box bound, truth OPEN.
+                open_truth.add(scopes)
+                return taken
+
+            if opens == "antecedent":
+                # **THERE IS NO CAUSE BOX TO OPEN** (req 37): «why do you sleep?» asks for an
+                # unknown row implying this one. The antecedent is raised in `_relate`, where the
+                # rows exist to be joined.
+                wants_antecedent.add(scopes)
+                return taken
+
+            if opens == "field":
+                # «WHOSE cat sleeps?» — the possessor is a field of the record (req 26). It is set
+                # on the box its noun builds, so nothing is done here but accounting for the word.
+                return taken
 
         if kind == "entity":
             # A PRONOUN FILLS ITS BOX. «I sleep» has an agent — it is not an unplaced word. Content

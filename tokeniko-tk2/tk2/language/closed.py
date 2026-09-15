@@ -231,8 +231,15 @@ class ClosedClasses:
         return narrowed[0]
 
     def read(self, tokens: Sequence[str], at: int = 0, upos: str | None = None,
-             dep: str | None = None, head_dep: str | None = None) -> Match | None:
+             dep: str | None = None, head_dep: str | None = None,
+             in_root_clause: bool | None = None) -> Match | None:
         """`match` and `select` together — what a compiler calls once per token position.
+
+        `in_root_clause` is tk1's R5 test, and it is what tells an INTERROGATIVE `who` from a
+        RELATIVE one. Both are `nsubj` of their own clause and no label separates them: «WHO sleeps»
+        asks, «the cat WHO sleeps» describes — and the difference is whether the clause hangs off
+        the root or off a noun. The dependency alone cannot say, so the caller that holds the
+        skeleton does.
 
         `head_dep` is the dependency of the word this token ATTACHES TO, and it is what settles an
         ambiguous marker. UD puts `case` on the marker and the informative label on the nominal:
@@ -246,6 +253,14 @@ class ClosedClasses:
         row = self.select(form, upos, dep)
         if row is None:
             return None
+        # A wh-word in the ROOT clause asks; one inside a relative clause describes. The table holds
+        # both readings of `who`, `when`, `where` and `which`, and this is the only evidence there
+        # is for choosing — R5, earned by tk1 on live specimens.
+        if in_root_clause is not None and row["role"] in ("interrogative", "relative"):
+            wanted = "interrogative" if in_root_clause else "relative"
+            better = next((r for r in self._by_form[form] if r["role"] == wanted), None)
+            if better is not None:
+                row = better
         candidates = self._by_form[form]
         certain = len(candidates) == 1 or bool(upos or dep)
         compiled = dict(row.get("compiled") or {})
@@ -280,7 +295,8 @@ class ClosedClasses:
             word = words[i]
             head = words[word.head]
             found = self.read(skeleton.tokens, i, word.upos, word.dep,
-                              head_dep=None if head.index == word.index else head.dep)
+                              head_dep=None if head.index == word.index else head.dep,
+                              in_root_clause=skeleton.attaches_to_root(i))
             if found is None:
                 i += 1
                 continue

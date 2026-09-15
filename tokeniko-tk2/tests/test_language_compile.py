@@ -346,11 +346,156 @@ def test_an_xcomp_stays_inside_its_clause(compiler):
     assert "xcomp" not in CLAUSE_DEPS
 
 
-def test_many_rows_raised_the_floor(compiler):
-    """20 of 25 whole and 95.8% mean, up from 18 and 89.5% before joins existed."""
+
+
+# ------------------------------------------------------------------------------------------------
+# WH-WORDS — «a question is something OPEN», and five kinds of open
+# ------------------------------------------------------------------------------------------------
+
+WHEN = skeleton_from_conllu("When do you sleep ?", [
+    ("1", "When", "when", "ADV", "4", "advmod"),
+    ("2", "do", "do", "AUX", "4", "aux"),
+    ("3", "you", "you", "PRON", "4", "nsubj"),
+    ("4", "sleep", "sleep", "VERB", "0", "root"),
+    ("5", "?", "?", "PUNCT", "4", "punct"),
+])
+
+WHO = skeleton_from_conllu("Who sleeps ?", [
+    ("1", "Who", "who", "PRON", "2", "nsubj"),
+    ("2", "sleeps", "sleep", "VERB", "0", "root"),
+    ("3", "?", "?", "PUNCT", "2", "punct"),
+])
+
+WHAT = skeleton_from_conllu("What did you eat ?", [
+    ("1", "What", "what", "PRON", "4", "obj"),
+    ("2", "did", "do", "AUX", "4", "aux"),
+    ("3", "you", "you", "PRON", "4", "nsubj"),
+    ("4", "eat", "eat", "VERB", "0", "root"),
+    ("5", "?", "?", "PUNCT", "4", "punct"),
+])
+
+WHY = skeleton_from_conllu("Why do you sleep ?", [
+    ("1", "Why", "why", "ADV", "4", "advmod"),
+    ("2", "do", "do", "AUX", "4", "aux"),
+    ("3", "you", "you", "PRON", "4", "nsubj"),
+    ("4", "sleep", "sleep", "VERB", "0", "root"),
+    ("5", "?", "?", "PUNCT", "4", "punct"),
+])
+
+WHOSE = skeleton_from_conllu("Whose cat sleeps ?", [
+    ("1", "Whose", "whose", "PRON", "2", "nmod:poss"),
+    ("2", "cat", "cat", "NOUN", "3", "nsubj"),
+    ("3", "sleeps", "sleep", "VERB", "0", "root"),
+    ("4", "?", "?", "PUNCT", "3", "punct"),
+])
+
+#: «The cat who sleeps is mine» — the SAME `who`, describing rather than asking.
+WHO_RELATIVE = skeleton_from_conllu("The cat who sleeps is mine .", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "cat", "cat", "NOUN", "6", "nsubj"),
+    ("3", "who", "who", "PRON", "4", "nsubj"),
+    ("4", "sleeps", "sleep", "VERB", "2", "acl:relcl"),
+    ("5", "is", "be", "AUX", "6", "cop"),
+    ("6", "mine", "mine", "PRON", "0", "root"),
+    ("7", ".", ".", "PUNCT", "6", "punct"),
+])
+
+
+def test_a_wh_word_OPENS_the_box_it_asks_about(compiler):
+    """«There is no mood field» (E2): a question IS something open. «When do you sleep?» is the same
+    row as «you sleep», with the TIME box open instead of absent."""
+    out = compiler.compile(WHEN)
+    row = out.zip.rows[-1]
+
+    assert isinstance(row.boxes[Role.TIME].head, Open)
+    assert row.predicate == "sleep.v"
+    assert out.coverage == 1.0
+
+
+def test_a_participant_question_takes_its_role_from_the_RELATION(compiler):
+    """`who` and `what` name no role — the dependency does, exactly as it does for every other
+    nominal (req 12). A role written in the row would be a third place the same fact lives."""
+    who, what = compiler.compile(WHO), compiler.compile(WHAT)
+
+    assert isinstance(who.zip.rows[-1].boxes[Role.AGENT].head, Open), "nsubj -> agent"
+    assert isinstance(what.zip.rows[-1].boxes[Role.PATIENT].head, Open), "obj -> patient"
+    assert who.coverage == what.coverage == 1.0
+
+
+def test_WHY_asks_for_an_ANTECEDENT_because_there_is_no_cause_box(compiler):
+    """REQ 37, PAYING FOR ITSELF. There is no CAUSE relation — a cause is IMPLY read with the
+    theatre's arrow — so «why do you sleep?» cannot open a cause box. It asks for an unknown ROW
+    implying the one that was asserted, and the format already had that shape."""
+    out = compiler.compile(WHY)
+    asked = next(r for r in rows_of(out, "content") if r.predicate == "sleep.v")
+    unknown = next(r for r in rows_of(out, "content") if r is not asked)
+    join = rows_of(out, "join")[0]
+
+    assert isinstance(unknown.predicate, Open) and not unknown.boxes, "wholly open"
+    assert join.operator is Operator.IMPLY
+    assert join.operands == [unknown.name, asked.name], "the unknown implies the claim"
+    assert asked.truth == 1.0, "the sleeping is asserted; only its antecedent is asked"
+
+
+def test_WHOSE_opens_the_possessor_FIELD_and_adds_no_box(compiler):
+    """The possessor lives inside the record (req 26), so asking about it opens a field."""
+    out = compiler.compile(WHOSE)
+    box = out.zip.rows[-1].boxes[Role.AGENT]
+
+    assert box.head == "cat.n"
+    assert isinstance(box.relation, Open)
+    assert out.coverage == 1.0
+
+
+def test_the_SAME_word_asks_in_a_root_clause_and_describes_in_a_relative_one(compiler):
+    """tk1's R5, deciding a question the dependency cannot: «WHO sleeps» and «the cat WHO sleeps»
+    are both `nsubj` of their own clause, and only the clause's own attachment separates them."""
+    asking = compiler.compile(WHO).zip.rows[-1]
+    describing = compiler.compile(WHO_RELATIVE)
+
+    assert isinstance(asking.boxes[Role.AGENT].head, Open), "a question: the agent is asked"
+
+    sleeping = next(r for r in rows_of(describing, "content") if r.predicate == "sleep.v")
+    assert isinstance(sleeping.boxes[Role.AGENT].head, Var), "a description: the agent is the cat"
+    assert describing.coverage == 1.0
+
+
+def test_copular_be_as_ROOT_still_earns_no_predicate(compiler):
+    """«Where is the cat?» has `be` as its root because there is no other verb, and it is still glue
+    (req 31): the question is a LOCATION box on a row about the cat."""
+    out = compiler.compile(skeleton_from_conllu("Where is the cat ?", [
+        ("1", "Where", "where", "ADV", "2", "advmod"),
+        ("2", "is", "be", "AUX", "0", "root"),
+        ("3", "the", "the", "DET", "4", "det"),
+        ("4", "cat", "cat", "NOUN", "2", "nsubj"),
+        ("5", "?", "?", "PUNCT", "2", "punct"),
+    ]))
+    row = out.zip.rows[-1]
+
+    assert row.predicate is None, "no `be.v`, and certainly no `be.n`"
+    assert isinstance(row.boxes[Role.LOCATION].head, Open)
+    assert row.boxes[Role.TOPIC].head == "cat.n"
+
+
+def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
+    """Req 31 names the exception: «there is a cat» is content, not glue. The expletive is what
+    separates it from the copular reading."""
+    out = compiler.compile(skeleton_from_conllu("There is a cat .", [
+        ("1", "There", "there", "PRON", "2", "expl"),
+        ("2", "is", "be", "AUX", "0", "root"),
+        ("3", "a", "a", "DET", "4", "det"),
+        ("4", "cat", "cat", "NOUN", "2", "nsubj"),
+        ("5", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+
+    assert out.zip.rows[-1].predicate == "be.v", "content, and a VERB key"
+
+
+def test_wh_words_raised_the_floor_again(compiler):
+    """21 of 25 whole and 96.8% mean, from 20 and 95.8% before the wh-words compiled."""
     scored = [compiler.compile(c.skeleton) for c in CASES]
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
-    assert full >= 20, f"{full} of {len(CASES)} whole; 20 were on 2026-09-15"
-    assert mean >= 0.95, f"mean {mean:.1%}; it was 95.8% on 2026-09-15"
+    assert full >= 21, f"{full} of {len(CASES)} whole; 21 were on 2026-09-15"
+    assert mean >= 0.96, f"mean {mean:.1%}; it was 96.8% on 2026-09-15"

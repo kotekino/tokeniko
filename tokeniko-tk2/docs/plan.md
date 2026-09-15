@@ -673,9 +673,13 @@ it).
    operator set and no relation field. It needed **closed classes v4** (`db/0010`) first, because
    «if» and «because» carried IDENTICAL rows and nothing in the dependency tree separates them
    either — the assertion status is knowledge about the word.
-   **WHAT REMAINS:** the wh-word's box («when do you sleep?» opens a slot and nothing says which),
-   embedded questions, and the thirteen ambiguous markers (the head-verb geometry, which needs the
-   dictionary in the loop). Context-as-argument is untouched; nothing has needed it yet.
+   ~~**WHAT REMAINS:** the wh-word's box~~ **DONE 2026-09-15** (`db/0011`, record
+   `202609151555_the-wh-words.md`): five kinds, and three of them are not boxes — `whether` opens
+   the TRUTH, `whose` a FIELD, and **`why` an ANTECEDENT**, because req 37 left no cause box to
+   open and the shape was already in the format. **21 of 25 whole, mean 96.8%.**
+   **WHAT REMAINS:** embedded questions, and the thirteen ambiguous markers — the head-verb
+   geometry, which needs the dictionary in the loop and is the last big piece of the 37 → 18
+   mapping. Context-as-argument is untouched; nothing has needed it yet.
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
