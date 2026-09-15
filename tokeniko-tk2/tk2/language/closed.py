@@ -177,18 +177,27 @@ class ClosedClasses:
         if len(rows) == 1:
             return rows[0]
 
+        # **THE DEPENDENCY GOES FIRST, AND IT OUTRANKS THE POS.** Found on a live parse, 2026-09-15:
+        # stanza reads «He looked UP» as `upos=ADP, dep=compound:prt` — the tag says «adposition»
+        # and the relation says «this is the verb's particle». Narrowing by POS first kept the two
+        # ADP rows, threw away the particle row, and returned a DIRECTION marker for a phrasal verb.
+        #
+        # The order is not a preference: a POS tag labels a token in isolation, a dependency states
+        # its RELATION to the rest of the sentence, and the job this table records is a relational
+        # fact. Where the two disagree the relation is the better witness — which is also why
+        # `compound:prt` must be matched as the full label, not bared to `compound`.
         narrowed = rows
-        if upos:
-            classes = UD_POS_TO_WORD_CLASS.get(upos.upper(), ())
-            kept = [r for r in narrowed if r["word_class"] in classes]
-            narrowed = kept or narrowed
         if dep:
-            allowed = UD_DEP_TO_ROLE.get(dep.split(":")[0] if dep not in UD_DEP_TO_ROLE else dep)
+            allowed = UD_DEP_TO_ROLE.get(dep) or UD_DEP_TO_ROLE.get(dep.split(":")[0])
             if allowed:
                 kept = [r for r in narrowed if r["role"] in allowed]
                 if kept:
                     # the table's own order is the tie-break, and `allowed` is best-first
                     narrowed = sorted(kept, key=lambda r: allowed.index(r["role"]))
+        if upos and len(narrowed) > 1:
+            classes = UD_POS_TO_WORD_CLASS.get(upos.upper(), ())
+            kept = [r for r in narrowed if r["word_class"] in classes]
+            narrowed = kept or narrowed
         return narrowed[0]
 
     def read(self, tokens: Sequence[str], at: int = 0, upos: str | None = None,
@@ -253,9 +262,16 @@ def standing_closed_classes(db_name: str | None = None) -> ClosedClasses:
     """
     if db_name:
         from tk2.core.models import ClosedClassDoc
-        from tk2.datatier import traps
+        from tk2.datatier.client import database
 
-        rows = [r.model_dump() for r in traps.find_all(ClosedClassDoc)]
+        # READ THROUGH PYMONGO, not the ODM. `policy_source`'s live readers assume the caller has
+        # already booted bunnet — true inside a tool, false in a bare script, and the failure is an
+        # `AttributeError: _inheritance_inited` from deep inside the ODM rather than anything that
+        # names the real problem. These rows are `logic (r)`: nothing here writes them, and the
+        # write classes are enforced on the WRITE path, so reading them raw costs no protection and
+        # buys a reader that works wherever it is called from. The guard still has the last word —
+        # `database()` refuses anything not whitelisted, by name, before a query is possible.
+        rows = list(database(db_name)[ClosedClassDoc.Settings.name].find({}, {"_id": 0}))
         if rows:
             version = max(r["version"] for r in rows)
             return ClosedClasses(rows, f"{db_name}.{ClosedClassDoc.Settings.name} v{version}")

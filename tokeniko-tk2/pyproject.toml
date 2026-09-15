@@ -40,6 +40,7 @@ pythonpath = ["."]
 markers = [
     "mongo: needs a live local MongoDB (runs against the sandbox test db, dropped afterwards)",
     "wordnet: needs nltk and the local WordNet corpus (the pure engine is tested without either)",
+    "skeleton: needs stanza and its English models (~400 MB and seconds to load; the station is tested against hand-written skeletons, and this marks the few that call the real provider)",
 ]
 
 [tool.taskipy.tasks]
