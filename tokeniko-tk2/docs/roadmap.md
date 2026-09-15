@@ -32,7 +32,11 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [ ] **the placement floor** — inherited from E1c/E1d, measured 2026-09-14: the base's +0.15 was
       fitted on base-to-base cosines (p90 +0.000) and says NEAR to **99.7%** of relations-placed
       senses. A placement needs a floor fitted to placements, and a bar to fit it against
-- [ ] skeleton adapter (stanza, swappable)
+- [ ] **⚑ the UD gate** — all 37 UD dependency relations and 17 POS tags read consistently against
+      UD's own examples; the 37 → 18-roles mapping table is the epic's real deliverable
+- [ ] **task 0 — the closed classes' SEMANTICS**: the 383 rows exist, `compiled` is empty on all of
+      them; 135 prepositions typed `role_marker` and not one says which role it marks
+- [ ] skeleton adapter (stanza — it targets UD2; spaCy is not a second opinion)
 - [ ] compile core (anchors migrated; senses open; context argument; partial zips)
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
@@ -81,7 +85,8 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 ## E9 — the translation night
 - [ ] additive translation (v2 zips BESIDE v1; biography intact)
 - [ ] KB translation (no hand-fixes)
-- [ ] no-regression ratchet green
+- [ ] no-regression ratchet green — the log is `tkzipdebug`: 529 clean journeys, **209 v1 read
+      wrong** (read them with `tools/journey_ledger.html`)
 - [ ] the migration night of sleep — observed
 
 ## E10 — the embodiment & the window

@@ -619,6 +619,13 @@ after freeze are migrations, not edits).
 
 ## E3 — The station *(parser/compiler, one lib)*
 
+**Scope, stated so it can be defended** *(the Captain, 2026-09-15)*: **natural language → skeleton
+(stanza) → tkzip.** Mechanical. What the zip MEANS — senses bound, truth, consequence — is the
+evaluator's and the mind's, which is evaluator req 5 already written down. The station consults the
+dictionary for **SHAPE, never for MEANING**: the ported content lists become geometry with a
+nearest-anchor fallback, and the sense slot is emitted **OPEN**. Record:
+`docs/parser-compiler/202609151148_the-ud-gate-and-the-stations-edges.md`.
+
 **Goal:** surface → tkzip → surface, one pure bidirectional library. tk1's AST/LLC die as
 interfaces — **and its ~40 hand lists die with them**: the standing law above prices this epic's
 first bill, so every ported set arrives as rows (the grammatical classes and the weights alike — they
@@ -629,11 +636,26 @@ copied across as written is a rebuild that inherited the defect.
 it).
 
 **Tasks**
-0. **The closed classes as typed KB rows** — ONE collection replacing tk1's four code lists, each row
-   carrying its type and its compiled meaning: referential (→ entity, resolved from context) ·
-   quantificational (→ quantifier) · interrogative/relative (→ unbound variable + question mood) ·
-   prepositions (→ role markers). Curated and exhaustive. It is born earlier if E1 needs it to
-   exclude function words from its seed ranking — one table, two consumers.
+0. ~~**The closed classes as typed KB rows**~~ **— THE TABLE EXISTS. What is owed is its SEMANTICS.**
+   *Rewritten 2026-09-15, on the Captain's ruling, after checking the body rather than the plan.*
+   E1 built `language_closed_classes` when it needed to exclude function words from its seed
+   ranking — the «born earlier, one table two consumers» clause below came true — and it holds
+   **383 typed rows** sourced verbatim as «tk1 `lib/llc/constants.py`, the hand list this table
+   retires»: 135 prepositions · 77 pronouns · 47 conjunctions · 41 determiners · 24 particles ·
+   17 adverbs · 17 auxiliaries · 13 modals · 7 clitics · 5 postpositions, across 22 roles.
+
+   **But `compiled` is EMPTY on all 383.** The enumeration landed and the MEANING did not, and the
+   plan's own words for this task were «each row carrying its type **and its compiled meaning**».
+   So E3's task is the second half: referential → entity (resolved from context) · quantificational
+   → quantifier · interrogative/relative → unbound variable + question mood · **prepositions → WHICH
+   OF TKZIP'S 18 ROLES each marks**, which is exactly the question E2's drill parked when it left
+   `direction`'s marker cluster here («does *toward* entail arrival?»). All 135 prepositions are
+   typed `role_marker` today and not one says which role it marks.
+
+   **This kind is NOT rebuilt from raw input, and that is the point of naming the kinds.** A closed
+   class is closed BY ENUMERATION; a corpus can TEST its completeness and can never generate it.
+   Deriving it from text is how the set silently becomes open — «the db option by the back door»,
+   refused once already for tkzip's typed `other`.
 1. **Skeleton adapter** — stanza behind the lib boundary, swappable (req 2); the torch-load patch
    and model-loading quirks contained in the adapter.
 2. **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an
@@ -643,7 +665,18 @@ it).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
 5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
-   fashion by tooling.
+   fashion by tooling. *The drill is the FORMAT's gate and stays one — it proved tkzip can HOLD the
+   world. It is not the STATION's gate: it says nothing about whether stanza's skeleton was read
+   correctly.*
+5b. **⚑ THE UD GATE — the station's real acceptance test** *(the Captain, 2026-09-15)*. Every one of
+   **UD's 37 dependency relations and 17 POS tags**, handled consistently against **UD's own
+   published examples** (`universaldependencies.org/u/dep/`, `/u/pos/` — 67 relations have a global
+   page with examples). Both ends are CLOSED — 37 relations in, 18 tkzip roles + 10 operators + the
+   five-element prefix out — so **the mapping table can be COMPLETE, and it is E3's real
+   deliverable.** `case` is the relation that fills task 0's empty `compiled` field.
+   *Why UD and not more of our own sentences: our fixtures encode OUR habits. UD's examples are
+   strangers'. And stanza is chosen precisely because it TARGETS this standard — «close enough» is
+   a measurement owed relation by relation, not an assumption carried.*
 
 6. **THE PLACEMENT FLOOR — inherited from E1c/E1d, and measured before it was handed over.** The
    station is where a placement is first trusted or refused: a word it does not know reaches the
@@ -659,9 +692,9 @@ it).
 7. **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
    them. The count is in the manifest, so it is predictable rather than surprising.
 
-**Done when:** the drill bar passes through the real lib (parse AND render), clean input costs one
-parse, confidence orders the drill's failures sensibly, and **a placement is judged by a floor fitted
-to placements**.
+**Done when:** the drill bar passes through the real lib (parse AND render), **every UD relation and
+POS tag is read consistently against UD's own examples**, clean input costs one parse, confidence
+orders the drill's failures sensibly, and **a placement is judged by a floor fitted to placements**.
 
 ---
 
@@ -811,6 +844,14 @@ live traffic finds what tests cannot. The confidence ladder's thresholds tuned o
    longer re-derives is NOT hand-fixed.
 3. **The no-regression ratchet** — v1's corpora and test-feedback log replayed: everything v1
    answered correctly, v2 must.
+   **THE LOG IS NAMED, and it is measured** *(2026-09-15)*: `tokeniko_mem.tkzipdebug` — **583
+   journeys, 546 distinct, 529 never spent on E2's drill, and v1 read 209 of them WRONG (40%)**.
+   Those 209 are the ratchet's hard half: not «everything v1 answered correctly» but everything it
+   did not, which is the list v2 must not reproduce. Read them with
+   `tools/journey_ledger.html` — grouped by phenomenon, carrying v1's own verdict and its own note
+   on every mismatch. **They arrived here by the Captain's own catch**: the QM had proposed them as
+   E3's derivation corpus, and they are memory inherited from tk1, which is this epic. They may
+   still inform E3 as EVIDENCE; they are never its gate.
 4. **The migration night of sleep** — he wakes on v2, wonders, finds what no longer follows, and
    retreats it himself — an event in his life, not surgery. The night is observed and logged.
 
