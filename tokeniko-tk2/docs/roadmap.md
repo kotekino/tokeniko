@@ -45,8 +45,12 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [x] **compile core — ONE content row** (`tk2/language/compile.py`): the relation half and the
       marker half of the mapping, quantifier binders, possessors inside the record, senses OPEN.
       **18 of 25 UD cases at 100% coverage, mean 89.5%**
-- [ ] **compile core — MANY rows**: a join, a relative clause and reported speech each need a second
-      content row plus a `JoinRow`/`AttitudeRow`. Every partial in the corpus is this one gap
+- [x] **compile core — MANY rows**: one content row per clause, related by joins, attitudes and
+      shared variables. **«if» / «because» / «and» are three distinguishable zips** (req 38, from a
+      real parse). Needed closed classes v4 (`db/0010`) first: «if» and «because» had identical
+      rows. **20 of 25 UD cases whole, mean 95.8%**
+- [ ] **the wh-word's box** — «when do you sleep?» opens a slot and nothing says WHICH one; embedded
+      questions («who did it») likewise
 - [ ] **the thirteen ambiguous markers** — «to» destination|recipient, «in»
       location|time|instrument|manner: where no UD subtype settles it, the head-verb geometry must
 - [ ] **`mark` under a reporting verb opens a POV**, not a join (E2 made attitude a prefix element)

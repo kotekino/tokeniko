@@ -30,6 +30,7 @@ from tk2.dictionary import keys as keymod
 from tk2.language.closed import ClosedClasses
 from tk2.language.skeleton import Skeleton, Word
 from tk2.tkzip.schema import (
+    AttitudeRow,
     Box,
     Var,
     ContentRow,
@@ -67,6 +68,23 @@ POS_LETTER = {"NOUN": "n", "PROPN": "n", "VERB": "v", "ADJ": "a", "ADV": "r"}
 #: The relations that hang a NOMINAL off a head — the candidates for a box.
 NOMINAL_DEPS = frozenset({"nsubj", "obj", "iobj", "obl", "nmod"})
 
+#: THE RELATIONS THAT OPEN A CLAUSE OF THEIR OWN — each one becomes its own content row, related to
+#: the row above it by a join, an attitude, or a shared variable.
+#:
+#: `xcomp` is deliberately ABSENT. «you like TO SWIM» is one predication with a controlled subject,
+#: not two claims: nobody asserts that you swim. Treating it as a second row would put an unasserted
+#: proposition in the zip with nothing marking it unasserted — the one thing the truth slot exists to
+#: prevent. It stays inside its matrix clause until there is a reason it cannot.
+CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis"})
+
+#: What a joining word claims about its halves (closed classes v4, `db/0010`).
+ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
+ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
+
+#: A claim the station makes with no fuzziness of its own: the speaker said it, so it is stated at
+#: full strength. What the claim is WORTH is the evaluator's question, not the parser's.
+CLAIMED = 1.0
+
 
 @dataclass
 class Compiled:
@@ -96,72 +114,240 @@ class Compiler:
     # -- the whole sentence -----------------------------------------------------------------------
 
     def compile(self, skeleton: Skeleton) -> Compiled:
+        """Skeleton → zip. One content row per CLAUSE, related by joins and attitudes.
+
+        The clauses are found first and compiled independently, because a box belongs to the clause
+        whose head governs it: «if it RAINS I stay HOME» has two subjects and two predicates, and a
+        single pass would put them all in one row and lose which went with which.
+        """
         root = skeleton.root
         if root is None:
             return Compiled(zip=Zip(rows=[ContentRow(name="r0")]), unplaced=skeleton.tokens)
 
         marks = self._read_closed(skeleton)
+        heads = self._clause_heads(skeleton)
+        owner = self._owners(skeleton, heads)
+
         covered: set[int] = set()
-        prefix_rows: list = []
-        boxes: dict[Role, Box] = {}
         abstained: list[str] = []
-        unresolved: list[tuple[Word, Box]] = []
+        prefix_rows: list = []
+        content: dict[int, ContentRow] = {}
 
-        # THE PREDICATE. Plain copular `be` compiles to STRUCTURE and earns no dimension (req 31):
-        # «the cat is cute» is *cat + cute, no verb*. The row for `be` states that conditionally and
-        # names the dependency that decides, so the check is «did the table say glue here», never a
-        # list of verbs in this file.
-        predicate = None
-        copular = False
-        if root.upos in ("VERB", "AUX"):
-            predicate = self._key(root)
-            covered.add(root.index)
-        else:
-            # A nominal or adjectival root IS the complement — the copula's predicate. «The cat is
-            # cute» is *cat + cute, no verb* (req 31): `cute` is the complement and `cat` is the
-            # thing it is said of, which is the TOPIC rather than an agent — nobody is acting.
-            boxes[Role.COMPLEMENT] = self._box_for(root, skeleton, marks, covered, prefix_rows)
-            covered.add(root.index)
-            copular = True
+        for position, head in enumerate(heads):
+            mine = {i for i, h in owner.items() if h == head.index}
+            content[head.index] = self._clause(
+                skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}")
 
-        for word in skeleton:
-            if word.index in covered:
-                continue
-            match = marks.get(word.index)
-
-            if match is not None:
-                consumed = self._compile_closed(word, match, skeleton, boxes, prefix_rows,
-                                                abstained, copular)
-                covered.update(consumed)
-                continue
-
-            role = self._role_of(word, skeleton, marks, copular)
-            if role is not None and role not in boxes:
-                boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows)
-                covered.add(word.index)
-            elif role is None and word.bare_dep in NOMINAL_DEPS:
-                # A nominal the station SAW and could not place: its marker is ambiguous, or it is a
-                # possessor its head will take. Recorded either way — `_box_for` marks the tokens it
-                # consumes, so a possessor is already covered and only the truly unplaced survives.
-                unresolved.append((word, self._box_for(word, skeleton, marks, covered)))
-
-        # A phrase whose ROLE is unknown is not a phrase that was not understood: its head, its
-        # determination and its marker are all read. It lands in `unplaced` as the words it covers,
-        # because the zip has no box to put it in — and that is the honest report (req 21: material
-        # no box fits is RECORDED, never given a position it did not earn).
-        for word, box in unresolved:
-            if word.index not in covered:
-                abstained.append(f"{word.text}: nominal with no role")
+        joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
 
-        row = ContentRow(name="r0", predicate=predicate,
-                         predicate_sense=Open() if predicate else None, boxes=boxes)
-        rows = [*prefix_rows, row] if prefix_rows else [row]
+        rows = [*prefix_rows, *content.values(), *joins]
         return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
                         abstained=tuple(abstained))
+
+    # -- the clauses ------------------------------------------------------------------------------
+
+    def _clause_heads(self, skeleton: Skeleton) -> list[Word]:
+        """The root, and every word that opens a clause of its own — in sentence order.
+
+        Sentence order rather than tree order because row order carries SCOPE (req 35), and the
+        order the speaker used is the only scope information the surface gives.
+        """
+        found = [w for w in skeleton
+                 if w.is_root or (w.bare_dep in CLAUSE_DEPS and w.upos in ("VERB", "AUX", "ADJ",
+                                                                           "NOUN", "PROPN", "PRON"))]
+        return sorted(found, key=lambda w: w.index)
+
+    def _owners(self, skeleton: Skeleton, heads: list[Word]) -> dict[int, int]:
+        """Which clause each token belongs to — walk up until a clause head is reached.
+
+        Bounded like every walk over this structure: a malformed skeleton with a head cycle must
+        fail rather than stop responding.
+        """
+        names = {w.index for w in heads}
+        owner: dict[int, int] = {}
+        for word in skeleton:
+            node = word
+            for _ in range(len(skeleton)):
+                if node.index in names:
+                    owner[word.index] = node.index
+                    break
+                if node.is_root:
+                    owner[word.index] = node.index
+                    break
+                node = skeleton[node.head]
+            else:
+                owner[word.index] = skeleton.root.index
+        return owner
+
+    def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
+                covered: set[int], prefix_rows: list, abstained: list, name: str) -> ContentRow:
+        """One clause → one content row. Only the tokens this clause owns are read."""
+        boxes: dict[Role, Box] = {}
+        unresolved: list[tuple[Word, Box]] = []
+        predicate = None
+        copular = False
+
+        if head.upos in ("VERB", "AUX"):
+            predicate = self._key(head)
+            covered.add(head.index)
+        else:
+            boxes[Role.COMPLEMENT] = self._box_for(head, skeleton, marks, covered, prefix_rows, name)
+            covered.add(head.index)
+            copular = True
+
+        for index in sorted(mine):
+            if index in covered:
+                continue
+            word = skeleton[index]
+            match = marks.get(index)
+            if match is not None:
+                covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
+                                                    abstained, copular, name))
+                continue
+            role = self._role_of(word, skeleton, marks, copular)
+            if role is not None and role not in boxes:
+                boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name)
+                covered.add(index)
+            elif role is None and word.bare_dep in NOMINAL_DEPS:
+                unresolved.append((word, self._box_for(word, skeleton, marks, covered)))
+
+        for word, _box in unresolved:
+            if word.index not in covered:
+                abstained.append(f"{word.text}: nominal with no role")
+
+        return ContentRow(name=name, predicate=predicate,
+                          predicate_sense=Open() if predicate else None, boxes=boxes)
+
+    def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
+                marks: dict, covered: set[int], prefix_rows: list, abstained: list) -> list[JoinRow]:
+        """How the clauses stand to one another — a join, an attitude, or a shared variable.
+
+        **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
+        the halves are claimed, and the row for the joining word is what says so (closed classes v4).
+        Setting `truth` on a content row is therefore not bookkeeping — it is the assertion, and the
+        heart reads it as supposition (heart 16) exactly as the evaluator reads it as a claim.
+        """
+        joins: list[JoinRow] = []
+        # **A ROW IS CLAIMED UNLESS A JOIN SAYS OTHERWISE**, and the joins have not spoken yet. The
+        # root is NOT claimed by being the root: «if it rains I stay home» asserts neither the rain
+        # NOR the staying — only the conditional — and the main clause is the root in that sentence.
+        # Deciding its truth before reading the joiner got that backwards, which is the whole
+        # distinction req 38 rests on.
+        unasserted: set[str] = set()
+        for head in heads:
+            if head.is_root:
+                continue
+            outer = self._enclosing(skeleton, head, content)
+            if outer is None:
+                continue
+            joiner = self._joiner(skeleton, head, marks)
+
+            if head.bare_dep == "acl":
+                # A RELATIVE CLAUSE SHARES A VARIABLE with the phrase it modifies, rather than
+                # joining it: «the cat that sleeps» is one cat, described twice (req 36).
+                self._share_variable(skeleton, head, content, outer, prefix_rows, covered, marks)
+                continue
+
+            if joiner is not None and joiner.compiled.get("asserts") == ASSERTS_MATRIX:
+                # A POV, not a join: «he says THAT you swim» claims the saying, never the swimming.
+                self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner)
+                unasserted.add(content[head.index].name)
+                covered.update(range(joiner_index(skeleton, head, joiner),
+                                     joiner_index(skeleton, head, joiner) + joiner.length))
+                continue
+
+            operator = (joiner.compiled.get("operator") if joiner else None) or "and"
+            asserts = (joiner.compiled.get("asserts") if joiner else None) or ASSERTS_BOTH
+            if asserts == ASSERTS_AMBIGUOUS:
+                # «when» is a generic conditional or a factual time clause, and only the theatre
+                # separates them. Abstain rather than assert something the speaker may not have.
+                abstained.append(f"{joiner.form}: asserts both readings; the theatre decides")
+                asserts = ASSERTS_NEITHER
+
+            inner, outer_row = content[head.index], content[outer.index]
+            if asserts == ASSERTS_NEITHER:
+                # STATED, NOT CLAIMED — both halves. The JOIN carries the claim, and the heart reads
+                # this shape as supposition (heart 16) exactly as the evaluator reads a claim.
+                unasserted.add(inner.name)
+                unasserted.add(outer_row.name)
+
+            # Row order is scope order, and the surface order is what the speaker chose: «if it
+            # rains I stay home» and «I stay home if it rains» are the same two rows in the order
+            # they were said. The ANTECEDENT is the subordinate clause either way.
+            operands = ([inner.name, outer_row.name] if operator == "imply"
+                        else sorted([outer_row.name, inner.name],
+                                    key=lambda n: 0 if n == outer_row.name else 1))
+            joins.append(JoinRow(name=f"j{len(joins)}", operator=Operator(operator),
+                                 operands=operands, truth=CLAIMED))
+            if joiner is not None:
+                covered.update(range(joiner_index(skeleton, head, joiner),
+                                     joiner_index(skeleton, head, joiner) + joiner.length))
+
+        # Now every join has spoken. What no join left unasserted, the speaker claimed.
+        for row in content.values():
+            if row.truth is None and row.name not in unasserted:
+                row.truth = CLAIMED
+        return joins
+
+    def _enclosing(self, skeleton: Skeleton, head: Word, content: dict) -> Word | None:
+        """The clause this one hangs off — its head's own clause."""
+        node = skeleton[head.head]
+        for _ in range(len(skeleton)):
+            if node.index in content and node.index != head.index:
+                return node
+            if node.is_root:
+                return node if node.index != head.index else None
+            node = skeleton[node.head]
+        return None
+
+    def _joiner(self, skeleton: Skeleton, head: Word, marks: dict):
+        """The `mark` or `cc` that introduces this clause — where the operator and the assertion
+        status both come from."""
+        for child in skeleton.children(head.index):
+            if child.bare_dep in ("mark", "cc") and child.index in marks:
+                return marks[child.index]
+        return None
+
+    def _attitude(self, skeleton, head, content, outer, prefix_rows, covered, joiner) -> None:
+        """«he says that you swim» — an ATTITUDE over the inner row, claiming only the saying.
+
+        `verb` is a key rather than a member of an enum: attitude verbs are open (think, believe,
+        suppose, want, fear, pretend, hope, doubt), so the classification is nearest-anchor geometry
+        over a small anchor set and never misses the verb nobody thought of (req 55).
+        """
+        outer_row = content[outer.index]
+        holder = outer_row.boxes.get(Role.AGENT) or Box(head=Open(), sense=Open())
+        prefix_rows.append(AttitudeRow(
+            name=f"a{len(prefix_rows)}", scopes=content[head.index].name,
+            holder=holder, verb=self._key(outer)))
+        # the inner row stays EMPTY: the attitude is claimed, its content is not
+
+    def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks) -> None:
+        """A relative clause describes the SAME thing as the phrase it modifies — one variable in
+        two rows, which is req 36's one binding mechanism doing the work a second box would fake."""
+        inner = content[head.index]
+        name = f"y{len(prefix_rows) + len(content)}"
+        target = skeleton[head.head]
+        for role, box in content[outer.index].boxes.items():
+            if box.head == self._key(target):
+                content[outer.index].boxes[role] = Box(
+                    head=Var(name=name), sense=Open(), determination=box.determination,
+                    quantity=box.quantity, marker=box.marker, relation=box.relation)
+                break
+        for role, box in list(inner.boxes.items()):
+            if isinstance(box.head, Open) or box.head is None:
+                inner.boxes[role] = Box(head=Var(name=name), sense=Open())
+                break
+        else:
+            inner.boxes[Role.AGENT] = Box(head=Var(name=name), sense=Open())
+        # The relative pronoun IS the variable — «the cat THAT sleeps» has no third participant.
+        for child in skeleton.children(head.index):
+            if child.bare_dep in ("nsubj", "obj") and marks.get(child.index) is not None:
+                covered.add(child.index)
 
     # -- the pieces -------------------------------------------------------------------------------
 
@@ -217,7 +403,7 @@ class Compiler:
         return None
 
     def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: set[int],
-                 prefix_rows: list | None = None) -> Box:
+                 prefix_rows: list | None = None, scopes: str = "r0") -> Box:
         """The seven-field record for one nominal phrase — per PHRASE, never one per clause.
 
         Every field is independently bindable (req 47): `head` may be BOUND while `sense` is OPEN,
@@ -269,7 +455,7 @@ class Compiler:
             # questions, equations and naming, instead of a quantified phrase the evaluator has to
             # synthesise a variable for.
             name = f"x{len(prefix_rows)}"
-            prefix_rows.append(QuantifierRow(name=f"q{len(prefix_rows)}", scopes="r0", binds=name,
+            prefix_rows.append(QuantifierRow(name=f"q{len(prefix_rows)}", scopes=scopes, binds=name,
                                              quantity=quantity, determination=determination,
                                              restriction=box))
             return Box(head=Var(name=name), sense=Open())
@@ -277,7 +463,7 @@ class Compiler:
 
     def _compile_closed(self, word: Word, match, skeleton: Skeleton, boxes: dict,
                         prefix_rows: list, abstained: list,
-                        copular: bool = False) -> set[int]:
+                        copular: bool = False, scopes: str = "r0") -> set[int]:
         """What a closed-class form does to the zip. Returns the token indices it accounted for."""
         kind = match.kind
         taken = {word.index + n for n in range(match.length)}
@@ -285,11 +471,11 @@ class Compiler:
         if kind == "prefix":
             element = match.compiled.get("element")
             if element == "negation":
-                prefix_rows.append(NegationRow(name=f"n{len(prefix_rows)}", scopes="r0"))
+                prefix_rows.append(NegationRow(name=f"n{len(prefix_rows)}", scopes=scopes))
             elif element == "modality":
                 from tk2.tkzip.schema import Modality, ModalityRow
 
-                prefix_rows.append(ModalityRow(name=f"m{len(prefix_rows)}", scopes="r0",
+                prefix_rows.append(ModalityRow(name=f"m{len(prefix_rows)}", scopes=scopes,
                                               modality=Modality(match.compiled["modality"])))
             return taken
 
@@ -333,6 +519,15 @@ class Compiler:
             abstained.append(f"{match.form}: {kind} is not compiled yet")
             return set()
         return taken
+
+
+def joiner_index(skeleton: Skeleton, head: Word, joiner) -> int:
+    """Where the joining word sits — needed to mark it covered, since it is read from the clause it
+    introduces rather than walked over in order."""
+    for child in skeleton.children(head.index):
+        if child.bare_dep in ("mark", "cc"):
+            return child.index
+    return head.index
 
 
 def compile_sentence(skeleton: Skeleton, table: ClosedClasses) -> Compiled:

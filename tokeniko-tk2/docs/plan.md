@@ -666,10 +666,16 @@ it).
    mapping, quantifier binders with their restriction, possessors inside the record, senses OPEN —
    **18 of 25 UD cases whole, mean coverage 89.5%**. The frame caught a design error on the way: a
    `QuantifierRow`'s `restriction` is a Box, so a binder cannot be emitted on meeting «every».
-   **WHAT REMAINS IS ONE FEATURE: MANY ROWS.** A join («reading or writing»), a relative clause
-   («the cat that sleeps») and reported speech («he says that…») each need a second content row and
-   a `JoinRow` or `AttitudeRow` to relate them — and every partial in the corpus is that gap.
-   Context-as-argument is untouched; nothing has needed it yet.
+   ~~**WHAT REMAINS IS ONE FEATURE: MANY ROWS.**~~ **DONE 2026-09-15** (record
+   `202609151505_many-rows.md`): one content row per clause, related by joins, attitudes and shared
+   variables — **20 of 25 whole, mean 95.8%**. The three-way distinction of req 38 is produced from
+   a real parse: «if» leaves both halves EMPTY, «because» claims both, «and» is the third, one
+   operator set and no relation field. It needed **closed classes v4** (`db/0010`) first, because
+   «if» and «because» carried IDENTICAL rows and nothing in the dependency tree separates them
+   either — the assertion status is knowledge about the word.
+   **WHAT REMAINS:** the wh-word's box («when do you sleep?» opens a slot and nothing says which),
+   embedded questions, and the thirteen ambiguous markers (the head-verb geometry, which needs the
+   dictionary in the loop). Context-as-argument is untouched; nothing has needed it yet.
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
