@@ -51,7 +51,11 @@ def test_matching_is_case_folded(table):
 
 
 def test_the_table_knows_its_own_shape(table):
-    assert table.version == 2
+    """The reader always holds ONE version — the newest it was given — because a table carrying two
+    would answer the same form twice with different jobs. Not pinned to a number here: the versions
+    are a ledger and will keep growing, and a test that pinned one would fail on every correction
+    while proving nothing about the reader."""
+    assert table.version >= 2
     assert table.longest == 3, "English's complex prepositions reach three tokens here"
     assert len(table.multiword_forms()) > 40
     assert "in front of" in table.multiword_forms()

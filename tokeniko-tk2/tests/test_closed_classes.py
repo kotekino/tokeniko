@@ -23,7 +23,14 @@ def migration(number: int):
 
 @pytest.fixture(scope="module")
 def rows():
-    return migration(8).ROWS
+    """THE NEWEST version — v3 (`db/0009`). The gate corrected three mappings the afternoon v2
+    landed, and a suite pinned to v2 would hold the station to the older table for ever."""
+    return migration(9).CLOSED_CLASS_ROWS
+
+
+@pytest.fixture(scope="module")
+def v2():
+    return migration(8).CLOSED_CLASS_ROWS
 
 
 @pytest.fixture(scope="module")
@@ -103,6 +110,48 @@ def test_the_concessive_loss_is_RECORDED_rather_than_hidden(rows):
     assert despite["compiled"]["lossy"] is True
 
 
+def test_the_possessive_marks_a_POSSESSOR_and_not_glue(rows):
+    """CORRECTED AT v3 by the UD gate. UD analyses «the Chair 's office» as case + nmod and pairs it
+    explicitly with «the office OF the Chair» — the same relation in two spellings. v2 compiled `'s`
+    to structure, so one of those spellings threw the possessor away. tkzip keeps the possessor
+    INSIDE the record as Box.relation (req 26)."""
+    clitic = next(r for r in rows if r["form"] == "'s" and r["role"] == "genitive")
+
+    assert clitic["compiled"]["kind"] == "field"
+    assert clitic["compiled"]["field"] == "relation"
+    assert clitic["compiled"]["was"] == "structure", "the row says what it used to be"
+
+
+def test_plain_copular_be_is_STRUCTURE_and_the_row_names_what_chooses(rows):
+    """Req 31 and the Captain's first draft verbatim: «the cat is cute» is cat + cute, NO VERB. v2
+    typed every form of `be` as theatre. One row cannot tell copular from auxiliary from existential
+    `be` — the dependency can, so the row carries both readings and names the relation that picks."""
+    is_ = next(r for r in rows if r["form"] == "is")
+
+    assert is_["compiled"]["kind"] == "structure"
+    assert is_["compiled"]["when"] == "cop", "and it says WHICH dependency makes it glue"
+    assert is_["compiled"]["otherwise"] == "theatre"
+    assert all(next(r for r in rows if r["form"] == f)["compiled"]["when"] == "cop"
+               for f in ("be", "am", "are", "was", "were", "been", "being"))
+
+
+def test_v3_changes_ELEVEN_rows_and_moves_no_form(rows, v2):
+    """The migration's whole claim, checked: three mappings corrected, nothing else touched, and —
+    load-bearing — the single-word FORMS are identical. That set is the dictionary's gloss-word
+    exclusion: if it moved, D would change and the sealed base with it, under a policy nobody
+    re-ruled."""
+    before = {(r["form"], r["word_class"], r["position"]): r for r in v2}
+    after = {(r["form"], r["word_class"], r["position"]): r for r in rows}
+
+    assert set(before) == set(after)
+    changed = {k[0] for k in after if before[k]["compiled"] != after[k]["compiled"]}
+    assert changed == {"'s", "'m", "'re", "be", "is", "am", "are", "was", "were", "been", "being"}
+    assert not [k for k in after if before[k]["role"] != after[k]["role"]], "no row was re-typed"
+
+    forms = lambda rs: sorted({r["form"] for r in rs if " " not in r["form"]})
+    assert forms(v2) == forms(rows), "the exclusion set must not move"
+
+
 def test_the_articles_are_DETERMINATION_and_not_quantity(rows):
     """v1's own features said «force: definite / indefinite» and the row was still typed
     quantificational. tkzip keeps determination as its own field beside quantity — «the cat» and
@@ -177,14 +226,14 @@ def test_without_negates_the_box_it_fills(rows):
 # ------------------------------------------------------------------------------------------------
 
 
-def test_v2_carries_every_v1_form_and_invents_none(rows, v1):
+def test_the_newest_version_carries_every_v1_form_and_invents_none(rows, v1):
     before = Counter((r["form"], r["word_class"]) for r in v1 if r.get("version") == 1)
     after = Counter((r["form"], r["word_class"]) for r in rows)
 
     assert after == before, "a form was added or lost between versions"
 
 
-def test_v2_changes_only_compiled_role_and_note(rows, v1):
+def test_the_newest_version_changes_only_compiled_role_and_note(rows, v1):
     """The forms, features and sources are v1's and must not drift: this migration is the author of
     the MAPPING and of nothing else."""
     old = {(r["form"], r["word_class"], r["position"]): r for r in v1 if r.get("version") == 1}
@@ -192,7 +241,7 @@ def test_v2_changes_only_compiled_role_and_note(rows, v1):
         was = old[(row["form"], row["word_class"], row["position"])]
         assert row["features"] == was["features"]
         assert row["source"] == was["source"]
-        assert row["version"] == 2
+        assert row["version"] == 3
 
     moved = [r["form"] for r in rows
              if r["role"] != old[(r["form"], r["word_class"], r["position"])]["role"]]
