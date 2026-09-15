@@ -105,3 +105,61 @@ fact from R being silent.
 half of a sense, because **40.2% of senses carry no relations at all** (48,416 of 120,475). Reading
 them relations-only would place nothing for two senses in five — a different and much larger silence
 than 0.3%, and its own ruling.
+
+---
+
+## AND THE SAME QUESTION ASKED OF `place()` — a DIFFERENT answer, measured
+
+*The Captain asked whether `place()` should follow the same logic. It should not, and the reason is a
+number rather than a principle: for base keys the D fallback was worth **nothing** (+0.000 cosines);
+for senses it is worth little but not nothing, and refusing it costs almost half the input.*
+
+**COVERAGE.** `place()` exists for words the base does NOT contain — **85.7% of senses (103,218 of
+120,475) are senses of such words**, which is the population that matters here:
+
+| | all senses | senses of out-of-base words |
+|---|---|---|
+| placeable by RELATIONS | 59.8% | **56.3%** |
+| placeable by DISTRIBUTION | 94.8% | 94.5% |
+| placeable by EITHER | 96.9% | 96.6% |
+
+**QUALITY**, over 400 sampled out-of-base senses that have gold. **Gold = the base dimensions the
+sense's own synset IS (synonym) or IS-A-KIND-OF (hypernym)** — «where does this sense belong»:
+
+| candidate | placed | prec@5 | hit@5 |
+|---|---|---|---|
+| distribution (today) | 96.0% | 4.0% | 18.8% |
+| relations only | 88.5%* | **13.3%** | **62.7%** |
+| **R first, D where mute** | **98.5%*** | 12.1% | 56.9% |
+
+*\* the placed column is sample-inflated for both: gold requires hypernyms, which correlates with
+having relations. The HONEST coverage figures are the table above — relations-only leaves **43.7% of
+out-of-base senses unplaceable**.*
+
+**RELATIONS ARE MORE THAN 3× BETTER ON BOTH MEASURES**, and the eyeball test is decisive:
+
+```
+dog.n.01        relations    carnivore.n  characteristic.a  narrative.a …
+                distribution party.v  berth.n  play.v  sometimes.r …
+
+devour.v.01     relations    destroy.v  compulsion.n  harm.v …
+ («destroy completely»,
+  not «eat» — E1c's trap)
+                distribution fail.v  juicy.a  absolute.a …
+```
+
+## THE RULING — R FIRST, THEN D, WITH THE SOURCE NAMED *(the Captain, 2026-09-14)*
+
+**Not «relations only».** The proposer ruling could refuse its fallback because the fallback was
+`argmax` over zeros; here D still answers 18.8% hit@5, which is poor and is not nothing. So the
+answer is to **label** rather than to refuse: try the sense's relations, fall back to its distribution
+where it states none, and let **every placement name the half that made it**.
+
+`Neighbour.source` already carries that, and the naming is the architecture rather than a softening —
+**requirement 10's own words are «every answer names its source»**. A consumer that trusts only R
+filters on it; the evaluator can weigh a D-placement as weaker evidence instead of being handed it
+silently. *«What tk isn't understanding, he doesn't make up»* is satisfied by labelling, which was
+available here and was not available for the anchor.
+
+**STATUS: RULED, NOT YET IMPLEMENTED.** `place()` and `project()` still read the distributional half
+only.
