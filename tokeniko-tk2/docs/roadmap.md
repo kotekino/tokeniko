@@ -19,64 +19,19 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 ## E0 — the keel ✅ 2026-08-23 — see `landed.md`
 
 ## E1 — the dictionary at scale ✅ COMPLETE 2026-09-10 — see `landed.md`
-- [x] closure engine (keys as law, ring boundary visible, policy fingerprinted) — `34e43c8`
-- [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
-- [x] proper-noun/abbreviation refusal (`or`=Oregon out of the base) — `1e7cad3`
-- [x] policy as rows — the mechanism (collection, bar ledger, manifest, offline snapshot) — `e480ccd`
-- [x] policy as rows — the ruling: k=200, rail 25,000, closed classes as typed KB rows — `a6acefb`
-- [x] R at scale + curation pipeline (Captain's hand on approve) — `f71baa3`
-- [x] lemma scope ruled (v4) + inferred opposition ruled (v5) — `7da676f`
-- [x] D at scale + the dual read ruled (min_shared 1 · derivational 0.45 · mix 0.5) — `b8f325e`
-- [x] the bar grown 18 → 37 as rows; the closed-class filter and the mix re-ruled against it — `e1dbdd2`
-- [x] the seal, the verifier, the map — a base can say "I am complete" — `a4b13f1`
-- [x] acceptance floors ruled: NEAR ≥ +0.27 · FAR < 0 · ABSTAIN between — `0678054`
-- [x] **THE BASE IS BUILT AND SEALED ON THE BODY** (4,555 dims · R 51,564 · D 473,262 ·
-      `9824ef46…`, applied by the Captain 2026-09-10, read back whole)
 
-*Scope note: E1 built the BASE (4,555 POS-split keys), not the sense layer. The resource's 68,779
-words / 120,475 senses ride ON it and are **not built** — an open dictionary task with no epic yet
-(`plan.md` § E1, «what E1 did not build»).*
-
-## E1b — the names ✅ 2026-09-10 — see `landed.md`
-- [x] every collection prefixed by the component that owns it (`dictionary_base_*`, `heart_*`,
-      `language_`, `senses_`, `tkzip_`, `body_params`)
-- [x] `tokeniko_tk2_body` → **`tokeniko_tk2`**; the 983-dim prototype that held the name, dropped
-- [x] thirteen migrations → one baseline; all nine policy versions carried with their notes verbatim
-- [x] rebuilt and proved: `9824ef46…` reproduces, every collection identical row by row
+## E1b — the names, and one baseline ✅ 2026-09-10 — see `landed.md`
 
 ## E1c — the sense layer ✅ 2026-09-10 — see `landed.md`
-- [x] the sense vector ruled: BOTH floors — gloss over base dims, and the synset's own relations
-- [x] sense selection ruled: `senses="primary"` stands — the base is the frame, the senses the content
-- [x] **120,475 senses placed (96.9%), 816,309 cells, sealed and read back whole**
-- [x] the manifest names its own build (a T5 finding that became real when two builds shared a policy)
 
-## E1d — the audit's repairs ✅ 2026-09-14 *(bar 13 → 19 of 37 decided, 0 wrong)*
-- [x] the audit written into the chapter, 21 statuses corrected — `docs/dictionary/202609141115_the-e1-audit.md`
-- [ ] **T2 — SEPARATE READS** (req 10): the reader returns two answers, each naming its source;
-      `space.py` stops returning `cos(R + 0.15·D)`
-- [ ] **T3 — mine `gloss_reference` into R** and measure against the bar (req 2: «eat's definition
-      NAMES food» is the signal D was never going to carry); the Captain rules the weight after
-      the measurement
-- [x] **T2 — SEPARATE READS** — R decides, D proposes, ABSTAIN when R is silent; policy v11
-      (`db/0003`, unapplied). `thick~thin` and `push~pull` recover their FAR
-- [x] **T3 — `gloss_reference` mined into R** and a STATED CELL may decide (req 19, honoured at
-      last); policy v12 (`db/0004`, unapplied). **Requirement 2 CLOSED** — `eat.v~food.n` NEAR
-- [x] **T4 — curated edges are INPUTS**, not outputs: `dictionary_curated_edges`, consumed by the
-      build, and a build REFUSES when an approved edge names a dimension the base no longer has
-- [x] **T5 — the two lost edges restored as rows** (`db/0005`, unapplied) — `sleep~bed` CLOSED
-- [x] **REQUIREMENT 16 — `derivational` at primary-sense resolution** (policy v13, `db/0006`,
-      unapplied). Down-weighting was measured impossible; the defect was a resolution mismatch.
-      On a real rebuild of R: best zero-wrong floor 0.10 on a plateau to 0.20, 19 of 37 decided
-- [x] **APPLIED + REBUILT 2026-09-14** (on the Captain's order): `0003`–`0006` on the body; base
-      rebuilt as `969766250c02` with the sense layer, read back WHOLE against all four seals;
-      membership unchanged (4,555 dimensions)
-- [x] **NEAR floor re-ruled +0.28 → +0.15** (policy v14, `db/0007`, applied) — measured on the
-      stored build, in the middle of the gap between `compass.n~compass.v` FAR +0.095 and
-      `walk.v~run.v` NEAR +0.212. **BAR: 19 of 37 decided, 0 wrong** (13 when E1d opened)
+## E1d — the audit's repairs ✅ 2026-09-14 — see `landed.md`
 
 ## E2 — the format (tkzip v2) ✅ COMPLETE 2026-09-14 — see `landed.md`
 
 ## E3 — the station (parser/compiler)
+- [ ] **the placement floor** — inherited from E1c/E1d, measured 2026-09-14: the base's +0.15 was
+      fitted on base-to-base cosines (p90 +0.000) and says NEAR to **99.7%** of relations-placed
+      senses. A placement needs a floor fitted to placements, and a bar to fit it against
 - [ ] skeleton adapter (stanza, swappable)
 - [ ] compile core (anchors migrated; senses open; context argument; partial zips)
 - [ ] renderer (same lib)

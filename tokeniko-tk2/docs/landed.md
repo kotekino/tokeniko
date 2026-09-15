@@ -22,6 +22,19 @@ forever by default (`--max-ticks`/SIGTERM to bound).*
 
 *Sixteen commits (`34e43c8 → 0678054`). The base is built, sealed and on the body.*
 
+- [x] closure engine (keys as law, ring boundary visible, policy fingerprinted) — `34e43c8`
+- [x] inflection-collision fix (req 21) + stop list yields to membership — `fe73d40`
+- [x] proper-noun/abbreviation refusal (`or`=Oregon out of the base) — `1e7cad3`
+- [x] policy as rows — the mechanism (collection, bar ledger, manifest, offline snapshot) — `e480ccd`
+- [x] policy as rows — the ruling: k=200, rail 25,000, closed classes as typed KB rows — `a6acefb`
+- [x] R at scale + curation pipeline (Captain's hand on approve) — `f71baa3`
+- [x] lemma scope ruled (v4) + inferred opposition ruled (v5) — `7da676f`
+- [x] D at scale + the dual read ruled (min_shared 1 · derivational 0.45 · mix 0.5) — `b8f325e`
+- [x] the bar grown 18 → 37 as rows; the closed-class filter and the mix re-ruled against it — `e1dbdd2`
+- [x] the seal, the verifier, the map — a base can say «I am complete» — `a4b13f1`
+- [x] acceptance floors ruled: NEAR ≥ +0.27 · FAR < 0 · ABSTAIN between — `0678054`
+- [x] **THE BASE IS BUILT AND SEALED ON THE BODY** — 4,555 dims · R 51,564 · D 473,262
+
 **What stands, in `tokeniko_tk2`** *(renamed at E1b; the table below already uses the new names)* — one sealed build, `config 9824ef46…`, policy v9, bar v2,
 authorized and applied by the Captain 2026-09-10, read back whole by `tools/verify_base.py`:
 
@@ -38,7 +51,7 @@ authorized and applied by the Captain 2026-09-10, read back whole by `tools/veri
 
 **The reading:** 68,779-word lexicon → 3,172 words → 4,555 dimensions, `stopped=depth`. Dual read
 **R + 0.15·D = 276 of 336** NEAR/FAR comparisons ordered correctly, local order 5/8, 6 mute of 37.
-Verdicts: **NEAR ≥ +0.27 · FAR < 0 · ABSTAIN between.**
+Verdicts: **NEAR ≥ +0.27 · FAR < 0 · ABSTAIN between.** *(E1's number, and history: +0.27 → +0.28 at policy v10 → **+0.15 at v14**, each re-fitted to the base that existed. See E1d.)*
 
 **Nine rulings, every one measured first and every one now a row** — v1 seeds/cuts · v2 seeds ruled
 + cap→rail · v3 relation weights + POS alphabet · v4 lemma scope `word` · v5 `antonym_inferred` /
@@ -49,13 +62,15 @@ set may live* (frame / curation / open) and *content is defined, structure is co
 **What E1 did NOT build — read this before assuming the dictionary is finished.** E1 built the
 **BASE**: the frame the geometry is stated over. The resource carries **68,779 words and 120,475
 senses**, and those ride ON the base (a sense holds a D-vector over base dimensions and consults R
-through its sense key — tkzip req 11). **That layer does not exist yet and has no epic.** It needs
+through its sense key — tkzip req 11). ~~**That layer does not exist yet and has no epic.**~~ It needed
 two decisions E1 deliberately left open: how a sense's vector is derived, and sense selection
 (`senses="primary"` is kept and its rot is documented — `small` reading as «the slender part of the
-back»). See `plan.md` § E1, «what E1 did not build».
+back»). **BOTH WERE RULED AND THE LAYER WAS BUILT: it became E1c**, below, the same day.
 
 *Inherited flags: `compass.n~compass.v` (+0.2668) is the POS collapse the NEAR floor is fitted to —
-if it is ever resolved, the floor is re-measured and not inherited · `measure` and `vocabulary` are
+if it is ever resolved, the floor is re-measured and not inherited. **IT WAS, AT E1d**: requirement
+16 mined `derivational` at primary-sense resolution, `compass` fell to +0.0948, and the floor was
+re-measured and re-ruled to +0.15 rather than inherited — exactly as this flag required · `measure` and `vocabulary` are
 unruled BY DEFAULT rather than by decision (they were unobservable behind the old cap and are
 observable now) · a transient `OperationFailure: Operation not permitted` appears in long live test
 runs against the `tk-atlas` container and passes on retry.*
@@ -147,6 +162,49 @@ measured over base-to-base cosines, and whether a sense-to-base reading is judge
 is E3's question · `dictionary_builds` gained a `build` field: the T5 finding that a manifest could
 not name its own rows became real the moment two builds shared one policy, and the two pre-fix rows
 are left in the ledger because a ledger records what happened.*
+
+---
+
+## E1d — the audit's repairs ✅ 2026-09-14 *(bar 13 → 19 of 37 decided, 0 wrong)*
+
+*It exists because at E2's close the Captain called in a parked order — «go through ALL the docs of
+`docs/<chapter>` and see if we missed something in the old requirements» — and because of how he
+framed the audit: **«if we ruled in some direction, it is not relevant. What is relevant is the final
+status, how much it differs from all the original requirements, and what we can do to fix.»** The
+`docs/dictionary/` audit measured all 21 requirements against the sealed base: **11 clean · 6 partial
+· 2 LOST · 1 contradicted by construction · 1 superseded.***
+
+- [x] **the audit itself** — 21 statuses corrected in the chapter (`202609141115_the-e1-audit.md`). What it found: **req 2 «eat stays near food» was marked PROVEN at +0.405 and read +0.048** — their glosses share nothing, because D measures what two definitions SHARE and the real relation is that eat's definition NAMES food · **req 10 said «never blended into one float» and the reader returned `cos(R + 0.15·D)`** · **req 20's two hand-approved curated edges were GONE**, zero curated cells in the base, because a curated edge was an OUTPUT of a build and not an INPUT to one.
+- [x] **T2 — SEPARATE READS** (policy v11) — R decides, D proposes, ABSTAIN when R is silent. Measured first: where R is silent, D provably cannot tell a declared NEAR from a declared FAR (`eat~hungry` 0.338 against `bed~cause` 0.326). `space.similarity()` DELETED — a function returning one number is what req 10 forbids. `thick~thin` and `push~pull` recover their FAR.
+- [x] **T3 — `gloss_reference` mined into R** (policy v12) — «A's definition NAMES B», weight 0.9, reciprocal 0.54, and **a STATED CELL may decide** (req 19, honoured at last; only UNAMBIGUOUS references decide). **Requirement 2 CLOSED.**
+- [x] **T4 — curated edges are INPUTS** — `dictionary_curated_edges`, append-mostly, consumed by the build, and a build **REFUSES** when an approved edge names a dimension the base no longer has. The structural fix for req 20: an output gets regenerated, an input survives.
+- [x] **T5 — the two lost edges restored** (`db/0005`).
+- [x] **REQUIREMENT 16 — `derivational` at primary-sense resolution** (policy v13) — its own proposed fix was **measured impossible**: a weight is a monotone rescale, so `compass` (FAR) sits above `cause` and `buy` (NEAR) at every scale. The defect was a **resolution mismatch** — a dimension IS its primary sense, but `derivational` was mined across every sense of the word. At the right resolution WordNet already separates all seven declared siblings, no threshold, 0% unanswerable over 1,626 pairs. *The QM's own first hypothesis failed too — D separated the seven by 0.020, which lands on the population median across all pairs; seven pairs were thin evidence and the bench existed to say so.*
+- [x] **APPLIED, REBUILT, RE-MEASURED, RULED — on the body** — `0003`–`0006` applied; base rebuilt as **`969766250c02`** with the sense layer and read back WHOLE against all four seals; membership unchanged at 4,555. **`db/0002`'s order was followed this time**: rebuild, then measure, then rule.
+- [x] **NEAR floor re-ruled +0.28 → +0.15** (policy v14) — the floor governs ONE gap, `compass.n~compass.v` FAR +0.0948 below and `walk.v~run.v` NEAR +0.2116 above, and 0.15 is the **middle** of it. The floor it replaced sat 0.0079 above a FAR pair and failed the first time the base moved.
+- [x] **R PROPOSES, AND THERE IS NO FALLBACK** — brain req 12 said «memory proposes by cosine» and never said WHOSE. Benched: **D 5.9% precision@10 with 36.6% junk · R 28.7% with 9.8%**, and **no variant of D helps** (direct cell 4.2%, `min_shared=2` 4.7%, uncapped 6.3%, idf 6.0%). The cause is measured — D's cosine asks «which common gloss word do you contain», `eat.v` shares 49 of its ~50 columns with `lead.v` on the word **«take»**, and 62% of D's cells sit at the cap. Where R is silent (14 of 4,555, 0.3%) **nothing is proposed**: the fallback removed was offering cosines of +0.000, `argmax` over zeros. *This also confirmed the 2026-08-25 idf rejection at a second and different gate.*
+- [x] **A SENSE IS PLACED BY WHAT IT STATES** — R first, D where the sense states none, **and the placement names the half**. Deliberately NOT the proposer's rule: relations reach 56.3% of the out-of-base senses `place()` exists for against the distribution's 94.5%, and D still answers 18.8% hit@5 — so the honest move is to LABEL the weaker answer, not refuse it. And a projected sense is ranked **in the half it came from**: ranking it elsewhere makes its `source` label FALSE, and measured worse (15.6% prec@5 against 13.3%).
+
+**Two bugs found by the work rather than by a test:** `MatrixStore.drop()` never covered the sense
+layer, so dropping the superseded build left **120,475 orphaned sense rows** under a build the
+verifier could not even list · and the build tool's default report still scored the pre-v11 blended
+reading, printing `mental.a~physical.a` — a declared FAR with a stated antonym — at **+0.105**. Both
+fixed; the tool now scores through the engine's own reader and `--floors` works under separate reads.
+
+*Four more found en route: `closed_forms(None)` broken since `0002` landed · `db/0004`'s first draft
+silently un-declared six rows · `assert_coherent` fired on its own success (R has two miners now) ·
+and D's cosine is «do these share NEIGHBOURS», not «does one name the other».*
+
+**Requirements 2, 10, 14, 16, 19 and 20 are closed — in code AND on the body.**
+
+*Open, named rather than left to be discovered: **D's neighbourhood cannot be tuned** and its honest
+content is the DIRECT CELL, first-order evidence rather than a neighbourhood
+(`202609141853_d-cannot-propose.md`) · **tkzip req 11 is flagged in its own chapter** — it assumes
+retrieval is topical cosine over the D-side geometry, and that geometry cannot rank · and **the
+acceptance floors are the BASE's**, fitted on base-to-base cosines where p90 is +0.000: applied to
+sense-to-base placements the same +0.15 says NEAR to **99.7%** of relations-placed senses and 89.7%
+of distribution-placed ones, so it does not discriminate in that population at all. **Carried to E3**,
+which is where `plan.md` said that question belonged before it was measurable.*
 
 ---
 

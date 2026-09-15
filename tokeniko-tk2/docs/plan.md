@@ -352,7 +352,10 @@ and whether R is consulted per sense or per key — tkzip req 11's «rides on th
 `small` reading as «the slender part of the back» is a *base* problem today and becomes a *sense*
 problem the moment senses are first-class). Neither belongs to E2 (the zip's schema) or E3 (the
 station): it is **a dictionary task with no epic**, and the plan must gain one rather than let it
-arrive by accident inside another epic's scope. Named here as OPEN, for the Captain to place.
+arrive by accident inside another epic's scope. ~~Named here as OPEN, for the Captain to place.~~
+**PLACED AND BUILT: it became E1c** (2026-09-10), which ruled both questions it names — the sense
+vector carries BOTH floors, and `senses="primary"` stands with a reason rather than by default. The
+epic the plan had to gain is below.
 
 ---
 
@@ -449,6 +452,16 @@ will have to ABSTAIN on — the count is in the manifest so that is predictable 
 surprising · the **acceptance floors are the base's**, measured over base-to-base cosines, and
 whether a sense-to-base reading is judged by the same numbers is E3's question, not answered here.*
 
+***MEASURED 2026-09-14, and it is now E3's with a number rather than a worry.*** *Base-to-base
+cosines are +0.000 at p90 and +0.117 at p99, so the ruled floor of +0.15 is a HIGH bar in the
+population it was fitted to. Applied to sense-to-base placements it is not: the top-1 cosine of a
+placed sense has a median of **+0.484** when relations placed it and **+0.228** when the distribution
+did, so the same +0.15 reads **NEAR for 99.7%** of relations-placed senses and 89.7% of
+distribution-placed ones. **A floor that says NEAR to everything is not discriminating** — it is a
+threshold calibrated on another population. Nothing is wrong with the base's floor, which is the
+point: the sense layer needs its OWN, fitted its own way, and E3 is where a placement first has to
+be trusted or refused.*
+
 ---
 
 ---
@@ -490,12 +503,12 @@ chapter as written, never against what was ruled later.**
    have — a rebuild moves the closure's cut, so an edge can outlive its dimension, and that is
    precisely the silence E1d exists to end. A curated cell OVERRIDES a mined one and the override
    is reported, because «the resource stated otherwise and a person disagreed» is a discovery.
-5. ~~**RE-APPROVE THE TWO LOST EDGES**~~ **— WRITTEN 2026-09-14 (`db/0005`, unapplied).**
+5. ~~**RE-APPROVE THE TWO LOST EDGES**~~ **— WRITTEN AND APPLIED 2026-09-14 (`db/0005`).**
    `bed.n→sleep.v` (`used_for`) and `hungry.a→eat.v` (`state_of`), with the ORIGINAL authorization
    and date carried, because this restores a decision rather than making a new one. **`sleep~bed`
    closes** — the pair the 2026-08-12 review called the one only R gets right.
 
-6. ~~**REQUIREMENT 16**~~ **— CLOSED 2026-09-14 (policy v13, `db/0006`, unapplied).** Requirement
+6. ~~**REQUIREMENT 16**~~ **— CLOSED 2026-09-14 (policy v13, `db/0006`, applied).** Requirement
    16's own proposed fix — down-weighting `derivational` — was measured IMPOSSIBLE: a weight is a
    monotone rescale and `compass.n~compass.v` (FAR) sits above `buy` and `cause` (NEAR) at every
    scale. A D threshold failed on the population (it landed on the median of 1,626 sibling pairs).
@@ -519,9 +532,12 @@ chapter as written, never against what was ruled later.**
 
 **Done when:** ✅ **MET 2026-09-14.** Every requirement the audit marked REFUTED, LOST, CONTRADICTED or
 open is closed — 2, 10, 14, 16, 19, 20 — and it is TRUE ON THE BODY, not only in code. **Bar: 13 → 19
-of 37 decided, 0 wrong.** Carried forward, named: the old build `9824ef465c86` is still on the body and
-the bench's loader may pick it (pass `--build`); the build tool's printed bar report still scores the
-pre-v11 blended reading; D's neighbourhood is noise at the top.
+of 37 decided, 0 wrong.** Carried forward, named: ~~the old build `9824ef465c86` is still on the body~~
+**dropped 2026-09-14, and `MatrixStore.drop()` fixed — it never covered the sense layer and left
+120,475 orphaned rows** · ~~the build tool's printed bar report still scores the pre-v11 blended
+reading~~ **fixed — it scores through the engine's own reader, and `--floors` works under separate
+reads** · **D's neighbourhood cannot be tuned** (benched: no variant helps; R proposes instead) ·
+**the placement floor is E3's**, measured and handed over above.
 
 *T2 precedes T3: «did it close?» cannot be answered while the verdict is a blend.*
 
@@ -629,8 +645,23 @@ it).
 5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
    fashion by tooling.
 
+6. **THE PLACEMENT FLOOR — inherited from E1c/E1d, and measured before it was handed over.** The
+   station is where a placement is first trusted or refused: a word it does not know reaches the
+   geometry through `place()`, which returns each reading with a verdict. That verdict currently uses
+   **the BASE's floor**, and the base's floor was fitted on base-to-base cosines where p90 is +0.000
+   — a population where +0.15 is a high bar. It is not one here: a placed sense's top-1 cosine has a
+   median of **+0.484** (relations) / **+0.228** (distribution), so +0.15 reads NEAR for **99.7%** and
+   89.7% of them. **A floor that says NEAR to everything is not a floor.** The sense layer needs its
+   own, fitted its own way — with the same discipline `db/0002` and `db/0007` were: measure the
+   population first, then put the threshold in the MIDDLE of a real gap, never on a wall. *And the
+   bar it is fitted against has to be built: the base's 37 pairs are base-to-base and say nothing
+   about placements.*
+7. **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
+   them. The count is in the manifest, so it is predictable rather than surprising.
+
 **Done when:** the drill bar passes through the real lib (parse AND render), clean input costs one
-parse, and confidence orders the drill's failures sensibly.
+parse, confidence orders the drill's failures sensibly, and **a placement is judged by a floor fitted
+to placements**.
 
 ---
 
@@ -646,6 +677,12 @@ parse, and confidence orders the drill's failures sensibly.
    crisp enumeration); INCONSISTENT reserved for logic.
 3. **Bind-and-ground** — the one search over sense slots / wh-gaps / unbound roles; dual read at
    both floors, source named in the derivation; ABSTAIN first-class.
+   *Amended 2026-09-14 — «dual read» here predates policy v11 and must not be read as a blend:
+   **R DECIDES, D PROPOSES, and where R is silent the answer is ABSTAIN.** A stated cell decides
+   before any threshold. «Both floors» remains right (NEAR floor + FAR ceiling) but they are R's
+   floors; D has none, because D never issues a verdict. `space.similarity()` no longer exists —
+   `read(a, b)` is the door, and it already names its source, which is what «source named in the
+   derivation» was asking for.*
 4. **Chaining** — the forward-chainer migrates and generalizes (fixpoint, corroborate/KB-refute).
 5. **Budget & ordering** — depth/time caps as db(r) params; depth-stamped insufficient; the
    micro-nn ordering hook (verdict untouched).
