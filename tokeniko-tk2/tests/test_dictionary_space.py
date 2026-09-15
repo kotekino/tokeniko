@@ -399,11 +399,62 @@ def test_a_projection_names_the_half_it_read():
     held = space(senses=senses)
 
     stated = held.project("devour.v.01", source=SOURCE_RELATIONAL)
-    proposed = held.project("devour.v.01")
+    proposed = held.project("devour.v.01", source=SOURCE_DISTRIBUTIONAL)
     assert stated is not None and proposed is not None
     assert not np.allclose(stated, proposed), "the two halves are different vectors"
     assert stated[held._index["eat.v"]] > 0
     assert proposed[held._index["food.n"]] > 0
+
+
+def test_a_sense_is_placed_by_its_RELATIONS_where_it_states_any():
+    """THE RULING OF 2026-09-14: R first, D where the sense states no relations, and the answer
+    NAMES the half. Deliberately not `neighbours`' rule, which refuses its fallback — there the
+    fallback was +0.000, here D still answers 18.8% hit@5 and relations reach only 56.3% of the
+    out-of-base senses this exists for."""
+    senses = [
+        {"key": "devour.v.01", "base": "devour.v", "ordinal": 1, "synset": "devour.v.01",
+         "definition": "eat greedily",
+         "relations": [{"column": "eat.v", "w": 0.8, "rel": "hypernym_1"}],
+         "distribution": [{"column": "food.n", "w": 0.5}]},
+        # States nothing — 40.2% of senses are like this, which is why the fallback stays.
+        {"key": "devour.v.02", "base": "devour.v", "ordinal": 2, "synset": "devour.v.02",
+         "definition": "read greedily", "relations": [],
+         "distribution": [{"column": "food.n", "w": 0.5}]},
+    ]
+    held = space(senses=senses)
+
+    stated = held.projection("devour.v.01")
+    assert stated.source == SOURCE_RELATIONAL
+    assert stated.vector[held._index["eat.v"]] > 0
+
+    fallen_back = held.projection("devour.v.02")
+    assert fallen_back.source == SOURCE_DISTRIBUTIONAL, "D where the sense states nothing"
+    assert fallen_back.vector[held._index["food.n"]] > 0
+
+    # A caller may still force one half and get silence rather than the other one.
+    assert held.projection("devour.v.02", source=SOURCE_RELATIONAL) is None
+
+
+def test_a_placement_is_ranked_IN_THE_HALF_it_was_projected_from():
+    """A correctness property, not an option. Ranking a relations-projected sense against D's
+    columns asks «whose DEFINITION mentions the words this synset is RELATED to» — a cross-space
+    question, and it makes the `source` label a false statement. Measured worse too: devour.v.01
+    («destroy completely») returns fail.v/compulsion.n crossed and ruin.v/destroy.v/defeat.v in its
+    own space, 15.6% prec@5 against 13.3%."""
+    senses = [{
+        "key": "devour.v.01", "base": "devour.v", "ordinal": 1, "synset": "devour.v.01",
+        "definition": "eat greedily",
+        "relations": [{"column": "eat.v", "w": 0.8, "rel": "hypernym_1"}],
+        "distribution": [{"column": "food.n", "w": 0.5}],
+    }]
+    held = space(senses=senses)
+
+    placed = held.place("devour")["devour.v.01"]
+    assert placed[0].key == "eat.v", "ranked among what R states, because R is what placed it"
+    assert all(n.source == SOURCE_RELATIONAL for n in placed), "every neighbour names the half"
+
+    crossed = held.neighbours_of_vector(held.project("devour.v.01"), source=SOURCE_DISTRIBUTIONAL)
+    assert all(n.source == SOURCE_DISTRIBUTIONAL for n in crossed), "and says so when asked to"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -479,3 +530,25 @@ def test_a_policy_that_never_ruled_the_cell_rule_reads_as_it_always_read():
     found = held.read("eat.v", "devour.v")
     assert found.source == SOURCE_RELATIONAL
     assert found.relational_cosine > 0, "the COSINE answered, as it did before v12"
+
+
+def test_the_catch_over_a_vector_refuses_a_ZERO_reading():
+    """The same defect, through the door the senses opened. If a projected sense shares no column
+    with any anchor, `argmax` returns whichever anchor was listed first — nothing was measured, and
+    naming one anyway is the zeros-dressed-as-an-answer this project already refused once."""
+    senses = [{
+        "key": "devour.v.01", "base": "devour.v", "ordinal": 1, "synset": "devour.v.01",
+        "definition": "destroy completely",
+        "relations": [{"column": "sleep.v", "w": 0.8, "rel": "hypernym_1"}],
+        "distribution": [],
+    }]
+    held = space(senses=senses)
+    found = held.projection("devour.v.01")
+
+    # `sleep.v` is what it states, so an anchor set containing it is measurable ...
+    caught = held.nearest_anchor_of_vector(found.vector, ["sleep.v", "food.n"], source=found.source)
+    assert caught is not None and caught.key == "sleep.v" and caught.source == found.source
+
+    # ... and one that shares no column with it at all is not: `meal.n`'s R row is empty, so every
+    # reading is 0.0 and the winner would be whichever anchor happened to be listed first.
+    assert held.nearest_anchor_of_vector(found.vector, ["meal.n"], source=found.source) is None

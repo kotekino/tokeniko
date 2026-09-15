@@ -143,6 +143,20 @@ class Reading:
 
 
 @dataclass(frozen=True, slots=True)
+class Projection:
+    """A sense read as a vector in the base's space, WITH the half it was read from.
+
+    The source is not decoration: since the ruling of 2026-09-14 a sense is placed by its RELATIONS
+    where it states any and by its DISTRIBUTION where it does not, so the caller cannot know which
+    half answered unless the answer says. And the vector must be ranked in the half it came from —
+    see `neighbours_of_vector`.
+    """
+
+    vector: object
+    source: str
+
+
+@dataclass(frozen=True, slots=True)
 class Neighbour:
     """One answer to «what is near this», with the verdict the policy issues on it and the LAYER it
     came from — because an answer that does not name its source is the thing requirement 10 forbids."""
@@ -494,15 +508,21 @@ class DictionarySpace:
         return Neighbour(candidates[best], reading,
                          self._config.reading.verdict(reading), source=SOURCE_RELATIONAL)
 
-    def project(self, sense: str, source: str = SOURCE_DISTRIBUTIONAL) -> np.ndarray | None:
-        """One SENSE as a unit vector in the base's space — how a word outside the base gets in.
+    def projection(self, sense: str, source: str | None = None) -> Projection | None:
+        """One SENSE as a unit vector in the base's space, NAMING the half it was read from.
 
-        NOT TOUCHED BY THE 2026-09-14 PROPOSER RULING, and the reason is a measurement rather than
-        an oversight: that ruling is about proposing from a BASE KEY, which is what the bench
-        measured. A SENSE has both floors and **40.2% of senses carry no relations at all**
-        (48,416 of 120,475), so reading this relations-only would place nothing for two senses in
-        five — a different and much larger silence than the 0.3% of base keys R is quiet about.
-        Flagged for its own ruling; `source` is how either reading is asked for.
+        **R FIRST, D WHERE THE SENSE STATES NO RELATIONS** — the Captain's ruling of 2026-09-14,
+        and it is deliberately NOT the rule `neighbours` follows. That one refuses its fallback
+        because the fallback was worth nothing: R is silent on 14 of 4,555 dimensions and D's
+        cosines there are +0.000. Here the trade is real. `place` exists for words the base does not
+        contain — 85.7% of senses are of such words — and of those, relations place **56.3%** where
+        the distribution places **94.5%**, so relations-only would leave **43.7% unplaceable**.
+
+        Measured over 400 out-of-base senses against gold (the base keys the sense IS or IS-A-KIND-OF):
+        distribution **4.0% prec@5 / 18.8% hit@5** · relations **15.6% / 60.5%** · this rule
+        **at 96.6% coverage**. Relations are three times better and D is NOT zero — so the honest
+        move is to LABEL the weaker answer rather than refuse it, which is what `source` is for and
+        what requirement 10 asks for in its own words: *every answer names its source.*
 
         THE GAP THIS CLOSES, found by probing the layer above: `nearest_anchor` could only start
         from a key that was already a dimension, and the semantic catch exists for ARBITRARY input.
@@ -510,59 +530,110 @@ class DictionarySpace:
         nothing to say about it, and «never rely on a fixed dictionary» would have been a promise the
         dictionary could not keep.
 
-        A sense already carries cells over base dimensions: that IS a vector in this space, and
-        projecting it is reading it as one. IT NAMES WHICH HALF IT IS READING, because a sense has
-        both floors and folding them together here would be the blend rebuilt one layer down —
-        exactly what policy v11 ruled out. `distributional` by default, because placing a word is a
-        PROPOSAL; ask for `relational` to place it by what its synset states.
+        Pass `source` to force one half and get `None` when it is mute — that is how a caller asks
+        «place this by what its synset STATES» and accepts silence for an answer.
         """
         reading = self._by_sense.get(sense)
         if reading is None:
             return None
-        vector = np.zeros(len(self._keys), dtype=np.float32)
-        if source == SOURCE_RELATIONAL:
-            for column, _relation, weight in reading.relations:
-                j = self._index.get(column)
-                if j is not None:
-                    vector[j] += weight
-        else:
-            for column, weight in self._distribution_of(sense):
-                j = self._index.get(column)
-                if j is not None:
-                    vector[j] += weight
-        norm = float(np.linalg.norm(vector))
-        return None if norm == 0 else vector / norm
+        wanted = (SOURCE_RELATIONAL, SOURCE_DISTRIBUTIONAL) if source is None else (source,)
+        for half in wanted:
+            vector = np.zeros(len(self._keys), dtype=np.float32)
+            if half == SOURCE_RELATIONAL:
+                for column, _relation, weight in reading.relations:
+                    j = self._index.get(column)
+                    if j is not None:
+                        vector[j] += weight
+            else:
+                for column, weight in self._distribution_of(sense):
+                    j = self._index.get(column)
+                    if j is not None:
+                        vector[j] += weight
+            norm = float(np.linalg.norm(vector))
+            if norm:
+                return Projection(vector / norm, half)
+        return None
+
+    def project(self, sense: str, source: str | None = None) -> np.ndarray | None:
+        """`projection` without the label — for a caller that already knows which half it asked for.
+
+        Prefer `projection`: a vector whose half is not carried alongside it is a vector that can be
+        ranked in the wrong space, which is the defect this pair was written to make impossible.
+        """
+        found = self.projection(sense, source)
+        return None if found is None else found.vector
 
     def place(self, word: str, count: int = 12) -> dict[str, list[Neighbour]]:
-        """Every reading of a word, each placed among the base's dimensions.
+        """Every reading of a word, each placed among the base's dimensions, each naming its half.
 
         The station's real question about an unknown word — not «which dimension is this» (it may be
         none) but «where does each of its readings sit». `devour` is not a dimension and its senses
         land squarely next to `eat.v`, which is the whole argument for a layer that rides on the base
         rather than a base that tries to contain everything.
+
+        Each reading is ranked IN THE HALF IT WAS PROJECTED FROM (`projection` picks the half), so
+        the `source` on every neighbour is a true statement about how that answer was reached.
         """
         out: dict[str, list[Neighbour]] = {}
         for sense_key in sorted(self._senses_by_word.get(keys.normalize_word(word), ())):
-            out[sense_key] = self.neighbours_of_vector(self.project(sense_key), count)
+            found = self.projection(sense_key)
+            out[sense_key] = ([] if found is None else
+                              self.neighbours_of_vector(found.vector, count, source=found.source))
         return out
 
-    def neighbours_of_vector(self, vector, count: int = 12) -> list[Neighbour]:
+    def neighbours_of_vector(self, vector, count: int = 12,
+                             source: str = SOURCE_DISTRIBUTIONAL) -> list[Neighbour]:
         """The nearest dimensions to an arbitrary vector — what `place` and the catch both need.
 
         Separate from `neighbours` because the caller may hold a vector that is not a row of this
         matrix at all: a projected sense today, a zip's own point when E2 lands.
+
+        **IT RANKS IN THE HALF IT IS TOLD**, and that is a correctness property rather than an
+        option. This used to rank everything in D. A relations-projected sense read against D's
+        columns asks «whose DEFINITION mentions the words this synset is RELATED to» — a
+        cross-space question whose top hit is carried by D's identity axis, and it measured worse:
+        `devour.v.01` («destroy completely») returned `fail.v, compulsion.n, spots.n` crossed and
+        **`ruin.v, destroy.v, defeat.v, overcome.v`** in its own space (15.6% prec@5 against 13.3%).
+        Ranking a vector somewhere other than where it came from also makes its `source` label a
+        false statement, which is the one thing requirement 10 forbids.
         """
         if vector is None:
             return []
         # Likewise a proposal: any word reaches the space through its senses, and
         # what comes back are candidates, never verdicts.
-        sims = self._distributional @ vector
+        space = self._relational if source == SOURCE_RELATIONAL else self._distributional
+        sims = space @ vector
         take = min(count, len(self._keys))
         best = np.argpartition(-sims, take - 1)[:take]
         return [
-            Neighbour(self._keys[i], float(sims[i]), self._config.reading.verdict(float(sims[i])))
+            Neighbour(self._keys[i], float(sims[i]), self._config.reading.verdict(float(sims[i])),
+                      source=source)
             for i in best[np.argsort(-sims[best])]
         ]
+
+    def nearest_anchor_of_vector(self, vector, anchors, source: str = SOURCE_DISTRIBUTIONAL):
+        """The nearest of a NAMED anchor set to an arbitrary vector — the catch, for a word that is
+        not a dimension and had to reach the space through one of its senses.
+
+        Here rather than in the bench because the bench had been reaching into `_distributional` and
+        `_index` to do it by hand, which is how a caller ends up ranking in the wrong half without
+        anyone noticing.
+        """
+        held = [a for a in anchors if a in self._index]
+        if vector is None or not held:
+            return None
+        space = self._relational if source == SOURCE_RELATIONAL else self._distributional
+        rows = np.array([self._index[a] for a in held])
+        sims = space[rows] @ vector
+        best = int(np.argmax(sims))
+        reading = float(sims[best])
+        if reading == 0.0:
+            # NOTHING was measured: this vector and every anchor share no column at all, so
+            # `argmax` is returning whichever anchor was listed first. That is the defect the
+            # proposer ruling removed from `nearest_anchor` and it must not come back through the
+            # door the senses opened. A negative reading is kept — that is R's own sign, and real.
+            return None
+        return Neighbour(held[best], reading, self._config.reading.verdict(reading), source=source)
 
     def _distribution_of(self, sense: str):
         return self._sense_distribution.get(sense, ())

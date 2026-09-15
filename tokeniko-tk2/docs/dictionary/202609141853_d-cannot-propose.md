@@ -161,5 +161,56 @@ filters on it; the evaluator can weigh a D-placement as weaker evidence instead 
 silently. *«What tk isn't understanding, he doesn't make up»* is satisfied by labelling, which was
 available here and was not available for the anchor.
 
-**STATUS: RULED, NOT YET IMPLEMENTED.** `place()` and `project()` still read the distributional half
-only.
+**STATUS: IMPLEMENTED 2026-09-14.** `projection(sense)` returns the vector AND the half it was read
+from; `place()` and the bench route carry that source on every neighbour.
+
+## AND ONE THING THE BENCH ITSELF HAD WRONG — a projected sense must be ranked IN ITS OWN HALF
+
+*Found while implementing, not while benching, which is the honest order to report it in.*
+
+`neighbours_of_vector` ranked **everything** against D's matrix, whatever half the vector came from.
+So the «relations only» column above was measured as *R-projected, ranked in D* — a cross-space read
+that asks «whose DEFINITION mentions the words this synset is RELATED to», and whose top hit is
+carried by D's identity axis rather than by any similarity.
+
+Re-measured on the same 400 senses:
+
+| reading | prec@5 | hit@5 |
+|---|---|---|
+| R-projected, ranked in D *(what the bench did)* | 13.3% | 62.7% |
+| **R-projected, ranked in R** *(same space)* | **15.6%** | 60.5% |
+| D-projected, ranked in D *(today)* | 4.0% | 18.8% |
+| D-projected, ranked in R *(crossed)* | 5.2% | 23.2% |
+
+Higher precision, and the eyeball test is decisive:
+
+```
+devour.v.01   («destroy completely»)
+   crossed      fail.v  compulsion.n  destroy.v  spots.n  entrance.v
+   same space   ruin.v  destroy.v  defeat.v  overcome.v        <- what the sense MEANS
+
+dog.n.01
+   crossed      carnivore.n  characteristic.a  narrative.a  intentional.a
+   same space   carnivore.n  bear.n  raccoon.n                 <- animals
+```
+
+**It is also a correctness property and not a preference:** ranking a vector somewhere other than
+where it came from makes its `source` label a FALSE statement, and «every answer names its source»
+is the one thing requirement 10 forbids breaking. `neighbours_of_vector` now takes the half and ranks
+in it.
+
+**ON THE LIVE BASE**, each reading labelled with the half that placed it:
+
+```
+devour.v.01  [relational]     ruin.v, destroy.v, defeat.v
+devour.v.03  [relational]     deplete.v, eat.v, down.v, consume.v
+dog.n.01     [relational]     carnivore.n, bear.n, colors.n, flag.n, raccoon.n
+dog.v.01     [relational]     tail.v, track.v, tag.v, tree.v, pursue.v
+dog.n.02     [distributional] entire.n, heart.n, unpleasant.a        <- honest, and labelled
+happy.a.01   [relational]     happiness.n, belonging.n, satisfaction.n
+```
+
+**AND THE ZEROS CAME BACK THROUGH THE NEW DOOR.** The vector catch scored `devour.v.01 -> eat.v
++0.000`: `argmax` over a row of zeros, naming whichever anchor was listed first — the exact defect
+the proposer ruling had just removed from `nearest_anchor`. It now returns `None` when the best
+reading is 0.0. A NEGATIVE reading is kept: that is R's own sign, and it is real evidence.

@@ -189,8 +189,12 @@ class Bench(BaseHTTPRequestHandler):
             ],
             # A word need not be a dimension at all — most are not — and its readings still have a
             # place. This is the half E1c added and the half `resolve` alone cannot show.
+            # Each placement NAMES the half that made it (the ruling of 2026-09-14): a sense is
+            # placed by its relations where it states any, by its definition where it does not, and
+            # a page that showed the ranking without the half would be hiding which one answered.
             "placed": {
-                sense: [{"key": n.key, "cosine": round(n.cosine, 4), "verdict": n.verdict}
+                sense: [{"key": n.key, "cosine": round(n.cosine, 4), "verdict": n.verdict,
+                         "source": n.source}
                         for n in neighbours]
                 for sense, neighbours in self.space.place(word, count=8).items()
             },
@@ -252,25 +256,24 @@ class Bench(BaseHTTPRequestHandler):
         by_sense = {}
         if direct is None:
             for sense in self.space.place(word, count=1):
-                vector = self.space.project(sense)
-                if vector is None:
+                # The space does the ranking now. This used to reach into `_distributional` and
+                # `_index` and score by hand, which is exactly how a caller ends up ranking a
+                # relations-projected sense in D's columns without anyone noticing.
+                found = self.space.projection(sense)
+                if found is None:
                     continue
-                held = [a for a in anchors if self.space.holds(a)]
-                if not held:
+                caught = self.space.nearest_anchor_of_vector(found.vector, anchors,
+                                                             source=found.source)
+                if caught is None:
                     continue
-                scored = sorted(
-                    ((a, float(vector @ self.space._distributional[self.space._index[a]])) for a in held),
-                    key=lambda pair: -pair[1],
-                )
-                best, reading = scored[0]
-                by_sense[sense] = {"anchor": best, "cosine": round(reading, 4),
-                                   "verdict": self.config.reading.verdict(reading)}
+                by_sense[sense] = {"anchor": caught.key, "cosine": round(caught.cosine, 4),
+                                   "verdict": caught.verdict, "source": caught.source}
         return {
             "word": word,
             "anchors": anchors,
             "direct": None if direct is None else
                       {"anchor": direct.key, "cosine": round(direct.cosine, 4),
-                       "verdict": direct.verdict},
+                       "verdict": direct.verdict, "source": direct.source},
             "by_sense": by_sense,
         }
 
