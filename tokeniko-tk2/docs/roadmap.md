@@ -32,12 +32,24 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [ ] **the placement floor** — inherited from E1c/E1d, measured 2026-09-14: the base's +0.15 was
       fitted on base-to-base cosines (p90 +0.000) and says NEAR to **99.7%** of relations-placed
       senses. A placement needs a floor fitted to placements, and a bar to fit it against
-- [ ] **⚑ the UD gate** — all 37 UD dependency relations and 17 POS tags read consistently against
-      UD's own examples; the 37 → 18-roles mapping table is the epic's real deliverable
-- [ ] **task 0 — the closed classes' SEMANTICS**: the 383 rows exist, `compiled` is empty on all of
-      them; 135 prepositions typed `role_marker` and not one says which role it marks
-- [ ] skeleton adapter (stanza — it targets UD2; spaCy is not a second opinion)
-- [ ] compile core (anchors migrated; senses open; context argument; partial zips)
+- [x] **task 0 — the closed classes' SEMANTICS** — 383 rows carry a complete `compiled`; 41 re-typed
+      at v2 (`db/0008`) and 11 corrected at v3 (`db/0009`), both applied. `tk2/language/closed.py`
+      reads them: longest-first for the 63 multi-word forms, UD deciding the job for the 45
+      ambiguous ones
+- [x] **skeleton adapter** — stanza behind the lib boundary (`tk2/language/skeleton.py`); `Skeleton`
+      and `Word` hold UD strings and nothing above imports spacy, stanza or torch
+- [x] **⚑ the UD gate OPENS** — `tools/ud_gate.py`, offline by default: **16 answered · 0 wrong ·
+      9 abstained** over 25 cases reaching 16 of the 37 relations. It found four defects nobody
+      would have read off the code. *(The 21 unreached relations are printed by name every run.)*
+- [ ] **the UD gate COMPLETED** — the remaining 21 relations, each with a transcribed case
+- [x] **compile core — ONE content row** (`tk2/language/compile.py`): the relation half and the
+      marker half of the mapping, quantifier binders, possessors inside the record, senses OPEN.
+      **18 of 25 UD cases at 100% coverage, mean 89.5%**
+- [ ] **compile core — MANY rows**: a join, a relative clause and reported speech each need a second
+      content row plus a `JoinRow`/`AttitudeRow`. Every partial in the corpus is this one gap
+- [ ] **the thirteen ambiguous markers** — «to» destination|recipient, «in»
+      location|time|instrument|manner: where no UD subtype settles it, the head-verb geometry must
+- [ ] **`mark` under a reporting verb opens a POV**, not a join (E2 made attitude a prefix element)
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
 - [ ] drill automated = acceptance gate

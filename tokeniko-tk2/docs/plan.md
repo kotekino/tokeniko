@@ -661,6 +661,15 @@ it).
 2. **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an
    asset); sense slots left OPEN; context-as-argument for anaphora/ellipsis/fragments (req 7);
    partial zips with open variables (req 8).
+   **HALF DONE 2026-09-15** (`tk2/language/compile.py`, record
+   `docs/parser-compiler/202609151415_the-compile-core.md`): one content row, both halves of the
+   mapping, quantifier binders with their restriction, possessors inside the record, senses OPEN —
+   **18 of 25 UD cases whole, mean coverage 89.5%**. The frame caught a design error on the way: a
+   `QuantifierRow`'s `restriction` is a Box, so a binder cannot be emitted on meeting «every».
+   **WHAT REMAINS IS ONE FEATURE: MANY ROWS.** A join («reading or writing»), a relative clause
+   («the cat that sleeps») and reported speech («he says that…») each need a second content row and
+   a `JoinRow` or `AttitudeRow` to relate them — and every partial in the corpus is that gap.
+   Context-as-argument is untouched; nothing has needed it yet.
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.

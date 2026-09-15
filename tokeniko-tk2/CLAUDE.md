@@ -56,11 +56,31 @@ A wrong deploy is revertible; a wrong schema decision is not. So on any core-des
 - `../tokeniko-tk1/` — the live v1 engine. It is the **empirical instrument**: its stored journeys
   (`tkzipdebug`, 553 rows / 113 judged mismatches) are evidence about what the format must hold.
 
+## RECONCILE THE TRIO *BEFORE* ASKING FOR THE COMMIT (the Captain, 2026-09-15)
+
+> *«Keep the rule to reconcile always before asking me to commit.»*
+
+Not after, and not «at» the commit: **the reconciliation is part of the work being proposed**, so it
+is in the diff he is approving. A commit that lands code and leaves `roadmap.md` describing the
+state before it is a commit that made the trio wrong — and the trio is how he sees the project.
+
+Concretely, before every «ready to commit?»:
+
+1. **`roadmap.md`** — tick what is done, and rewrite any line whose TEXT no longer describes reality
+   (a task-0 line still saying «`compiled` is empty on all of them» is worse than an unticked box).
+2. **`plan.md`** — does the epic's task list still match what the epic turned out to be? New tasks
+   found by the work go in, with their measurement.
+3. **`landed.md`** — only when an epic CLOSES. Items move there, never copied.
+4. **The chapter** — a ruling or a measurement goes in `docs/<chapter>/` as a dated note, and the
+   `requirements.md` line it amends says so.
+
+Then propose the commit, with the doc changes in the same diff as the code.
+
 ## Standing invariants
 
 - tk2 work never enters `../tokeniko-tk1/doc/roadmap.md` — that boundary is absolute.
 - The status trio is `plan.md` · `roadmap.md` · `landed.md`. One item, one status, one doc;
-  reconcile at every commit.
+  **reconcile BEFORE proposing the commit** — see the section above.
 - Commits, pushes and `--apply`-class writes happen **only** on the Captain's explicit yes.
 - tk2 code writes sandbox databases only. The guard is never weakened.
 - The three standing laws (where a closed set may live · content is defined, structure is compiled ·
