@@ -19,6 +19,7 @@ from tk2.language.skeleton import (
 from tk2.language.closed import (
     ClosedClasses,
     Match,
+    UD_DEP_SETTLES_ROLE,
     UD_DEP_TO_ROLE,
     UD_POS_TO_WORD_CLASS,
     standing_closed_classes,
@@ -36,6 +37,7 @@ __all__ = [
     "skeleton_from_conllu",
     "ClosedClasses",
     "Match",
+    "UD_DEP_SETTLES_ROLE",
     "UD_DEP_TO_ROLE",
     "UD_POS_TO_WORD_CLASS",
     "standing_closed_classes",

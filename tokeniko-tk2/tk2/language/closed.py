@@ -81,6 +81,25 @@ UD_DEP_TO_ROLE: dict[str, tuple[str, ...]] = {
 }
 
 
+#: UD dependency -> the tkzip ROLE it settles, for markers the table alone cannot disambiguate.
+#: FRAME, and narrow on purpose: every entry is a relation whose UD definition NAMES the role, so
+#: nothing here is a judgement about English — it is a reading of UD's own documentation.
+#:
+#:   `obl:agent`   "used for agents in passive constructions" — «the cat was chased BY the dog».
+#:                 `by` is instrument/agent/path/time in the table and this settles it outright.
+#:   `nmod:poss`   a possessor, and tkzip keeps the possessor INSIDE the record (Box.relation),
+#:                 which is why the answer is a field name and not one of the eighteen roles.
+#:   `obl:tmod`    a temporal modifier, named as such by UD.
+#:   `obl:lmod`    a locative modifier, likewise.
+UD_DEP_SETTLES_ROLE: dict[str, str] = {
+    "obl:agent": "agent",
+    "obl:tmod": "time",
+    "obl:lmod": "location",
+    "nmod:poss": "relation",
+    "det:poss": "relation",
+}
+
+
 @dataclass(frozen=True, slots=True)
 class Match:
     """One closed-class form found in a token stream, with the job it is doing.
@@ -98,6 +117,17 @@ class Match:
     compiled: dict[str, Any]
     features: dict[str, Any] = field(default_factory=dict)
     certain: bool = True
+
+    #: Set when a UD subtype SETTLED which role this marker fills — `obl:agent` for «by», say. The
+    #: candidates stay in `roles` so the evidence is visible; this is what the compiler should use.
+    settled_role: str | None = None
+
+    @property
+    def role_or_settled(self) -> str:
+        """The role to fill, preferring what UD settled over the table's own best guess."""
+        if self.settled_role:
+            return self.settled_role
+        return self.roles[0] if self.roles else ""
 
     @property
     def kind(self) -> str:
@@ -201,8 +231,15 @@ class ClosedClasses:
         return narrowed[0]
 
     def read(self, tokens: Sequence[str], at: int = 0, upos: str | None = None,
-             dep: str | None = None) -> Match | None:
-        """`match` and `select` together — what a compiler calls once per token position."""
+             dep: str | None = None, head_dep: str | None = None) -> Match | None:
+        """`match` and `select` together — what a compiler calls once per token position.
+
+        `head_dep` is the dependency of the word this token ATTACHES TO, and it is what settles an
+        ambiguous marker. UD puts `case` on the marker and the informative label on the nominal:
+        «the cat was chased BY the dog» is `case(dog, by)` + `obl:agent(chased, dog)`. The marker's
+        own dep is `case` in every one of these sentences and says nothing; the head's dep says
+        which role the phrase fills. A caller with a skeleton always has it — `skeleton[w.head].dep`.
+        """
         form = self.match(tokens, at)
         if form is None:
             return None
@@ -211,15 +248,44 @@ class ClosedClasses:
             return None
         candidates = self._by_form[form]
         certain = len(candidates) == 1 or bool(upos or dep)
+        compiled = dict(row.get("compiled") or {})
+        # A UD SUBTYPE CAN SETTLE AN AMBIGUOUS MARKER OUTRIGHT, and where it does, the table's
+        # best-first order is not the answer — «the cat was chased BY the dog» is `obl:agent`, and
+        # `by` reads instrument-first in the rows because that is its commonest job, not its job
+        # here. Only applied to a marker that actually offers that role: a subtype naming something
+        # this form cannot fill is a disagreement to report, never a role to invent.
+        settled = UD_DEP_SETTLES_ROLE.get(head_dep or "") or UD_DEP_SETTLES_ROLE.get(dep or "")
+        if settled and settled not in compiled.get("roles", ()) and settled != "relation":
+            settled = None
         return Match(
             form=form,
             length=len(form.split()),
             word_class=row["word_class"],
             role=row["role"],
-            compiled=dict(row.get("compiled") or {}),
+            compiled=compiled,
             features=dict(row.get("features") or {}),
             certain=certain,
+            settled_role=settled,
         )
+
+    def walk_skeleton(self, skeleton):
+        """Every closed-class form in a SKELETON — the walk a compiler actually runs.
+
+        Separate from `walk` because it can see the whole sentence: the head's dependency is what
+        settles an ambiguous marker, and a caller holding only `(upos, dep)` pairs cannot supply it.
+        """
+        i = 0
+        words = skeleton.words
+        while i < len(words):
+            word = words[i]
+            head = words[word.head]
+            found = self.read(skeleton.tokens, i, word.upos, word.dep,
+                              head_dep=None if head.index == word.index else head.dep)
+            if found is None:
+                i += 1
+                continue
+            yield i, found
+            i += found.length
 
     def walk(self, tokens: Sequence[str], tags: Sequence[tuple[str, str]] | None = None):
         """Every closed-class form in a token stream, left to right, multi-word forms consumed whole.

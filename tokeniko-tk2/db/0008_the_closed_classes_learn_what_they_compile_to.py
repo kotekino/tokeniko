@@ -71,6 +71,7 @@ THEATRE = "theatre"          # moves the theatre, not the row
 STRUCTURE = "structure"      # compiles to nothing: it was glue
 DETERMINATION = "determination"   # sets the box's `determination` field, which is not `quantity`
 AMBIGUOUS = "ambiguous"      # two readings the compiler must choose between; `candidates` holds both
+FIELD = "field"              # fills a FIELD of the box rather than a box — the possessor
 
 
 def _box(*roles):
@@ -199,12 +200,32 @@ def _compiled_for(row: dict) -> dict:
     if role == "subordinator":
         return {"kind": JOIN, "operator": _SUBORDINATOR.get(form, "imply")}
     if role == "tense_aspect":
+        # **PLAIN COPULAR `be` COMPILES TO STRUCTURE AND EARNS NO DIMENSION** (req 31): «the cat is
+        # cute» is *cat + cute, no verb* — the Captain's own first draft, verbatim. It is not a
+        # theatre move; `become`, `seem` and `remain` keep a home and `be` does not. Found by the UD
+        # gate on «Sue is a teacher», where UD labels it `cop` and the row said «theatre».
+        # The COMPILER still has to tell copular `be` from auxiliary `be` («she is running», `aux`)
+        # and existential `be` («there is a cat», which IS content) — UD's relation is what says
+        # which, and that is the compile core's job, not this row's.
+        if row["form"] in _COPULAR_BE:
+            return {"kind": STRUCTURE, "when": "cop", "otherwise": THEATRE, "was": THEATRE}
         return {"kind": THEATRE}
-    if role in ("infinitive_marker", "expletive", "existential", "affirmation", "genitive",
+    if role == "genitive":
+        # **THE POSSESSIVE CLITIC IS NOT GLUE**, found by the UD gate on UD's own example, 2026-09-15.
+        # UD analyses «the Chair 's office» as `case('s)` + `nmod(office, Chair)` and pairs it
+        # explicitly with «the office OF the Chair» — the same relation, two spellings. tkzip keeps
+        # the possessor INSIDE the record as `Box.relation` (req 26), so this fills a FIELD rather
+        # than a box. Typing it `structure` threw the possessor away.
+        return {"kind": FIELD, "field": "relation", "was": "structure"}
+    if role in ("infinitive_marker", "expletive", "existential", "affirmation",
                 "verb_particle", "hortative"):
         return {"kind": STRUCTURE}
     return {}
 
+
+#: The forms of `be`. Copular `be` is glue; the same forms under `aux` move the theatre, and under
+#: an existential reading they are content. One row cannot decide that — the dependency can.
+_COPULAR_BE = {"be", "is", "am", "are", "was", "were", "been", "being", "'s", "'re", "'m"}
 
 #: Which corner of the square each quantifier word binds. `Quantity` is tkzip's frozen enum.
 _QUANTITY = {
