@@ -407,15 +407,23 @@ def test_reading_the_policy_without_naming_a_version_is_refused(created):
 
 @live
 def test_0004_writes_the_closed_classes_as_declared(created):
-    """One table replacing tk1's four hand lists, and E1's exclusion set at the same time."""
-    stored = list(created["language_closed_classes"].find({}))
+    """One table replacing tk1's four hand lists, and E1's exclusion set at the same time.
+
+    **VERSION 1 SPECIFICALLY, and the filter is the point.** `db/0008` writes version 2 beside it —
+    the same forms with `compiled` filled and 41 rows re-typed — and these rows are versioned as a
+    whole exactly so that both can sit in the table at once. An unfiltered read here compared the
+    UNION against v1 and called v2's re-typings «extra items», which is the collection working as
+    designed and the assertion asking the wrong question.
+    """
+    stored = [r for r in created["language_closed_classes"].find({}) if r["version"] == 1]
     declared = closed_class_rows()
 
+    assert stored, "version 1 is still readable beside whatever versions came after it"
     assert {(r["form"], r["word_class"], r["role"]) for r in stored} == {
         (r["form"], r["word_class"], r["role"]) for r in declared
     }
-    assert {r["version"] for r in stored} == {1}
-    # E3's column is empty by construction — what a form compiles TO is a tkzip question.
+    # E3's column was empty by construction in v1 — what a form compiles TO is a tkzip question,
+    # and tkzip did not exist yet. `db/0008` is where it stops being empty.
     assert all(r["compiled"] == {} for r in stored)
 
 

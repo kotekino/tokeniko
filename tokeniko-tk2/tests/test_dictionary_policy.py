@@ -1535,7 +1535,18 @@ def test_the_closed_classes_are_found_even_when_the_newest_migration_never_decla
     forms, source = closed_forms(None)
 
     assert len(forms) > 200 and "the" in forms
-    assert "0001" in source, "the baseline is what declares them"
+
+    # It used to assert «0001 is what declares them», which was true while the baseline was the only
+    # file that did. `db/0008` declares them now — version 2, with `compiled` filled — and the
+    # mechanism finding the NEWEST declaring file rather than the newest file is the whole point of
+    # it. So the property held here is the one that cannot go stale: whoever declares them, the
+    # offline path finds them, and it finds the newest.
+    found, _module = newest_migration_declaring("CLOSED_CLASS_ROWS")
+    assert f"db/{found.label}" in source, "the source names the file the rows actually came from"
+    assert found.number == max(
+        m.number for m in __import__("tk2.migrations", fromlist=["discover"]).discover()
+        if hasattr(m.load(), "CLOSED_CLASS_ROWS")
+    ), "and it is the newest file that declares them"
 
     found, module = newest_migration_declaring("POLICY_ROWS")
     assert found.number >= 4, "and the newest POLICY is still found the other way"
