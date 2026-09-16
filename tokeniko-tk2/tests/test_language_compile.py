@@ -181,18 +181,80 @@ def test_the_sense_slot_is_always_OPEN(compiler):
 # ------------------------------------------------------------------------------------------------
 
 
+def test_an_EMBEDDED_QUESTION_opens_its_slot(compiler):
+    """«if you know WHO did it, tell me» — the wh-word opens a participant in its own row, and the
+    utterance is still not a question.
+
+    **A WH-WORD HAS THREE READINGS AND R5's BINARY TEST CONFLATED THE LAST PAIR.** R5 asks «is this
+    the root clause» and answers the MOOD question rightly — «I am happy WHEN I talk» is not an
+    interrogative. It was then read as «therefore RELATIVE», which is the conflation: an embedded
+    question opens its slot exactly as a root one does. **UD marks the difference**: a relative
+    clause modifies a NOUN (`acl:relcl`); an embedded question is a clausal COMPLEMENT.
+    """
+    out = compiled(compiler, "if you know who did it , tell me")
+    did = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "do.v")
+
+    assert isinstance(did.boxes[Role.AGENT].head, Open), "`who` opens the agent slot"
+    assert out.coverage == 1.0 and out.unplaced == ()
+
+
+def test_the_three_readings_of_a_wh_word_stay_apart(compiler):
+    """Root asks · a noun-modifying clause describes · a complement clause asks without the
+    utterance being a question. All three, in one test, because the risk is a fix that collapses
+    them the other way."""
+    asking = compiled(compiler, "when do you sleep ?")
+    describing = compiled(compiler, "the cat that sleeps")
+    embedded = compiled(compiler, "if you know who did it , tell me")
+
+    assert Role.TIME in main_row(asking).boxes, "the root clause ASKS: a box is opened"
+    assert isinstance(main_row(asking).boxes[Role.TIME].head, Open)
+
+    sleeps = next(r for r in describing.zip.rows if getattr(r, "predicate", None) == "sleep.v")
+    assert isinstance(sleeps.boxes[Role.AGENT].head, Var), "the relative BINDS, it does not open"
+
+    did = next(r for r in embedded.zip.rows if getattr(r, "predicate", None) == "do.v")
+    assert isinstance(did.boxes[Role.AGENT].head, Open), "the embedded one asks"
+    assert all(c == 1.0 for c in (asking.coverage, describing.coverage, embedded.coverage))
+
+
+def test_UNASSERTION_PROPAGATES_into_an_enclosed_clause(compiler):
+    """**«if you know WHO DID IT, tell me» does not assert that anybody did it.** The whole antecedent
+    is supposed, and a clause inside it is inside the supposition.
+
+    It was a TRUTH error and therefore the worst kind: the `ccomp` was joined by an AND that claimed
+    its operand while the other half of the same conditional was explicitly not claimed.
+    """
+    out = compiled(compiler, "if you know who did it , tell me")
+    content = [r for r in out.zip.rows if r.kind == "content"]
+
+    assert all(r.truth is None for r in content), f"claimed: {[r.name for r in content if r.truth]}"
+    assert [r.truth for r in out.zip.rows if r.kind == "join"] == [1.0, 1.0], "the JOINS are claimed"
+
+
+def test_a_compiled_form_does_not_ALSO_abstain(compiler):
+    """A report that cries wolf is worse than no report. `if` was in the abstention list of a
+    sentence whose IMPLY it had built, because the per-clause walk met it before `_relate` ran."""
+    out = compiled(compiler, "if you know who did it , tell me")
+
+    assert out.abstained == (), f"spurious: {out.abstained}"
+    assert any(r.kind == "join" and r.operator is Operator.IMPLY for r in out.zip.rows)
+    assert compiled(compiler, "the cat that sleeps").abstained == ()
+
+
 def test_a_word_the_station_cannot_place_is_VISIBLE(compiler):
     """Req 21: material no box fits is RECORDED, never given a position it did not earn — and never
     silently dropped either.
 
-    The example moved when relative clauses started compiling: this test used to use «the cat that
-    sleeps», and the honest thing on that day was to point it at something still unhandled rather
-    than to keep asserting a limitation that had been lifted. «who» in an embedded question has no
-    rule yet, and that is what the zip reports."""
-    out = compiled(compiler, "if you know who did it , tell me")
+    The example has moved TWICE, and each move is the same honesty: point it at something still
+    unhandled rather than keep asserting a limitation that has been lifted. It was «the cat that
+    sleeps» until relative clauses compiled, then «if you know who did it» until embedded questions
+    did. It is now `xcomp`, which is not a gap but a RULING — «you like TO SWIM» is one predication
+    and nobody asserts that you swim — so what the zip reports is that the ruling has no compiled
+    consequence yet."""
+    out = compiled(compiler, "he says that you like to swim")
 
-    assert out.unplaced, "the embedded question is not compiled yet, and the zip says so"
-    assert set(out.unplaced) <= set(case("if you know who did it , tell me").skeleton.tokens)
+    assert out.unplaced, "the xcomp's own verb is not a row, and the zip says so"
+    assert set(out.unplaced) <= set(case("he says that you like to swim").skeleton.tokens)
     assert out.zip.unplaced == list(out.unplaced)
     assert 0.0 < out.coverage < 1.0, "partial, and honestly so"
 
@@ -591,7 +653,7 @@ def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
 
 
 def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
-    """The 25 cases that existed before the corpus reached all 37 relations: **22 whole, 98.4%.**
+    """The 25 cases that existed before the corpus reached all 37 relations: **24 whole, 99.4%.**
 
     **The floor is stated in TWO HALVES on purpose.** On 2026-09-16 the corpus grew from 16 relations
     to 37, and the eighteen new cases are the hard ones by construction — everything easy had already

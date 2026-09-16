@@ -746,7 +746,21 @@ it).
      a corpus that holds only what already works is a corpus that cannot report a gap.*
      Frontier **11/19 at 84.5%**, gate **33 answered · 0 WRONG**.
    - **`appos`** — one individual under two descriptions; unruled, and it leans on E3b.
-   - **embedded questions** («if you know WHO did it»).
+   - ~~**embedded questions**~~ **DONE 2026-09-16.** **A wh-word has THREE readings and R5's binary
+     test conflated the last pair**: root → interrogative (opens a slot, the utterance asks) · a
+     noun-modifying clause → relative (BINDS an antecedent, opens nothing) · a complement clause →
+     free relative (opens a slot, and the utterance does NOT ask). R5 answered the MOOD question
+     rightly and was then read as «therefore relative». **UD marks the difference and nothing else
+     does** — `acl:relcl` modifies a noun; an embedded question is a clausal complement.
+     **AND IT FOUND A TRUTH ERROR, which is the worst kind**: «if you know WHO DID IT, tell me»
+     CLAIMED that somebody did it. The `ccomp`'s AND asserted its operand while the other half of
+     the same conditional was explicitly not claimed — so unassertion now propagates into an
+     enclosed clause. The heads are walked in sentence order, so an enclosing clause has always
+     spoken first and no second pass is needed.
+     **Plus one honesty repair**: `if` was in the abstention list of a sentence whose IMPLY it had
+     built, because the per-clause walk meets a joiner before `_relate` runs. A report that cries
+     wolf is worse than no report.
+     **Ratchet 24/25 at 99.4%** — a new high — gate **33 answered · 0 WRONG**.
    Context-as-argument is untouched; nothing has needed it yet.
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip

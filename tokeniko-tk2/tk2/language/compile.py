@@ -85,6 +85,11 @@ CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis"})
 ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
 ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
 
+#: Kinds a LATER pass owns. A joining word is built by `_relate` once every clause exists, and a
+#: relative pronoun by `_share_variable` — so neither is an abstention when the per-clause walk meets
+#: it, and saying so made the abstention list untrustworthy.
+LATER_PASS_OWNS = frozenset({"join", "open"})
+
 #: A closed-class `kind` -> the word for WHERE that form went, when the two differ. A form whose
 #: `compiled.kind` is `box` is a MARKER on somebody else's box, never a box of its own, and calling
 #: its placement `box` would make the trace say the preposition filled the role.
@@ -490,6 +495,17 @@ class Compiler:
                 asserts = ASSERTS_NEITHER
 
             inner, outer_row = content[head.index], content[outer.index]
+            if outer_row.name in unasserted and asserts == ASSERTS_BOTH:
+                # **UNASSERTION PROPAGATES DOWN, AND NOT PROPAGATING IT IS A TRUTH ERROR.** «if you
+                # know WHO DID IT, tell me» does not assert that anybody did it — the whole antecedent
+                # is supposed, and a clause inside it is inside the supposition. The AND that relates
+                # them is honest; what was wrong was claiming its operand while the other half of the
+                # conditional was explicitly not claimed.
+                #
+                # The heads are walked in SENTENCE ORDER, so an enclosing clause has always spoken
+                # before the clause it encloses — which is why this reads `unasserted` rather than
+                # needing a second pass.
+                unasserted.add(inner.name)
             if asserts == ASSERTS_NEITHER:
                 # STATED, NOT CLAIMED — both halves. The JOIN carries the claim, and the heart reads
                 # this shape as supposition (heart 16) exactly as the evaluator reads a claim.
@@ -1061,6 +1077,13 @@ class Compiler:
             # restriction, open) — and in the second case the word stays UNPLACED rather than
             # vanishing, which is what `Zip.unplaced` is for.
             if kind in ("determination", "field", "structure", "theatre"):
+                return taken
+            if kind in LATER_PASS_OWNS:
+                # **NOT AN ABSTENTION: A LATER PASS OWNS IT.** `_relate` builds the joins and
+                # `_share_variable` the relative pronouns, and both run after every clause is
+                # compiled — so reporting them here said the station had given up on words it
+                # goes on to place correctly. A report that cries wolf is worse than no report,
+                # and «if» was in the abstention list of a sentence whose IMPLY it had built.
                 return taken
             abstained.append(f"{match.form}: {kind} is not compiled yet")
             return set()

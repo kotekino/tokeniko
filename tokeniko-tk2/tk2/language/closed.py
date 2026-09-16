@@ -30,6 +30,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
+from tk2.language.skeleton import bare
+
 #: UD universal POS -> the `word_class` values this table uses. Several-to-several on purpose:
 #: UD's `AUX` covers our auxiliaries AND our modals, and our prepositions and postpositions are both
 #: UD's `ADP` — English's handful of postpositions differ by POSITION, which the dependency carries.
@@ -80,6 +82,14 @@ UD_DEP_TO_ROLE: dict[str, tuple[str, ...]] = {
     "fixed": ("role_marker", "subordinator"),
 }
 
+
+#: The dependencies of a clause that MODIFIES A NOUN — which is what separates a relative clause
+#: from an embedded question, and the only evidence there is for it. FRAME: `acl` is UD's own
+#: «clausal modifier of a noun», and `acl:relcl` its relative-clause subtype.
+#:
+#: **ON THE FRAME/KNOWLEDGE AUDIT LIST** with `CLAUSE_DEPS` and the rest — a set of UD relations in
+#: code — though this one is a reading of UD's own definition rather than a judgement about English.
+RELATIVE_CLAUSE_DEPS = frozenset({"acl"})
 
 #: UD dependency -> the tkzip ROLE it settles, for markers the table alone cannot disambiguate.
 #: FRAME, and narrow on purpose: every entry is a relation whose UD definition NAMES the role, so
@@ -253,14 +263,45 @@ class ClosedClasses:
         row = self.select(form, upos, dep)
         if row is None:
             return None
-        # A wh-word in the ROOT clause asks; one inside a relative clause describes. The table holds
-        # both readings of `who`, `when`, `where` and `which`, and this is the only evidence there
-        # is for choosing — R5, earned by tk1 on live specimens.
-        if in_root_clause is not None and row["role"] in ("interrogative", "relative"):
-            wanted = "interrogative" if in_root_clause else "relative"
-            better = next((r for r in self._by_form[form] if r["role"] == wanted), None)
-            if better is not None:
-                row = better
+        # **A WH-WORD HAS THREE READINGS, NOT TWO, AND R5's BINARY TEST CONFLATED THE LAST PAIR.**
+        #
+        #   «WHO sleeps?»                 root clause          -> INTERROGATIVE: opens a slot, and
+        #                                                         the utterance is a question
+        #   «the cat WHO sleeps»          an `acl:relcl`       -> RELATIVE: binds an antecedent and
+        #                                                         opens nothing — one cat, described
+        #   «I know WHO did it»           a complement clause  -> FREE RELATIVE: opens a slot, and
+        #                                                         the utterance is NOT a question
+        #
+        # R5 asks «is this the root clause» and answers the MOOD question correctly — «I am happy
+        # WHEN I talk» is not an interrogative. It was then read as «therefore relative», which is
+        # the conflation: an embedded question opens its slot exactly as a root one does, and only
+        # the utterance's mood differs. That is why «if you know WHO did it» left `who` unplaced.
+        #
+        # **UD MARKS THE DIFFERENCE AND NOTHING ELSE DOES**: a relative clause modifies a NOUN and is
+        # `acl:relcl`; an embedded question is a clausal COMPLEMENT — `ccomp`, `csubj`, `xcomp` — or
+        # an argument in its own right. So the clause's own dependency chooses, and `head_dep` is
+        # already that: the wh-word is `nsubj`/`obj` of its clause's verb, so its head IS the clause.
+        if row["role"] in ("interrogative", "relative", "free_relative"):
+            if in_root_clause:
+                wanted = "interrogative"
+            elif bare(head_dep or "") in RELATIVE_CLAUSE_DEPS:
+                wanted = "relative"
+            elif in_root_clause is None:
+                wanted = None          # the caller holds no tree; the table's own order stands
+            else:
+                wanted = "free_relative"
+            if wanted is not None:
+                better = next((r for r in self._by_form[form] if r["role"] == wanted), None)
+                # **FALL BACK TO THE INTERROGATIVE READING, NOT TO WHATEVER WAS FIRST.** Not every
+                # wh-word has a free-relative row — `why` has none — and an embedded «why» still
+                # ASKS. The interrogative reading is the one that opens a slot, which is what an
+                # embedded question needs; the mood is the compiler's business and it knows the
+                # clause is not the root.
+                if better is None and wanted == "free_relative":
+                    better = next((r for r in self._by_form[form]
+                                   if r["role"] == "interrogative"), None)
+                if better is not None:
+                    row = better
         candidates = self._by_form[form]
         certain = len(candidates) == 1 or bool(upos or dep)
         compiled = dict(row.get("compiled") or {})

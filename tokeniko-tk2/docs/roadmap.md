@@ -116,8 +116,29 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       for some non-numerals, so a zero no word in the phrase asked for is refused. UD's own case
       arrived ABSTAINING and answered within the hour. **Frontier 11/19 at 84.5%; gate 33 answered,
       0 WRONG**
-- [ ] **embedded questions** — «if you know WHO did it»: neither a root-clause interrogative nor a
-      relative, and R5 rightly says «not the root clause» without being enough to compile it
+- [ ] **⚑ THE PERSON AXIS — asked by the Captain 2026-09-16, answered NO** *(req 20, record
+      `202609161349_the-person-axis.md`)*: «John said to Marie: YOU are a clever girl» — the `you`
+      must rotate to Marie. tk1 managed all of it; **tk2 has one sentence saying a pronoun is
+      indexical and nothing saying the context CHANGES inside a POV**. Four gaps: no person axis at
+      all (`compile()` takes no context argument — req 7 written, not built) · the ADDRESSEE is a
+      slot tkzip does not have, so where it lives is a FORMAT ruling under a frozen schema · stanza
+      SPLITS a quote into its own sentence and the station has no multi-sentence path · and neither
+      gate tests it (the drill has no quoted speech; the QM transcribed `ccomp` as the INDIRECT form
+      and passed over UD's own direct-quote examples). **A wrong rotation is a wrong BELIEF, not a
+      wrong parse** — well-formed, coherent, about the wrong person, and the evaluator cannot catch it
+- [x] **embedded questions** *(2026-09-16)* — **a wh-word has THREE readings and R5's binary test
+      conflated the last pair.** R5 asks «is this the root clause» and answers the MOOD question
+      rightly; it was then read as «therefore relative», and an embedded question opens its slot
+      exactly as a root one does. **UD marks the difference and nothing else does**: a relative
+      clause modifies a NOUN (`acl:relcl`), an embedded question is a clausal COMPLEMENT
+- [x] **UNASSERTION PROPAGATES into an enclosed clause** — a TRUTH error found by the above:
+      «if you know WHO DID IT, tell me» claimed that somebody did it, because the `ccomp`'s AND
+      asserted its operand while the other half of the same conditional was explicitly not claimed.
+      The whole antecedent is supposed, and a clause inside it is inside the supposition
+- [x] **a compiled form no longer ALSO abstains** — `if` sat in the abstention list of a sentence
+      whose IMPLY it had built, because the per-clause walk meets a joiner before `_relate` runs.
+      A report that cries wolf is worse than no report.
+      **Ratchet 24/25 at 99.4% — a new high; gate 33 answered, 0 WRONG**
 - [x] **the thirteen ambiguous markers** — closed classes v6 (`db/0012`). **Not the geometry
       `db/0008` predicted**: «is a pool a place?» is a hypernymy question and cosine does not answer
       taxonomy. It is **WordNet's supersense** — 26 noun + 15 verb classes, published and closed, so
