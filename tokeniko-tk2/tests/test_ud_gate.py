@@ -10,6 +10,7 @@ import pytest
 
 from tests.fixtures.ud import CASES, OPEN, RELATION_FILLS_ROLE, covered
 from tk2.language import standing_closed_classes
+from tk2.language.compile import Compiler
 from tk2.language.skeleton import UD_DEPS, UD_POS
 from tools.ud_gate import ABSTAINED, ANSWERED, WRONG, read
 
@@ -20,8 +21,17 @@ def table():
 
 
 @pytest.fixture(scope="module")
-def scored(table):
-    return [(case, *read(case, table)) for case in CASES]
+def compiler(table):
+    return Compiler(table)
+
+
+@pytest.fixture(scope="module")
+def scored(table, compiler):
+    """**The gate scores the ZIP, not the table** — since 2026-09-16. It used to ask the closed-class
+    table what a token was, which was half a station and could never reach the relations that are
+    compiler questions. Now the sentence is compiled and the marked token is looked up in
+    `Compiled.placement`, the compiler's own record of where each word went."""
+    return [(case, *read(case, table, compiler)) for case in CASES]
 
 
 def test_the_station_is_never_WRONG_on_ud_s_own_examples(scored):
@@ -38,7 +48,7 @@ def test_the_gate_answers_what_it_can_and_the_number_is_held(scored):
     saying something about itself."""
     answered = sum(1 for _, verdict, _, _ in scored if verdict == ANSWERED)
 
-    assert answered >= 19, f"the gate answered {answered} of {len(CASES)}; it answered 19 on 2026-09-16"
+    assert answered >= 22, f"the gate answered {answered} of {len(CASES)}; 22 on 2026-09-16, once it scored the ZIP"
 
 
 def test_every_abstention_says_WHY(scored):

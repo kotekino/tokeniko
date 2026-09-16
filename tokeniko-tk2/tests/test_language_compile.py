@@ -7,7 +7,7 @@ the record, and every word the station could not place is visible rather than go
 
 import pytest
 
-from tests.fixtures.ud import CASES
+from tests.fixtures.ud import CASES, frontier, ratchet
 from tk2.language import standing_closed_classes
 from tk2.language.compile import RELATION_FILLS_ROLE, Compiler, compile_sentence
 from tk2.language.skeleton import skeleton_from_conllu
@@ -200,7 +200,53 @@ def test_a_multiword_marker_covers_every_token_it_spans(compiler):
     out = compiled(compiler, "out of the box")
 
     assert out.coverage == 1.0 and out.unplaced == ()
-    assert out.zip.rows[0].boxes[Role.COMPLEMENT].marker == "out of"
+    assert out.zip.rows[0].boxes[Role.SOURCE].marker == "out of"
+
+
+def test_a_marked_ROOT_takes_its_markers_role_and_not_the_default(compiler):
+    """«out of the box» is a SOURCE the speaker said out loud. A non-verb root defaulted to
+    `complement`, which kept the marker's SPELLING and threw its MEANING into the default — a zip
+    that reads as understood and is not. The gate caught it the day it started scoring the zip.
+
+    **The copula is the exception, and by construction**: in «Sue is a teacher» the root IS the
+    complement (req 31), so there the marker does not get to override.
+    """
+    out = compiled(compiler, "out of the box")
+    assert Role.SOURCE in out.zip.rows[0].boxes
+    assert Role.COMPLEMENT not in out.zip.rows[0].boxes
+
+    copular = compiled(compiler, "Sue is a teacher")
+    assert Role.COMPLEMENT in copular.zip.rows[0].boxes
+
+
+def test_an_nmod_under_a_noun_is_a_possessor_ONLY_IF_ITS_MARKER_SAYS_SO(compiler):
+    """«the office OF the Chair» is a possessor; «the cafe UP BESIDE the lookout» is a LOCATION, and
+    reading the second as a possessor said the cafe belonged to the lookout.
+
+    **And the marker is ASKED, never listed**: `'s` compiles to `field: relation` and `db/0012` gives
+    `of` the rule «head is a NOUN → relation», so a `{"of", "'s"}` in Python would be a hand list in
+    the one file whose purpose is to end them — the Captain's frame-or-knowledge rule, 2026-09-16.
+    """
+    possessor = compiled(compiler, "the office of the Chair")
+    assert possessor.zip.rows[0].boxes[Role.COMPLEMENT].relation == "chair.n"
+
+    located = compiled(compiler, "The cafe up beside the lookout")
+    assert located.zip.rows[0].boxes[Role.LOCATION].head == "lookout.n"
+    assert located.zip.rows[0].boxes[Role.COMPLEMENT].relation is None, "the cafe owns no lookout"
+
+
+def test_every_covered_token_says_WHERE_it_went(compiler):
+    """`Compiled.placement` — the trace the zip-level gate needed and req 4's confidence will read.
+
+    A covered token with no label is "counted as understood without saying what it became", and that
+    is what the trace exists to make impossible: three UD cases reported `of`, `'s` and `beside` as
+    never reaching the zip, in sentences that compiled at 100% coverage.
+    """
+    out = compiled(compiler, "the office of the Chair")
+
+    assert set(out.placement) == set(out.covered)
+    assert all(out.placement.values()), f"unlabelled: {[k for k, v in out.placement.items() if not v]}"
+    assert out.placement[2] == "field:relation", "`of` marked the possessor FIELD, not a box"
 
 
 def test_every_case_produces_a_valid_zip(compiler):
@@ -509,11 +555,36 @@ def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
     assert out.zip.rows[-1].predicate == "be.v", "content, and a VERB key"
 
 
-def test_the_ambiguous_markers_raised_the_floor_again(compiler):
-    """22 of 25 whole and 98.4% mean, from 21 and 96.8% before the thirteen were settled."""
-    scored = [compiler.compile(c.skeleton) for c in CASES]
+def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
+    """The 25 cases that existed before the corpus reached all 37 relations: **22 whole, 98.4%.**
+
+    **The floor is stated in TWO HALVES on purpose.** On 2026-09-16 the corpus grew from 16 relations
+    to 37, and the eighteen new cases are the hard ones by construction — everything easy had already
+    been transcribed. One averaged figure over the whole corpus would let a real regression on these
+    twenty-five be paid for by a lucky gain on the frontier, which is the shape of a number that
+    stops measuring.
+    """
+    scored = [compiler.compile(c.skeleton) for c in ratchet()]
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
-    assert full >= 22, f"{full} of {len(CASES)} whole; 22 were on 2026-09-16"
+    assert len(scored) == 25
+    assert full >= 22, f"{full} of {len(scored)} whole; 22 were on 2026-09-16"
     assert mean >= 0.98, f"mean {mean:.1%}; it was 98.4% on 2026-09-16"
+
+
+def test_the_FRONTIER_half_is_where_the_work_is(compiler):
+    """The eighteen relations the corpus reached on 2026-09-16: **6 of 18 whole, 76.6% mean.**
+
+    Low, and honestly so. What is missing is NAMED rather than averaged away — `amod` (req 70 rules
+    attributive adjectives as SECOND ROWS and the station does not build them), `flat`/`list` (one
+    name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
+    unruled), `nummod` (the box's own `count` field), `appos`.
+    """
+    scored = [compiler.compile(c.skeleton) for c in frontier()]
+    full = sum(1 for s in scored if s.coverage == 1.0)
+    mean = sum(s.coverage for s in scored) / len(scored)
+
+    assert len(scored) == 18
+    assert full >= 6, f"{full} of {len(scored)} whole; 6 were on 2026-09-16"
+    assert mean >= 0.76, f"mean {mean:.1%}; it was 76.6% on 2026-09-16"

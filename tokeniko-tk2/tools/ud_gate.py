@@ -28,76 +28,96 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from tests.fixtures.ud import CASES, OPEN, by_relation, covered  # noqa: E402
+from tests.fixtures.ud import (  # noqa: E402
+    CASES, NOT_IN_ENGLISH, OPEN, UD_ABSTAINS, by_relation, covered,
+)
 from tk2.language import standing_closed_classes  # noqa: E402
-from tk2.language.markers import MarkerSelector  # noqa: E402
+from tk2.language.compile import Compiler  # noqa: E402
 from tk2.language.skeleton import UD_DEPS  # noqa: E402
 
 ANSWERED, WRONG, ABSTAINED = "answered", "WRONG", "abstained"
 
 
-SELECTOR = MarkerSelector()
-
-
-def read(case, table) -> tuple[str, str, str]:
+def read(case, table, compiler) -> tuple[str, str, str]:
     """What the station makes of the marked token. Returns (verdict, produced, why).
 
-    The station here is what EXISTS: the closed-class table read through a UD skeleton. Roles that
-    come from a relation rather than from a marker (agent, patient, recipient) are not its job yet —
-    that is the compile core, E3 task 2 — so it abstains on them, honestly and by name.
+    **IT SCORES THE ZIP NOW, NOT THE TABLE.** Until 2026-09-16 this asked the closed-class table what
+    a token was, because the table was all that existed — and its own docstring said so: *«roles that
+    come from a relation rather than from a marker are not its job yet»*. That was a gate measuring
+    half a station, and it could never reach the twenty-one relations that are COMPILER questions:
+    what does `amod` become, what does `conj` become, where did `nummod` go. «The token is covered»
+    does not distinguish a role from a prefix from a row.
+
+    So the sentence is COMPILED and the marked token is looked up in `Compiled.placement` — the
+    compiler's own record of where each word went. A relation the station handles badly now shows up
+    as a wrong placement or as an unplaced word, which is what a gate is for.
+
+    **The `expect` vocabulary is unchanged**, and deliberately: a case still marks the MARKER and
+    still expects a ROLE, because «what did this `case` edge produce» is the natural question and
+    re-pointing 25 transcribed cases at their nominals would have rewritten the corpus to suit the
+    instrument.
     """
     skeleton = case.skeleton
     word = skeleton[case.at]
-    head = skeleton[word.head]
-    match = table.read(skeleton.tokens, case.at, word.upos, word.dep,
-                       head_dep=None if head.index == word.index else head.dep)
+    out = compiler.compile(skeleton)
+    where = out.placement.get(case.at, "")
 
-    if match is None:
-        return ABSTAINED, "", "no closed-class row matched this token"
-
-    settled_why = ""
-    kind = match.kind
-    if kind == "box":
-        if match.settled_role:
-            # UD's own subtype named the role — `obl:agent`, `obl:tmod`. No ambiguity survives that.
-            produced = match.settled_role
-        elif len(match.roles) > 1:
-            # ONE OF THE THIRTEEN. `db/0012` says what settles it, and `tk2.language.markers` runs
-            # the rules: UD puts `case` on the marker and the phrase's own head one edge further
-            # out, so the nominal is this token's head and the verb is the nominal's.
-            nominal = skeleton[word.head]
-            governor = skeleton[nominal.head]
-            settled = SELECTOR.settle(match.compiled, nominal.lemma, nominal.upos,
-                                      governor.lemma, governor.upos)
-            if settled is None:
-                return (ABSTAINED, "|".join(match.roles),
-                        f"{len(match.roles)} candidates and nothing selects between them")
-            produced = settled.role
-            settled_why = settled.why
+    if not where:
+        if word.upos in ("PUNCT", "SYM"):
+            # Punctuation compiles to nothing and that IS the answer — it is structure, dropped on
+            # purpose, and the zip is not missing anything.
+            produced, why = "structure", "punctuation compiles to nothing"
         else:
-            produced = match.roles[0] if match.roles else ""
-    elif kind == "join":
-        produced = match.compiled.get("operator", "")
-    elif kind == "field":
-        produced = match.compiled.get("field", "field")
-    elif kind in ("prefix", "structure", "entity", "determination", "restriction", "theatre",
-                  "quantifier", "open", "ambiguous"):
-        produced = {"determination": "determination", "quantifier": "prefix"}.get(kind, kind)
-        # A CONDITIONAL ROW: copular `be` is structure, the same form under `aux` moves the theatre.
-        # The row states both and names the dependency that chooses — «when: cop».
-        when = match.compiled.get("when")
-        if when and word.dep != when:
-            produced = match.compiled.get("otherwise", produced)
+            return (ABSTAINED, "", f"{word.text!r} reached no part of the zip")
     else:
-        produced = kind
+        produced, why = _produced(where, case, skeleton, out, table)
+        if produced is None:
+            return ABSTAINED, "", why
 
     if case.expect == OPEN:
         return ABSTAINED, produced, "the corpus has not ruled what this owes"
-    if not produced:
-        return ABSTAINED, "", f"matched {match.form!r} but it compiles to nothing nameable"
     if produced == case.expect:
-        return ANSWERED, produced, settled_why
-    return WRONG, produced, f"expected {case.expect}"
+        return ANSWERED, produced, why
+    return WRONG, produced, f"expected {case.expect}" + (f" ({why})" if why else "")
+
+
+def _produced(where: str, case, skeleton, out, table) -> tuple[str | None, str]:
+    """A placement label -> the word the corpus uses for it.
+
+    The two that need the zip rather than the label are the ones where the token is not itself the
+    thing it produced: a MARKER names a box it does not fill, and a JOINER names an operator that
+    lives on a row of its own.
+    """
+    kind, _, detail = where.partition(":")
+
+    if kind == "box":
+        return detail, "filled by relation"
+    if kind == "field":
+        return detail, "a field of the record, not a box (req 26)"
+    if kind == "predicate":
+        return "predicate", f"the predicate of {detail}"
+    if kind == "marker":
+        form = _form_at(table, skeleton, case.at)
+        for row in out.zip.rows:
+            for role, box in getattr(row, "boxes", {}).items():
+                if box.marker == form:
+                    return role.value, f"marks the {role.value} box"
+        return None, f"{form!r} marked a phrase that reached no box"
+    if kind == "join":
+        for row in out.zip.rows:
+            operator = getattr(row, "operator", None)
+            if operator is not None:
+                return operator.value, "the operator it compiled to"
+        return None, "joined nothing"
+    if kind == "quantifier":
+        return "prefix", "a binder in the prefix"
+    return kind, ""
+
+
+def _form_at(table, skeleton, at: int) -> str:
+    """The closed-class FORM starting at this token — multi-word forms included, so «out of» is one
+    marker and not two."""
+    return table.match(skeleton.tokens, at) or skeleton[at].text.lower()
 
 
 def run(argv=None) -> int:
@@ -113,6 +133,7 @@ def run(argv=None) -> int:
     args = parser.parse_args(argv)
 
     table = standing_closed_classes(args.db)
+    compiler = Compiler(table)
     print("=" * 96)
     print("THE UD GATE — the station against Universal Dependencies' own examples")
     print("=" * 96)
@@ -126,7 +147,7 @@ def run(argv=None) -> int:
     print(f"  {'relation':<14} {'expected':<14} {'produced':<22} {'':<10} sentence")
     print(f"  {'-' * 14} {'-' * 14} {'-' * 22} {'-' * 10} {'-' * 30}")
     for case in sorted(CASES, key=lambda c: (c.relation, c.text)):
-        verdict, produced, why = read(case, table)
+        verdict, produced, why = read(case, table, compiler)
         tally[verdict] += 1
         results.append({"relation": case.relation, "text": case.text, "expect": case.expect,
                         "produced": produced, "verdict": verdict, "why": why,
@@ -144,10 +165,24 @@ def run(argv=None) -> int:
     print("  an abstention is not a miss — «half understood is legal, wrongly understood is the "
           "sin» (req 8)")
 
-    missing = sorted(set(UD_DEPS) - covered())
+    # THREE STATES, NOT TWO. «We have not got to it» and «it does not arise in English» are
+    # different things, and folding the second into the first makes the coverage number a lie in
+    # the flattering direction — while folding it the other way makes the gate look permanently
+    # incomplete for a reason nobody can fix.
+    missing = sorted(set(UD_DEPS) - covered() - set(NOT_IN_ENGLISH) - set(UD_ABSTAINS))
     print()
-    print(f"  COVERAGE — {len(covered())} of 37 relations have at least one case.")
-    print(f"  NOT YET REACHED ({len(missing)}): {' '.join(missing)}")
+    print(f"  COVERAGE — {len(covered())} of 37 relations have at least one case; "
+          f"{len(NOT_IN_ENGLISH)} do not arise in English and {len(UD_ABSTAINS)} is UD's own "
+          f"abstention.")
+    print(f"  NOT IN ENGLISH ({len(NOT_IN_ENGLISH)}): {' '.join(NOT_IN_ENGLISH)}"
+          f"   — UD's own pages print no English example")
+    print(f"  UD ABSTAINS ({len(UD_ABSTAINS)}): {' '.join(UD_ABSTAINS)}"
+          f"   — «we could not decide which relation this is»; the station owes nothing")
+    if missing:
+        print(f"  NOT YET REACHED ({len(missing)}): {' '.join(missing)}")
+    else:
+        print("  NOT YET REACHED: none — **every relation UD publishes for English is in the "
+              "corpus.**")
 
     live = None
     if args.live:

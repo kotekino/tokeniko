@@ -38,11 +38,27 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       ambiguous ones
 - [x] **skeleton adapter** — stanza behind the lib boundary (`tk2/language/skeleton.py`); `Skeleton`
       and `Word` hold UD strings and nothing above imports spacy, stanza or torch
-- [x] **⚑ the UD gate OPENS** — `tools/ud_gate.py`, offline by default: **19 answered · 0 wrong ·
-      6 abstained** over 25 cases reaching 16 of the 37 relations (16/0/9 when it opened). It found
-      five defects nobody would have read off the code, the newest being `of` under a noun compiling
-      to a box instead of the possessor FIELD. *(The 21 unreached relations are printed every run.)*
-- [ ] **the UD gate COMPLETED** — the remaining 21 relations, each with a transcribed case
+- [x] **⚑ the UD gate OPENS** — `tools/ud_gate.py`, offline by default. It has found **nine** defects
+      nobody would have read off the code
+- [x] **⚑ the gate SCORES THE ZIP, not the table** *(2026-09-16)* — it was measuring half a station,
+      and the relations still unreached were almost all COMPILER questions. Needed
+      `Compiled.placement` first: a per-token record of WHERE each word went (`box:location`,
+      `prefix`, `join`, `predicate:r1`, `field:relation`, `structure`), which is also what req 4's
+      confidence scalar reads. **It found four defects before a single new case was added** — three
+      words «reaching no part of the zip» in sentences that compiled at 100%, «the cafe up beside the
+      lookout» read as a POSSESSOR, «out of the box» throwing its marker's meaning into the default,
+      and a vocative merely unplaced rather than deliberately dropped
+- [x] **⚑ the UD gate COMPLETED — EVERY ONE OF THE 37** *(2026-09-16)*: 43 cases · **30 answered ·
+      0 WRONG · 13 abstained**. 34 relations have a case, **2 do not arise in English** (`clf`,
+      `dislocated` — UD's own pages print no English example) and **1 is UD's own abstention**
+      (`dep`). Three states, never two: folding «not in English» into «not yet reached» makes the
+      coverage number a lie in the flattering direction.
+      **AND A SECOND PROVIDER MEASUREMENT (req 2): stanza produces 15 of the 18 relations UD
+      publishes on these sentences.** The three it does not — `goeswith`, `orphan`, `reparandum` —
+      are one family: a typo, a gapping, a self-correction. The station will never meet them labelled
+- [ ] **`amod` — attributive adjectives are SECOND ROWS** (tkzip req 70, already ruled): «a human
+      body» is ∃B(body(B) ∧ human(B)). **The frontier's biggest gap, five cases**, and «Last night»
+      leaving `Last` unplaced is the same hole from the other side
 - [x] **compile core — ONE content row** (`tk2/language/compile.py`): the relation half and the
       marker half of the mapping, quantifier binders, possessors inside the record, senses OPEN.
       **18 of 25 UD cases at 100% coverage, mean 89.5%**
@@ -63,11 +79,15 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       supersense **11/11** independent · geometry 6 with 3 wrong and 14 mute · first-candidate 7 with
       4. A `default` now fills its box and is COUNTED, never silent. **22 of 25 UD cases whole, mean
       98.4%**
-- [ ] **`amod`** — «Last night» leaves `Last` unplaced: an adjectival modifier is not compiled yet
 - [ ] **`mark` under a reporting verb opens a POV**, not a join (E2 made attitude a prefix element)
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
 - [ ] drill automated = acceptance gate
+- [ ] **⚑ THE FRAME/KNOWLEDGE AUDIT — E3's closing act** *(the Captain, 2026-09-16)*: walk every set
+      this epic put in code and re-ask the FRAME test. Already suspect: `RELATION_FILLS_ROLE`
+      (`nsubj → agent` is a declined judgement), `CLAUSE_DEPS` (`xcomp` deliberately absent — an
+      argued exclusion is a ruling), `UD_DEP_TO_ROLE` (best-first is a claim about English),
+      `UD_POS_TO_WORD_CLASS`, `CLAIMED = 1.0` (a threshold in code is what `db/0002` refuses)
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] **is it a name at all?** — stanza NER vs spaCy NER measured on the same text; `PROPN` and

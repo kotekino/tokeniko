@@ -694,8 +694,18 @@ it).
    `noun.time`) and «with Anna» twice — **the named-individual hole**, parked with its own answer
    waiting. **NAMED DEBT:** the supersense is read LIVE from WordNet and is therefore outside the
    base's build fingerprint; its home is a `lexname` on `SenseVectorDoc`, which is a rebuild.
-   **WHAT REMAINS:** embedded questions («if you know WHO did it»), and `amod` — «Last night» leaves
-   `Last` unplaced. Context-as-argument is untouched; nothing has needed it yet.
+   **WHAT REMAINS, as the completed gate now names it** *(2026-09-16)*:
+   - **`amod` — the frontier's biggest gap, five cases.** tkzip req 70 already rules it:
+     *«attributive adjectives are SECOND ROWS, not a field — «a human body» is ∃B(body(B) ∧ human(B)),
+     the same machinery as the depictive»*. «Last night» leaving `Last` unplaced is the same hole
+     from the other side. **This is the next piece.**
+   - **`flat` / `list`** — one name across several tokens; E3b by another route.
+   - **`xcomp`** — deliberately not a clause, and what it IS instead has never been ruled.
+   - **`nummod`** — the box's own `count` field (req 26); a numeral is neither a quantifier nor a
+     determination.
+   - **`appos`** — one individual under two descriptions; unruled, and it leans on E3b.
+   - **embedded questions** («if you know WHO did it»).
+   Context-as-argument is untouched; nothing has needed it yet.
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
@@ -713,6 +723,30 @@ it).
    strangers'. And stanza is chosen precisely because it TARGETS this standard — «close enough» is
    a measurement owed relation by relation, not an assumption carried.*
 
+   **DONE 2026-09-16** (record `202609161050_the-gate-reaches-every-relation.md`). Two changes, and
+   the first had to come before the second:
+   - **THE GATE SCORES THE ZIP, NOT THE TABLE.** It was measuring half a station — its own docstring
+     said «roles that come from a relation are not its job yet» — and the relations still unreached
+     were almost all COMPILER questions. It needed **`Compiled.placement`** first: a per-token record
+     of WHERE each word went, which is also exactly what req 4's confidence scalar reads and what
+     req 3 means by a reading that can be handed back. **It found four defects before one new case
+     was added**: three words «reaching no part of the zip» in sentences that compiled at 100%
+     (covered with nothing said about where they went), «the cafe up beside the lookout» compiled as
+     a POSSESSOR, «out of the box» defaulting to `complement` and throwing its marker's meaning away
+     while keeping its spelling, and a vocative merely UNPLACED rather than deliberately dropped.
+   - **EVERY ONE OF THE 37 IS REACHED.** 43 cases · **30 answered · 0 WRONG · 13 abstained**. 34
+     relations have a case, **2 do not arise in English** (`clf`, `dislocated`) and **1 is UD's own
+     abstention** (`dep`) — three states reported apart, because folding «not in English» into «not
+     yet reached» makes the coverage figure a lie in the flattering direction.
+   - **AND A SECOND PROVIDER MEASUREMENT, which req 2 asked for**: stanza produces **15 of the 18**
+     relations UD publishes on these sentences. The three it does not — `goeswith`, `orphan`,
+     `reparandum` — are ONE FAMILY: a typo, a gapping, a self-correction. **The station will never
+     meet them labelled from this provider**, so building handling for them would be building
+     against a label that never arrives.
+   - The corpus now splits into a **ratchet** (the 25 earlier cases: 22 whole, 98.4%, and they may
+     never get worse) and a **frontier** (the 18 added: 6 whole, 76.6%, and it is meant to climb).
+     One averaged figure would let a regression on the old be paid for by a gain on the new.
+
 6. **THE PLACEMENT FLOOR — inherited from E1c/E1d, and measured before it was handed over.** The
    station is where a placement is first trusted or refused: a word it does not know reaches the
    geometry through `place()`, which returns each reading with a verdict. That verdict currently uses
@@ -726,6 +760,29 @@ it).
    about placements.*
 7. **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
    them. The count is in the manifest, so it is predictable rather than surprising.
+8. **⚑ THE FRAME/KNOWLEDGE AUDIT — the epic's closing act** *(the Captain, 2026-09-16, and the first
+   of these)*. *«At the end of E3 we should go through everything we have done and double check if
+   something we consider frame should be moved in the knowledge kingdom.»* Walk every set this epic
+   put in a `.py` file and re-ask the FRAME test on it: is it LAW, or a revisable fact about a
+   language, a resource or the world? **The rule's own lesson is that the answer is not obvious from
+   inside the decision** — choosing our own inventory and hard-coding it relocates the rigidity
+   instead of removing it — so each one is discussed, not self-marked.
+
+   **The candidates already on the list, named as they were built rather than remembered at the end:**
+
+   | in code today | why it is suspect |
+   |---|---|
+   | `RELATION_FILLS_ROLE` (`compile.py`) | its own comment says `nsubj → agent` and not «agent or experiencer» is a JUDGEMENT the station declines to make. A judgement is knowledge |
+   | `CLAUSE_DEPS` (`compile.py`) | **`xcomp` is deliberately absent**, argued at length — «nobody asserts that you swim». An argued exclusion is a ruling, and a ruling is a row |
+   | `UD_DEP_TO_ROLE` (`closed.py`) | the roles are BEST-FIRST, and an ordering is a claim about which reading is commoner in English |
+   | `UD_POS_TO_WORD_CLASS` (`closed.py`) | «UD's `AUX` covers our auxiliaries AND our modals» is a statement about English, not about UD |
+   | `CLAIMED = 1.0` (`compile.py`) | a threshold in code is the shape `db/0002` and `db/0007` exist to refuse |
+   | `UD_DEP_SETTLES_ROLE` (`closed.py`) | *defensible as frame* — every entry is a relation whose UD definition NAMES the role. But the READING is ours, so it is argued, not assumed |
+   | `DEPS_THAT_COMPILE_TO_NOTHING` (`compile.py`) | added 2026-09-16 and put on this list in the same commit. `{"vocative"}` — and «a vocative is addressing, not content» is an E2 RULING, which is a row |
+   | `POS_LETTER`, `UD_POS_TO_WORDNET`, `NOUN/VERB_SUPERSENSES` | *defensible as frame* — correspondences between two published closed vocabularies, and the supersense inventory is checked against the corpus every run |
+
+   **Done when** every row of that table has a ruling and a home, and the ones that moved are a
+   migration.
 
 **Done when:** the drill bar passes through the real lib (parse AND render), **every UD relation and
 POS tag is read consistently against UD's own examples**, clean input costs one parse, confidence

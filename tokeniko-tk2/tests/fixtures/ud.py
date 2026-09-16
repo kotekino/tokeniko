@@ -29,6 +29,41 @@ PREFIX = "prefix"
 ENTITY = "entity"
 STRUCTURE = "structure"
 OPEN = "OPEN"          # not yet ruled — the honest state, and it is COUNTED
+ROW = "ROW"            # it must open a CONTENT ROW of its own — ruled by tkzip, not built by E3 yet
+
+#: Relations that DO NOT ARISE IN ENGLISH, so an empty corpus for them is COMPLETE rather than
+#: missing. `clf` is the classifier — UD's page has no English example because English has none, and
+#: its first example is Mandarin; `dislocated` likewise prints none. Reported apart from «not yet
+#: reached», because the two are different states and averaging them would make the coverage number
+#: a lie in the flattering direction.
+NOT_IN_ENGLISH = ("clf", "dislocated")
+
+#: The relations the corpus gained on 2026-09-16, when it went from 16 relations to all 37. They are
+#: the HARD ones by construction — everything easy had already been transcribed — so a coverage
+#: number over the whole corpus is not comparable with one from before.
+#:
+#: **Kept so the floor can be stated in two halves and neither can hide the other**: the cases that
+#: existed before must not REGRESS (a ratchet), and these are the FRONTIER, where the number is
+#: expected to be low and to climb. One averaged figure would let a real regression on the old cases
+#: be paid for by a lucky gain on the new ones.
+FRONTIER = ("amod", "appos", "ccomp", "conj", "csubj", "discourse", "expl", "flat", "goeswith",
+            "list", "nmod", "nummod", "orphan", "parataxis", "reparandum", "root", "vocative",
+            "xcomp")
+
+
+def ratchet() -> tuple:
+    """The cases that existed before 2026-09-16 — the half that may never get worse."""
+    return tuple(c for c in CASES if c.relation not in FRONTIER)
+
+
+def frontier() -> tuple:
+    """The cases added when the corpus reached all 37 relations — the half that is meant to climb."""
+    return tuple(c for c in CASES if c.relation in FRONTIER)
+
+
+#: UD's OWN abstention: `dep` means «we could not decide which relation this is». There is nothing
+#: for the station to owe, and a case asserting otherwise would be testing our reading of a shrug.
+UD_ABSTAINS = ("dep",)
 
 
 @dataclass(frozen=True, slots=True)
@@ -313,6 +348,215 @@ CASES: tuple[Case, ...] = (
        note="A RELATIVE binds its antecedent — a variable shared between two rows. The format has "
             "`Var` for exactly this and the station has no rule that emits one yet.",
        annotated=False),
+
+    # ══ THE TWENTY-ONE RELATIONS THE GATE HAD NOT REACHED, added 2026-09-16 ═══════════════════
+    # Transcribed from each relation's own page, then parsed by stanza and CHECKED against the
+    # published edge. **Stanza produces 15 of the 18; the three it does not — `goeswith`,
+    # `orphan`, `reparandum` — are named on their own cases and are all ONE FAMILY: a typo, a
+    # gapping, a self-correction. The station will never meet them labelled from this provider.**
+
+    # ── amod ──
+    _c("amod", "Sam eats large hot dogs", [
+        ("1", "Sam", "sam", "PROPN", "2", "nsubj"),
+        ("2", "eats", "eat", "VERB", "0", "root"),
+        ("3", "large", "large", "ADJ", "5", "amod"),
+        ("4", "hot", "hot", "ADJ", "5", "amod"),
+        ("5", "dogs", "dog", "NOUN", "2", "obj"),
+    ], at=2, expect=ROW,
+       note="**REQ 70 ALREADY RULES THIS: attributive adjectives are SECOND ROWS, not a field** — «a human body» is EXISTS B (body(B) AND human(B)), the same machinery as the depictive «he ate the fish raw». The station does not build it yet, and «Last night» leaving `Last` unplaced is the same hole seen from the other side."),
+
+    # ── appos ──
+    _c("appos", "Sam , my brother , arrived", [
+        ("1", "Sam", "sam", "PROPN", "6", "nsubj"),
+        ("2", ",", ",", "PUNCT", "1", "punct"),
+        ("3", "my", "my", "PRON", "4", "nmod:poss"),
+        ("4", "brother", "brother", "NOUN", "1", "appos"),
+        ("5", ",", ",", "PUNCT", "1", "punct"),
+        ("6", "arrived", "arrive", "VERB", "0", "root"),
+    ], at=3, expect=OPEN,
+       note="«Sam, my brother» is ONE individual under two descriptions. Whether that is an identity row, a second row, or the record's own `relation` field is not ruled — and it leans on E3b, because the descriptions are usually names."),
+
+    # ── ccomp ──
+    _c("ccomp", "He said that he knew the muffin man .", [
+        ("1", "He", "he", "PRON", "2", "nsubj"),
+        ("2", "said", "say", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"),
+        ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "knew", "know", "VERB", "2", "ccomp"),
+        ("6", "the", "the", "DET", "8", "det"),
+        ("7", "muffin", "muffin", "NOUN", "8", "compound"),
+        ("8", "man", "man", "NOUN", "5", "obj"),
+        ("9", ".", ".", "PUNCT", "2", "punct"),
+    ], at=4, expect="predicate",
+       note="A complement CLAUSE opens a row of its own. What relates it to the matrix is the other half — E2 made attitude a PREFIX element, so a reporting verb should raise a POV rather than a join, and that is still on E3's list."),
+
+    # ── conj ──
+    _c("conj", "Bill is big and honest", [
+        ("1", "Bill", "bill", "PROPN", "3", "nsubj"),
+        ("2", "is", "be", "AUX", "3", "cop"),
+        ("3", "big", "big", "ADJ", "0", "root"),
+        ("4", "and", "and", "CCONJ", "5", "cc"),
+        ("5", "honest", "honest", "ADJ", "3", "conj"),
+    ], at=4, expect="complement",
+       note="«Bill is big and honest» — two copular predications sharing a subject. The second is a row, and `and` is the join. The shared subject is the part that has to be a VARIABLE rather than a repeated box."),
+
+    # ── csubj ──
+    _c("csubj", "That he lied surprised me .", [
+        ("1", "That", "that", "SCONJ", "3", "mark"),
+        ("2", "he", "he", "PRON", "3", "nsubj"),
+        ("3", "lied", "lie", "VERB", "4", "csubj"),
+        ("4", "surprised", "surprise", "VERB", "0", "root"),
+        ("5", "me", "i", "PRON", "4", "obj"),
+        ("6", ".", ".", "PUNCT", "4", "punct"),
+    ], at=2, expect="predicate",
+       note="A whole clause in the SUBJECT slot: «that he lied» is what surprised me. It is a row, and the matrix's agent slot should hold its NAME (req 33: nesting is naming)."),
+
+    # ── discourse ──
+    _c("discourse", "Iguazu is in Argentina :)", [
+        ("1", "Iguazu", "iguazu", "PROPN", "4", "nsubj"),
+        ("2", "is", "be", "AUX", "4", "cop"),
+        ("3", "in", "in", "ADP", "4", "case"),
+        ("4", "Argentina", "argentina", "PROPN", "0", "root"),
+        ("5", ":)", ":)", "SYM", "4", "discourse"),
+    ], at=4, expect=OPEN,
+       note="An emoticon carries AFFECT and no proposition. That is the heart's business, not the zip's — and «what a smiley does to a zip» is unruled on purpose."),
+
+    # ── expl ──
+    _c("expl", "There is a ghost in the room", [
+        ("1", "There", "there", "PRON", "2", "expl"),
+        ("2", "is", "be", "VERB", "0", "root"),
+        ("3", "a", "a", "DET", "4", "det"),
+        ("4", "ghost", "ghost", "NOUN", "2", "nsubj"),
+        ("5", "in", "in", "ADP", "7", "case"),
+        ("6", "the", "the", "DET", "7", "det"),
+        ("7", "room", "room", "NOUN", "2", "obl"),
+    ], at=0, expect="structure",
+       note="**THE EXPLETIVE CONTRIBUTES NOTHING TO THE PROPOSITION.** «There is a ghost in the room» claims a ghost is in the room; `there` is scaffolding. It is also the sentence req 31 names as the exception that keeps existential `be` CONTENT while copular `be` is glue — and the expletive is what separates them."),
+
+    # ── flat ──
+    _c("flat", "Hillary Rodham Clinton", [
+        ("1", "Hillary", "hillary", "PROPN", "0", "root"),
+        ("2", "Rodham", "rodham", "PROPN", "1", "flat"),
+        ("3", "Clinton", "clinton", "PROPN", "1", "flat"),
+    ], at=1, expect=OPEN,
+       note="«Hillary Rodham Clinton» is ONE name across three tokens. This is E3b's first task by another route, and the station must not mint three individuals."),
+
+    # ── goeswith ──
+    _c("goeswith", "They come here with out legal permission", [
+        ("1", "They", "they", "PRON", "2", "nsubj"),
+        ("2", "come", "come", "VERB", "0", "root"),
+        ("3", "here", "here", "ADV", "2", "advmod"),
+        ("4", "with", "with", "ADP", "7", "case"),
+        ("5", "out", "out", "ADP", "7", "case"),
+        ("6", "legal", "legal", "ADJ", "7", "amod"),
+        ("7", "permission", "permission", "NOUN", "2", "obl"),
+    ], at=4, expect=OPEN,
+       note="**STANZA DOES NOT PRODUCE THIS RELATION HERE.** UD publishes `goeswith(with-4, out-5)` — «with out» is a typo for «without» — and stanza reads `out` as a SECOND `case` marker instead. So the station never meets `goeswith` from this provider, and what it meets is the «up beside» shape: two markers on one nominal.",
+       annotated=False),
+
+    # ── list ──
+    _c("list", "Steve Jones sj@abc.xyz University of Arizona", [
+        ("1", "Steve", "steve", "PROPN", "0", "root"),
+        ("2", "Jones", "jones", "PROPN", "1", "flat"),
+        ("3", "sj@abc.xyz", "sj@abc.xyz", "PROPN", "1", "list"),
+        ("4", "University", "university", "PROPN", "1", "list"),
+        ("5", "of", "of", "ADP", "6", "case"),
+        ("6", "Arizona", "arizona", "PROPN", "4", "nmod"),
+    ], at=2, expect=OPEN,
+       note="A contact block is not a sentence. UD says so by having a relation for it; what a zip does with it is unruled."),
+
+    # ── nmod ──
+    _c("nmod", "a room in the hotel", [
+        ("1", "a", "a", "DET", "2", "det"),
+        ("2", "room", "room", "NOUN", "0", "root"),
+        ("3", "in", "in", "ADP", "5", "case"),
+        ("4", "the", "the", "DET", "5", "det"),
+        ("5", "hotel", "hotel", "NOUN", "2", "nmod"),
+    ], at=2, expect="location",
+       note="A nominal modifying a NOUN, with a case marker — and the marker decides, exactly as it does under `obl`. This is the case that proved `nmod` + noun head is not enough to call something a possessor."),
+
+    # ── nummod ──
+    _c("nummod", "Sam ate 3 sheep", [
+        ("1", "Sam", "sam", "PROPN", "2", "nsubj"),
+        ("2", "ate", "eat", "VERB", "0", "root"),
+        ("3", "3", "3", "NUM", "4", "nummod"),
+        ("4", "sheep", "sheep", "NOUN", "2", "obj"),
+    ], at=2, expect="count",
+       note="**THE BOX HAS A `count` FIELD AND THIS IS WHAT FILLS IT** (req 26: every nominal box is quantifier · relation · noun, per phrase). A numeral is not a quantifier and not a determination — it is a count, and the station does not read it yet."),
+
+    # ── orphan ──
+    _c("orphan", "Marie won gold and Peter bronze", [
+        ("1", "Marie", "marie", "PROPN", "2", "nsubj"),
+        ("2", "won", "win", "VERB", "0", "root"),
+        ("3", "gold", "gold", "NOUN", "2", "obj"),
+        ("4", "and", "and", "CCONJ", "5", "cc"),
+        ("5", "Peter", "peter", "PROPN", "3", "conj"),
+        ("6", "bronze", "bronze", "NOUN", "5", "compound"),
+    ], at=5, expect=OPEN,
+       note="**STANZA DOES NOT PRODUCE THIS RELATION.** UD publishes `orphan(Peter, bronze)` for the gapped «and Peter bronze»; stanza reads `compound`. Gapping is a real hole and the station will not meet it labelled.",
+       annotated=False),
+
+    # ── parataxis ──
+    _c("parataxis", "The guy , John said , left early in the morning", [
+        ("1", "The", "the", "DET", "2", "det"),
+        ("2", "guy", "guy", "NOUN", "7", "nsubj"),
+        ("3", ",", ",", "PUNCT", "2", "punct"),
+        ("4", "John", "john", "PROPN", "5", "nsubj"),
+        ("5", "said", "say", "VERB", "7", "parataxis"),
+        ("6", ",", ",", "PUNCT", "2", "punct"),
+        ("7", "left", "leave", "VERB", "0", "root"),
+        ("8", "early", "early", "ADV", "7", "advmod"),
+        ("9", "in", "in", "ADP", "11", "case"),
+        ("10", "the", "the", "DET", "11", "det"),
+        ("11", "morning", "morning", "NOUN", "7", "obl"),
+    ], at=4, expect="predicate",
+       note="«The guy, John said, left early» — the report is a row of its own and the matrix is NOT its complement. Same shape as `ccomp` and a different route to it."),
+
+    # ── reparandum ──
+    _c("reparandum", "Go to the righ- to the left .", [
+        ("1", "Go", "go", "VERB", "0", "root"),
+        ("2", "to", "to", "ADP", "4", "case"),
+        ("3", "the", "the", "DET", "4", "det"),
+        ("4", "righ-", "righ-", "NOUN", "1", "obl"),
+        ("5", "to", "to", "ADP", "7", "case"),
+        ("6", "the", "the", "DET", "7", "det"),
+        ("7", "left", "left", "NOUN", "4", "nmod"),
+        ("8", ".", ".", "PUNCT", "1", "punct"),
+    ], at=3, expect=OPEN,
+       note="**STANZA DOES NOT PRODUCE THIS RELATION.** UD publishes `reparandum(left-7, righ--4)` for the self-correction «the righ- to the left»; stanza reads `nmod`. A disfluency must never become content — `original` keeps it verbatim (req 3) — but the station cannot act on a label it never receives.",
+       annotated=False),
+
+    # ── root ──
+    _c("root", "the cat sleeps", [
+        ("1", "the", "the", "DET", "2", "det"),
+        ("2", "cat", "cat", "NOUN", "3", "nsubj"),
+        ("3", "sleeps", "sleep", "VERB", "0", "root"),
+    ], at=2, expect="predicate",
+       note="The relation every sentence has, and the one the corpus had reached twenty times without ever NAMING — so the coverage report called it unreached."),
+
+    # ── vocative ──
+    _c("vocative", "Guys , take it easy !", [
+        ("1", "Guys", "guy", "NOUN", "3", "vocative"),
+        ("2", ",", ",", "PUNCT", "3", "punct"),
+        ("3", "take", "take", "VERB", "0", "root"),
+        ("4", "it", "it", "PRON", "3", "obj"),
+        ("5", "easy", "easy", "ADJ", "3", "xcomp"),
+        ("6", "!", "!", "PUNCT", "3", "punct"),
+    ], at=0, expect="structure",
+       note="**E2 RULED THIS IN THE DRILL**: «the vocative is addressing, not content». «Guys, take it easy» is an instruction to a room; the room is not a participant in it."),
+
+    # ── xcomp ──
+    _c("xcomp", "We expect them to change their minds", [
+        ("1", "We", "we", "PRON", "2", "nsubj"),
+        ("2", "expect", "expect", "VERB", "0", "root"),
+        ("3", "them", "they", "PRON", "2", "obj"),
+        ("4", "to", "to", "PART", "5", "mark"),
+        ("5", "change", "change", "VERB", "2", "xcomp"),
+        ("6", "their", "their", "PRON", "7", "nmod:poss"),
+        ("7", "minds", "mind", "NOUN", "5", "obj"),
+    ], at=4, expect=OPEN,
+       note="**THE NAMED GAP.** `xcomp` is deliberately absent from `CLAUSE_DEPS`: «you like TO SWIM» is one predication with a controlled subject, and nobody asserts that you swim. So it is not a row — and WHAT it is instead has not been ruled. The zip says so by leaving the verb unplaced."),
+
 )
 
 

@@ -56,6 +56,39 @@ A wrong deploy is revertible; a wrong schema decision is not. So on any core-des
 - `../tokeniko-tk1/` — the live v1 engine. It is the **empirical instrument**: its stored journeys
   (`tkzipdebug`, 553 rows / 113 judged mismatches) are evidence about what the format must hold.
 
+## FRAME OR KNOWLEDGE? — ASK BEFORE YOU PUT A SET IN CODE (the Captain, 2026-09-16, PRIO 1)
+
+> *«Whenever you think to stick something in the code, always ask me to discuss: frame or knowledge?
+> 99% of the times it will be knowledge and we will discover together. This must be a rule. It
+> applies everywhere — except logic.»*
+
+**The rule was earned the same day.** Asked whether the KINDS OF NAME should be OntoNotes' label set
+or our own, the QM argued for our own on four engineering grounds — and still left the inventory as
+an enum **in code**. The Captain's answer went a layer deeper:
+
+> *«With our inventory as db (not code!), we can modify it keeping the logic: everything is KB. If
+> we rely on a third party we lose this ability.»*
+
+**Choosing our own set and hard-coding it does not remove the rigidity, it relocates it.** That is
+the failure this rule exists to catch, and it is not obvious from inside the decision — which is why
+it is a conversation and not a checklist.
+
+**So: before any list, map, enum, threshold or roster is written into a `.py` file, STOP and ask.**
+Not «is this convenient in code» — *is this LAW, or is it a revisable fact about a language, a
+resource or the world?* The default answer is KNOWLEDGE.
+
+- **The one exception is LOGIC.** The logic kernel is invariant by charter and is not up for
+  discussion — everything else is.
+- **The FRAME test** (2026-08-25): a set feels like law and is not, when it is a contingent fact,
+  dialect-varying and revisable. `ClosedClassDoc.word_class` is a **string and not an enum** for
+  exactly this reason — *«a class that needed a code change to exist would put the table back in
+  code»*. That sentence is the test, already written down, a month before the rule.
+- **What frame legitimately holds**: the MECHANISM that reads the rows, and the relations between two
+  published, closed vocabularies where no evidence revises the correspondence. Everything else is a
+  migration.
+- **AT THE END OF EVERY EPIC, AUDIT WHAT WAS BUILT** — walk back through it and ask which of the
+  things called frame belong in the knowledge kingdom. E3 carries the first such audit as a task.
+
 ## RECONCILE THE TRIO *BEFORE* ASKING FOR THE COMMIT (the Captain, 2026-09-15)
 
 > *«Keep the rule to reconcile always before asking me to commit.»*

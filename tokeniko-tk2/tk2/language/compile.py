@@ -82,9 +82,68 @@ CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis"})
 ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
 ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
 
+#: A closed-class `kind` -> the word for WHERE that form went, when the two differ. A form whose
+#: `compiled.kind` is `box` is a MARKER on somebody else's box, never a box of its own, and calling
+#: its placement `box` would make the trace say the preposition filled the role.
+CLOSED_KIND_PLACES = {"box": "marker"}
+
+#: UD relations whose dependent COMPILES TO NOTHING — it is addressing or framing, not content.
+#: `vocative` is E2's own ruling, made in the drill: *«the vocative is addressing, not content»* —
+#: «Guys, take it easy» is an instruction to a room, and the room is not a participant in it.
+#: **ON THE FRAME/KNOWLEDGE AUDIT LIST** (E3 task 8): this is a set of UD relations living in code,
+#: the same family as `CLAUSE_DEPS`, and the reading «a vocative is not content» is a ruling.
+DEPS_THAT_COMPILE_TO_NOTHING = frozenset({"vocative"})
+
 #: A claim the station makes with no fuzziness of its own: the speaker said it, so it is stated at
 #: full strength. What the claim is WORTH is the evaluator's question, not the parser's.
 CLAIMED = 1.0
+
+
+class Placements:
+    """Which tokens reached the zip, **and where each one went.**
+
+    A `set` of covered indices answers «how much of this sentence was understood» and nothing else,
+    and that was enough while the gate only exercised the closed-class table. It is not enough now:
+    most of UD's relations are questions for the COMPILER — *what did `amod` become, what did `conj`
+    become* — and «the token is covered» does not distinguish a role from a prefix from a row.
+
+    So the same bookkeeping carries a LABEL. It behaves as the set it replaces (`in`, `len`, `add`,
+    `update`) so every existing call site is unchanged, and a caller that knows where a token went
+    says so. **The first non-empty label wins**: a token is placed once, and a later unlabelled
+    `add` — the generic accounting that runs after the specific one — must not erase it.
+
+    This is also what req 4's confidence scalar will read, and what req 3 means by a reading that can
+    be handed back: «which word became which part of this zip» is the question both of them ask.
+    """
+
+    __slots__ = ("_where",)
+
+    def __init__(self) -> None:
+        self._where: dict[int, str] = {}
+
+    def add(self, index: int, label: str = "") -> None:
+        if label or index not in self._where:
+            if not self._where.get(index):
+                self._where[index] = label
+
+    def update(self, indices, label: str = "") -> None:
+        for index in indices:
+            self.add(index, label)
+
+    def label(self, index: int) -> str:
+        return self._where.get(index, "")
+
+    def as_dict(self) -> dict[int, str]:
+        return dict(self._where)
+
+    def __contains__(self, index: int) -> bool:
+        return index in self._where
+
+    def __iter__(self):
+        return iter(self._where)
+
+    def __len__(self) -> int:
+        return len(self._where)
 
 
 @dataclass
@@ -99,6 +158,11 @@ class Compiled:
     covered: tuple[int, ...] = ()
     unplaced: tuple[str, ...] = ()
     abstained: tuple[str, ...] = field(default_factory=tuple)
+    #: token index -> WHERE it went: `box:location`, `prefix`, `join`, `predicate`, `structure`, …
+    #: Empty for a token that was covered by accounting nobody labelled — which is itself a finding,
+    #: and the gate reports it rather than guessing.
+    placement: dict[int, str] = field(default_factory=dict)
+
     #: Roles filled by an ambiguous marker's DEFAULT — the curation's best-first answer, taken
     #: because nothing in the sentence chose. Counted rather than silent: that distinction is the
     #: whole of req 8 here, and it is what req 4's confidence scalar reads.
@@ -137,7 +201,7 @@ class Compiler:
         heads = self._clause_heads(skeleton)
         owner = self._owners(skeleton, heads)
 
-        covered: set[int] = set()
+        covered = Placements()
         abstained: list[str] = []
         defaulted: list[str] = []
         prefix_rows: list = []
@@ -160,6 +224,7 @@ class Compiler:
         rows = [*prefix_rows, *content.values(), *extra, *joins]
         return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
+                        placement=covered.as_dict(),
                         abstained=tuple(abstained), defaulted=tuple(defaulted))
 
     # -- the clauses ------------------------------------------------------------------------------
@@ -216,7 +281,7 @@ class Compiler:
         return owner
 
     def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
-                covered: set[int], prefix_rows: list, abstained: list, name: str,
+                covered: Placements, prefix_rows: list, abstained: list, name: str,
                 open_truth: set, wants_antecedent: set,
                 defaulted: list | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
@@ -229,14 +294,24 @@ class Compiler:
             # `be` as root, doing copular work: it earns NO predicate (req 31) and no box either —
             # it is glue, and «Where is the cat?» is a LOCATION question about the cat, not a claim
             # about `be`. The subject becomes the topic through `copular` below.
-            covered.add(head.index)
+            covered.add(head.index, "structure")
             copular = True
         elif head.upos in ("VERB", "AUX"):
             predicate = self._key(head)
-            covered.add(head.index)
+            covered.add(head.index, f"predicate:{name}")
         else:
-            boxes[Role.COMPLEMENT] = self._box_for(head, skeleton, marks, covered, prefix_rows, name)
-            covered.add(head.index)
+            # A NON-VERB ROOT IS THE COMPLEMENT — «Sue is a teacher» — **unless it carries a role
+            # marker and there is no copula to make it one.** «out of the box» is a SOURCE that the
+            # speaker said out loud, and defaulting it to `complement` threw the marker's meaning
+            # into the default while keeping the marker's spelling, which reads as understood and is
+            # not. In a copular clause the root IS the complement by construction (req 31), so the
+            # marker does not get to override; in a bare fragment it is the only evidence there is.
+            marked = None
+            if not any(c.bare_dep == "cop" for c in skeleton.children(head.index)):
+                marked = self._marker_role(head, skeleton, marks, defaulted)
+            role = marked or Role.COMPLEMENT
+            boxes[role] = self._box_for(head, skeleton, marks, covered, prefix_rows, name)
+            covered.add(head.index, f"box:{role.value}")
             copular = True
 
         for index in sorted(mine):
@@ -247,12 +322,20 @@ class Compiler:
             if match is not None:
                 covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
                                                     abstained, copular, name,
-                                                    open_truth, wants_antecedent))
+                                                    open_truth, wants_antecedent),
+                               label=CLOSED_KIND_PLACES[match.kind] if match.kind in
+                               CLOSED_KIND_PLACES else (match.kind or "structure"))
+                continue
+            if word.bare_dep in DEPS_THAT_COMPILE_TO_NOTHING:
+                # Addressing, not content. Dropped ON PURPOSE and recorded as such — a word that is
+                # merely LEFT OUT and a word that compiles to nothing are different answers, and
+                # `Zip.unplaced` is for the first (req 21).
+                covered.add(index, "structure")
                 continue
             role = self._role_of(word, skeleton, marks, copular, defaulted)
             if role is not None and role not in boxes:
                 boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name)
-                covered.add(index)
+                covered.add(index, f"box:{role.value}")
             elif role is None and word.bare_dep in NOMINAL_DEPS:
                 unresolved.append((word, self._box_for(word, skeleton, marks, covered)))
 
@@ -264,7 +347,7 @@ class Compiler:
                           predicate_sense=Open() if predicate else None, boxes=boxes)
 
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
-                marks: dict, covered: set[int], prefix_rows: list, abstained: list) -> list[JoinRow]:
+                marks: dict, covered: Placements, prefix_rows: list, abstained: list) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -298,7 +381,8 @@ class Compiler:
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner)
                 unasserted.add(content[head.index].name)
                 covered.update(range(joiner_index(skeleton, head, joiner),
-                                     joiner_index(skeleton, head, joiner) + joiner.length))
+                                     joiner_index(skeleton, head, joiner) + joiner.length),
+                               label="join")
                 continue
 
             operator = (joiner.compiled.get("operator") if joiner else None) or "and"
@@ -326,7 +410,8 @@ class Compiler:
                                  operands=operands, truth=CLAIMED))
             if joiner is not None:
                 covered.update(range(joiner_index(skeleton, head, joiner),
-                                     joiner_index(skeleton, head, joiner) + joiner.length))
+                                     joiner_index(skeleton, head, joiner) + joiner.length),
+                               label="join")
 
         # Now every join has spoken. What no join left unasserted, the speaker claimed.
         for row in content.values():
@@ -416,7 +501,7 @@ class Compiler:
         # The relative pronoun IS the variable — «the cat THAT sleeps» has no third participant.
         for child in skeleton.children(head.index):
             if child.bare_dep in ("nsubj", "obj") and marks.get(child.index) is not None:
-                covered.add(child.index)
+                covered.add(child.index, "var")
 
     # -- the pieces -------------------------------------------------------------------------------
 
@@ -427,6 +512,34 @@ class Compiler:
         """A content word's dictionary key — `eat.v`. The sense stays OPEN beside it."""
         letter = POS_LETTER.get(word.upos, "n")
         return keymod.key_of(word.lemma, letter)
+
+    def _marks_a_possessor(self, word: Word, skeleton: Skeleton, marks: dict) -> bool:
+        """Is this `nmod` a POSSESSOR, or a modifier that merely happens to hang off a noun?
+
+        «the office OF the Chair» is a possessor; «the cafe UP BESIDE the lookout» is a LOCATION, and
+        reading the second as a possessor said the cafe belonged to the lookout. `nmod` + a noun head
+        is not enough — **the marker decides**, exactly as it decides under `obl`.
+
+        **AND THE MARKER IS ASKED, NOT LISTED** (the Captain's rule of 2026-09-16: before a set goes
+        in code, is it frame or knowledge?). «Which prepositions spell a possessor» is a contingent
+        fact about English, so `{"of", "'s"}` would have been a hand list in a file whose whole
+        purpose is to end them. The rows already say it: `'s` compiles to `field: relation`, and
+        `db/0012` gives `of` the rule «head is a NOUN -> relation». So the test is *what does this
+        marker produce here*, and a new possessive spelling is a migration.
+        """
+        markers = [marks[c.index] for c in skeleton.children(word.index)
+                   if marks.get(c.index) is not None and marks[c.index].kind in ("box", "field")]
+        if not markers:
+            return True          # a bare `nmod` under a noun — «the Chair office», the plain case
+        head = skeleton[word.head]
+        for match in markers:
+            if match.kind == "field" and match.compiled.get("field") == "relation":
+                return True
+            settled = self.selector.settle(match.compiled, word.lemma, word.upos,
+                                           head.lemma, head.upos)
+            if settled is not None and settled.role == "relation":
+                return True
+        return False
 
     def _role_of(self, word: Word, skeleton: Skeleton, marks: dict,
                  copular: bool = False, defaulted: list | None = None) -> Role | None:
@@ -450,10 +563,22 @@ class Compiler:
         # Chair» is one phrase, and tkzip keeps the possessor INSIDE the record (req 26). `_box_for`
         # takes it when the head phrase is built, so it must not also claim a role here.
         head = skeleton[word.head]
-        if word.bare_dep == "nmod" and head.upos in ("NOUN", "PROPN"):
+        if word.bare_dep == "nmod" and head.upos in ("NOUN", "PROPN") \
+                and self._marks_a_possessor(word, skeleton, marks):
             return None
 
-        # its own case marker, if it has one
+        return self._marker_role(word, skeleton, marks, defaulted)
+
+    def _marker_role(self, word: Word, skeleton: Skeleton, marks: dict,
+                     defaulted: list | None = None) -> Role | None:
+        """The role this nominal's own CASE MARKER gives it, or None if it has none that decides.
+
+        Split out of `_role_of` because a ROOT has to be able to ask it. `_role_of` gates on
+        `NOMINAL_DEPS` — `obl`, `nmod`, `nsubj`… — and `root` is in none of them, so «out of the
+        box» could never reach its marker and fell to the `complement` default with the marker's
+        spelling kept and its meaning discarded.
+        """
+        head = skeleton[word.head]
         for child in skeleton.children(word.index):
             match = marks.get(child.index)
             if match is None or match.kind != "box":
@@ -482,7 +607,7 @@ class Compiler:
             return Role(settled.role)
         return None
 
-    def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: set[int],
+    def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: Placements,
                  prefix_rows: list | None = None, scopes: str = "r0") -> Box:
         """The seven-field record for one nominal phrase — per PHRASE, never one per clause.
 
@@ -500,38 +625,50 @@ class Compiler:
             kind = match.kind
             if kind == "determination":
                 determination = Determination(match.compiled["determination"])
-                covered.add(child.index)
+                covered.add(child.index, "determination")
             elif kind == "quantifier" and match.compiled.get("quantity"):
                 quantity = Quantity(match.compiled["quantity"])
-                covered.add(child.index)
+                covered.add(child.index, "quantifier")
             elif kind == "box":
                 marker = match.form
                 # A MULTI-WORD MARKER COVERS EVERY TOKEN IT SPANS. «out OF the box» is one form and
                 # `of` hangs off `out` as UD's `fixed`; marking only the first token left `of`
                 # looking unplaced in a sentence that was fully understood.
-                covered.update(range(child.index, child.index + match.length))
+                covered.update(range(child.index, child.index + match.length), label="marker")
             elif kind == "field" and match.compiled.get("field") == "relation":
                 # the possessive clitic: «the Chair 's office» — the possessor is a FIELD (req 26)
-                covered.add(child.index)
+                covered.add(child.index, "field:relation")
             elif kind == "open" and match.compiled.get("opens") == "field":
                 # «WHOSE cat sleeps?» — the possessor is asked. It is a FIELD of the record (req 26),
                 # so the question opens the field rather than adding a box.
                 relation = Open()
-                covered.add(child.index)
+                covered.add(child.index, "field:relation")
             elif kind == "entity" and child.dep in ("nmod:poss", "det:poss"):
                 # «MY friend» — a possessive pronoun is indexical, so the possessor is OPEN and
                 # resolved from context, never `my.n`.
                 relation = Open()
-                covered.add(child.index)
+                covered.add(child.index, "field:relation")
         # A possessor NOUN — «the office of the Chair», «the Chair 's office». Both spellings reach
         # here, which is the pairing UD's own `case` page makes explicit.
         for child in skeleton.children(word.index):
-            if child.bare_dep == "nmod" and child.upos in ("NOUN", "PROPN"):
+            if child.bare_dep == "nmod" and child.upos in ("NOUN", "PROPN") \
+                    and self._marks_a_possessor(child, skeleton, marks):
                 relation = self._key(child)
-                covered.add(child.index)
+                covered.add(child.index, "field:relation")
+                # AND EVERY WORD THE POSSESSOR PHRASE SPANS SAYS WHERE IT WENT. These used to be
+                # covered with no label — «counted as understood without saying what it became» —
+                # and the placement trace is what made that visible: three cases reported `of`,
+                # `'s` and `beside` as never reaching the zip, in sentences that compiled fine.
                 for grandchild in skeleton.children(child.index):
-                    if marks.get(grandchild.index) is not None:
-                        covered.add(grandchild.index)
+                    found = marks.get(grandchild.index)
+                    if found is None:
+                        continue
+                    covered.update(range(grandchild.index, grandchild.index + found.length),
+                                   label="determination" if found.kind == "determination"
+                                   # «the office OF the Chair» — the marker went to the FIELD, not
+                                   # to a box, because that is where the possessor lives (req 26).
+                                   else "field:relation" if found.kind in ("box", "field")
+                                   else found.kind)
         box = Box(head=self._key(word), sense=Open(), determination=determination,
                   quantity=quantity, marker=marker, relation=relation)
         if quantity is not None and prefix_rows is not None:
