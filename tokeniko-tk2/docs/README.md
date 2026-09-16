@@ -204,6 +204,9 @@ history**; rows overtaken so far are annotated:
 | Behaviour / dispatch | **rebuild** | this *is* limit A |
 | Brain phases (thinking/priorities/actions/sleep) | ~~**inherit**~~ → **rebuild the orchestrator, keep the phase idea** | OVERTAKEN 2026-08-13: the compensator half dies into the dual read; phases become kb reweighting (dna only knows they exist); the loop survives as dna, the how becomes rows |
 | API, senses, adapters, Mongo | **inherit** the senses/adapters; the tier is its own session | the everything-is-rows ruling (2026-08-13) makes the body an interpreter of the db — datatier/body/data-modeling get their own conception sessions (register #11–13) |
+| Places table (4,674,701 curated rows) | **inherit** | ADDED 2026-09-16 (E3b): a hand-built spatial ontology — two containment chains (`path_admin` political · `path_geo` physical), a closed ~21-value `type` column that is an `is_a` statement, coordinates, `physical_features` cross-links. Author-curated at first ingestion, static, and about the WORLD rather than about him — so it is an asset like the curated senses, not biography. Read lazily and never materialized (the cascade-noise ruling, applied at this exact table in v1) |
+| Names list (`tokeniko.names`, 21,975 rows) | **inherit**, clean | ADDED 2026-09-16 (E3b): a flat roster of personal-name spellings. It is EVIDENCE and never a test — 28.1% of it is also a place name and 15.2% a WordNet common noun, measured the day it was adopted. Needs a cleaning pass (the string `TRUE` survived ingestion) |
+| Stakeholders (`tokeniko_mem.stakeholders`, 18 rows) | **migrate** | ADDED 2026-09-16: who he has MET and who he was TOLD ABOUT is his life, so the rows are §2's translation (E9). E3b builds the mechanism that reads such a table and moves no row |
 | Stored memory documents | **migrate** | §2's translation |
 
 **The signal to watch:** if the finished ledger says *rebuild everything*, the design is not
@@ -261,6 +264,9 @@ decided*.
 | 11 | Self-modifying rule detection | both | proposed (§3) |
 | 12 | Plurality of sources / enclosure resistance | both | flagged (§3) |
 | 13 | Role inventory completeness | both | **CLOSED 2026-09-11 (E2 t1)** — 17 boxes + the predicate, cut from VerbNet (29 roles / 429 classes), PropBank (112,917 annotated sentences) and FrameNet (1,221 frames), cross-checked against the Captain's own first draft. `comitative` was found in neither computational inventory and in the draft. See `tkzip/202609111051_notes.md` |
+| 14 | **The kinds of name — whose closed set?** OntoNotes' 18 NER labels (what the models actually emit) or our own inventory (person · public figure · organization · place · work · event · none) with a map from theirs to ours | Cap | **OPEN 2026-09-16 (E3b)** — the same shape as the 37 → 18 mapping: both ends closed, so the table can be complete. tk1 mapped nine of the labels to type-centroid senses and that is a starting position, not a ruling |
+| 15 | **E3b's micro-nn and E5's lib — which comes forward?** E3b task 5 declares the ecosystem's first instance, and E5 is the framework it declares against | Cap | **OPEN 2026-09-16** — either bring E5 tasks 1–2 forward to sit beside E3b, or hold E3b task 5 and let the curated half land first with an abstention where prominence decides. The second is cheaper and keeps the fence honest |
+| 16 | **Identity binding across channels.** Individual uids are `name@channel:talker_uid`, so a new channel mints a NEW individual unless deliberately bound | Cap | **OPEN 2026-09-16 (E3b task 6)** — flagged in `ideas.md` before any of this: *«decide the binding before the first line is typed, not after»*. E3b is when names start minting uids, so it is when this stops being theoretical |
 
 ---
 

@@ -69,6 +69,30 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
 - [ ] drill automated = acceptance gate
 
+## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
+- [ ] **is it a name at all?** — stanza NER vs spaCy NER measured on the same text; `PROPN` and
+      CASING as separate weak evidence. tk1's gate failed BOTH ways: it minted individuals from OOV
+      gibberish spaCy labelled `GPE`, and refused «kotekino», lower case and known. *(Not a reopening
+      of req 2: NER is not a UD task and has no UD relation.)*
+- [ ] **a name of what?** — the kinds as a closed set: person · public figure · organization · place ·
+      work · event · none; tk1's nine NER→type-centroid senses as the starting position
+- [ ] **the places table, INHERITED** — measured 2026-09-16: **4,674,701** author-curated rows,
+      `path_admin` + `path_geo` containment chains, a `type` column of **exactly 21** values that is
+      an `is_a`, a second axis `category`, coordinates on 99.9%. Read LAZILY, never materialized
+      (the cascade-noise ruling, applied there already)
+- [ ] **the names list, INHERITED — and it cannot be a TEST** — `tokeniko.names`: 21,975 rows, one
+      column. It holds `anna` and would fix the bench on the spot — but **28.1% of it is also a place
+      name** (`paris` included) and 15.2% a WordNet common noun. Evidence, never a test: which is the
+      measurement that forces the net
+- [ ] **have I met it?** — recognition against a names table; tk1's preference order inherited whole,
+      «genuinely ambiguous → never guess» included. The MECHANISM is E3b's, the ROWS are E9's
+- [ ] **⚑ which one? — THE FIRST MICRO-NN** — «Paris, France» or «Paris, Ontario»: tk1 logged it and
+      never solved it. The first case to pass micro-nn req 9's two tests — curation cannot finish AND
+      the answer moves over time. Ranks the curated table's candidates, never mints one
+- [ ] **what a name is in a zip** — type centroid = SEMANTIC, uid = IDENTITY, never merged
+- [ ] **the markers' third reading** — «went with Anna» goes comitative because Anna is a PERSON, with
+      no rule about Anna anywhere. That is E3b's acceptance test, and the marker bench already holds it
+
 ## E4 — the evaluator
 - [ ] verdict shape (pure; truth · status · bindings · derivation)
 - [ ] form kernel (logic floor migrated)

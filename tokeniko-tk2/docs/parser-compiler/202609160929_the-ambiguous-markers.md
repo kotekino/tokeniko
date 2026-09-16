@@ -123,10 +123,17 @@ so the resource is right and the rule is coarse. Left standing rather than speci
 named `speed` would be the hand list this table exists to end.
 
 **«I ate with Anna» and «went with Anna» read INSTRUMENT.** WordNet holds `anna` only as an Indian
-coin. **This is the named-individual hole**, which already has its answer waiting — a type-centroid
-semantic vector plus a context-scoped identity — and is not something a better marker rule should
-paper over. It is also why the bench scores names in their own bucket: averaging them in would hide
-a known gap behind a selector's number.
+coin. **This is the named-individual hole**, and it is not something a better marker rule should
+paper over. It is also why the bench scores names in their own bucket: averaging them in would hide a
+known gap behind a selector's number.
+
+> **PARKED FOR ONE HOUR.** I wrote here that the hole «already has its answer waiting — a
+> type-centroid vector plus a context-scoped identity». **The Captain refused the parking the same
+> morning** and widened it into an epic of its own: *is it a name at all · a name of WHAT · WHICH one
+> · have I MET it*, with tk1's 4.7M-row places table inherited and the prominence question becoming
+> **the ecosystem's first micro-nn**. A type centroid plus a uid is the SHAPE of the answer, not the
+> answer. See `202609160959_the-name-question.md` and **E3b**. *These two bench cases are E3b's
+> acceptance test, and they are already written down.*
 
 *The geometry rescued both Anna cases, and that is not a reason to keep it: `anna.n.01` is a coin,
 and a coin reading near `person.n` is luck rather than signal.*
