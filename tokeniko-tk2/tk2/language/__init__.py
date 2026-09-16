@@ -16,6 +16,12 @@ from tk2.language.skeleton import (
     bare,
     skeleton_from_conllu,
 )
+from tk2.language.adverbs import (
+    AdverbKinds,
+    AdverbReading,
+    MANNER,
+    standing_adverb_kinds,
+)
 from tk2.language.closed import (
     ClosedClasses,
     Match,
@@ -35,6 +41,10 @@ __all__ = [
     "Word",
     "bare",
     "skeleton_from_conllu",
+    "AdverbKinds",
+    "AdverbReading",
+    "MANNER",
+    "standing_adverb_kinds",
     "ClosedClasses",
     "Match",
     "UD_DEP_SETTLES_ROLE",

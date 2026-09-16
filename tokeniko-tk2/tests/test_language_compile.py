@@ -607,20 +607,20 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
-    """The eighteen relations the corpus reached on 2026-09-16: **7 of 18 whole, 80.8% mean.**
+    """The eighteen relations the corpus reached on 2026-09-16: **9 of 18 whole, 82.2% mean.**
 
     Low, and honestly so. What is missing is NAMED rather than averaged away — `flat`/`list` (one
     name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
-    unruled), `nummod` (the box's own `count` field), `appos`, and the content ADVERBS (`early`,
-    `here`) which are the adjectives' own problem one part of speech over.
+    unruled), `nummod` (the box's own `count` field), `appos`, and the gapped `orphan`, which stanza
+    does not label at all.
     """
     scored = [compiler.compile(c.skeleton) for c in frontier()]
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
     assert len(scored) == 18
-    assert full >= 7, f"{full} of {len(scored)} whole; 7 were on 2026-09-16"
-    assert mean >= 0.80, f"mean {mean:.1%}; it was 80.8% on 2026-09-16"
+    assert full >= 9, f"{full} of {len(scored)} whole; 9 were on 2026-09-16"
+    assert mean >= 0.82, f"mean {mean:.1%}; it was 82.2% on 2026-09-16"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -664,3 +664,40 @@ def test_two_adjectives_CHAIN_their_joins(compiler):
     assert joins[0].operands == ["m0", "r0"]
     assert joins[1].operands == ["m1", "j0"], "the second adjective joins the growing conjunction"
     assert all(len(j.operands) == 2 for j in joins)
+
+
+# ------------------------------------------------------------------------------------------------
+# adverbs — requirement 23's four scopes
+# ------------------------------------------------------------------------------------------------
+
+
+def test_a_circumstantial_adverb_fills_its_own_box(compiler):
+    """«left EARLY in the morning» — `early` is a TIME, and it is its own filler: there is no nominal
+    under it, so the head is the adverb's own key."""
+    out = compiled(compiler, "The guy , John said , left early in the morning")
+    row = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "leave.v")
+
+    assert row.boxes[Role.TIME].head in ("early.r", "morning.n")
+    assert out.coverage == 1.0
+
+
+def test_a_MARKED_nominal_outranks_a_bare_adverb_for_the_same_box(compiler):
+    """«left EARLY in the MORNING» has two time expressions and one time box. The speaker CHOSE the
+    marker on «in the morning», so it is the stronger evidence — and placing adverbs in token order
+    let `early` take the box and pushed `morning` out, which is the same coverage and the worse
+    reading. Adverbs are therefore placed after the nominals of their clause."""
+    out = compiled(compiler, "The guy , John said , left early in the morning")
+    row = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "leave.v")
+
+    assert row.boxes[Role.TIME].head == "morning.n", "the marked one won"
+    assert out.unplaced == (), "and the adverb is still accounted for"
+
+
+def test_a_referential_adverb_fills_a_box_with_an_OPEN_head(compiler):
+    """«They come HERE» — closed classes v7 gave the row its box. The head stays OPEN because the
+    form is INDEXICAL and context resolves it (req 7), exactly as a pronoun's does."""
+    out = compiled(compiler, "They come here with out legal permission")
+    row = main_row(out)
+
+    assert isinstance(row.boxes[Role.LOCATION].head, Open), "not `here.r`"
+    assert out.coverage == 1.0

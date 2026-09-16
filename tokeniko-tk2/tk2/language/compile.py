@@ -27,6 +27,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from tk2.dictionary import keys as keymod
+from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
 from tk2.language.skeleton import Skeleton, Word
@@ -36,6 +37,8 @@ from tk2.tkzip.schema import (
     Var,
     ContentRow,
     Determination,
+    Modality,
+    ModalityRow,
     JoinRow,
     NegationRow,
     Open,
@@ -86,6 +89,14 @@ ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
 #: `compiled.kind` is `box` is a MARKER on somebody else's box, never a box of its own, and calling
 #: its placement `box` would make the trace say the preposition filled the role.
 CLOSED_KIND_PLACES = {"box": "marker"}
+
+#: The relations that hang an ADVERB off its head. `advmod` is the ordinary one; `discourse` is UD's
+#: own name for a connective, and it is the only dependency that names an adverb's KIND outright.
+#:
+#: **ON THE FRAME/KNOWLEDGE AUDIT LIST** with `CLAUSE_DEPS` and `DEPS_THAT_COMPILE_TO_NOTHING`: it
+#: is a set of UD relations in code. Weaker than those two — it selects WHERE to look rather than
+#: ruling what a thing means — but it is the same shape and the audit should see it.
+ADVERB_DEPS = frozenset({"advmod", "discourse"})
 
 #: UD relations whose dependent COMPILES TO NOTHING — it is addressing or framing, not content.
 #: `vocative` is E2's own ruling, made in the drill: *«the vocative is addressing, not content»* —
@@ -177,8 +188,13 @@ class Compiled:
 class Compiler:
     """Skeleton → zip. Pure: context is an argument and never state (req 7)."""
 
-    def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None) -> None:
+    def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None,
+                 adverbs: AdverbKinds | None = None) -> None:
         self.table = table
+        #: Requirement 23's four-way split, as rows (`db/0013`). A miss is the MANNER default, which
+        #: is measured rather than assumed: 79% of English's adverbs are `-ly` and describe the
+        #: action. Two rosters, one vocabulary — `compiled` here is the closed classes' own.
+        self.adverbs = adverbs if adverbs is not None else standing_adverb_kinds()
         #: WHICH role an ambiguous marker fills here — `db/0012`'s rules, run by
         #: `tk2.language.markers`. An argument so a test can state what the resource says instead
         #: of depending on which WordNet is installed.
@@ -206,6 +222,7 @@ class Compiler:
         defaulted: list[str] = []
         prefix_rows: list = []
         modifiers: list = []   # (var, adjective key, its binder, the row it belongs to)
+        adverb_joins: list = []   # (row, operator, pragmatic) — a discourse adverb needs two rows
         content: dict[int, ContentRow] = {}
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
@@ -214,11 +231,12 @@ class Compiler:
             mine = {i for i, h in owner.items() if h == head.index}
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
-                open_truth, wants_antecedent, defaulted, modifiers)
+                open_truth, wants_antecedent, defaulted, modifiers, adverb_joins)
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
         extra += self._modify(modifiers, joins)
+        self._connect(adverb_joins, content, joins, abstained)
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
@@ -285,10 +303,12 @@ class Compiler:
     def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
                 covered: Placements, prefix_rows: list, abstained: list, name: str,
                 open_truth: set, wants_antecedent: set,
-                defaulted: list | None = None, modifiers: list | None = None) -> ContentRow:
+                defaulted: list | None = None, modifiers: list | None = None,
+                adverb_joins: list | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
+        adverbs_here: list[Word] = []
         predicate = None
         copular = False
 
@@ -329,6 +349,11 @@ class Compiler:
                                label=CLOSED_KIND_PLACES[match.kind] if match.kind in
                                CLOSED_KIND_PLACES else (match.kind or "structure"))
                 continue
+            if word.bare_dep in ADVERB_DEPS and word.upos == "ADV" and match is None:
+                # **AN ADVERB TAKES ONE OF REQUIREMENT 23's FOUR SCOPES**, and the rows say which —
+                # but it is placed AFTER this loop, not here. See `adverbs_here` below.
+                adverbs_here.append(word)
+                continue
             if word.bare_dep in DEPS_THAT_COMPILE_TO_NOTHING:
                 # Addressing, not content. Dropped ON PURPOSE and recorded as such — a word that is
                 # merely LEFT OUT and a word that compiles to nothing are different answers, and
@@ -342,6 +367,20 @@ class Compiler:
                 covered.add(index, f"box:{role.value}")
             elif role is None and word.bare_dep in NOMINAL_DEPS:
                 unresolved.append((word, self._box_for(word, skeleton, marks, covered)))
+
+        # **THE ADVERBS GO LAST, AND A MARKED NOMINAL OUTRANKS A BARE ONE FOR THE SAME BOX.** «left
+        # EARLY in the MORNING» has two time expressions and one time box: `early` is `advmod` with
+        # no marker, «in the morning» is a nominal whose marker SAYS time. The speaker chose the
+        # marker, so it is the stronger evidence — and placing adverbs in token order let `early`
+        # take the box and pushed `morning` out, which is the same coverage and the worse reading.
+        for word in adverbs_here:
+            reading = self.adverbs.read(word.lemma, word.dep)
+            if reading.is_default and defaulted is not None:
+                defaulted.append(f"{word.text}: manner (no row; the default)")
+            covered.update(
+                self._compile_adverb(word, reading, skeleton, boxes, prefix_rows, name,
+                                     adverb_joins if adverb_joins is not None else [], abstained),
+                label=f"adverb:{reading.kind}")
 
         for word, _box in unresolved:
             if word.index not in covered:
@@ -450,6 +489,88 @@ class Compiler:
             joins.append(JoinRow(name=f"j{len(joins)}", operator=Operator.IMPLY,
                                  operands=[unknown.name, row.name], truth=CLAIMED))
         return raised
+
+    def _connect(self, adverb_joins: list, content: dict, joins: list, abstained: list) -> None:
+        """A DISCOURSE adverb relates two ROWS, so it can only be built once both exist.
+
+        «He was tired. Therefore he left.» — `therefore` is an IMPLY between the row it sits in and
+        the one before it. That is requirement 23's fourth kind, and it is the same operator set the
+        joining WORDS use, because it is the same relation: `db/0008` gave «because of» IMPLY and
+        `db/0013` gives «therefore» IMPLY, one from a preposition and one from an adverb.
+
+        **A CONNECTIVE WITH ONLY ONE ROW ABSTAINS.** «However, he left» in isolation names a contrast
+        with something the sentence does not contain — usually the previous utterance, which is
+        context and therefore an ARGUMENT (req 7) that this call does not have. Inventing the missing
+        operand would be the silently-complete nearest fit.
+        """
+        order = [row.name for row in content.values()]
+        for owner, operator, pragmatic in adverb_joins:
+            position = order.index(owner) if owner in order else -1
+            if position <= 0:
+                abstained.append(f"a {operator} connective with no row before it — the other half is "
+                                 f"context, which is an argument this call does not have (req 7)")
+                continue
+            join = JoinRow(name=f"j{len(joins)}", operator=Operator(operator),
+                           operands=[order[position - 1], owner], truth=CLAIMED)
+            joins.append(join)
+            if pragmatic:
+                # Parked by name, exactly as `db/0008` parked the concessive prepositions: the
+                # defeated expectation is not truth-functional and the figurative layer will want
+                # its cases when it is built.
+                abstained.append(f"{operator} carries a parked `{pragmatic}` reading")
+
+    def _compile_adverb(self, word: Word, reading, skeleton: Skeleton, boxes: dict,
+                        prefix_rows: list, scopes: str, adverb_joins: list,
+                        abstained: list) -> set[int]:
+        """One adverb, placed by its KIND — requirement 23's four-way split, from the rows.
+
+        Each kind lands somewhere the format already has, which is the whole reason the split is
+        worth making:
+
+          `circumstantial` -> a BOX, and `roles` says which (time, location, direction)
+          `manner`         -> a manner box, carrying no head of its own (req 24)
+          `epistemic`      -> the prefix's MODALITY element — the adverbial spelling of `may`/`must`
+          `evaluative`     -> the prefix's ATTITUDE element; it does not touch truth
+          `discourse`      -> a JOIN between this row and the one before it
+
+        The discourse case is deferred to `_relate`'s neighbourhood, because a join needs two rows
+        and only one exists here.
+        """
+        taken = {word.index}
+        kind = reading.kind
+        compiled = reading.compiled
+
+        if compiled.get("kind") == "box":
+            role = Role(reading.role) if reading.role else None
+            if role is None or role in boxes:
+                return taken if role is not None else set()
+            # A circumstantial adverb IS its own filler — «yesterday» is the time, with no nominal
+            # under it. The head is the adverb's own key, and the sense stays OPEN like every other.
+            boxes[role] = Box(head=self._key(word), sense=Open())
+            return taken
+
+        if compiled.get("kind") == "prefix":
+            element = compiled.get("element")
+            if element == "modality" and compiled.get("modality"):
+                prefix_rows.append(ModalityRow(name=f"p{len(prefix_rows)}", scopes=scopes,
+                                               modality=Modality(compiled["modality"])))
+                return taken
+            if element == "attitude":
+                # **AN ATTITUDE SCOPES A MATRIX AND DOES NOT CHANGE ITS TRUTH** — «luckily he left»
+                # asserts that he left. tkzip's prefix has an attitude element and E2 put it there
+                # for exactly this; what it holds is an ATTITUDE HOLDER, and an evaluative adverb
+                # names no holder — it is the speaker's, and the speaker is the POV's business.
+                # So it is recorded as an abstention rather than compiled into something it is not.
+                abstained.append(f"{word.text}: evaluative — an attitude whose holder is the "
+                                 f"speaker, and the prefix wants a holder")
+                return taken
+            return set()
+
+        if compiled.get("kind") == "join" and compiled.get("operator"):
+            adverb_joins.append((scopes, compiled["operator"], compiled.get("pragmatic")))
+            return taken
+
+        return set()
 
     def _modify(self, modifiers: list, joins: list) -> list:
         """**ATTRIBUTIVE ADJECTIVES BECOME ROWS** — tkzip req 70, and the shape is the drill's own.
@@ -847,7 +968,13 @@ class Compiler:
             # is defined, structure is compiled (the second standing law): a pronoun is INDEXICAL,
             # resolved to an entity from context before the dictionary is consulted, so the box is
             # filled with an OPEN head rather than with `i.n`. It never earns a dimension.
-            role = self._role_of(word, skeleton, {}, copular)
+            # **A REFERENTIAL ADVERB CARRIES ITS OWN BOX** (closed classes v7, `db/0014`). «They come
+            # HERE» is a location and «I left THEN» a time, and `advmod` is not a nominal relation,
+            # so `_role_of` could never reach one — the word was left unplaced in a sentence
+            # otherwise understood. The ROW says which box; the head stays OPEN because the form is
+            # indexical and context resolves it (req 7).
+            named = match.compiled.get("roles") or ()
+            role = Role(named[0]) if named else self._role_of(word, skeleton, {}, copular)
             if role is not None and role not in boxes:
                 boxes[role] = Box(head=Open(), sense=Open(),
                                   determination=Determination.DEFINITE)

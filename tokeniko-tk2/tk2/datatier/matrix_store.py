@@ -217,7 +217,8 @@ class MongoMatrixStore:
         }])
         return stored
 
-    def origin(self, build: str, policy_version: int | None = None):
+    def origin(self, build: str, policy_version: int | None = None,
+               closed_class_version: int | None = None):
         """THE DIRTY-CHECK: what a loaded space would have to match to still be current.
 
         ONE query over `dictionary_base_seals`, which is three or four rows — measured at about the
@@ -229,6 +230,13 @@ class MongoMatrixStore:
         edge changes a matrix's content UNDER the same label — `curate_dictionary.py approve` calls
         `write`, and `write` re-seals. A check that watched only the label would go on serving a
         base the Captain had already corrected by hand.
+
+        `closed_class_version` is the fourth thing that moves it, added 2026-09-16 on the Captain's
+        «fix it now, before any v7»: the closed-class forms filter D's vocabulary, so a table
+        migration changes what D would be built from — and no seal, label or policy version records
+        it. Passed in rather than read here, because this store holds matrices and the closed
+        classes are the language package's table; a store that went looking for them would be
+        reaching across a seam this file does not own.
         """
         from tk2.dictionary.space import SpaceOrigin
 
@@ -237,6 +245,7 @@ class MongoMatrixStore:
             build=build,
             seals=tuple(sorted((name, seal.get("fingerprint", "")) for name, seal in found.items())),
             policy_version=policy_version,
+            closed_class_version=closed_class_version,
         )
 
     def senses(self, build: str, base: str | None = None) -> list[dict]:

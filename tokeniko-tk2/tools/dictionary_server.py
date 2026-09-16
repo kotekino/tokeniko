@@ -38,6 +38,7 @@ from tk2.datatier.guard import guard_db_name
 from tk2.datatier.policy_source import standing_bar, standing_policy
 from tk2.dictionary import policy
 from tk2.dictionary.space import DictionarySpace
+from tk2.language import standing_closed_classes
 
 PAGE = Path(__file__).resolve().parent / "dictionary_bench.html"
 
@@ -80,7 +81,8 @@ def load(db_name: str, build_label: str | None):
         # The provenance the dirty-check compares against. Recorded at load, so the bench can be
         # asked whether the rows have moved under it — which is the whole point of the check
         # existing before there is a phase to act on it.
-        origin=store.origin(label, policy_version=version),
+        origin=store.origin(label, policy_version=version,
+                            closed_class_version=standing_closed_classes(db_name).version),
     )
     elapsed = time.time() - started
     return space, config, label, elapsed, policy_source, store, version

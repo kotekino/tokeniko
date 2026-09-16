@@ -64,7 +64,7 @@ class SpaceOrigin:
     to hang it on; what exists today is the ability to KNOW, which turns a silent staleness into a
     visible one.
 
-    THREE THINGS MOVE IT, and the third is the one that would have been missed:
+    FOUR THINGS MOVE IT, and the last two are the ones that would have been missed:
 
       - the BUILD LABEL, when a new base is applied beside the old;
       - the SEAL FINGERPRINTS, when a matrix's content changes under the same label — which is
@@ -72,6 +72,17 @@ class SpaceOrigin:
       - the POLICY VERSION, when a ruling changes the reading without touching a single cell. That
         happened the day this was written: the NEAR floor moved from +0.27 to +0.28 and every
         verdict in the space changed while every matrix stayed identical.
+      - **the CLOSED-CLASS VERSION** *(added 2026-09-16, before it cost anything)*. The closed-class
+        forms are a STRUCTURE FILTER on D's vocabulary — `distribution.vocabulary` drops them,
+        because *«a function word is compiled and never defined»* and two glosses sharing `in` is D
+        defining one. So a closed-class migration changes what D WOULD be built from, and until this
+        field existed nothing recorded which set a sealed base had actually been filtered by. **The
+        drift would have been silent**: the base keeps its label and its seals, the table moves
+        underneath it, and no check anywhere disagrees.
+
+        It is recorded rather than enforced, and that is the point. A table may legitimately move
+        ahead of a base — E3 wrote four closed-class versions in one day without a rebuild, and each
+        was correct. What must never happen is that the two disagree and nobody can SEE it.
 
     MEASURED, and the second number is the one a tick has to plan for: the check costs 7-12 ms warm
     against the body, and it SPIKES to 100-215 ms on network jitter — the body is a machine on the
@@ -85,6 +96,9 @@ class SpaceOrigin:
     seals: tuple[tuple[str, str], ...] = ()
     #: The policy version the space reads through. A ruling moves this and nothing else.
     policy_version: int | None = None
+    #: The closed-class version whose forms filtered D's vocabulary at build time. `None` on a space
+    #: loaded by a caller that did not say — honest, and distinguishable from «version 0».
+    closed_class_version: int | None = None
 
     def differs_from(self, other: "SpaceOrigin") -> tuple[str, ...]:
         """WHAT changed, not merely whether — a phase deciding to spend seven seconds deserves the
@@ -100,6 +114,10 @@ class SpaceOrigin:
                                  f"{str(mine.get(name))[:12]} -> {str(theirs.get(name))[:12]}")
         if self.policy_version != other.policy_version:
             moved.append(f"policy v{self.policy_version} -> v{other.policy_version}")
+        if self.closed_class_version != other.closed_class_version:
+            moved.append(f"closed classes v{self.closed_class_version} -> "
+                         f"v{other.closed_class_version} — D's vocabulary filter moved, so this "
+                         f"base was built against a different set of function words")
         return tuple(moved)
 
 

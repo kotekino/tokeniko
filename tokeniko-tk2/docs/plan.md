@@ -711,8 +711,22 @@ it).
      test going red. **The missing control: does the compiler produce, for the drill's own
      sentences, what the drill hand-compiled?** It is the one measurement that would join the format's
      gate to the station's, and it needs stanza parses of the drill's 78 sentences.
-   - **content ADVERBS** — `early`, `here`. The adjectives' problem one part of speech over, and not
-     the same piece: an adverb modifies the PREDICATION, not a nominal, so it raises no binder.
+   - ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
+     `202609161251_the-adverbs.md`). Requirement 23 split adverbs four ways at E2 and nothing said
+     WHICH is which. **The resource cannot say**: WordNet has ONE adverb class (`adv.all`) and
+     adverbs have NO hypernyms, so the supersense instrument that settled the markers gives nothing
+     here. It is curation — **and curatable only because MANNER IS THE DEFAULT**: 79% of English's
+     3,767 single-word adverbs are `-ly` and describe the action, so the table holds the 106
+     EXCEPTIONS rather than the class. A default is COUNTED, never silent.
+     **THE RULE'S FIRST LIVE APPLICATION MOVED THE ANSWER.** By the second standing law these are
+     structure and belong in the closed classes; the Captain ruled a separate collection on a cost
+     the principle does not see — those forms filter D's vocabulary, and 60 new ones would
+     desynchronise the sealed base. The cost he named (two tables) is paid by making only the ROSTER
+     second: `compiled` here is the closed classes' own vocabulary.
+     **THE CLASH CHECK PAID FOR ITSELF ON THE FIRST RUN** — 11 forms were already in the closed
+     classes and **10 were already compiled CORRECTLY** there. The other two became `db/0014`, which
+     is FREE because the exclusion set is a set of FORMS: 268 before, 268 after.
+     Frontier **9/18 at 82.2%**, ratchet unmoved, gate **31 answered · 0 WRONG**.
    - **`flat` / `list`** — one name across several tokens; E3b by another route.
    - **`xcomp`** — deliberately not a clause, and what it IS instead has never been ruled.
    - **`nummod`** — the box's own `count` field (req 26); a numeral is neither a quantifier nor a
@@ -793,6 +807,7 @@ it).
    | `CLAIMED = 1.0` (`compile.py`) | a threshold in code is the shape `db/0002` and `db/0007` exist to refuse |
    | `UD_DEP_SETTLES_ROLE` (`closed.py`) | *defensible as frame* — every entry is a relation whose UD definition NAMES the role. But the READING is ours, so it is argued, not assumed |
    | `DEPS_THAT_COMPILE_TO_NOTHING` (`compile.py`) | added 2026-09-16 and put on this list in the same commit. `{"vocative"}` — and «a vocative is addressing, not content» is an E2 RULING, which is a row |
+   | `ADVERB_DEPS` (`compile.py`) | added 2026-09-16, same day, same list. `{"advmod", "discourse"}` — weaker than the two above (it selects WHERE to look rather than ruling what a thing means) and the same shape |
    | `POS_LETTER`, `UD_POS_TO_WORDNET`, `NOUN/VERB_SUPERSENSES` | *defensible as frame* — correspondences between two published closed vocabularies, and the supersense inventory is checked against the corpus every run |
 
    **Done when** every row of that table has a ruling and a home, and the ones that moved are a

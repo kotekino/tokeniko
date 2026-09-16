@@ -552,3 +552,37 @@ def test_the_catch_over_a_vector_refuses_a_ZERO_reading():
     # ... and one that shares no column with it at all is not: `meal.n`'s R row is empty, so every
     # reading is 0.0 and the winner would be whichever anchor happened to be listed first.
     assert held.nearest_anchor_of_vector(found.vector, ["meal.n"], source=found.source) is None
+
+
+# ------------------------------------------------------------------------------------------------
+# the dirty-check's fourth field
+# ------------------------------------------------------------------------------------------------
+
+
+def test_the_closed_class_version_moves_the_origin():
+    """**THE DRIFT THAT WOULD HAVE BEEN SILENT** (the Captain, 2026-09-16: «fix it now, before any
+    v7»). The closed-class forms are a STRUCTURE FILTER on D's vocabulary — a function word is
+    compiled and never defined — so a closed-class migration changes what D would be built from.
+
+    Until this field existed, nothing recorded which set a sealed base had been filtered by: the
+    base keeps its label and its seals, the table moves underneath it, and no check disagrees.
+    """
+    before = SpaceOrigin(build="b", seals=(("relational", "aaa"),), policy_version=14,
+                         closed_class_version=6)
+    after = SpaceOrigin(build="b", seals=(("relational", "aaa"),), policy_version=14,
+                        closed_class_version=7)
+
+    moved = before.differs_from(after)
+    assert moved, "a closed-class migration must make the space visibly stale"
+    assert "closed classes v6 -> v7" in moved[0]
+    assert "D's vocabulary filter moved" in moved[0], "and it must say WHY that matters"
+
+
+def test_a_space_that_was_not_told_its_closed_class_version_says_so():
+    """`None` rather than 0 — «nobody said» and «version zero» are different answers, and a caller
+    that could not tell them apart would be treating ignorance as evidence. The same distinction
+    `relational()` makes between a zero cosine and an unknown key."""
+    quiet = SpaceOrigin(build="b", policy_version=14)
+
+    assert quiet.closed_class_version is None
+    assert quiet.differs_from(SpaceOrigin(build="b", policy_version=14)) == ()

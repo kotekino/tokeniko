@@ -73,9 +73,28 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       UD gate compiles UD's sentences and never looks at the drill. **A role the station puts in
       every copular sentence was wrong for a day with no test going red.** The control that is
       missing: does the compiler produce, for the drill's own sentences, what the drill hand-compiled?
-- [ ] **content ADVERBS** — `early` in «left early in the morning», `here` in «they come here»: the
-      adjectives' problem one part of speech over, and NOT the same piece (an adverb modifies the
-      predication, not a nominal, so it raises no binder)
+- [x] **content ADVERBS — requirement 23's four scopes, as rows** *(2026-09-16, `db/0013` + `db/0014`)*.
+      **The resource cannot answer this**: WordNet files every adverb under ONE class (`adv.all`) and
+      adverbs have NO hypernyms, so the supersense that settled the markers gives nothing. It is
+      curation — and curatable only because **manner is the DEFAULT**: 79% of English's 3,767 adverbs
+      are `-ly` and describe the action, so the table holds the 106 EXCEPTIONS. A default is COUNTED,
+      never silent.
+      **A SEPARATE TABLE, on the Captain's ruling**: «however» is a join like «because» and belongs in
+      the closed classes by principle, but those forms filter D's vocabulary and 60 new ones would
+      desynchronise the sealed base. Cost paid by making only the ROSTER second — `compiled` here is
+      the closed classes' own vocabulary, so a reader cannot tell which table answered.
+      **Frontier 9/18 at 82.2%; ratchet unmoved; gate 31 answered, 0 WRONG.**
+- [x] **`db/0014` — the two gaps the clash check found** — it refused 11 forms already in the closed
+      classes, and **10 were already compiled CORRECTLY there** (`so`, `yet` as joins;
+      `anywhere`/`everywhere` as quantifiers over places; `inside`/`outside` as location boxes). The
+      other two are real: `however` held only its free-relative reading, and `here`/`now`/`then`/
+      `there` said `entity, resolve: context` without ever saying WHICH BOX. **Repairing them is
+      FREE** — the exclusion set is a set of FORMS, so an edited `compiled` and a second row for an
+      existing form both leave it at **268**
+- [x] **the dirty-check gained a fourth field** *(the Captain: «fix it now, before any v7»)* — the
+      closed-class forms filter D's vocabulary, and `SpaceOrigin` recorded build · seals · policy and
+      NOT which table filtered it. A migration could move under a sealed base with nothing anywhere
+      disagreeing. Recorded, not enforced: a table may legitimately run ahead of a base
 - [x] **compile core — ONE content row** (`tk2/language/compile.py`): the relation half and the
       marker half of the mapping, quantifier binders, possessors inside the record, senses OPEN.
       **18 of 25 UD cases at 100% coverage, mean 89.5%**
