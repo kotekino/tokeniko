@@ -27,6 +27,13 @@ dependencies = [
     # are an operator install (`python -m nltk.downloader wordnet omw-1.4 stopwords`), never a
     # download at import: a build that reaches the network mid-run is a build nobody pinned.
     "nltk",
+    # admitted 2026-09-16 by the Captain (E3, nummod): converting an English number WORD needs a
+    # roster of atoms plus composition rules, and `db/0001` ruled numerals out of the closed classes
+    # for that reason — «productive and infinite, however finite the words below ten look». tk1 used
+    # this same library. It enters through ONE door, as nltk does: `tk2.language.compile.
+    # numeral_value` is the only place that may import it, so a machine without it still parses and
+    # only the count abstains. Pure python, no corpus, no network.
+    "word2number",
 ]
 
 # pytest is not on the closed runtime list above and does not belong on it: the body never imports

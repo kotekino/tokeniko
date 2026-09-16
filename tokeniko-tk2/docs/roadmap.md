@@ -110,13 +110,12 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       and `determination` are three ORTHOGONAL fields, so a numeral raises no binder and changes no
       scope — it is a field of the record, exactly as the possessor is. **Frontier 10/19 at 83.2%;
       gate 32 answered, 0 WRONG.**
-- [ ] **⚑ NUMBER WORDS — the Captain's ruling owed** — «Sam ate 3 sheep» compiles whole; «Sam spent
-      forty dollars» ABSTAINS and says why. `3` is orthography; `forty` needs a roster of atoms plus
-      composition rules, and `db/0001` ruled numerals out of the closed classes for that reason
-      («productive and infinite, however finite the words below ten look»). tk1 used **`word2number`,
-      which is in this venv and is NOT a declared dependency** — and every entry in `pyproject.toml`
-      was admitted by the Captain with a stated reason. The case is in the corpus so the gap is
-      MEASURED rather than assumed
+- [x] **NUMBER WORDS — `word2number` admitted** *(the Captain, 2026-09-16)*, the fifth dependency
+      and on `nltk`'s terms: **one door**, `compile.numeral_value`, so a machine without the package
+      still parses and only the count abstains. The library is not trusted blindly — it returns **0**
+      for some non-numerals, so a zero no word in the phrase asked for is refused. UD's own case
+      arrived ABSTAINING and answered within the hour. **Frontier 11/19 at 84.5%; gate 33 answered,
+      0 WRONG**
 - [ ] **embedded questions** — «if you know WHO did it»: neither a root-clause interrogative nor a
       relative, and R5 rightly says «not the root clause» without being enough to compile it
 - [x] **the thirteen ambiguous markers** — closed classes v6 (`db/0012`). **Not the geometry

@@ -5,6 +5,8 @@ the 37 → 18 mapping stay apart, a quantifier binds the phrase it restricts, a 
 the record, and every word the station could not place is visible rather than gone.
 """
 
+import inspect
+
 import pytest
 
 from tests.fixtures.ud import CASES, frontier, ratchet
@@ -607,7 +609,7 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
-    """The relations the corpus reached on 2026-09-16: **10 of 19 whole, 83.2% mean.**
+    """The relations the corpus reached on 2026-09-16: **11 of 19 whole, 84.5% mean.**
 
     Low, and honestly so. What is missing is NAMED rather than averaged away — `flat`/`list` (one
     name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
@@ -619,8 +621,8 @@ def test_the_FRONTIER_half_is_where_the_work_is(compiler):
     mean = sum(s.coverage for s in scored) / len(scored)
 
     assert len(scored) == 19, "a relation may gain a case; the frontier grows and the ratchet does not"
-    assert full >= 10, f"{full} of {len(scored)} whole; 10 were on 2026-09-16"
-    assert mean >= 0.83, f"mean {mean:.1%}; it was 83.2% on 2026-09-16"
+    assert full >= 11, f"{full} of {len(scored)} whole; 11 were on 2026-09-16"
+    assert mean >= 0.84, f"mean {mean:.1%}; it was 84.5% on 2026-09-16"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -721,32 +723,46 @@ def test_a_numeral_fills_COUNT_and_raises_no_binder(compiler):
     assert out.coverage == 1.0
 
 
-def test_a_number_WORD_abstains_and_the_phrase_still_lands(compiler):
-    """**THE LIMIT, HELD AS A TEST SO IT CANNOT DRIFT.** `3` is orthography — the same mechanical
-    transformation `normalize_word` performs. `forty` is not: it needs a roster of atoms plus
-    composition rules, and `db/0001` ruled numerals out of the closed classes for that reason.
-
-    tk1 used the `word2number` library, which is in this venv and is NOT a declared dependency —
-    and every entry in `pyproject.toml` was admitted by the Captain with a stated reason. So the
-    station abstains and NAMES why, and the phrase still lands with only the count missing, which is
-    what a seven-field record is for.
-    """
+def test_a_number_WORD_is_read_too(compiler):
+    """«Sam spent forty dollars» — UD's own second nummod example, which arrived in the corpus
+    ABSTAINING and got its dependency admitted the same day (`word2number`, on `nltk`'s terms: one
+    door, and `numeral_value` is the door)."""
     out = compiled(compiler, "Sam spent forty dollars")
     box = main_row(out).boxes[Role.PATIENT]
 
-    assert box.head == "dollar.n", "the caught part stays bound"
-    assert box.count is None
-    assert any("forty" in note and "word2number" in note for note in out.abstained)
+    assert box.head == "dollar.n" and box.count == 40
+    assert out.coverage == 1.0
 
 
-def test_a_digit_is_read_and_a_separator_is_not(compiler):
-    """A comma or a space inside a digit string is a thousands separator in most of the world and a
-    decimal point in some of it, so neither is stripped: `1,5` is not read at all rather than read
-    as fifteen."""
+def test_what_the_numeral_reader_REFUSES(compiler):
+    """The refusals are the interesting half, and two of them are about not trusting the library.
+
+    A comma or a space inside a digit string is a thousands separator in most of the world and a
+    decimal point in some of it, so neither is stripped — `1,5` is not read at all rather than read
+    as fifteen. And `word_to_num` returns **0** for some strings that are not numerals: a zero no
+    word in the phrase asked for is the library shrugging, and a shrug is not a count.
+    """
     from tk2.language.compile import numeral_value
 
     assert numeral_value("3") == 3
     assert numeral_value("", "17") == 17
+    assert numeral_value("twenty-one") == 21, "a hyphen is spelling, not a separator"
+    assert numeral_value("three hundred and four") == 304
+    assert numeral_value("zero") == 0, "and a real zero survives the shrug guard"
+
     assert numeral_value("1,5") is None
-    assert numeral_value("forty") is None
+    assert numeral_value("dollars") is None, "the library answers 0 here; the guard refuses it"
+    assert numeral_value("sheep") is None
     assert numeral_value("") is None
+
+
+def test_the_numeral_reader_never_stops_a_parse(compiler):
+    """**ONE DOOR, AND ITS FAILURE IS AN ABSTENTION.** `word2number` is imported inside
+    `numeral_value` and nowhere else, so a machine without the package still parses — only the count
+    abstains. The import error is caught with the library's own raises, because all of them mean the
+    same thing here and none may reach the caller."""
+    import tk2.language.compile as mod
+
+    assert "word2number" not in [n for n in dir(mod)], "not imported at module scope"
+    assert "from word2number import w2n" in inspect.getsource(mod.numeral_value)
+    assert "ImportError" in inspect.getsource(mod.numeral_value)

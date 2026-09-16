@@ -529,21 +529,20 @@ CASES: tuple[Case, ...] = (
        annotated=False),
 
     # ── nummod, the WORD form ──
-    # UD's second nummod example, and the one that names the limit rather than the feature: the
-    # station reads DIGITS and abstains on a number WORD. Converting «forty» needs a roster of atoms
-    # plus composition rules, and db/0001 ruled numerals out of the closed classes for exactly that
-    # reason — «productive and infinite, however finite the words below ten look». tk1 used the
-    # `word2number` library; admitting a dependency is the Captain's ruling, so until he makes it
-    # this case measures the gap instead of hiding it.
+    # UD's second nummod example. It arrived ABSTAINING — the station read digits and not words —
+    # and the abstention is what got the dependency admitted the same day. A case that measures a
+    # gap is worth as much as one that confirms a feature, and this one did both within the hour.
     _c("nummod", "Sam spent forty dollars", [
         ("1", "Sam", "sam", "PROPN", "2", "nsubj"),
         ("2", "spent", "spend", "VERB", "0", "root"),
         ("3", "forty", "forty", "NUM", "4", "nummod"),
         ("4", "dollars", "dollar", "NOUN", "2", "obj"),
-    ], at=2, expect=OPEN,
-       note="**THE LIMIT, MEASURED.** `Sam ate 3 sheep` compiles whole; this one abstains on the "
-            "numeral and says why. OPEN rather than `count`, because what the station owes a number "
-            "WORD is not ruled until the dependency question is."),
+    ], at=2, expect="count",
+       note="**THE CASE THAT MEASURED A LIMIT AND THEN CLOSED IT.** It was added abstaining, with "
+            "`expect=OPEN`, because converting «forty» needs a roster of atoms plus composition "
+            "rules and `word2number` was not a declared dependency. The Captain admitted it the "
+            "same day, on `nltk`'s terms — one door — so the case now answers. *It is kept because "
+            "a corpus that only holds what already works is a corpus that cannot report a gap.*"),
 
     # ── root ──
     _c("root", "the cat sleeps", [

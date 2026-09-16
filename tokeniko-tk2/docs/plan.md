@@ -738,8 +738,13 @@ it).
      roster of atoms plus composition rules, and `db/0001` ruled numerals out of the closed classes
      for exactly that reason. tk1 solved it with **`word2number`, which is present in this venv and
      is NOT in `pyproject.toml`** — and every dependency there was admitted by the Captain with a
-     stated reason, so admitting a fifth is his and not the compiler's. The case sits in the corpus
-     abstaining, which measures the gap instead of hiding it.
+     stated reason, so admitting a fifth is his and not the compiler's.
+     **ADMITTED THE SAME DAY**, on `nltk`'s terms: one door (`compile.numeral_value`), local import,
+     failure is an abstention and never a crash. The library is checked rather than trusted — it
+     returns **0** for some strings that are not numerals, so a zero no word in the phrase asked for
+     is refused. *The corpus case arrived abstaining and answered within the hour, and it is kept:
+     a corpus that holds only what already works is a corpus that cannot report a gap.*
+     Frontier **11/19 at 84.5%**, gate **33 answered · 0 WRONG**.
    - **`appos`** — one individual under two descriptions; unruled, and it leans on E3b.
    - **embedded questions** («if you know WHO did it»).
    Context-as-argument is untouched; nothing has needed it yet.

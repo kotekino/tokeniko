@@ -100,21 +100,46 @@ def numeral_value(lemma: str, text: str = "") -> int | None:
     reason — *«two, seventeen, three hundred and four — productive and infinite, so not a closed
     class at all however finite the words below ten look»*.
 
-    tk1 solved it with `word2number`, which is **available in this venv and NOT a declared
-    dependency**. Every entry in `pyproject.toml`'s list was admitted by the Captain with a stated
-    reason, so admitting a fifth is his ruling and not this file's. **Until then a number word
-    ABSTAINS and says so** — «half understood is legal, wrongly understood is the sin», and a count
-    the station guessed would be a number in a zip that nobody put there.
+    tk1 solved it with `word2number`, and **the Captain admitted it on 2026-09-16** — the fifth
+    entry in `pyproject.toml`, on the same terms as `nltk`: **it enters through ONE door, and this
+    function is the door.** Nothing else in tk2 may import it, so a machine without the package
+    still parses and only the count abstains.
+
+    **THE IMPORT IS LOCAL AND ITS FAILURE IS AN ABSTENTION, NOT A CRASH.** A station that could not
+    read a numeral must still read the sentence — «half understood is legal, wrongly understood is
+    the sin» — and a count the station guessed would be a number in a zip that nobody put there.
 
     A comma or a space inside a digit string is a thousands separator in most of the world and a
     decimal point in some of it, so neither is stripped: `1,5` is not read at all rather than read
-    as fifteen.
+    as fifteen. **And the library's own failure mode is checked rather than trusted**: it raises on
+    a word it cannot read, and it returns 0 for some non-numerals, so a 0 that did not come from a
+    word meaning zero is refused.
     """
     for candidate in (lemma, text):
         found = (candidate or "").strip()
         if found.isdigit():
             return int(found)
-    return None
+
+    word = (lemma or text or "").strip().lower().replace("-", " ")
+    if not word:
+        return None
+    try:
+        from word2number import w2n
+
+        value = w2n.word_to_num(word)
+    except (ImportError, ValueError, IndexError, AttributeError, TypeError):
+        # ImportError: the package is not installed, and the station goes on without it.
+        # The rest: `word_to_num` raises on a word it cannot read, and its internals are not
+        # defensive — an unexpected shape reaches the caller as an IndexError. All of them mean the
+        # same thing here, which is «no number», and none of them may stop the parse.
+        return None
+    if not isinstance(value, int):
+        return None
+    if value == 0 and "zero" not in word and "naught" not in word and "nought" not in word:
+        # It returns 0 for some strings that are not numerals at all. A zero that no word in the
+        # phrase asked for is the library shrugging, and a shrug is not a count.
+        return None
+    return value
 
 
 #: The relations that hang an ADVERB off its head. `advmod` is the ordinary one; `discourse` is UD's
