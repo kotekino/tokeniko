@@ -22,6 +22,12 @@ from tk2.language.adverbs import (
     MANNER,
     standing_adverb_kinds,
 )
+from tk2.language.utterance import (
+    NO_CONTEXT,
+    CompiledUtterance,
+    Context,
+    compile_utterance,
+)
 from tk2.language.closed import (
     ClosedClasses,
     Match,
@@ -41,6 +47,10 @@ __all__ = [
     "Word",
     "bare",
     "skeleton_from_conllu",
+    "NO_CONTEXT",
+    "CompiledUtterance",
+    "Context",
+    "compile_utterance",
     "AdverbKinds",
     "AdverbReading",
     "MANNER",

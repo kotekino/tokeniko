@@ -31,6 +31,7 @@ from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
 from tk2.language.skeleton import UD_POS, Skeleton, Word
+from tk2.language.utterance import NO_CONTEXT, Context
 from tk2.tkzip.schema import (
     AttitudeRow,
     Box,
@@ -272,8 +273,17 @@ class Compiler:
 
     # -- the whole sentence -----------------------------------------------------------------------
 
-    def compile(self, skeleton: Skeleton) -> Compiled:
+    def compile(self, skeleton: Skeleton, context: Context = NO_CONTEXT) -> Compiled:
         """Skeleton → zip. One content row per CLAUSE, related by joins and attitudes.
+
+        **`context` IS REQUIREMENT 7, FINALLY BUILT** — *«the station is pure: context is an ARGUMENT,
+        never state»*. It carries what the caller knows and the sentence does not: who is speaking,
+        who is being spoken to, and (when anaphora is built) the recent zips. It is READ and never
+        stored, so the compiler stays pure and two calls with different contexts cannot influence
+        each other.
+
+        **Defaulting to `NO_CONTEXT` is what keeps this additive**: with no context every pronoun
+        stays OPEN exactly as before, and not one existing measurement moves.
 
         The clauses are found first and compiled independently, because a box belongs to the clause
         whose head governs it: «if it RAINS I stay HOME» has two subjects and two predicates, and a
@@ -301,7 +311,7 @@ class Compiler:
             mine = {i for i, h in owner.items() if h == head.index}
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
-                open_truth, wants_antecedent, defaulted, modifiers, adverb_joins)
+                open_truth, wants_antecedent, defaulted, modifiers, adverb_joins, context)
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
@@ -375,7 +385,8 @@ class Compiler:
                 covered: Placements, prefix_rows: list, abstained: list, name: str,
                 open_truth: set, wants_antecedent: set,
                 defaulted: list | None = None, modifiers: list | None = None,
-                adverb_joins: list | None = None) -> ContentRow:
+                adverb_joins: list | None = None,
+                context: Context = NO_CONTEXT) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
@@ -416,7 +427,7 @@ class Compiler:
             if match is not None:
                 covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
                                                     abstained, copular, name,
-                                                    open_truth, wants_antecedent),
+                                                    open_truth, wants_antecedent, context),
                                label=CLOSED_KIND_PLACES[match.kind] if match.kind in
                                CLOSED_KIND_PLACES else (match.kind or "structure"))
                 continue
@@ -1004,7 +1015,8 @@ class Compiler:
                         prefix_rows: list, abstained: list,
                         copular: bool = False, scopes: str = "r0",
                         open_truth: set | None = None,
-                        wants_antecedent: set | None = None) -> set[int]:
+                        wants_antecedent: set | None = None,
+                        context: Context = NO_CONTEXT) -> set[int]:
         """What a closed-class form does to the zip. Returns the token indices it accounted for."""
         kind = match.kind
         taken = {word.index + n for n in range(match.length)}
@@ -1091,7 +1103,20 @@ class Compiler:
             named = match.compiled.get("roles") or ()
             role = Role(named[0]) if named else self._role_of(word, skeleton, {}, copular)
             if role is not None and role not in boxes:
-                boxes[role] = Box(head=Open(), sense=Open(),
+                # **THE PERSON AXIS, AS FAR AS IT GOES WITHOUT THE ROTATION.** `i` and `you` carry
+                # `person: 1` and `person: 2` in their own rows — the axis has had its data since
+                # v1 and no caller to supply the other end. The context is that caller.
+                #
+                # **THIRD PERSON IS NOT HERE AND THAT IS NOT AN OVERSIGHT**: «he» and «they» are
+                # ANAPHORA — they point at something earlier in the discourse, not at a participant
+                # in the speech act — so `Context.for_person` answers for 1 and 2 only.
+                #
+                # **AND THIS DOES NOT ROTATE YET.** A first-person pronoun under a POV names that
+                # POV's holder, not the outer speaker (req 20), and building that waits on the
+                # Captain's ruling about where an ADDRESSEE lives. What is here is the outer speech
+                # act's own participants, which is right whenever there is no POV above the word.
+                who = context.for_person(match.features.get("person"))
+                boxes[role] = Box(head=who if who is not None else Open(), sense=Open(),
                                   determination=Determination.DEFINITE)
                 return taken
             # A possessive pronoun («MY friend») is the possessor of the phrase it hangs off, and is

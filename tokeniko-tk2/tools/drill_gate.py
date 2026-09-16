@@ -36,6 +36,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests.fixtures.drill import CASES  # noqa: E402
 from tk2.language import standing_closed_classes  # noqa: E402
 from tk2.language.compile import Compiler  # noqa: E402
+from tk2.language.utterance import compile_utterance  # noqa: E402
 
 AGREED, DISAGREED, MISSING = "agreed", "DISAGREED", "missing"
 
@@ -178,13 +179,14 @@ def run(argv=None) -> int:
         if not skeletons:
             readings.append(Reading(case.id, case.sentence, unparsed="no skeleton"))
             continue
-        # **ONE SKELETON ONLY, AND THE LIMIT IS REPORTED RATHER THAN HIDDEN.** `compile` takes one;
-        # a sentence stanza splits reaches this gate as its first half. That is E3 task 2b's
-        # multi-sentence gap, met here from the other side.
-        produced = compiler.compile(skeletons[0])
+        # **EVERY SENTENCE OF THE UTTERANCE, since E3 task 2b.2.** This gate is what reported the
+        # gap — five of the drill's sentences were split by stanza and only the first half read —
+        # and `compile_utterance` is what closed it. The sentences are merged into one zip and are
+        # not yet RELATED to one another; that is 2b.3, the Captain's format ruling.
+        produced = compile_utterance(compiler, skeletons)
         reading = compare(produced.zip, case.zip, case.id, case.sentence)
-        if len(skeletons) > 1:
-            reading.unparsed = f"stanza split this into {len(skeletons)} sentences; only the first"
+        if produced.split:
+            reading.unparsed = f"stanza split this into {len(skeletons)} sentences; all were read"
         readings.append(reading)
 
     conflicts = [r for r in readings if r.verdict == DISAGREED]
@@ -215,8 +217,8 @@ def run(argv=None) -> int:
     print(f"  SENTENCES      {len(agreed)} agreed · {len(conflicts)} DISAGREED · "
           f"{len(readings) - len(agreed) - len(conflicts)} reached no common ground")
     if split:
-        print(f"  MULTI-SENTENCE {len(split)} were split by stanza and only the first half was read "
-              f"— E3 task 2b")
+        print(f"  MULTI-SENTENCE {len(split)} were split by stanza and ALL halves were read "
+              f"(E3 task 2b.2); the halves are not yet RELATED to one another — that is 2b.3")
     print()
     print("  **ONLY `DISAGREED` IS A DEFECT.** A missing row is E3 not being finished, and it is")
     print("  counted apart so it can never be averaged into something that looks like agreement.")

@@ -790,12 +790,22 @@ it).
    (req 3), not with the features.
 
    **Four sub-tasks, in dependency order:**
-   1. **CONTEXT AS AN ARGUMENT — requirement 7, finally built.** The speech act's participants
-      (speaker, addressee) and the recent zips, passed into `compile()` and never held. *Everything
-      else waits on it, and nothing has needed it until now.*
-   2. **MULTI-SENTENCE INPUT.** Measured 2026-09-16: stanza splits «John said to Marie " You are a
-      clever girl "» into TWO skeletons, so the rotation information and the pronouns it governs
-      arrive separately and `compile` takes one skeleton. The cheapest of the four.
+   1. ~~**CONTEXT AS AN ARGUMENT**~~ **DONE 2026-09-16** (record
+      `202609161521_context-as-an-argument.md`). `compile(skeleton, context=NO_CONTEXT)` — the
+      speech act's speaker and addressee, plus `recent` declared for the anaphora that is not built.
+      **The axis had its data since v1**: `i` carries `person: 1` and `you` `person: 2` in their own
+      rows, and nothing read them because there was nowhere for «who is speaking» to enter.
+      **Without a context nothing changes**, so no existing measurement moved. Third person is
+      deliberately absent — «he» is ANAPHORA, not a speech-act participant — and **the station never
+      invents an identifier**: it copies what the caller handed it, which is what keeps this from
+      pre-empting E3b.
+   2. ~~**MULTI-SENTENCE INPUT**~~ **DONE 2026-09-16.** `compile_utterance` compiles every skeleton
+      of one utterance into ONE zip. The first sentence keeps its names (so a single-sentence
+      utterance is byte-identical to before and nothing was re-measured); later ones are prefixed
+      `s1.` **and every reference moves with them** — row names and variable names are two
+      namespaces, and a second sentence's `x0` binding the first's variable would be a zip that is
+      well-formed and means something nobody said. **The drill gate reported this gap and now reads
+      all five split sentences whole.** The halves are not yet RELATED to one another; that is 2b.3.
    3. **⚑ THE FORMAT RULING, WHICH IS THE CAPTAIN'S.** Where does the ADDRESSEE live? `Pov` holds
       `holder · verb · strength` and has no fourth field. Either it gains one — **a schema change,
       and tkzip is FROZEN at v2, so a migration under his hand (req 73)** — or the resolver reads the

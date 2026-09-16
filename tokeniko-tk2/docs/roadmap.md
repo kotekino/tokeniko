@@ -146,9 +146,14 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       gate tests it (the drill has no quoted speech; the QM transcribed `ccomp` as the INDIRECT form
       and passed over UD's own direct-quote examples). **A wrong rotation is a wrong BELIEF, not a
       wrong parse** — well-formed, coherent, about the wrong person, and the evaluator cannot catch
-      it. **Four sub-tasks in `plan.md` task 2b**: context-as-argument (req 7, written and never
-      built) · multi-sentence input · **the Captain's FORMAT ruling on where the addressee lives**
-      (`Pov` has no fourth field, and tkzip is frozen) · the rotation, plus cases in BOTH gates
+      it. **Four sub-tasks in `plan.md` task 2b**, and the first two are DONE 2026-09-16:
+      ~~context-as-argument~~ (req 7 built at last — the axis had its data since v1 and no caller to
+      supply the other end; without a context nothing changes) · ~~multi-sentence input~~
+      (`compile_utterance` — the drill gate reported five sentences half-read and now reads them
+      whole) · **⚑ the Captain's FORMAT ruling on where the addressee lives** (`Pov` has no fourth
+      field, and tkzip is frozen at v2) · the rotation, plus cases in BOTH gates.
+      **A test asserts the WRONG answer on purpose**, so the day the rotation lands it fails and
+      whoever made it fail reads the note
 - [x] **embedded questions** *(2026-09-16)* — **a wh-word has THREE readings and R5's binary test
       conflated the last pair.** R5 asks «is this the root clause» and answers the MOOD question
       rightly; it was then read as «therefore relative», and an embedded question opens its slot

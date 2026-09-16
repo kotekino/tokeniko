@@ -1,0 +1,185 @@
+"""THE UTTERANCE — context as an argument (req 7), and a quote that arrives as two sentences.
+
+**TWO OF E3 TASK 2b's FOUR SUB-TASKS**, and deliberately not the other two: the rotation itself waits
+on the Captain's format ruling about where an ADDRESSEE lives, and nothing here guesses at it.
+
+**WHY `compile()` COULD NOT SIMPLY GROW A PARAMETER.** Requirement 7 says *«the station is pure —
+context is an ARGUMENT, never state»*, and it has been written and unbuilt since E3 opened because
+nothing needed it. Two things need it now and they are different:
+
+- **a pronoun has to resolve to somebody.** `i` and `you` carry `person: 1` and `person: 2` in their
+  closed-class rows already — the axis has had its data all along and no caller to supply the other
+  end.
+- **a quote arrives as a SECOND SENTENCE.** Measured 2026-09-16: stanza splits «John said to Marie
+  " You are a clever girl "» into two skeletons, so the frame and the words it governs never meet.
+  `Compiler.compile` takes one skeleton and should keep taking one — an utterance is the larger unit
+  and it belongs here.
+
+**THE SPEAKER IS WHATEVER THE CALLER SAYS IT IS.** This module never invents an identifier. The drill
+hand-compiles «I» as `me.n`; the blueprint says the self-model is carried by named individuals with
+uids (E3b). Both are legal here and the station does not choose — it fills the box with the
+identifier it was handed, and with `Open()` when it was handed none. **Without a context nothing
+changes**, which is what keeps this purely additive.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field, replace
+from typing import Iterable, Sequence
+
+from tk2.tkzip.schema import Box, ContentRow, Ref, Var, Zip
+
+
+@dataclass(frozen=True, slots=True)
+class Context:
+    """What the caller knows that the sentence does not. **Passed in, never held.**
+
+    `speaker` and `addressee` are the SPEECH ACT's two participants, and they are identifiers the
+    caller owns — a dictionary key, a uid, anything the layer above uses for a person. The station
+    copies one into a box and never mints one.
+
+    `recent` is for anaphora and ellipsis (req 7's other two), which are not built: it is declared so
+    that the argument does not have to change shape the day they are, and so a caller can already
+    pass what it holds.
+    """
+
+    speaker: object | None = None
+    addressee: object | None = None
+    recent: tuple[Zip, ...] = ()
+
+    #: The two persons this context can answer for, as the closed-class rows spell them.
+    def for_person(self, person: object) -> object | None:
+        """Who a pronoun of this grammatical person names here, or None if this context cannot say.
+
+        **First and second only, and third is not an oversight.** «he» and «they» are ANAPHORA — they
+        point at something earlier in the discourse, not at a participant in the speech act — so they
+        resolve against `recent` when that is built, and never against the speaker.
+        """
+        if person == 1:
+            return self.speaker
+        if person == 2:
+            return self.addressee
+        return None
+
+    @property
+    def is_empty(self) -> bool:
+        return self.speaker is None and self.addressee is None and not self.recent
+
+
+#: The one shared context that says nothing — so a caller that has none passes a real object rather
+#: than a `None` every function has to test for.
+NO_CONTEXT = Context()
+
+
+# ------------------------------------------------------------------------------------------------
+# merging sentences into one utterance
+# ------------------------------------------------------------------------------------------------
+
+
+def _rename(value, prefix: str, rows: set[str], vars_: set[str]):
+    """One field, with every NAME in it prefixed. Row names and variable names are two namespaces
+    and both must move, or the second sentence's `x0` binds the first sentence's variable."""
+    if isinstance(value, Var):
+        return Var(name=f"{prefix}{value.name}") if value.name in vars_ else value
+    if isinstance(value, Ref):
+        return Ref(row=f"{prefix}{value.row}") if value.row in rows else value
+    if isinstance(value, Box):
+        return value.model_copy(update={
+            "head": _rename(value.head, prefix, rows, vars_),
+            "relation": _rename(value.relation, prefix, rows, vars_),
+        })
+    if isinstance(value, str):
+        return f"{prefix}{value}" if value in rows else value
+    return value
+
+
+def prefixed(zip_: Zip, prefix: str) -> Zip:
+    """A zip whose every row name, variable name and reference carries `prefix`.
+
+    **The reference sites are enumerable and that is why this is safe**: `scopes` on a prefix row,
+    `operands` on a join, `binds` and `restriction` on a binder, and a box's `head` or `relation`
+    when it holds a `Var` or a `Ref`. A name that is not one of this zip's own is left alone — so a
+    key like `cat.n` is never mangled, which is what `rows` and `vars_` are checked against.
+    """
+    if not prefix:
+        return zip_
+    rows = {row.name for row in zip_.rows}
+    vars_ = {row.binds for row in zip_.rows if getattr(row, "binds", None)}
+
+    moved = []
+    for row in zip_.rows:
+        update = {"name": f"{prefix}{row.name}"}
+        if getattr(row, "scopes", None):
+            update["scopes"] = _rename(row.scopes, prefix, rows, vars_)
+        if getattr(row, "operands", None):
+            update["operands"] = [_rename(o, prefix, rows, vars_) for o in row.operands]
+        if getattr(row, "binds", None):
+            update["binds"] = f"{prefix}{row.binds}"
+        if getattr(row, "restriction", None):
+            update["restriction"] = _rename(row.restriction, prefix, rows, vars_)
+        if getattr(row, "boxes", None):
+            update["boxes"] = {role: _rename(box, prefix, rows, vars_)
+                               for role, box in row.boxes.items()}
+        if getattr(row, "pov", None) is not None:
+            update["pov"] = row.pov.model_copy(update={
+                "holder": _rename(row.pov.holder, prefix, rows, vars_)})
+        moved.append(row.model_copy(update=update))
+    return zip_.model_copy(update={"rows": moved})
+
+
+@dataclass
+class CompiledUtterance:
+    """Every sentence of one utterance, in one zip — plus what each sentence cost.
+
+    **The sentences are NOT related to one another**, and that is the honest state rather than a
+    shortcut. «John said to Marie "You are a clever girl"» needs the quote to become the content of
+    the saying, and what that looks like is E3 task 2b.3 — the Captain's format ruling on where an
+    addressee lives. Merging them into one zip is what makes that ruling BUILDABLE: until now the
+    second half was simply dropped.
+    """
+
+    zip: Zip
+    sentences: int = 1
+    unplaced: tuple[str, ...] = ()
+    abstained: tuple[str, ...] = ()
+    defaulted: tuple[str, ...] = ()
+    coverage: float = 1.0
+    #: True when the provider split the input — the caller is entitled to know that the rows in this
+    #: zip came from more than one sentence and are not yet joined.
+    split: bool = False
+
+
+def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTEXT
+                      ) -> CompiledUtterance:
+    """Every skeleton of one utterance → one zip.
+
+    The first sentence keeps its names so a single-sentence utterance is byte-identical to what
+    `Compiler.compile` produces alone — which is what lets this be added without moving a single
+    existing measurement.
+    """
+    if not skeletons:
+        # **AN EMPTY ZIP IS NOT A ZIP** — the schema requires at least one row, and it is right to:
+        # a zip is a claim about something, and «nothing» is not something. So an utterance with no
+        # sentences produces the same shape the compiler already produces for a skeleton with no
+        # root — one empty content row, saying «I received this and made nothing of it» — rather
+        # than a second convention for the same state.
+        return CompiledUtterance(zip=Zip(rows=[ContentRow(name="r0")]), sentences=0, coverage=1.0)
+
+    rows, unplaced, abstained, defaulted, covered, total = [], [], [], [], 0, 0
+    for position, skeleton in enumerate(skeletons):
+        compiled = compiler.compile(skeleton, context=context)
+        zip_ = prefixed(compiled.zip, "" if position == 0 else f"s{position}.")
+        rows.extend(zip_.rows)
+        unplaced.extend(compiled.unplaced)
+        abstained.extend(compiled.abstained)
+        defaulted.extend(compiled.defaulted)
+        covered += len(compiled.covered)
+        total += len(compiled.covered) + len(compiled.unplaced)
+
+    return CompiledUtterance(
+        zip=Zip(rows=rows, unplaced=list(unplaced)),
+        sentences=len(skeletons),
+        unplaced=tuple(unplaced), abstained=tuple(abstained), defaulted=tuple(defaulted),
+        coverage=1.0 if not total else covered / total,
+        split=len(skeletons) > 1,
+    )
