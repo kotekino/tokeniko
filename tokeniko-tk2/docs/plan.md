@@ -695,10 +695,24 @@ it).
    waiting. **NAMED DEBT:** the supersense is read LIVE from WordNet and is therefore outside the
    base's build fingerprint; its home is a `lexname` on `SenseVectorDoc`, which is a rebuild.
    **WHAT REMAINS, as the completed gate now names it** *(2026-09-16)*:
-   - **`amod` — the frontier's biggest gap, five cases.** tkzip req 70 already rules it:
-     *«attributive adjectives are SECOND ROWS, not a field — «a human body» is ∃B(body(B) ∧ human(B)),
-     the same machinery as the depictive»*. «Last night» leaving `Last` unplaced is the same hole
-     from the other side. **This is the next piece.**
+   - ~~**`amod`**~~ **DONE 2026-09-16** (record `202609161215_the-attributive-adjective.md`). The
+     shape was not designed here — req 70 ruled it and the drill hand-compiled it at E2: the
+     adjective is a second row with NO predicate, its subject is the PATIENT, and **the binder
+     scopes the JOIN** because the variable lives in both rows. **An adjective forces a binder even
+     with no quantifier word**, because a row saying `patient=body.n, complement=human.a` claims
+     that BODIES are human. Ratchet **23/25 at 98.9%**, frontier **7/18 at 80.8%**, gate **31
+     answered · 0 WRONG**.
+     **AND IT FOUND A SLIP**: the copular subject is the **PATIENT**, not the `topic` the compile
+     core wrote. `topic` here is SUBJECT MATTER («a lecture ON physics»); the drill uses it for that
+     alone, three times, and hand-compiles the copular row as patient + complement 43 times.
+   - **⚑ THE TWO GATES HAVE NEVER MET, and that is how the slip survived.** The drill validates
+     hand-written zips with no parser involved; the UD gate compiles UD's sentences and never looks
+     at the drill. A role the station puts in EVERY copular sentence was wrong for a day without a
+     test going red. **The missing control: does the compiler produce, for the drill's own
+     sentences, what the drill hand-compiled?** It is the one measurement that would join the format's
+     gate to the station's, and it needs stanza parses of the drill's 78 sentences.
+   - **content ADVERBS** — `early`, `here`. The adjectives' problem one part of speech over, and not
+     the same piece: an adverb modifies the PREDICATION, not a nominal, so it raises no binder.
    - **`flat` / `list`** — one name across several tokens; E3b by another route.
    - **`xcomp`** — deliberately not a clause, and what it IS instead has never been ruled.
    - **`nummod`** — the box's own `count` field (req 26); a numeral is neither a quantifier nor a

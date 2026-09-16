@@ -56,9 +56,26 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       **AND A SECOND PROVIDER MEASUREMENT (req 2): stanza produces 15 of the 18 relations UD
       publishes on these sentences.** The three it does not — `goeswith`, `orphan`, `reparandum` —
       are one family: a typo, a gapping, a self-correction. The station will never meet them labelled
-- [ ] **`amod` — attributive adjectives are SECOND ROWS** (tkzip req 70, already ruled): «a human
-      body» is ∃B(body(B) ∧ human(B)). **The frontier's biggest gap, five cases**, and «Last night»
-      leaving `Last` unplaced is the same hole from the other side
+- [x] **`amod` — attributive adjectives are SECOND ROWS** *(2026-09-16, tkzip req 70)*: «a human
+      body» is ∃B(body(B) ∧ human(B)) — and the shape was not designed here, the drill hand-compiled
+      it at E2. The adjective row has NO predicate (req 31), its subject is the PATIENT, and **the
+      binder scopes the JOIN** because the variable lives in both rows. **An adjective forces a
+      binder even with no quantifier word**: a row saying `patient=body.n, complement=human.a` would
+      claim BODIES are human. And the modifier joins **chain per clause into ONE tree** — two
+      modified nouns first produced two joins both naming the content row, which is sound and is not
+      what the drill does. **Ratchet 23/25 at 98.9%; frontier 7/18 at 80.8%; gate 31 answered,
+      0 WRONG.** Record: `202609161215_the-attributive-adjective.md`
+- [x] **the copular subject is the PATIENT, not the topic** — a compile-core slip found by reading
+      the drill while building `amod`. `topic` in this inventory is SUBJECT MATTER («a lecture ON
+      physics») and the drill uses it for that alone, three times, while hand-compiling the copular
+      row as patient + complement **43 times**. E2 ruled the shape outright
+- [ ] **⚑ THE TWO GATES HAVE NEVER MET** — the drill validates hand-written zips with no parser; the
+      UD gate compiles UD's sentences and never looks at the drill. **A role the station puts in
+      every copular sentence was wrong for a day with no test going red.** The control that is
+      missing: does the compiler produce, for the drill's own sentences, what the drill hand-compiled?
+- [ ] **content ADVERBS** — `early` in «left early in the morning», `here` in «they come here»: the
+      adjectives' problem one part of speech over, and NOT the same piece (an adverb modifies the
+      predication, not a nominal, so it raises no binder)
 - [x] **compile core — ONE content row** (`tk2/language/compile.py`): the relation half and the
       marker half of the mapping, quantifier binders, possessors inside the record, senses OPEN.
       **18 of 25 UD cases at 100% coverage, mean 89.5%**

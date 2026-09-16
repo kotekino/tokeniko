@@ -205,6 +205,7 @@ class Compiler:
         abstained: list[str] = []
         defaulted: list[str] = []
         prefix_rows: list = []
+        modifiers: list = []   # (var, adjective key, its binder, the row it belongs to)
         content: dict[int, ContentRow] = {}
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
@@ -213,10 +214,11 @@ class Compiler:
             mine = {i for i, h in owner.items() if h == head.index}
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
-                open_truth, wants_antecedent, defaulted)
+                open_truth, wants_antecedent, defaulted, modifiers)
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
+        extra += self._modify(modifiers, joins)
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
@@ -283,7 +285,7 @@ class Compiler:
     def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
                 covered: Placements, prefix_rows: list, abstained: list, name: str,
                 open_truth: set, wants_antecedent: set,
-                defaulted: list | None = None) -> ContentRow:
+                defaulted: list | None = None, modifiers: list | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
@@ -310,7 +312,8 @@ class Compiler:
             if not any(c.bare_dep == "cop" for c in skeleton.children(head.index)):
                 marked = self._marker_role(head, skeleton, marks, defaulted)
             role = marked or Role.COMPLEMENT
-            boxes[role] = self._box_for(head, skeleton, marks, covered, prefix_rows, name)
+            boxes[role] = self._box_for(head, skeleton, marks, covered, prefix_rows, name,
+                                        modifiers)
             covered.add(head.index, f"box:{role.value}")
             copular = True
 
@@ -334,7 +337,8 @@ class Compiler:
                 continue
             role = self._role_of(word, skeleton, marks, copular, defaulted)
             if role is not None and role not in boxes:
-                boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name)
+                boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name,
+                                            modifiers)
                 covered.add(index, f"box:{role.value}")
             elif role is None and word.bare_dep in NOMINAL_DEPS:
                 unresolved.append((word, self._box_for(word, skeleton, marks, covered)))
@@ -447,6 +451,54 @@ class Compiler:
                                  operands=[unknown.name, row.name], truth=CLAIMED))
         return raised
 
+    def _modify(self, modifiers: list, joins: list) -> list:
+        """**ATTRIBUTIVE ADJECTIVES BECOME ROWS** — tkzip req 70, and the shape is the drill's own.
+
+        «I live in a human body» is hand-compiled in E2's drill as
+
+            EXISTS B restricted to body.n, scoping the JOIN
+            hu:  patient = B, complement = human.a
+            me:  live.v, agent = me.n, location = (B, marker «in»)
+            j1:  AND (hu, me)
+
+        Three things in that are not obvious and all three are load-bearing. The adjective row has
+        **no predicate** — req 31, «the cat is cute» is cat + cute and no verb. Its subject is the
+        **patient**, not the topic, which is the copular row's shape E2 ruled and the drill uses 43
+        times. And **the binder scopes the JOIN, not either row**, because the variable is shared
+        across both and a binder scoping one of them would leave the other's `B` unbound.
+
+        Several adjectives chain: «large hot dogs» is AND(large, AND(hot, eats)), one join apiece,
+        exactly as the drill chains j1, j2, j3.
+        """
+        raised = []
+        attached: dict[str, str] = {}      # owner row -> the conjunction built over it so far
+        binders: dict[str, list] = {}      # owner row -> every binder whose scope must follow it
+        for position, (var, key, binder, owner) in enumerate(modifiers):
+            row = ContentRow(
+                name=f"m{position}", truth=CLAIMED,
+                boxes={Role.PATIENT: Box(head=Var(name=var), sense=Open()),
+                       Role.COMPLEMENT: Box(head=key, sense=Open())})
+            raised.append(row)
+            # **ONE TREE PER CLAUSE, NOT ONE JOIN PER ADJECTIVE.** Two nouns each carrying an
+            # adjective would otherwise produce two joins both naming the content row — logically
+            # sound, and not what the drill does: it chains j1, j2, j3 into a single conjunction.
+            # A zip with two unrelated top-level assertions says the same thing in a shape nothing
+            # else in the format uses.
+            join = JoinRow(name=f"j{len(joins)}", operator=Operator.AND,
+                           operands=[row.name, attached.get(owner, owner)], truth=CLAIMED)
+            joins.append(join)
+            attached[owner] = join.name
+            binders.setdefault(owner, []).append(binder)
+
+        # THE BINDERS MOVE TO SCOPE THE WHOLE CONJUNCTION. Each was raised scoping the content row,
+        # because that was all that existed when `_box_for` ran; now its variable lives in two rows
+        # and only the outermost join covers both. Their ORDER is unchanged, and row order is scope
+        # order (req 35) — so the prefix still reads left to right as the speaker said it.
+        for owner, raised_binders in binders.items():
+            for binder in raised_binders:
+                binder.scopes = attached[owner]
+        return raised
+
     def _enclosing(self, skeleton: Skeleton, head: Word, content: dict) -> Word | None:
         """The clause this one hangs off — its head's own clause."""
         node = skeleton[head.head]
@@ -553,8 +605,17 @@ class Compiler:
         if settled is not None:
             if settled is Role.AGENT and copular:
                 # Nobody is acting in «Sue is a teacher» — the subject of a copula is what the
-                # complement is said OF. That is topicality, not agency.
-                return Role.TOPIC
+                # complement is said OF.
+                #
+                # **IT IS `patient`, AND THIS WAS WRONG UNTIL 2026-09-16.** The compile core reasoned
+                # its way to `topic` from «what the complement is said of», which is sound English
+                # and the wrong role name: in THIS inventory `topic` is SUBJECT MATTER — the thing
+                # «about» and «on» mark, «a lecture ON physics» — and the drill uses it for exactly
+                # that and for nothing else. E2 ruled the copular row's shape explicitly
+                # (`202609111511_notes.md`: row · POV · **patient** · complement) and the drill hand-
+                # compiles it **43 times**. A lone deviation in code against the format's own gate is
+                # the deviation that moves.
+                return Role.PATIENT
             return settled
         if word.bare_dep not in NOMINAL_DEPS:
             return None
@@ -608,7 +669,8 @@ class Compiler:
         return None
 
     def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: Placements,
-                 prefix_rows: list | None = None, scopes: str = "r0") -> Box:
+                 prefix_rows: list | None = None, scopes: str = "r0",
+                 modifiers: list | None = None) -> Box:
         """The seven-field record for one nominal phrase — per PHRASE, never one per clause.
 
         Every field is independently bindable (req 47): `head` may be BOUND while `sense` is OPEN,
@@ -671,15 +733,34 @@ class Compiler:
                                    else found.kind)
         box = Box(head=self._key(word), sense=Open(), determination=determination,
                   quantity=quantity, marker=marker, relation=relation)
+        # **AN ATTRIBUTIVE ADJECTIVE IS A SECOND ROW, AND A SECOND ROW NEEDS A VARIABLE** (tkzip
+        # req 70): «a human body» is EXISTS B (body(B) AND human(B)). There is no other way to say
+        # it — a row reading `patient=body.n, complement=human.a` would claim that BODIES are human,
+        # which is a statement about the kind and not about this one. So the adjective forces the
+        # binder that req 36 already provides, and the box refers to the variable.
+        adjectives = [c for c in skeleton.children(word.index)
+                      if c.bare_dep == "amod" and c.upos in ("ADJ", "VERB")]
+        if adjectives and quantity is None:
+            # No quantifier word, so the force comes from the phrase itself. EXISTENTIAL, because
+            # «a human body» is the drill's own worked case and it is existential — and the
+            # determination rides along beside it, which is exactly what req 26 split them for.
+            # *A bare plural («large dogs») is genericity, which E2 parked; it reads existential
+            # here and that is the honest approximation rather than a silent universal.*
+            quantity = Quantity.EXISTENTIAL
         if quantity is not None and prefix_rows is not None:
             # THE BINDER, and the box that referred to the noun now refers to the VARIABLE. That
             # indirection is req 36's whole point: one binding mechanism for quantification,
             # questions, equations and naming, instead of a quantified phrase the evaluator has to
             # synthesise a variable for.
             name = f"x{len(prefix_rows)}"
-            prefix_rows.append(QuantifierRow(name=f"q{len(prefix_rows)}", scopes=scopes, binds=name,
-                                             quantity=quantity, determination=determination,
-                                             restriction=box))
+            binder = QuantifierRow(name=f"q{len(prefix_rows)}", scopes=scopes, binds=name,
+                                   quantity=quantity, determination=determination,
+                                   restriction=box)
+            prefix_rows.append(binder)
+            for adjective in adjectives:
+                if modifiers is not None:
+                    modifiers.append((name, self._key(adjective), binder, scopes))
+                covered.add(adjective.index, "row")
             return Box(head=Var(name=name), sense=Open())
         return box
 

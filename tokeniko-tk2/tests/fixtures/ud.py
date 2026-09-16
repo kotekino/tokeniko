@@ -29,7 +29,7 @@ PREFIX = "prefix"
 ENTITY = "entity"
 STRUCTURE = "structure"
 OPEN = "OPEN"          # not yet ruled — the honest state, and it is COUNTED
-ROW = "ROW"            # it must open a CONTENT ROW of its own — ruled by tkzip, not built by E3 yet
+ROW = "row"            # it must open a CONTENT ROW of its own — ruled by tkzip, not built by E3 yet
 
 #: Relations that DO NOT ARISE IN ENGLISH, so an empty corpus for them is COMPLETE rather than
 #: missing. `clf` is the classifier — UD's page has no English example because English has none, and

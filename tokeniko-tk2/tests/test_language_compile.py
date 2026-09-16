@@ -27,6 +27,19 @@ def compiled(compiler, text):
     return compiler.compile(case(text).skeleton)
 
 
+def main_row(out):
+    """The last CLAUSE row — which is neither `rows[-1]` nor «the last content row», and stopped
+    being both the day attributive adjectives started raising rows and joins of their own.
+
+    A zip is a FLAT LIST whose order carries scope (req 35), not a list whose last element is the
+    point. Clause rows are named `r0, r1, …`; a modifier's row is `mN` and an antecedent's is
+    `rN_why`, and neither is what a test about the predication means.
+    """
+    import re
+    return [r for r in out.zip.rows
+            if r.kind == "content" and re.fullmatch(r"r\d+", r.name)][-1]
+
+
 # ------------------------------------------------------------------------------------------------
 # the two halves of the mapping
 # ------------------------------------------------------------------------------------------------
@@ -36,7 +49,7 @@ def test_a_core_argument_is_filled_by_the_RELATION(compiler):
     """No marker exists for agent or patient — English marks them by position, and the closed-class
     table proves it by holding no row for either."""
     out = compiled(compiler, "the cat chased the dog")
-    boxes = out.zip.rows[-1].boxes
+    boxes = main_row(out).boxes
 
     assert boxes[Role.AGENT].head == "cat.n"
     assert boxes[Role.PATIENT].head == "dog.n"
@@ -47,7 +60,7 @@ def test_the_passive_subject_IS_the_patient(compiler):
     """«the cat was chased by the dog» — nsubj:pass is the patient and obl:agent is the agent, so
     the passive and the active compile to the SAME roles. That is what «roles normalize» means."""
     out = compiled(compiler, "the cat was chased by the dog")
-    boxes = out.zip.rows[-1].boxes
+    boxes = main_row(out).boxes
 
     assert boxes[Role.PATIENT].head == "cat.n"
     assert boxes[Role.AGENT].head == "dog.n"
@@ -59,9 +72,9 @@ def test_a_circumstance_is_filled_by_the_MARKER(compiler):
     """«Sue left after the rehearsal» — `obl` says «a nominal dependent», which is not a role. The
     marker is what says TIME."""
     out = compiled(compiler, "Sue left after the rehearsal")
-    boxes = out.zip.rows[-1].boxes
+    boxes = main_row(out).boxes
 
-    assert out.zip.rows[-1].predicate == "leave.v"
+    assert main_row(out).predicate == "leave.v"
     assert boxes[Role.TIME].head == "rehearsal.n"
     assert boxes[Role.TIME].marker == "after"
 
@@ -114,14 +127,30 @@ def test_both_spellings_of_a_possessor_reach_the_SAME_place(compiler):
 
 
 def test_plain_copular_be_earns_no_predicate(compiler):
-    """Req 31 and the Captain's first draft verbatim: «the cat is cute» is cat + cute, NO VERB. And
-    the subject of a copula is the TOPIC — nobody is acting."""
+    """Req 31 and the Captain's first draft verbatim: «the cat is cute» is cat + cute, NO VERB.
+
+    **And the subject is the PATIENT, which the drill settles.** The compile core wrote `topic` here,
+    reasoning from «what the complement is said of» — sound English, wrong role name. In this
+    inventory `topic` is SUBJECT MATTER, the thing «about» and «on» mark, and the drill uses it for
+    that and nothing else (three times) while hand-compiling the copular row as patient + complement
+    **43 times**. E2 ruled the shape outright: *row · POV · patient · complement*.
+    """
     out = compiled(compiler, "Sue is a teacher")
-    row = out.zip.rows[-1]
+    row = main_row(out)
 
     assert row.predicate is None
     assert row.boxes[Role.COMPLEMENT].head == "teacher.n"
-    assert row.boxes[Role.TOPIC].head == "sue.n"
+    assert row.boxes[Role.PATIENT].head == "sue.n"
+
+
+def test_the_compiler_uses_topic_for_SUBJECT_MATTER_and_nothing_else(compiler):
+    """The control that would have caught the copular slip, stated as the invariant rather than as
+    the one case: `topic` is what «about» and «on» mark. A copular subject is not subject matter."""
+    copular = compiled(compiler, "Sue is a teacher")
+    assert Role.TOPIC not in copular.zip.rows[-1].boxes
+
+    marked = compiler.table.jobs("about")[0]["compiled"]
+    assert marked["roles"][0] == "topic", "the marker table is where topic comes from"
 
 
 def test_a_pronoun_fills_its_box_with_an_OPEN_head(compiler):
@@ -129,7 +158,7 @@ def test_a_pronoun_fills_its_box_with_an_OPEN_head(compiler):
     resolved to an entity from context before the dictionary is consulted — so it fills its role and
     never earns a dimension."""
     out = compiled(compiler, "I sleep")
-    box = out.zip.rows[-1].boxes[Role.AGENT]
+    box = main_row(out).boxes[Role.AGENT]
 
     assert isinstance(box.head, Open), "not `i.n`"
     assert out.coverage == 1.0
@@ -139,7 +168,7 @@ def test_the_sense_slot_is_always_OPEN(compiler):
     """The station never picks a sense — binding is the evaluator's one algorithm, and it has a KB
     to check itself against (evaluator req 5)."""
     out = compiled(compiler, "Sue left after the rehearsal")
-    row = out.zip.rows[-1]
+    row = main_row(out)
 
     assert isinstance(row.predicate_sense, Open)
     assert all(isinstance(box.sense, Open) for box in row.boxes.values())
@@ -176,11 +205,15 @@ def test_an_ambiguous_marker_is_settled_and_says_how(compiler):
     """
     out = compiled(compiler, "Last night , I swam in the pool")
 
-    row = out.zip.rows[-1]
+    row = main_row(out)
     assert row.boxes[Role.LOCATION].head == "pool.n"
     assert row.boxes[Role.LOCATION].marker == "in", "req 65: the marker the speaker chose is kept"
     assert any("in pool" in note for note in out.defaulted), "and it says nothing chose"
-    assert row.boxes[Role.TIME].head == "night.n", "what it DID know is still bound"
+    # «LAST night» — the adjective raises a binder (req 70), so the TIME box holds the VARIABLE and
+    # the noun moves into the binder's restriction. That indirection is the point of req 36.
+    binder = next(r for r in out.zip.rows if r.kind == "quantifier")
+    assert row.boxes[Role.TIME].head == Var(name=binder.binds), "what it DID know is still bound"
+    assert binder.restriction.head == "night.n"
 
 
 def test_a_supersense_settles_a_marker_and_that_is_not_a_default(compiler):
@@ -188,7 +221,7 @@ def test_a_supersense_settles_a_marker_and_that_is_not_a_default(compiler):
     differ only in what kind of thing the nominal is. A rule fired, so nothing is defaulted."""
     out = compiled(compiler, "I talked to my friend in the park")
 
-    row = out.zip.rows[-1]
+    row = main_row(out)
     assert row.boxes[Role.RECIPIENT].head == "friend.n"
     assert not any("to friend" in note for note in out.defaulted), "a person is not a guess"
     assert out.coverage == 1.0
@@ -469,7 +502,7 @@ def test_a_wh_word_OPENS_the_box_it_asks_about(compiler):
     """«There is no mood field» (E2): a question IS something open. «When do you sleep?» is the same
     row as «you sleep», with the TIME box open instead of absent."""
     out = compiler.compile(WHEN)
-    row = out.zip.rows[-1]
+    row = main_row(out)
 
     assert isinstance(row.boxes[Role.TIME].head, Open)
     assert row.predicate == "sleep.v"
@@ -504,7 +537,7 @@ def test_WHY_asks_for_an_ANTECEDENT_because_there_is_no_cause_box(compiler):
 def test_WHOSE_opens_the_possessor_FIELD_and_adds_no_box(compiler):
     """The possessor lives inside the record (req 26), so asking about it opens a field."""
     out = compiler.compile(WHOSE)
-    box = out.zip.rows[-1].boxes[Role.AGENT]
+    box = main_row(out).boxes[Role.AGENT]
 
     assert box.head == "cat.n"
     assert isinstance(box.relation, Open)
@@ -534,11 +567,11 @@ def test_copular_be_as_ROOT_still_earns_no_predicate(compiler):
         ("4", "cat", "cat", "NOUN", "2", "nsubj"),
         ("5", "?", "?", "PUNCT", "2", "punct"),
     ]))
-    row = out.zip.rows[-1]
+    row = main_row(out)
 
     assert row.predicate is None, "no `be.v`, and certainly no `be.n`"
     assert isinstance(row.boxes[Role.LOCATION].head, Open)
-    assert row.boxes[Role.TOPIC].head == "cat.n"
+    assert row.boxes[Role.PATIENT].head == "cat.n", "patient, not topic — the drill settles it"
 
 
 def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
@@ -552,7 +585,7 @@ def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
         ("5", ".", ".", "PUNCT", "2", "punct"),
     ]))
 
-    assert out.zip.rows[-1].predicate == "be.v", "content, and a VERB key"
+    assert main_row(out).predicate == "be.v", "content, and a VERB key"
 
 
 def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
@@ -569,22 +602,65 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
     mean = sum(s.coverage for s in scored) / len(scored)
 
     assert len(scored) == 25
-    assert full >= 22, f"{full} of {len(scored)} whole; 22 were on 2026-09-16"
-    assert mean >= 0.98, f"mean {mean:.1%}; it was 98.4% on 2026-09-16"
+    assert full >= 23, f"{full} of {len(scored)} whole; 23 were on 2026-09-16"
+    assert mean >= 0.98, f"mean {mean:.1%}; it was 98.9% on 2026-09-16"
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
-    """The eighteen relations the corpus reached on 2026-09-16: **6 of 18 whole, 76.6% mean.**
+    """The eighteen relations the corpus reached on 2026-09-16: **7 of 18 whole, 80.8% mean.**
 
-    Low, and honestly so. What is missing is NAMED rather than averaged away — `amod` (req 70 rules
-    attributive adjectives as SECOND ROWS and the station does not build them), `flat`/`list` (one
+    Low, and honestly so. What is missing is NAMED rather than averaged away — `flat`/`list` (one
     name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
-    unruled), `nummod` (the box's own `count` field), `appos`.
+    unruled), `nummod` (the box's own `count` field), `appos`, and the content ADVERBS (`early`,
+    `here`) which are the adjectives' own problem one part of speech over.
     """
     scored = [compiler.compile(c.skeleton) for c in frontier()]
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
     assert len(scored) == 18
-    assert full >= 6, f"{full} of {len(scored)} whole; 6 were on 2026-09-16"
-    assert mean >= 0.76, f"mean {mean:.1%}; it was 76.6% on 2026-09-16"
+    assert full >= 7, f"{full} of {len(scored)} whole; 7 were on 2026-09-16"
+    assert mean >= 0.80, f"mean {mean:.1%}; it was 80.8% on 2026-09-16"
+
+
+# ------------------------------------------------------------------------------------------------
+# attributive adjectives — tkzip req 70
+# ------------------------------------------------------------------------------------------------
+
+
+def test_an_attributive_adjective_is_a_SECOND_ROW(compiler):
+    """Req 70: «a human body» is ∃B(body(B) ∧ human(B)) — the same machinery as the depictive, and
+    NOT a field on the box. The shape is the drill's own, hand-compiled at E2.
+
+    The adjective row has **no predicate** (req 31: cat + cute, no verb) and its subject is the
+    **patient** (the copular row's shape). The binder scopes the **JOIN**, not either row, because
+    the variable lives in both and a binder over one would leave the other's variable unbound.
+    """
+    out = compiled(compiler, "Sam eats large hot dogs")
+    binder = out.zip.rows[0]
+    content = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "eat.v")
+    adjectives = [r for r in out.zip.rows if r.kind == "content" and r.name.startswith("m")]
+    joins = [r for r in out.zip.rows if r.kind == "join"]
+
+    assert binder.kind == "quantifier"
+    assert binder.restriction.head == "dog.n", "the variable is restricted to the NOUN"
+    assert content.boxes[Role.PATIENT].head == Var(name=binder.binds), "the box holds the VARIABLE"
+
+    assert [r.boxes[Role.COMPLEMENT].head for r in adjectives] == ["large.a", "hot.a"]
+    assert all(r.predicate is None for r in adjectives), "cat + cute, no verb"
+    assert all(r.boxes[Role.PATIENT].head == Var(name=binder.binds) for r in adjectives)
+
+    assert [j.operator for j in joins] == [Operator.AND, Operator.AND]
+    assert binder.scopes == joins[-1].name, "the binder scopes the JOIN, not either row"
+    assert out.coverage == 1.0
+
+
+def test_two_adjectives_CHAIN_their_joins(compiler):
+    """«large hot dogs» is AND(large, AND(hot, eats)) — one join apiece, exactly as the drill chains
+    j1, j2, j3. A single join with three operands would not be a binary operator."""
+    out = compiled(compiler, "Sam eats large hot dogs")
+    joins = [r for r in out.zip.rows if r.kind == "join"]
+
+    assert joins[0].operands == ["m0", "r0"]
+    assert joins[1].operands == ["m1", "j0"], "the second adjective joins the growing conjunction"
+    assert all(len(j.operands) == 2 for j in joins)
