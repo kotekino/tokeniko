@@ -116,7 +116,7 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       for some non-numerals, so a zero no word in the phrase asked for is refused. UD's own case
       arrived ABSTAINING and answered within the hour. **Frontier 11/19 at 84.5%; gate 33 answered,
       0 WRONG**
-- [ ] **⚑ THE PERSON AXIS — asked by the Captain 2026-09-16, answered NO** *(req 20, record
+- [ ] **⚑ THE PERSON AXIS — E3 SCOPE** *(the Captain, 2026-09-16 — asked, answered NO, placed)* *(req 20, record
       `202609161349_the-person-axis.md`)*: «John said to Marie: YOU are a clever girl» — the `you`
       must rotate to Marie. tk1 managed all of it; **tk2 has one sentence saying a pronoun is
       indexical and nothing saying the context CHANGES inside a POV**. Four gaps: no person axis at
@@ -125,7 +125,10 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       SPLITS a quote into its own sentence and the station has no multi-sentence path · and neither
       gate tests it (the drill has no quoted speech; the QM transcribed `ccomp` as the INDIRECT form
       and passed over UD's own direct-quote examples). **A wrong rotation is a wrong BELIEF, not a
-      wrong parse** — well-formed, coherent, about the wrong person, and the evaluator cannot catch it
+      wrong parse** — well-formed, coherent, about the wrong person, and the evaluator cannot catch
+      it. **Four sub-tasks in `plan.md` task 2b**: context-as-argument (req 7, written and never
+      built) · multi-sentence input · **the Captain's FORMAT ruling on where the addressee lives**
+      (`Pov` has no fourth field, and tkzip is frozen) · the rotation, plus cases in BOTH gates
 - [x] **embedded questions** *(2026-09-16)* — **a wh-word has THREE readings and R5's binary test
       conflated the last pair.** R5 asks «is this the root clause» and answers the MOOD question
       rightly; it was then read as «therefore relative», and an embedded question opens its slot

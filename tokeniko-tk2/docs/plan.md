@@ -762,6 +762,44 @@ it).
      wolf is worse than no report.
      **Ratchet 24/25 at 99.4%** — a new high — gate **33 answered · 0 WRONG**.
    Context-as-argument is untouched; nothing has needed it yet.
+2b. **⚑ THE PERSON AXIS — deixis, and the rotation under a point of view** *(the Captain asked
+   2026-09-16; the answer was that tk2 had no plan and no note, and he ruled it E3 SCOPE the same
+   day)*. Record: `docs/parser-compiler/202609161349_the-person-axis.md`, requirement 20.
+
+   > *«John said to Marie: "You are a clever girl". The "you" should rotate to take for tokeniko the
+   > meaning of Marie, not himself… and in general the pronouns to rotate the meaning depending on
+   > the point of view.»*
+
+   **The rule**: a first-person pronoun names the HOLDER of the innermost POV it is under; a
+   second-person one names that POV's ADDRESSEE; with no POV the outer speech act supplies both.
+   «John thinks I am wrong» still means the speaker — a THINKING pov addresses nobody, and only a
+   saying does.
+
+   **A wrong rotation is a wrong BELIEF, not a wrong parse**, and the evaluator cannot catch it: the
+   zip is well-formed, internally coherent, and about the wrong person. That puts it with the shields
+   (req 3), not with the features.
+
+   **Four sub-tasks, in dependency order:**
+   1. **CONTEXT AS AN ARGUMENT — requirement 7, finally built.** The speech act's participants
+      (speaker, addressee) and the recent zips, passed into `compile()` and never held. *Everything
+      else waits on it, and nothing has needed it until now.*
+   2. **MULTI-SENTENCE INPUT.** Measured 2026-09-16: stanza splits «John said to Marie " You are a
+      clever girl "» into TWO skeletons, so the rotation information and the pronouns it governs
+      arrive separately and `compile` takes one skeleton. The cheapest of the four.
+   3. **⚑ THE FORMAT RULING, WHICH IS THE CAPTAIN'S.** Where does the ADDRESSEE live? `Pov` holds
+      `holder · verb · strength` and has no fourth field. Either it gains one — **a schema change,
+      and tkzip is FROZEN at v2, so a migration under his hand (req 73)** — or the resolver reads the
+      `recipient` box of a `say` row, which adds nothing to the format and asks the resolver to know
+      that saying-verbs are special. *Neither is obviously right and the QM should not pick.*
+   4. **THE ROTATION ITSELF**, which is small once 1–3 exist, plus **cases in BOTH gates**: UD's own
+      direct-quote examples (which this QM passed over when transcribing `ccomp`) and hand-compiled
+      quotation in the drill. **Requirement 18 again** — the second hole this week that would have
+      been visible if the two gates had ever met.
+
+   *It touches E3b: «John» and «Marie» must become individuals before a rotation can NAME its
+   target. The mechanisms are separable — a «you» can rotate to «the person addressed» without
+   knowing who that is — but a rotation that cannot name its target is half an answer.*
+
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
@@ -843,7 +881,8 @@ it).
 
 **Done when:** the drill bar passes through the real lib (parse AND render), **every UD relation and
 POS tag is read consistently against UD's own examples**, clean input costs one parse, confidence
-orders the drill's failures sensibly, and **a placement is judged by a floor fitted to placements**.
+orders the drill's failures sensibly, **a placement is judged by a floor fitted to placements**, and
+**a pronoun under a point of view resolves to that POV's participants** (task 2b).
 
 *NOT owed by this epic: named individuals. A proper noun reaching a box with an identity is **E3b**,
 opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which is req 8 working.*

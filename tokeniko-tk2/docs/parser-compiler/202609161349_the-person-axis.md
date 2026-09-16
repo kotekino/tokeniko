@@ -113,5 +113,12 @@ answer.
    in the drill. *Requirement 18 again: the two gates have never met, and this is the second hole
    that would have been visible if they had.*
 
-**Nothing above is scheduled.** It is written here so the next session does not rediscover it, and so
-the Captain can place it — E3, E3b, or a piece of its own.
+**PLACED THE SAME DAY: «person axis is E3 scope» (the Captain, 2026-09-16).** It is `plan.md` task
+2b, sitting between the compile core and the renderer — which is the right place for the reason this
+note gives: the renderer has to speak a zip back, and a zip whose pronouns resolved to the wrong
+people would be spoken back confidently wrong.
+
+**The one item that is his and not the QM's is sub-task 3**, the format ruling: `Pov` has no fourth
+field and tkzip is frozen at v2, so either the addressee becomes a schema change under his hand
+(req 73) or the resolver learns that saying-verbs are special. Nothing else in the four waits on
+anybody.
