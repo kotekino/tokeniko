@@ -47,7 +47,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # The frozen shape. A change to anything in this module changes this number, and a zip carries the
 # number it was compiled against (req 22) — E9's translation night has to know what it is translating.
-SCHEMA_VERSION = 2
+#
+# **v3, 2026-09-16 — THE ADDRESSEE. The first migration of a frozen schema, under the Captain's hand
+# (req 73), and it is one field on two classes.** An attitude had a HOLDER and no addressee, so
+# «John said TO MARIE: you are a clever girl» had nowhere to record who «you» is. The alternative
+# was to leave the format alone and let the resolver read the `recipient` box of a `say` row — which
+# adds nothing to the schema and asks the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL, i.e. a
+# closed set of verbs in code, which is what two days of this epic have been moving into rows.
+# Ruled by the Captain: the field. Record: `docs/parser-compiler/202609161349_the-person-axis.md`.
+SCHEMA_VERSION = 3
 
 
 # --------------------------------------------------------------------------------------------------
@@ -282,12 +290,21 @@ class Pov(BaseModel):
 
     `strength` is where the gradation of «close the door» → «would you mind closing the door» lives:
     the strength of the wanting, not a mood scalar (req 51).
+
+    **`addressee` IS v3'S ONE ADDITION** — the person the attitude is DIRECTED AT, which an attitude
+    with only a holder cannot say. It is what a first- and second-person pronoun inside the attitude
+    rotates against: «John said TO MARIE: **you** are a clever girl» means Marie, and it means her
+    because the saying was addressed to her. **EMPTY unless the verb has one** — thinking addresses
+    nobody, and a `None` here is the difference between «no addressee» and «addressed to someone
+    unknown», which is `Open()`.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     holder: Box
     verb: BaseKey
+    #: v3. Empty for an attitude that addresses nobody — most of them.
+    addressee: Box | None = None
     strength: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
@@ -469,6 +486,9 @@ class AttitudeRow(_PrefixRow):
 
     holder: Box
     verb: BaseKey
+    #: v3, and it moves with `Pov`'s — the two are one mechanism in two spellings (req 45), so a
+    #: field on one and not the other would make the explicit form say LESS than the shorthand.
+    addressee: Box | None = None
     strength: float | None = Field(default=None, ge=0.0, le=1.0)
 
 

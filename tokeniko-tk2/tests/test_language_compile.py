@@ -13,7 +13,9 @@ from tests.fixtures.ud import CASES, frontier, ratchet
 from tk2.language import standing_closed_classes
 from tk2.language.compile import RELATION_FILLS_ROLE, Compiler, compile_sentence
 from tk2.language.skeleton import skeleton_from_conllu
-from tk2.tkzip.schema import Determination, Open, Operator, Quantity, Role, Var
+from tk2.tkzip.schema import (
+    SCHEMA_VERSION, Determination, Open, Operator, Quantity, Role, Var,
+)
 
 
 @pytest.fixture(scope="module")
@@ -352,7 +354,7 @@ def test_every_case_produces_a_valid_zip(compiler):
     for ud_case in CASES:
         out = compiler.compile(ud_case.skeleton)
         assert out.zip.rows, f"{ud_case.text!r} produced no rows"
-        assert out.zip.schema_version == 2
+        assert out.zip.schema_version == SCHEMA_VERSION
 
 
 def test_the_compiler_is_pure(compiler):

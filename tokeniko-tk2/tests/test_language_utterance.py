@@ -88,6 +88,20 @@ def test_the_station_never_invents_an_identifier(compiler):
 # ------------------------------------------------------------------------------------------------
 
 
+SAID = skeleton_from_conllu("John said to Marie", [
+    ("1", "John", "john", "PROPN", "2", "nsubj"),
+    ("2", "said", "say", "VERB", "0", "root"),
+    ("3", "to", "to", "ADP", "4", "case"),
+    ("4", "Marie", "marie", "PROPN", "2", "obl"),
+])
+QUOTED = skeleton_from_conllu("You are a clever girl", [
+    ("1", "You", "you", "PRON", "5", "nsubj"),
+    ("2", "are", "be", "AUX", "5", "cop"),
+    ("3", "a", "a", "DET", "5", "det"),
+    ("4", "clever", "clever", "ADJ", "5", "amod"),
+    ("5", "girl", "girl", "NOUN", "0", "root"),
+])
+
 ONE = skeleton_from_conllu("the cat sleeps", [
     ("1", "the", "the", "DET", "2", "det"),
     ("2", "cat", "cat", "NOUN", "3", "nsubj"),
@@ -161,42 +175,101 @@ def test_an_empty_utterance_is_ONE_EMPTY_ROW_and_not_an_empty_zip(compiler):
 
 
 # ------------------------------------------------------------------------------------------------
-# what is NOT built — asserted, so that building it breaks this and somebody reads the note
+# 2b.3 + 2b.4 — THE ROTATION (schema v3, the Captain's ruling of 2026-09-16)
 # ------------------------------------------------------------------------------------------------
 
 
-def test_THE_ROTATION_IS_NOT_BUILT_AND_THIS_TEST_SAYS_SO(compiler):
-    """**«John said to Marie: YOU are a clever girl» resolves `you` to the OUTER addressee.** That is
-    wrong — it should be Marie — and it is E3 task 2b.3 and 2b.4, waiting on the Captain's format
-    ruling about where an ADDRESSEE lives (`Pov` has no fourth field and tkzip is frozen at v2).
+def test_THE_CAPTAINS_OWN_SENTENCE(compiler):
+    """**«John said to Marie: YOU are a clever girl» — and the `you` is MARIE.**
 
-    **What 2b.2 bought is that the information is now IN THE ZIP**: the saying row carries
-    `recipient = marie.n`, and before this the second half of the sentence was simply dropped. The
-    rotation has something to read.
+    The sentence he asked about, working. It is TWO skeletons — stanza splits a quote — so the
+    rotation crosses a sentence boundary: the first sentence is a FRAME (a saying with an agent and
+    a recipient) and the second compiles under its participants.
 
-    *This test asserts the WRONG answer on purpose. The day it fails, the rotation works — and
-    whoever made it fail should come here, read `202609161349_the-person-axis.md`, and delete it.*
+    *This test replaces one that asserted the WRONG answer on purpose, with an instruction to delete
+    it the day the rotation landed. It landed.*
     """
-    said = skeleton_from_conllu("John said to Marie", [
+    out = compile_utterance(compiler, [SAID, QUOTED],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    saying = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v")
+    assert saying.boxes[Role.AGENT].head == "john.n"
+    assert saying.boxes[Role.RECIPIENT].head == "marie.n"
+
+    quoted = next(r for r in out.zip.rows if r.name.startswith("s1.")
+                  and Role.PATIENT in getattr(r, "boxes", {}))
+    assert quoted.boxes[Role.PATIENT].head == "marie.n", "the `you` is MARIE, not the outer listener"
+
+
+def test_a_frame_WITHOUT_a_recipient_does_not_rotate(compiler):
+    """«John said.» addresses nobody in particular, so there is nothing for a second person to
+    rotate into and the outer addressee rightly survives."""
+    said = skeleton_from_conllu("John said", [
+        ("1", "John", "john", "PROPN", "2", "nsubj"),
+        ("2", "said", "say", "VERB", "0", "root"),
+    ])
+    out = compile_utterance(compiler, [said, QUOTED],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    quoted = next(r for r in out.zip.rows if r.name.startswith("s1.")
+                  and Role.PATIENT in getattr(r, "boxes", {}))
+    assert quoted.boxes[Role.PATIENT].head == "captain"
+
+
+def test_an_attitude_that_ADDRESSES_NOBODY_rotates_only_the_first_person():
+    """**«John thinks I am wrong» still means the SPEAKER.** Thinking addresses nobody, so there is
+    no second-person slot to rotate into — and `addressee` being EMPTY rather than `Open()` is what
+    carries that. Schema v3 was ruled for exactly this distinction."""
+    from tk2.tkzip.schema import AttitudeRow
+
+    outer = Context(speaker="kotekino", addressee="captain")
+    saying = AttitudeRow(name="p0", scopes="r1", holder=Box(head="john.n"), verb="say.v",
+                         addressee=Box(head="marie.n"))
+    thinking = AttitudeRow(name="p0", scopes="r1", holder=Box(head="john.n"), verb="think.v")
+
+    assert outer.under(saying).for_person(2) == "marie.n"
+    assert outer.under(thinking).for_person(2) == "captain", "thinking addresses nobody"
+    assert outer.under(thinking).for_person(1) == "john.n", "but the holder IS the first person"
+
+
+def test_an_OPEN_holder_never_becomes_the_speaker():
+    """An unresolved filler is not somebody. «Somebody said you are wrong» must not make the speaker
+    of the quote an `Open()`."""
+    from tk2.tkzip.schema import AttitudeRow
+
+    outer = Context(speaker="kotekino", addressee="captain")
+    vague = AttitudeRow(name="p0", scopes="r1", holder=Box(head=Open()), verb="say.v")
+
+    assert outer.under(vague).for_person(1) == "kotekino"
+
+
+def test_the_rotation_inside_ONE_sentence(compiler):
+    """The same rule down a dependency tree instead of across a sentence boundary — «John said to
+    Marie THAT YOU swim». The context is worked out BEFORE the clauses are compiled, because a
+    pronoun is resolved where it is met and the attitude that governs it is built later."""
+    skeleton = skeleton_from_conllu("John said to Marie that you swim", [
         ("1", "John", "john", "PROPN", "2", "nsubj"),
         ("2", "said", "say", "VERB", "0", "root"),
         ("3", "to", "to", "ADP", "4", "case"),
         ("4", "Marie", "marie", "PROPN", "2", "obl"),
+        ("5", "that", "that", "SCONJ", "7", "mark"),
+        ("6", "you", "you", "PRON", "7", "nsubj"),
+        ("7", "swim", "swim", "VERB", "2", "ccomp"),
     ])
-    quoted = skeleton_from_conllu("You are a clever girl", [
-        ("1", "You", "you", "PRON", "5", "nsubj"),
-        ("2", "are", "be", "AUX", "5", "cop"),
-        ("3", "a", "a", "DET", "5", "det"),
-        ("4", "clever", "clever", "ADJ", "5", "amod"),
-        ("5", "girl", "girl", "NOUN", "0", "root"),
-    ])
-    out = compile_utterance(compiler, [said, quoted],
-                            Context(speaker="kotekino", addressee="captain"))
+    out = compiler.compile(skeleton, context=Context(speaker="kotekino", addressee="captain"))
 
-    saying = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v")
-    assert saying.boxes[Role.RECIPIENT].head == "marie.n", "the addressee IS in the zip now"
+    swimming = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "swim.v")
+    assert swimming.boxes[Role.AGENT].head == "marie.n"
 
-    quoted_row = next(r for r in out.zip.rows
-                      if r.name.startswith("s1.") and Role.PATIENT in getattr(r, "boxes", {}))
-    assert quoted_row.boxes[Role.PATIENT].head == "captain", (
-        "THE ROTATION NOW WORKS — delete this test and read the person-axis note")
+    attitude = next(r for r in out.zip.rows if r.kind == "attitude")
+    assert attitude.addressee.head == "marie.n", "schema v3: the attitude records who it addressed"
+
+
+def test_a_CONDITIONAL_does_not_rotate(compiler):
+    """Only an ATTITUDE rotates. «if you know who did it» is still the outer speaker's «you» — the
+    test is the joiner saying `asserts: matrix`, not merely being a subordinate clause."""
+    out = compiler.compile(case("if you know who did it , tell me").skeleton,
+                           context=Context(speaker="kotekino", addressee="captain"))
+    knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
+
+    assert knowing.boxes[Role.AGENT].head == "captain"

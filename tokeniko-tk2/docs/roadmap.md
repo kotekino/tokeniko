@@ -150,10 +150,14 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       ~~context-as-argument~~ (req 7 built at last — the axis had its data since v1 and no caller to
       supply the other end; without a context nothing changes) · ~~multi-sentence input~~
       (`compile_utterance` — the drill gate reported five sentences half-read and now reads them
-      whole) · **⚑ the Captain's FORMAT ruling on where the addressee lives** (`Pov` has no fourth
-      field, and tkzip is frozen at v2) · the rotation, plus cases in BOTH gates.
-      **A test asserts the WRONG answer on purpose**, so the day the rotation lands it fails and
-      whoever made it fail reads the note
+      whole) · ~~the FORMAT ruling~~ **RULED (a): the format gains the field — `SCHEMA_VERSION = 3`,
+      `addressee` on `Pov` and `AttitudeRow`, THE FIRST MIGRATION OF THE FROZEN SCHEMA.** The
+      alternative asked the resolver to know that saying-verbs are special, a closed set of verbs in
+      code · ~~the rotation~~ **DONE: «John said to Marie "You are a clever girl"» — the `you` is
+      MARIE.** «John thinks I am wrong» still means the speaker, because thinking addresses nobody
+      and EMPTY is what carries that. A conditional does not rotate.
+      **STILL OWED**: the quote becoming the CONTENT of the saying (the halves sit in one zip,
+      rotated, and are not yet joined into one claim), and cases in BOTH gates
 - [x] **embedded questions** *(2026-09-16)* — **a wh-word has THREE readings and R5's binary test
       conflated the last pair.** R5 asks «is this the root clause» and answers the MOOD question
       rightly; it was then read as «therefore relative», and an embedded question opens its slot

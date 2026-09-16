@@ -806,15 +806,26 @@ it).
       namespaces, and a second sentence's `x0` binding the first's variable would be a zip that is
       well-formed and means something nobody said. **The drill gate reported this gap and now reads
       all five split sentences whole.** The halves are not yet RELATED to one another; that is 2b.3.
-   3. **⚑ THE FORMAT RULING, WHICH IS THE CAPTAIN'S.** Where does the ADDRESSEE live? `Pov` holds
-      `holder · verb · strength` and has no fourth field. Either it gains one — **a schema change,
-      and tkzip is FROZEN at v2, so a migration under his hand (req 73)** — or the resolver reads the
-      `recipient` box of a `say` row, which adds nothing to the format and asks the resolver to know
-      that saying-verbs are special. *Neither is obviously right and the QM should not pick.*
-   4. **THE ROTATION ITSELF**, which is small once 1–3 exist, plus **cases in BOTH gates**: UD's own
-      direct-quote examples (which this QM passed over when transcribing `ccomp`) and hand-compiled
-      quotation in the drill. **Requirement 18 again** — the second hole this week that would have
-      been visible if the two gates had ever met.
+   3. ~~**⚑ THE FORMAT RULING**~~ **RULED (a) BY THE CAPTAIN, 2026-09-16 — the format gains the
+      field.** `SCHEMA_VERSION = 3`, `addressee: Box | None` on `Pov` and `AttitudeRow`. **The first
+      migration of the frozen schema** (req 73). The alternative — read the `recipient` of a `say`
+      row — cost nothing in the format and asked the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL,
+      a closed set of verbs in code, which is the exact shape his own rule of that morning refuses.
+      *The cost was small: the body holds zero zips, so E9 has nothing to translate.* **EMPTY is the
+      point, not `Open()`**: «no addressee» and «addressed to somebody unknown» are different facts,
+      and only the first stops a rotation.
+   4. ~~**THE ROTATION ITSELF**~~ **DONE 2026-09-16** (record `202609161544_the-rotation.md`).
+      «John said to Marie that YOU swim» → `marie.n`; «John thinks that I swim» → `john.n` and «you»
+      stays the outer listener; a conditional does not rotate at all. **It had to be decided BEFORE
+      the clauses were compiled** — a pronoun resolves where it is met and its attitude is built
+      later, so the contexts are worked out in a pass of their own from the tree.
+      **And the Captain's own sentence crosses a sentence boundary**: stanza splits a quote, so a
+      FRAME sentence (a saying with an agent and a recipient) rotates the next one. «John said to
+      Marie "You are a clever girl"» → the `you` is **marie.n**.
+      **STILL OWED**: the quote becoming the CONTENT of the saying — the two sentences sit in one
+      zip, correctly rotated, and are not yet joined into one claim. That is the «many rows» work
+      `ccomp` already does, arriving across a sentence boundary. Plus **cases in BOTH gates**: UD's
+      own direct-quote examples, which this QM passed over when transcribing `ccomp`.
 
    *It touches E3b: «John» and «Marie» must become individuals before a rotation can NAME its
    target. The mechanisms are separable — a «you» can rotate to «the person addressed» without
@@ -894,6 +905,7 @@ it).
    | `UD_DEP_SETTLES_ROLE` (`closed.py`) | *defensible as frame* — every entry is a relation whose UD definition NAMES the role. But the READING is ours, so it is argued, not assumed |
    | `DEPS_THAT_COMPILE_TO_NOTHING` (`compile.py`) | added 2026-09-16 and put on this list in the same commit. `{"vocative"}` — and «a vocative is addressing, not content» is an E2 RULING, which is a row |
    | `ADVERB_DEPS` (`compile.py`) | added 2026-09-16, same day, same list. `{"advmod", "discourse"}` — weaker than the two above (it selects WHERE to look rather than ruling what a thing means) and the same shape |
+   | **`SAYING_VERBS`** (`utterance.py`) | added 2026-09-16 and listed here in the SAME COMMIT. Nine verb keys in a frozenset, and **req 55 already rules the replacement**: *«attitude verbs are open, so the classification is nearest-anchor geometry over a small anchor set and never misses the verb nobody thought of»* — E4 owns that geometry. Reached only ACROSS a sentence boundary; the in-sentence path asks the joiner's own `asserts: matrix` row, which is curation doing it properly |
    | `POS_LETTER`, `UD_POS_TO_WORDNET`, `NOUN/VERB_SUPERSENSES` | *defensible as frame* — correspondences between two published closed vocabularies, and the supersense inventory is checked against the corpus every run |
 
    **Done when** every row of that table has a ruling and a home, and the ones that moved are a

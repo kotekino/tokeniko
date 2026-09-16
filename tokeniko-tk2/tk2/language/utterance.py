@@ -30,6 +30,11 @@ from typing import Iterable, Sequence
 from tk2.tkzip.schema import Box, ContentRow, Ref, Var, Zip
 
 
+def _is_open(value) -> bool:
+    """An OPEN or absent filler is not somebody — it must not become the speaker of anything."""
+    return value is None or value.__class__.__name__ == "Open"
+
+
 @dataclass(frozen=True, slots=True)
 class Context:
     """What the caller knows that the sentence does not. **Passed in, never held.**
@@ -46,6 +51,33 @@ class Context:
     speaker: object | None = None
     addressee: object | None = None
     recent: tuple[Zip, ...] = ()
+
+    def under(self, attitude) -> "Context":
+        """**THE ROTATION** — this context as it stands INSIDE an attitude (req 20).
+
+        A first-person pronoun names the HOLDER of the innermost point of view it is under, and a
+        second-person one names that POV's ADDRESSEE. «John said to Marie: YOU are a clever girl»
+        means Marie because the saying was addressed to her.
+
+        **AN ATTITUDE WITHOUT AN ADDRESSEE ROTATES ONLY THE FIRST PERSON, AND THAT IS THE POINT.**
+        «John thinks I am wrong» still means the speaker: thinking addresses nobody, so there is no
+        second-person slot to rotate into, and the outer addressee survives. The `addressee` field
+        being EMPTY rather than `Open()` is what carries that distinction — schema v3 was ruled for
+        exactly this.
+
+        `recent` is carried through unchanged: anaphora points into the discourse, and the discourse
+        does not restart inside a quotation.
+        """
+        holder = getattr(attitude, "holder", None)
+        addressee = getattr(attitude, "addressee", None)
+        speaker = getattr(holder, "head", None) if holder is not None else None
+        return replace(
+            self,
+            speaker=speaker if speaker is not None and not _is_open(speaker) else self.speaker,
+            addressee=(getattr(addressee, "head", None)
+                       if addressee is not None and not _is_open(getattr(addressee, "head", None))
+                       else self.addressee),
+        )
 
     #: The two persons this context can answer for, as the closed-class rows spell them.
     def for_person(self, person: object) -> object | None:
@@ -127,6 +159,40 @@ def prefixed(zip_: Zip, prefix: str) -> Zip:
     return zip_.model_copy(update={"rows": moved})
 
 
+#: Attitude verbs that ADDRESS somebody, and therefore rotate the second person. It is a
+#: placeholder and it is named as one: «which verbs are attitude verbs» is req 55's nearest-anchor
+#: geometry over a small anchor set — *«attitude verbs are open, so the classification never misses
+#: the verb nobody thought of»* — and E4 owns that. **ON THE FRAME/KNOWLEDGE AUDIT LIST**: it is a
+#: closed set of verbs in code, which is the exact shape the Captain's rule of 2026-09-16 refuses,
+#: and it is here only until the geometry that replaces it exists.
+SAYING_VERBS = frozenset({"say.v", "tell.v", "ask.v", "reply.v", "answer.v", "write.v", "shout.v",
+                          "whisper.v", "call.v"})
+
+
+def _frame(zip_) -> object | None:
+    """Is this sentence a QUOTE FRAME — «John said to Marie» — and if so, what attitude is it?
+
+    Returns something shaped like an `AttitudeRow` (a holder and an addressee) so that
+    `Context.under` can read it without caring whether the attitude came from a dependency tree or
+    from the sentence next door.
+
+    **A frame needs a recipient.** «John said.» addresses nobody in particular, so there is nothing
+    for a second person to rotate into and the outer addressee rightly survives.
+    """
+    from tk2.tkzip.schema import AttitudeRow, Role
+
+    for row in zip_.rows:
+        if row.kind != "content" or getattr(row, "predicate", None) not in SAYING_VERBS:
+            continue
+        holder = row.boxes.get(Role.AGENT)
+        addressee = row.boxes.get(Role.RECIPIENT)
+        if holder is None or addressee is None:
+            continue
+        return AttitudeRow(name=row.name, scopes=row.name, holder=holder,
+                           verb=row.predicate, addressee=addressee)
+    return None
+
+
 @dataclass
 class CompiledUtterance:
     """Every sentence of one utterance, in one zip — plus what each sentence cost.
@@ -166,8 +232,15 @@ def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTE
         return CompiledUtterance(zip=Zip(rows=[ContentRow(name="r0")]), sentences=0, coverage=1.0)
 
     rows, unplaced, abstained, defaulted, covered, total = [], [], [], [], 0, 0
+    quoting = None          # the attitude the PREVIOUS sentence set up, if it set one up
     for position, skeleton in enumerate(skeletons):
-        compiled = compiler.compile(skeleton, context=context)
+        # **A QUOTE ROTATES AGAINST THE SENTENCE THAT INTRODUCED IT.** «John said to Marie" You are
+        # a clever girl "» is two skeletons, and the first one is the frame: a saying with an agent
+        # and a recipient. So the second compiles under the first's participants, which is req 20's
+        # rule applied across a sentence boundary instead of down a dependency tree.
+        compiled = compiler.compile(skeleton, context=context if quoting is None
+                                    else context.under(quoting))
+        quoting = _frame(compiled.zip)
         zip_ = prefixed(compiled.zip, "" if position == 0 else f"s{position}.")
         rows.extend(zip_.rows)
         unplaced.extend(compiled.unplaced)

@@ -24,7 +24,7 @@ larger than its format.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from tk2.dictionary import keys as keymod
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
@@ -307,11 +307,19 @@ class Compiler:
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
 
+        # **THE ROTATION IS DECIDED BEFORE THE CLAUSES ARE COMPILED, AND IT HAS TO BE.** A pronoun
+        # is resolved where it is met, and the attitude that governs it is built later, in
+        # `_relate` — so by the time the POV exists the `you` inside it has already been given the
+        # outer addressee. The tree says which clause sits under which attitude, and the tree is
+        # known now, so the contexts are worked out first and the walk uses them.
+        inner = self._contexts(skeleton, heads, marks, context)
+
         for position, head in enumerate(heads):
             mine = {i for i, h in owner.items() if h == head.index}
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
-                open_truth, wants_antecedent, defaulted, modifiers, adverb_joins, context)
+                open_truth, wants_antecedent, defaulted, modifiers, adverb_joins,
+                inner.get(head.index, context))
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
@@ -733,6 +741,44 @@ class Compiler:
                 return marks[child.index]
         return None
 
+    def _contexts(self, skeleton: Skeleton, heads: list[Word], marks: dict,
+                  context: Context) -> dict[int, Context]:
+        """Which context each clause is compiled under — the person axis, rotated by the tree.
+
+        **Only an ATTITUDE rotates.** A conditional does not: «if you know who did it» is still the
+        outer speaker's «you». What makes a clause an attitude is its joiner saying `asserts: matrix`
+        — «he says THAT you swim» claims the saying and not the swimming — which is the same test
+        `_relate` uses to raise the `AttitudeRow`, read here one pass earlier.
+
+        The holder and addressee are read from the SKELETON rather than from the compiled row,
+        because the rows do not exist yet. That is a small duplication of `_role_of`'s job and it is
+        the honest one: the alternative is to compile the clauses twice.
+        """
+        if context.is_empty:
+            return {}
+        found: dict[int, Context] = {}
+        for head in heads:
+            if head.is_root:
+                continue
+            joiner = self._joiner(skeleton, head, marks)
+            if joiner is None or joiner.compiled.get("asserts") != ASSERTS_MATRIX:
+                continue
+            outer = self._enclosing(skeleton, head, {w.index: None for w in heads})
+            if outer is None:
+                continue
+            holder = addressee = None
+            for child in skeleton.children(outer.index):
+                if child.bare_dep == "nsubj" and self._readable(child):
+                    holder = self._key(child)
+                elif self._role_of(child, skeleton, marks) is Role.RECIPIENT:
+                    addressee = self._key(child) if self._readable(child) else None
+            found[head.index] = replace(
+                context,
+                speaker=holder if holder is not None else context.speaker,
+                addressee=addressee if addressee is not None else context.addressee,
+            )
+        return found
+
     def _attitude(self, skeleton, head, content, outer, prefix_rows, covered, joiner) -> None:
         """«he says that you swim» — an ATTITUDE over the inner row, claiming only the saying.
 
@@ -742,9 +788,14 @@ class Compiler:
         """
         outer_row = content[outer.index]
         holder = outer_row.boxes.get(Role.AGENT) or Box(head=Open(), sense=Open())
+        # **THE ADDRESSEE, schema v3.** «John said TO MARIE that…» — the person the attitude is
+        # directed at, which an attitude with only a holder could not say. It is the `recipient` of
+        # the attitude verb's own row, and it is EMPTY where there is none: thinking addresses
+        # nobody, and that absence is what stops «John thinks I am wrong» rotating.
         prefix_rows.append(AttitudeRow(
             name=f"p{len(prefix_rows)}", scopes=content[head.index].name,
-            holder=holder, verb=self._key(outer)))
+            holder=holder, addressee=outer_row.boxes.get(Role.RECIPIENT),
+            verb=self._key(outer)))
         # the inner row stays EMPTY: the attitude is claimed, its content is not
 
     def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks) -> None:
