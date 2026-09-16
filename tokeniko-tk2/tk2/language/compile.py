@@ -30,7 +30,7 @@ from tk2.dictionary import keys as keymod
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
-from tk2.language.skeleton import Skeleton, Word
+from tk2.language.skeleton import UD_POS, Skeleton, Word
 from tk2.tkzip.schema import (
     AttitudeRow,
     Box,
@@ -89,6 +89,19 @@ ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
 #: relative pronoun by `_share_variable` — so neither is an abstention when the per-clause walk meets
 #: it, and saying so made the abstention list untrustworthy.
 LATER_PASS_OWNS = frozenset({"join", "open"})
+
+#: **ROW-NAME PREFIXES, GATHERED HERE BECAUSE THEY MUST NOT COLLIDE.** The schema requires names to
+#: be unique within a zip (`Zip` validates it), and they were being minted in six places from four
+#: different counters — so `m` meant «modality prefix» in one and «modifier row» in another, and
+#: «In Italy, you MAY drive in France with a FOREIGN licence» produced two rows called `m0`.
+#:
+#: **The drill gate found it on its first run** (req 18): no sentence in UD's corpus carries both a
+#: modal and an attributive adjective, so neither existing gate could have. Listed rather than
+#: merely fixed, because the next row kind will want a letter and this is where to look.
+#:
+#:   r  a clause         m  an attributive modifier    q  a quantifier binder
+#:   j  a join           p  a PREFIX row (negation · modality · attitude · domain)
+ROW_PREFIXES = {"clause": "r", "modifier": "m", "binder": "q", "join": "j", "prefix": "p"}
 
 #: A closed-class `kind` -> the word for WHERE that form went, when the two differ. A form whose
 #: `compiled.kind` is `box` is a MARKER on somebody else's box, never a box of its own, and calling
@@ -331,8 +344,9 @@ class Compiler:
         order the speaker used is the only scope information the surface gives.
         """
         found = [w for w in skeleton
-                 if w.is_root or (w.bare_dep in CLAUSE_DEPS and w.upos in ("VERB", "AUX", "ADJ",
-                                                                           "NOUN", "PROPN", "PRON"))]
+                 if self._readable(w)
+                 and (w.is_root or (w.bare_dep in CLAUSE_DEPS and w.upos in ("VERB", "AUX", "ADJ",
+                                                                            "NOUN", "PROPN", "PRON")))]
         return sorted(found, key=lambda w: w.index)
 
     def _owners(self, skeleton: Skeleton, heads: list[Word]) -> dict[int, int]:
@@ -718,7 +732,7 @@ class Compiler:
         outer_row = content[outer.index]
         holder = outer_row.boxes.get(Role.AGENT) or Box(head=Open(), sense=Open())
         prefix_rows.append(AttitudeRow(
-            name=f"a{len(prefix_rows)}", scopes=content[head.index].name,
+            name=f"p{len(prefix_rows)}", scopes=content[head.index].name,
             holder=holder, verb=self._key(outer)))
         # the inner row stays EMPTY: the attitude is claimed, its content is not
 
@@ -749,6 +763,19 @@ class Compiler:
 
     def _read_closed(self, skeleton: Skeleton) -> dict[int, object]:
         return {i: m for i, m in self.table.walk_skeleton(skeleton)}
+
+    def _readable(self, word: Word) -> bool:
+        """Can this token become a dictionary key at all?
+
+        **A PROVIDER EMITS TOKENS UD DOES NOT DEFINE.** stanza tags trailing whitespace `SPACE`,
+        which is not one of UD's seventeen, and its lemma normalises to nothing — so `key_of` raised
+        `InvalidKey` and **the compiler stopped**. A station that stops is neither half-understood nor
+        wrongly-understood: it is a station that produced no zip at all, which req 8 does not even
+        contemplate. The drill gate found it on its first run (req 18), on five of the Captain's own
+        sentences, because his annotations («[de dicto]») leave trailing space that UD's tidy
+        examples never have.
+        """
+        return word.upos in UD_POS and bool(keymod.normalize_word(word.lemma or ""))
 
     def _key(self, word: Word) -> str:
         """A content word's dictionary key — `eat.v`. The sense stays OPEN beside it."""
@@ -987,11 +1014,11 @@ class Compiler:
         if kind == "prefix":
             element = match.compiled.get("element")
             if element == "negation":
-                prefix_rows.append(NegationRow(name=f"n{len(prefix_rows)}", scopes=scopes))
+                prefix_rows.append(NegationRow(name=f"p{len(prefix_rows)}", scopes=scopes))
             elif element == "modality":
                 from tk2.tkzip.schema import Modality, ModalityRow
 
-                prefix_rows.append(ModalityRow(name=f"m{len(prefix_rows)}", scopes=scopes,
+                prefix_rows.append(ModalityRow(name=f"p{len(prefix_rows)}", scopes=scopes,
                                               modality=Modality(match.compiled["modality"])))
             return taken
 

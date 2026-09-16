@@ -69,10 +69,30 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       the drill while building `amod`. `topic` in this inventory is SUBJECT MATTER («a lecture ON
       physics») and the drill uses it for that alone, three times, while hand-compiling the copular
       row as patient + complement **43 times**. E2 ruled the shape outright
-- [ ] **⚑ THE TWO GATES HAVE NEVER MET** — the drill validates hand-written zips with no parser; the
-      UD gate compiles UD's sentences and never looks at the drill. **A role the station puts in
-      every copular sentence was wrong for a day with no test going red.** The control that is
-      missing: does the compiler produce, for the drill's own sentences, what the drill hand-compiled?
+- [x] **⚑ THE TWO GATES MEET — `tools/drill_gate.py`, req 18** *(2026-09-16)*. It scores AGREEMENT,
+      not equality: most of the drill needs features E3 has not built, so a zip-equality check would
+      fail all 78 and teach nothing. Rows pair on their predicate (a copular row on its complement),
+      boxes on their HEAD — so `patient: sue.n` against `topic: sue.n` is one filler under two names,
+      which is the defect it was built for. A VARIABLE is never a conflict.
+      **IT CRASHED THE COMPILER BEFORE IT COULD SCORE**: six of the Captain's own sentences stopped
+      the station dead — a `SPACE` token (his «[de dicto]» annotations leave whitespace stanza tags
+      outside UD's seventeen) and **two rows called `m0`**, which no UD sentence could produce because
+      none carries both a modal and an attributive adjective.
+      **SIX DISAGREEMENTS → FOUR.** Two were curation errors (`db/0015`); the four that remain are
+      questions the project has NAMED. **38 sentences agreed · 4 DISAGREED · 91 of 126 rows paired ·
+      64 of 123 roles agreed**, and the four are a RATCHET held by a test
+- [x] **`db/0015` — a MARKED phrase has an endpoint** — «I walk TOWARD the station» compiled a
+      DIRECTION and the drill says DESTINATION, across three hand-compiled rows differing only by
+      marker (req 65 exists so they share a box). **The principle is sharper than the witnesses**:
+      req 67's `direction` is *a direction with NO ENDPOINT*, and a marked phrase has one — the
+      nominal IS the endpoint. Five rows corrected, and the migration refuses to apply if any marker
+      offers `direction` alone. Plus **«She turned LEFT» read as MANNER — the sentence req 67 was
+      written for** — because `db/0013`'s direction list held `sideways` and not `left`
+- [ ] **the subject's role depends on WHAT IS PREDICATED of it** — the drill gate's three remaining
+      disagreements are one question: «God exists» is a PATIENT, «the cat is hungry» an EXPERIENCER,
+      «Sue is a teacher» a patient. `RELATION_FILLS_ROLE`'s own comment defers it to the geometry —
+      *«a head-verb question, and a station that guessed would be doing the compile core's job
+      badly»*. **It now has three witnesses and a number instead of a prediction**
 - [x] **content ADVERBS — requirement 23's four scopes, as rows** *(2026-09-16, `db/0013` + `db/0014`)*.
       **The resource cannot answer this**: WordNet files every adverb under ONE class (`adv.all`) and
       adverbs have NO hypernyms, so the supersense that settled the markers gives nothing. It is

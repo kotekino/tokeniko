@@ -705,12 +705,22 @@ it).
      **AND IT FOUND A SLIP**: the copular subject is the **PATIENT**, not the `topic` the compile
      core wrote. `topic` here is SUBJECT MATTER («a lecture ON physics»); the drill uses it for that
      alone, three times, and hand-compiles the copular row as patient + complement 43 times.
-   - **⚑ THE TWO GATES HAVE NEVER MET, and that is how the slip survived.** The drill validates
-     hand-written zips with no parser involved; the UD gate compiles UD's sentences and never looks
-     at the drill. A role the station puts in EVERY copular sentence was wrong for a day without a
-     test going red. **The missing control: does the compiler produce, for the drill's own
-     sentences, what the drill hand-compiled?** It is the one measurement that would join the format's
-     gate to the station's, and it needs stanza parses of the drill's 78 sentences.
+   - ~~**⚑ THE TWO GATES HAVE NEVER MET**~~ **BUILT 2026-09-16** — `tools/drill_gate.py`, req 18,
+     record `202609161502_the-two-gates-meet.md`. It scores AGREEMENT and not equality, because most
+     of the drill needs features E3 has not built and an equality check would fail all 78 and teach
+     nothing. **It crashed the compiler before it could score anything** — a `SPACE` token outside
+     UD's seventeen (the Captain's «[de dicto]» annotations leave whitespace) and two rows called
+     `m0`, which no UD sentence can produce because none carries both a modal and an attributive
+     adjective. **Then six disagreements, now four**: two curation errors fixed by `db/0015`, one
+     E3b, and **three witnesses of ONE open question**. 38 agreed · 4 DISAGREED · 91 of 126 rows
+     paired, held as a ratchet by a `skeleton`-marked test.
+   - **⚑ THE SUBJECT'S ROLE DEPENDS ON WHAT IS PREDICATED OF IT** — the drill gate's three remaining
+     disagreements are one question, and it is the one `RELATION_FILLS_ROLE`'s own comment defers:
+     «God exists» is a PATIENT · «the cat is hungry» an EXPERIENCER · «Sue is a teacher» a patient.
+     *«Which one it is depends on the VERB, that is a head-verb question the geometry answers, and a
+     station that guessed here would be doing the compile core's job badly instead of leaving it
+     open.»* **It now has three witnesses and a number instead of a prediction**, which is what it
+     needed before anybody could try the geometry on it.
    - ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
      `202609161251_the-adverbs.md`). Requirement 23 split adverbs four ways at E2 and nothing said
      WHICH is which. **The resource cannot say**: WordNet has ONE adverb class (`adv.all`) and
