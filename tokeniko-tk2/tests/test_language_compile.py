@@ -607,7 +607,7 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
-    """The eighteen relations the corpus reached on 2026-09-16: **9 of 18 whole, 82.2% mean.**
+    """The relations the corpus reached on 2026-09-16: **10 of 19 whole, 83.2% mean.**
 
     Low, and honestly so. What is missing is NAMED rather than averaged away — `flat`/`list` (one
     name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
@@ -618,9 +618,9 @@ def test_the_FRONTIER_half_is_where_the_work_is(compiler):
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
-    assert len(scored) == 18
-    assert full >= 9, f"{full} of {len(scored)} whole; 9 were on 2026-09-16"
-    assert mean >= 0.82, f"mean {mean:.1%}; it was 82.2% on 2026-09-16"
+    assert len(scored) == 19, "a relation may gain a case; the frontier grows and the ratchet does not"
+    assert full >= 10, f"{full} of {len(scored)} whole; 10 were on 2026-09-16"
+    assert mean >= 0.83, f"mean {mean:.1%}; it was 83.2% on 2026-09-16"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -701,3 +701,52 @@ def test_a_referential_adverb_fills_a_box_with_an_OPEN_head(compiler):
 
     assert isinstance(row.boxes[Role.LOCATION].head, Open), "not `here.r`"
     assert out.coverage == 1.0
+
+
+# ------------------------------------------------------------------------------------------------
+# numerals — the box's own `count` field
+# ------------------------------------------------------------------------------------------------
+
+
+def test_a_numeral_fills_COUNT_and_raises_no_binder(compiler):
+    """Req 26: `quantity`, `count` and `determination` are three ORTHOGONAL fields — «the three cats»
+    is definite AND counted. A numeral is not a quantifier: it does not bind, so it changes no scope
+    and adds no row. It is a field of the record, exactly as the possessor is."""
+    out = compiled(compiler, "Sam ate 3 sheep")
+    box = main_row(out).boxes[Role.PATIENT]
+
+    assert box.head == "sheep.n" and box.count == 3
+    assert box.quantity is None, "a numeral is not a quantifier"
+    assert not [r for r in out.zip.rows if r.kind == "quantifier"], "and it raises no binder"
+    assert out.coverage == 1.0
+
+
+def test_a_number_WORD_abstains_and_the_phrase_still_lands(compiler):
+    """**THE LIMIT, HELD AS A TEST SO IT CANNOT DRIFT.** `3` is orthography — the same mechanical
+    transformation `normalize_word` performs. `forty` is not: it needs a roster of atoms plus
+    composition rules, and `db/0001` ruled numerals out of the closed classes for that reason.
+
+    tk1 used the `word2number` library, which is in this venv and is NOT a declared dependency —
+    and every entry in `pyproject.toml` was admitted by the Captain with a stated reason. So the
+    station abstains and NAMES why, and the phrase still lands with only the count missing, which is
+    what a seven-field record is for.
+    """
+    out = compiled(compiler, "Sam spent forty dollars")
+    box = main_row(out).boxes[Role.PATIENT]
+
+    assert box.head == "dollar.n", "the caught part stays bound"
+    assert box.count is None
+    assert any("forty" in note and "word2number" in note for note in out.abstained)
+
+
+def test_a_digit_is_read_and_a_separator_is_not(compiler):
+    """A comma or a space inside a digit string is a thousands separator in most of the world and a
+    decimal point in some of it, so neither is stripped: `1,5` is not read at all rather than read
+    as fifteen."""
+    from tk2.language.compile import numeral_value
+
+    assert numeral_value("3") == 3
+    assert numeral_value("", "17") == 17
+    assert numeral_value("1,5") is None
+    assert numeral_value("forty") is None
+    assert numeral_value("") is None

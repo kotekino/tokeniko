@@ -90,6 +90,33 @@ ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
 #: its placement `box` would make the trace say the preposition filled the role.
 CLOSED_KIND_PLACES = {"box": "marker"}
 
+def numeral_value(lemma: str, text: str = "") -> int | None:
+    """A numeral's VALUE, or None when this station cannot read it.
+
+    **DIGITS ONLY, AND THE LIMIT IS DELIBERATE.** `3` is orthography — the same mechanical
+    transformation `keys.normalize_word` performs, carrying no judgement about English and revisable
+    by nothing. **`forty` is not**: converting an English number WORD needs a roster of atoms plus
+    composition rules, and `db/0001` ruled numerals out of the closed classes for exactly that
+    reason — *«two, seventeen, three hundred and four — productive and infinite, so not a closed
+    class at all however finite the words below ten look»*.
+
+    tk1 solved it with `word2number`, which is **available in this venv and NOT a declared
+    dependency**. Every entry in `pyproject.toml`'s list was admitted by the Captain with a stated
+    reason, so admitting a fifth is his ruling and not this file's. **Until then a number word
+    ABSTAINS and says so** — «half understood is legal, wrongly understood is the sin», and a count
+    the station guessed would be a number in a zip that nobody put there.
+
+    A comma or a space inside a digit string is a thousands separator in most of the world and a
+    decimal point in some of it, so neither is stripped: `1,5` is not read at all rather than read
+    as fifteen.
+    """
+    for candidate in (lemma, text):
+        found = (candidate or "").strip()
+        if found.isdigit():
+            return int(found)
+    return None
+
+
 #: The relations that hang an ADVERB off its head. `advmod` is the ordinary one; `discourse` is UD's
 #: own name for a connective, and it is the only dependency that names an adverb's KIND outright.
 #:
@@ -333,7 +360,7 @@ class Compiler:
                 marked = self._marker_role(head, skeleton, marks, defaulted)
             role = marked or Role.COMPLEMENT
             boxes[role] = self._box_for(head, skeleton, marks, covered, prefix_rows, name,
-                                        modifiers)
+                                        modifiers, abstained)
             covered.add(head.index, f"box:{role.value}")
             copular = True
 
@@ -363,10 +390,11 @@ class Compiler:
             role = self._role_of(word, skeleton, marks, copular, defaulted)
             if role is not None and role not in boxes:
                 boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name,
-                                            modifiers)
+                                            modifiers, abstained)
                 covered.add(index, f"box:{role.value}")
             elif role is None and word.bare_dep in NOMINAL_DEPS:
-                unresolved.append((word, self._box_for(word, skeleton, marks, covered)))
+                unresolved.append((word, self._box_for(word, skeleton, marks, covered,
+                                                       abstained=abstained)))
 
         # **THE ADVERBS GO LAST, AND A MARKED NOMINAL OUTRANKS A BARE ONE FOR THE SAME BOX.** «left
         # EARLY in the MORNING» has two time expressions and one time box: `early` is `advmod` with
@@ -791,7 +819,7 @@ class Compiler:
 
     def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: Placements,
                  prefix_rows: list | None = None, scopes: str = "r0",
-                 modifiers: list | None = None) -> Box:
+                 modifiers: list | None = None, abstained: list | None = None) -> Box:
         """The seven-field record for one nominal phrase — per PHRASE, never one per clause.
 
         Every field is independently bindable (req 47): `head` may be BOUND while `sense` is OPEN,
@@ -799,6 +827,7 @@ class Compiler:
         """
         determination = None
         quantity = None
+        count = None
         marker = None
         relation = None
         for child in skeleton.children(word.index):
@@ -831,6 +860,24 @@ class Compiler:
                 # resolved from context, never `my.n`.
                 relation = Open()
                 covered.add(child.index, "field:relation")
+        # **THE NUMERAL FILLS `count`, WHICH IS NOT `quantity` AND NOT `determination`** (req 26:
+        # the three are orthogonal, and «the three cats» is definite AND counted). A numeral is not a
+        # quantifier — it does not bind — so it raises no binder and changes no scope; it is a field
+        # of the record, exactly as the possessor is.
+        for child in skeleton.children(word.index):
+            if child.bare_dep != "nummod" or marks.get(child.index) is not None:
+                continue
+            value = numeral_value(child.lemma, child.text)
+            if value is None:
+                # A number WORD, and this station cannot read one — see `numeral_value`. The phrase
+                # still lands; only the count is missing, which is what a seven-field record is for.
+                if abstained is not None:
+                    abstained.append(f"{child.text}: a numeral this station cannot read — digits "
+                                     f"only until `word2number` is admitted")
+                continue
+            count = value
+            covered.add(child.index, "count")
+
         # A possessor NOUN — «the office of the Chair», «the Chair 's office». Both spellings reach
         # here, which is the pairing UD's own `case` page makes explicit.
         for child in skeleton.children(word.index):
@@ -853,7 +900,7 @@ class Compiler:
                                    else "field:relation" if found.kind in ("box", "field")
                                    else found.kind)
         box = Box(head=self._key(word), sense=Open(), determination=determination,
-                  quantity=quantity, marker=marker, relation=relation)
+                  quantity=quantity, count=count, marker=marker, relation=relation)
         # **AN ATTRIBUTIVE ADJECTIVE IS A SECOND ROW, AND A SECOND ROW NEEDS A VARIABLE** (tkzip
         # req 70): «a human body» is EXISTS B (body(B) AND human(B)). There is no other way to say
         # it — a row reading `patient=body.n, complement=human.a` would claim that BODIES are human,

@@ -49,6 +49,8 @@ NOT_IN_ENGLISH = ("clf", "dislocated")
 FRONTIER = ("amod", "appos", "ccomp", "conj", "csubj", "discourse", "expl", "flat", "goeswith",
             "list", "nmod", "nummod", "orphan", "parataxis", "reparandum", "root", "vocative",
             "xcomp")
+#: A relation may gain a case AFTER the split — the frontier grows, the ratchet never does. «Sam
+#: spent forty dollars» arrived on 2026-09-16 to MEASURE a limit rather than to claim a feature.
 
 
 def ratchet() -> tuple:
@@ -525,6 +527,23 @@ CASES: tuple[Case, ...] = (
     ], at=3, expect=OPEN,
        note="**STANZA DOES NOT PRODUCE THIS RELATION.** UD publishes `reparandum(left-7, righ--4)` for the self-correction «the righ- to the left»; stanza reads `nmod`. A disfluency must never become content — `original` keeps it verbatim (req 3) — but the station cannot act on a label it never receives.",
        annotated=False),
+
+    # ── nummod, the WORD form ──
+    # UD's second nummod example, and the one that names the limit rather than the feature: the
+    # station reads DIGITS and abstains on a number WORD. Converting «forty» needs a roster of atoms
+    # plus composition rules, and db/0001 ruled numerals out of the closed classes for exactly that
+    # reason — «productive and infinite, however finite the words below ten look». tk1 used the
+    # `word2number` library; admitting a dependency is the Captain's ruling, so until he makes it
+    # this case measures the gap instead of hiding it.
+    _c("nummod", "Sam spent forty dollars", [
+        ("1", "Sam", "sam", "PROPN", "2", "nsubj"),
+        ("2", "spent", "spend", "VERB", "0", "root"),
+        ("3", "forty", "forty", "NUM", "4", "nummod"),
+        ("4", "dollars", "dollar", "NOUN", "2", "obj"),
+    ], at=2, expect=OPEN,
+       note="**THE LIMIT, MEASURED.** `Sam ate 3 sheep` compiles whole; this one abstains on the "
+            "numeral and says why. OPEN rather than `count`, because what the station owes a number "
+            "WORD is not ruled until the dependency question is."),
 
     # ── root ──
     _c("root", "the cat sleeps", [

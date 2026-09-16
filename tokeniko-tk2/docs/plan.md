@@ -729,8 +729,17 @@ it).
      Frontier **9/18 at 82.2%**, ratchet unmoved, gate **31 answered · 0 WRONG**.
    - **`flat` / `list`** — one name across several tokens; E3b by another route.
    - **`xcomp`** — deliberately not a clause, and what it IS instead has never been ruled.
-   - **`nummod`** — the box's own `count` field (req 26); a numeral is neither a quantifier nor a
-     determination.
+   - ~~**`nummod`**~~ **DONE 2026-09-16.** The box's own `count` field (req 26), and the three
+     fields are ORTHOGONAL — «the three cats» is definite AND counted — so a numeral raises no binder
+     and changes no scope. Frontier **10/19 at 83.2%**, gate **32 answered · 0 WRONG**.
+     **⚑ AND IT NAMED A RULING THE CAPTAIN OWES.** «Sam ate 3 sheep» compiles whole; «Sam spent
+     forty dollars» ABSTAINS and says why. `3` is ORTHOGRAPHY — the same mechanical transformation
+     `normalize_word` performs, carrying no judgement about English. **`forty` is not**: it needs a
+     roster of atoms plus composition rules, and `db/0001` ruled numerals out of the closed classes
+     for exactly that reason. tk1 solved it with **`word2number`, which is present in this venv and
+     is NOT in `pyproject.toml`** — and every dependency there was admitted by the Captain with a
+     stated reason, so admitting a fifth is his and not the compiler's. The case sits in the corpus
+     abstaining, which measures the gap instead of hiding it.
    - **`appos`** — one individual under two descriptions; unruled, and it leans on E3b.
    - **embedded questions** («if you know WHO did it»).
    Context-as-argument is untouched; nothing has needed it yet.
