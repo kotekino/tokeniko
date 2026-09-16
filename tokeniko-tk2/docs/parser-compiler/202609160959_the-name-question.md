@@ -202,8 +202,11 @@ each once they are:
 
 1. **Is it a name?** — stanza NER vs spaCy NER, measured on the same text; casing as evidence and not
    as a test; the two failure directions tk1 recorded as the bench's first cases.
-2. **A name of what?** — the kinds, as a closed set: person · organization · place · work · event ·
-   none. Whether the NER label set or our own is the frame.
+2. **A name of what?** — **ANSWERED the same day, and by the reason I had not reached.** I argued for
+   our own inventory on four engineering grounds; the Captain's was the first standing law: *«with our
+   inventory as db (not code!), we can modify it keeping the logic: everything is KB. If we rely on a
+   third party we lose this ability.»* So it is not merely OUR set instead of OntoNotes' — **it is a
+   set in ROWS instead of a set in code**, which my own proposal had not gone as far as. See req 17.
 3. **Which one?** — the places table as the curated half; prominence as the half that cannot be
    curated; the abstention as the default.
 4. **Have I met it?** — recognition against a names table, with tk1's preference order and its

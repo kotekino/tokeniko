@@ -140,7 +140,8 @@ no-regression ratchet (v1's corpora) gates E9.
 ```
 E0 keel ──► E1 dictionary ──► E2 format ──► E3 station ──► E4 evaluator ──► PS1
                                               └──► E3b names (beside E4; in before PS1)
-   └──► E5 micro-nn (parallel after E0, first instance lands with E3/E4 — and E3b IS it)
+                                                     ▲ carries E5's ABSTRACTION (Cap, 09-16)
+   └──► E5 micro-nn (the epic stays here; its machinery lands in E3b with the first real case)
 PS1 ──► E6 mind (rules + brain) ──► E7 heart ──► PS2 ──► E8 voice & ears ──► PS3
 PS3 ──► E9 translation night ──► E10 embodiment & window
 ```
@@ -755,6 +756,14 @@ resolution, and a zip with an unresolved name is still a zip. It should be in be
 a proof slice on a real sentence will contain a real name. *(A judgement call, revisable: the
 alternative is to let PS1 run with names unresolved and see what actually breaks.)*
 
+> **AND IT CARRIES E5's MACHINERY — the Captain, 2026-09-16** *(open question 15, answered)*:
+> *«Bring E5 forward because it is propaedeutic to closing the E3 name hole. So E5 remains where it
+> is, but the machinery (micro-nn abstraction) should go in E3b.»* **The epic stays where it is and
+> the ABSTRACTION lands here**, as task 5a. That is the better half of the trade in both directions:
+> the name hole cannot close without a net, and a framework whose first instance arrives with it is
+> a framework that has met a real case before it is declared general — which is the failure mode
+> «one abstraction, many instances» is most exposed to.
+
 **THE INHERITANCE IS LARGE AND IT IS TRANSCRIBED, NOT REMEMBERED.** tk1 built most of the curated
 half and recorded its failures in code comments that no roadmap points at. The chapter note
 transcribes them; the short version is that **the places table is an asset and the stakeholders are
@@ -768,10 +777,20 @@ biography**, and those go to different epics — the Captain's own boundary of 2
    (repaired with a second, recognition-only path). Those two are the bench's first cases.
    *This does not reopen req 2 — entity recognition is not a UD task and has no UD relation, so a
    second model here is not a second opinion on a dependency parse.*
-2. **A NAME OF WHAT?** — the kinds as a closed set: person · public figure · organization · place ·
-   work · event · none. Whether the frame is OntoNotes' label set or our own is the first ruling; tk1
-   mapped nine labels to type-centroid senses (`PERSON → person.n.01`, `ORG → organization.n.01`,
-   `GPE/LOC/FAC → location.n.01`) and that mapping is a starting position, not a conclusion.
+2. **A NAME OF WHAT? — OUR KINDS, AND THEY ARE ROWS** *(the Captain, 2026-09-16, req 17)*. The
+   inventory is ours and it lives in the db, not in code: *«with our inventory as db we can modify it
+   keeping the logic — everything is KB. If we rely on a third party we lose this ability.»* So two
+   tables and no enum — **the kinds** (person · organization · place · work · event · none, each row
+   naming the type-centroid sense it carries and which lookup it triggers) and **the label map**
+   (an NER label → a kind, one row each, so a model's new label is a migration and not a release).
+   tk1's nine mappings are the map's starting position: `PERSON → person.n.01`,
+   `ORG → organization.n.01`, `GPE/LOC/FAC → location.n.01`, `NORP → group.n.01`,
+   `PRODUCT`/`WORK_OF_ART → artifact.n.01`, `EVENT → event.n.01`.
+   **Prominence is NOT a kind** — it is a scalar on the resolution, and it is what task 5 ranks.
+   *A consequence to hold on to: a kind that is a row cannot be an enum the compiler branches on, so
+   the box carries it as a string. The precedent is `ClosedClassDoc.word_class`, which is a string
+   and not an enum for this exact reason — «a class that needed a code change to exist would put the
+   table back in code».*
 3. **THE PLACES TABLE, INHERITED** — **measured against the live v1 body, 2026-09-16: 4,674,701
    rows**, two containment chains (`path_admin` political · `path_geo` physical), a **`type` column of
    EXACTLY 21 values** which is an `is_a` statement, a second closed axis `category`
@@ -793,15 +812,24 @@ biography**, and those go to different epics — the Captain's own boundary of 2
    guess**. The MECHANISM is E3b's; the ROWS are biography and E9 migrates them — and there are
    **18 of them** (`tokeniko_mem.stakeholders`, measured 2026-09-16), so this half is small and the
    scale lives entirely in tasks 3 and 3b.
-5. **⚑ WHICH ONE? — THE FIRST MICRO-NN, and the first admitted by micro-nn req 9.** «Paris» is a city
+5a. **⚑ THE MICRO-NN ABSTRACTION ITSELF — brought forward from E5 by the Captain's ruling.** The
+   lib (features → a ranking or a scalar in [0,1], online updates, weights as epoch-stamped db rows,
+   deterministic per epoch — micro-nn reqs 1–4, 8) and the instance registry (declaration rows: input
+   schema · output kind · reward source) with **the shared fence enforced STRUCTURALLY** — candidates
+   in, ordering out, no candidate creation (req 7). *Reward plumbing is NOT here: the reward families
+   arrive with E7 and E8, so this instance learns from the correction signal the station already has
+   and the rest is wired later.* **Built to serve task 5 and generalized against it, never before
+   it.**
+5. **⚑ WHICH ONE? — THE FIRST INSTANCE, and the first admitted by micro-nn req 9.** «Paris» is a city
    in France and a town in Ontario; tk1 logged the problem («name lookup is not disambiguated by
    prominence, so homonyms resolve to whichever the knowledge base returns first») and never solved
    it. **It passes both of the Captain's tests**: curation can cover the places we have seen and never
    the next one, and the answer MOVES — what is prominent this year was not prominent last year.
-   An instance declaration (input schema · output kind · reward source) against E5's framework,
-   **ranking candidates the curated table produced**, under the shared fence. *This makes E5's lib a
-   dependency of E3b, or E3b a reason to bring part of E5 forward — a sequencing ruling the Captain
-   owes when this opens.*
+   An instance declaration (input schema · output kind · reward source) against the framework task 5a
+   builds, **ranking candidates the curated tables produced** — the places rows, the names roster, the
+   stakeholders he has met — under the shared fence. **The 28.1% collision measured in task 3b is
+   this task's brief**: the signals are strong and they contradict each other, which is exactly the
+   split decision that cannot be curated.
 6. **WHAT A NAME IS IN A ZIP** — a box whose `head` is a named individual: the **type centroid is the
    SEMANTIC content** and the **uid is the IDENTITY**, and the two never merge (the second standing
    law, and `plan.md`'s own «uid + type-centroid» for `kotekino` and `tokeniko`). Identity uids are
@@ -858,19 +886,28 @@ verdict + derivation, against a small seed KB, on the sandbox. Landed under the 
 
 **Answers to:** micro-nn reqs 1–8.
 
-**Tasks**
-1. **The lib** — features → ranking/scalar; online updates; weights epoch-stamped in db;
-   deterministic per epoch.
-2. **Instance registry** — declaration rows (input schema · output kind · reward source); the
-   shared fence enforced structurally (candidates in, ordering out — no candidate creation).
-3. **First instances** — **name resolution (E3b) is the FIRST**, and the first admitted by req 9
-   rather than declared at conception: which «Paris» a stranger means, ranked among candidates a
-   curated table produced. Then station confidence calibration (E3) and evaluator search order (E4);
-   reward plumbing arrives with E7 (heart) and E8 (dialogue feedback).
-   *E3b needs task 1 and task 2 of this epic before it can declare an instance — a sequencing ruling
-   the Captain owes when E3b opens: bring part of E5 forward, or hold E3b's task 5 until E5 lands.*
+> **THE MACHINERY MOVED TO E3b — the Captain, 2026-09-16.** *«Bring E5 forward because it is
+> propaedeutic to closing the E3 name hole. So E5 remains where it is, but the machinery (micro-nn
+> abstraction) should go in E3b.»* **The epic stays here; the ABSTRACTION lands earlier**, because
+> name resolution cannot close without it and a framework built for one real case is a framework
+> that has met a real case. Tasks 1 and 2 below are therefore E3b's, and are listed here with a
+> pointer rather than repeated — one item, one status, one doc.
 
-**Done when:** two live instances demonstrably reorder/calibrate without ever changing a verdict.
+**Tasks**
+1. ~~**The lib**~~ **— BUILT IN E3b (task 5a).** Features → ranking/scalar; online updates; weights
+   epoch-stamped in db; deterministic per epoch.
+2. ~~**Instance registry**~~ **— BUILT IN E3b (task 5a).** Declaration rows (input schema · output
+   kind · reward source); the shared fence enforced structurally (candidates in, ordering out — no
+   candidate creation).
+3. **Instance breadth** — E3b declares the first (name prominence, and the first admitted by req 9
+   rather than at conception). This epic adds the rest: station confidence calibration (E3),
+   evaluator search order (E4), and then the sites that need an organ — the heart jump, the
+   figurative layer, the channel register, the mouth's coloring.
+4. **Reward plumbing** — the intellectual and heart families wired to the instances; arrives with
+   E7 (heart) and E8 (dialogue feedback), which is why it could never have landed with the lib.
+
+**Done when:** two live instances demonstrably reorder/calibrate without ever changing a verdict,
+**on a framework E3b already proved against one real case.**
 
 ---
 

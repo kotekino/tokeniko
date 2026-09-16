@@ -2,7 +2,7 @@
 
 *What the instinct framework must be. One line each. Evidence in the dated `_notes.md` beside this.*
 
-1. **One abstraction, many instances** — a single middleware serves every use case; instances differ by declaration (input schema · output kind · reward source), never by stack.
+1. **One abstraction, many instances** — a single middleware serves every use case; instances differ by declaration (input schema · output kind · reward source), never by stack. **[WHERE IT IS BUILT, ruled 2026-09-16 — the abstraction lands in E3b, not in this chapter's own epic: *«E5 remains where it is, but the machinery should go in E3b»* (the Captain), because name resolution cannot close without a net. Reqs 1–4, 7 and 8 are therefore E3b's to satisfy and E5 keeps the breadth and the reward plumbing. The reason is not scheduling: a framework generalized BEFORE it has met a real case is the failure this requirement is most exposed to, and its first case now arrives with it.]**
 2. **One shape** — features in → a ranking or a scalar in [0,1] out; nothing else.
 3. **Tiny and laptop-honest** — small nets, numpy-scale; no heavyweight framework.
 4. **Weights are db rows, epoch-stamped** — an instance is config + weights in the db; training moves rows, never code.

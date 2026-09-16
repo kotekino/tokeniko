@@ -74,8 +74,11 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       CASING as separate weak evidence. tk1's gate failed BOTH ways: it minted individuals from OOV
       gibberish spaCy labelled `GPE`, and refused «kotekino», lower case and known. *(Not a reopening
       of req 2: NER is not a UD task and has no UD relation.)*
-- [ ] **a name of what?** — the kinds as a closed set: person · public figure · organization · place ·
-      work · event · none; tk1's nine NER→type-centroid senses as the starting position
+- [ ] **a name of what? — OUR kinds, as ROWS not code** *(the Captain, 2026-09-16, req 17: «everything
+      is KB — if we rely on a third party we lose the ability to modify it»)*: two tables, the KINDS
+      (person · organization · place · work · event · none) and the LABEL MAP (NER label → kind), so a
+      model's new label is a migration and not a release. tk1's nine mappings are the starting
+      position. **Prominence is a scalar, not a kind** — it is what the net ranks
 - [ ] **the places table, INHERITED** — measured 2026-09-16: **4,674,701** author-curated rows,
       `path_admin` + `path_geo` containment chains, a `type` column of **exactly 21** values that is
       an `is_a`, a second axis `category`, coordinates on 99.9%. Read LAZILY, never materialized
@@ -86,9 +89,15 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       measurement that forces the net
 - [ ] **have I met it?** — recognition against a names table; tk1's preference order inherited whole,
       «genuinely ambiguous → never guess» included. The MECHANISM is E3b's, the ROWS are E9's
-- [ ] **⚑ which one? — THE FIRST MICRO-NN** — «Paris, France» or «Paris, Ontario»: tk1 logged it and
+- [ ] **⚑ the MICRO-NN ABSTRACTION — brought forward from E5** *(the Captain, 2026-09-16: the epic
+      stays in E5, the machinery comes here because it is propaedeutic to closing the name hole)*:
+      the lib (features → ranking/scalar, weights as epoch-stamped rows, deterministic per epoch) and
+      the instance registry, with the fence enforced STRUCTURALLY. Built to serve the next line and
+      generalized against it, never before it
+- [ ] **⚑ which one? — THE FIRST INSTANCE** — «Paris, France» or «Paris, Ontario»: tk1 logged it and
       never solved it. The first case to pass micro-nn req 9's two tests — curation cannot finish AND
-      the answer moves over time. Ranks the curated table's candidates, never mints one
+      the answer moves over time. Ranks the curated tables' candidates, never mints one. **The 28.1%
+      collision above is the brief**: strong signals that contradict each other
 - [ ] **what a name is in a zip** — type centroid = SEMANTIC, uid = IDENTITY, never merged
 - [ ] **the markers' third reading** — «went with Anna» goes comitative because Anna is a PERSON, with
       no rule about Anna anywhere. That is E3b's acceptance test, and the marker bench already holds it
@@ -103,9 +112,13 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 - [ ] ⚑ PROOF SLICE 1: text → zip → verdict, end-to-end on sandbox
 
 ## E5 — the instinct middleware (parallel after E0)
-- [ ] the lib (features → ranking/scalar; weights as epoch-stamped rows)
-- [ ] instance registry + structural fence
-- [ ] first instances: station calibration · evaluator ordering
+*The MACHINERY moved to E3b (the Captain, 2026-09-16) — it is propaedeutic to the name hole, and a
+framework that meets a real case before it is declared general is the one failure mode «one
+abstraction, many instances» is most exposed to. The epic stays here; the two lines below are E3b's
+and are listed with a pointer, never repeated.*
+- [ ] ~~the lib~~ · ~~instance registry + structural fence~~ — **BUILT IN E3b**
+- [ ] instance breadth: station calibration · evaluator ordering · then the sites that need an organ
+- [ ] reward plumbing (intellectual + heart families) — arrives with E7 and E8
 
 ## E6 — the mind (rules + brain)
 - [ ] rules as zips (sign-gated matcher; urge collapse; defeat in context)
