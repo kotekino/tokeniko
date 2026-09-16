@@ -166,14 +166,32 @@ def test_a_word_the_station_cannot_place_is_VISIBLE(compiler):
     assert 0.0 < out.coverage < 1.0, "partial, and honestly so"
 
 
-def test_an_ambiguous_marker_abstains_rather_than_guessing(compiler):
-    """«I swam IN the pool» reads location|time|instrument|manner and nothing chooses between them.
-    Picking the first candidate would be the silently-complete nearest fit req 8 forbids."""
+def test_an_ambiguous_marker_is_settled_and_says_how(compiler):
+    """«I swam IN the pool» reads location|time|instrument|manner, and `db/0012` says what chooses.
+
+    It was an ABSTENTION until 2026-09-16, on the reading that picking a candidate would be the
+    silently-complete nearest fit req 8 forbids — and the operative word was SILENTLY. Nothing
+    fires here, so the curation's best-first default stands, and the zip RECORDS that it was a
+    default. A counted default is not a silent one.
+    """
     out = compiled(compiler, "Last night , I swam in the pool")
 
-    assert any("in:" in note for note in out.abstained)
-    assert Role.LOCATION not in out.zip.rows[-1].boxes, "it did not guess"
-    assert out.zip.rows[-1].boxes[Role.TIME].head == "night.n", "what it DID know is bound"
+    row = out.zip.rows[-1]
+    assert row.boxes[Role.LOCATION].head == "pool.n"
+    assert row.boxes[Role.LOCATION].marker == "in", "req 65: the marker the speaker chose is kept"
+    assert any("in pool" in note for note in out.defaulted), "and it says nothing chose"
+    assert row.boxes[Role.TIME].head == "night.n", "what it DID know is still bound"
+
+
+def test_a_supersense_settles_a_marker_and_that_is_not_a_default(compiler):
+    """«I talked TO my friend» is a RECIPIENT and «I walk TO the station» a destination, and the two
+    differ only in what kind of thing the nominal is. A rule fired, so nothing is defaulted."""
+    out = compiled(compiler, "I talked to my friend in the park")
+
+    row = out.zip.rows[-1]
+    assert row.boxes[Role.RECIPIENT].head == "friend.n"
+    assert not any("to friend" in note for note in out.defaulted), "a person is not a guess"
+    assert out.coverage == 1.0
 
 
 def test_a_multiword_marker_covers_every_token_it_spans(compiler):
@@ -491,11 +509,11 @@ def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
     assert out.zip.rows[-1].predicate == "be.v", "content, and a VERB key"
 
 
-def test_wh_words_raised_the_floor_again(compiler):
-    """21 of 25 whole and 96.8% mean, from 20 and 95.8% before the wh-words compiled."""
+def test_the_ambiguous_markers_raised_the_floor_again(compiler):
+    """22 of 25 whole and 98.4% mean, from 21 and 96.8% before the thirteen were settled."""
     scored = [compiler.compile(c.skeleton) for c in CASES]
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
-    assert full >= 21, f"{full} of {len(CASES)} whole; 21 were on 2026-09-15"
-    assert mean >= 0.96, f"mean {mean:.1%}; it was 96.8% on 2026-09-15"
+    assert full >= 22, f"{full} of {len(CASES)} whole; 22 were on 2026-09-16"
+    assert mean >= 0.98, f"mean {mean:.1%}; it was 98.4% on 2026-09-16"

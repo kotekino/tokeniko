@@ -38,9 +38,10 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       ambiguous ones
 - [x] **skeleton adapter** — stanza behind the lib boundary (`tk2/language/skeleton.py`); `Skeleton`
       and `Word` hold UD strings and nothing above imports spacy, stanza or torch
-- [x] **⚑ the UD gate OPENS** — `tools/ud_gate.py`, offline by default: **16 answered · 0 wrong ·
-      9 abstained** over 25 cases reaching 16 of the 37 relations. It found four defects nobody
-      would have read off the code. *(The 21 unreached relations are printed by name every run.)*
+- [x] **⚑ the UD gate OPENS** — `tools/ud_gate.py`, offline by default: **19 answered · 0 wrong ·
+      6 abstained** over 25 cases reaching 16 of the 37 relations (16/0/9 when it opened). It found
+      five defects nobody would have read off the code, the newest being `of` under a noun compiling
+      to a box instead of the possessor FIELD. *(The 21 unreached relations are printed every run.)*
 - [ ] **the UD gate COMPLETED** — the remaining 21 relations, each with a transcribed case
 - [x] **compile core — ONE content row** (`tk2/language/compile.py`): the relation half and the
       marker half of the mapping, quantifier binders, possessors inside the record, senses OPEN.
@@ -55,8 +56,14 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       **21 of 25 UD cases whole, mean 96.8%**
 - [ ] **embedded questions** — «if you know WHO did it»: neither a root-clause interrogative nor a
       relative, and R5 rightly says «not the root clause» without being enough to compile it
-- [ ] **the thirteen ambiguous markers** — «to» destination|recipient, «in»
-      location|time|instrument|manner: where no UD subtype settles it, the head-verb geometry must
+- [x] **the thirteen ambiguous markers** — closed classes v6 (`db/0012`). **Not the geometry
+      `db/0008` predicted**: «is a pool a place?» is a hypernymy question and cosine does not answer
+      taxonomy. It is **WordNet's supersense** — 26 noun + 15 verb classes, published and closed, so
+      the table can be COMPLETE (the UD gate's argument, a second time). Benched on 52 cases:
+      supersense **11/11** independent · geometry 6 with 3 wrong and 14 mute · first-candidate 7 with
+      4. A `default` now fills its box and is COUNTED, never silent. **22 of 25 UD cases whole, mean
+      98.4%**
+- [ ] **`amod`** — «Last night» leaves `Last` unplaced: an adjectival modifier is not compiled yet
 - [ ] **`mark` under a reporting verb opens a POV**, not a join (E2 made attitude a prefix element)
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)

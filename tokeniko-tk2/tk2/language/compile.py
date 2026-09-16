@@ -28,6 +28,7 @@ from dataclasses import dataclass, field
 
 from tk2.dictionary import keys as keymod
 from tk2.language.closed import ClosedClasses
+from tk2.language.markers import MarkerSelector
 from tk2.language.skeleton import Skeleton, Word
 from tk2.tkzip.schema import (
     AttitudeRow,
@@ -98,6 +99,10 @@ class Compiled:
     covered: tuple[int, ...] = ()
     unplaced: tuple[str, ...] = ()
     abstained: tuple[str, ...] = field(default_factory=tuple)
+    #: Roles filled by an ambiguous marker's DEFAULT — the curation's best-first answer, taken
+    #: because nothing in the sentence chose. Counted rather than silent: that distinction is the
+    #: whole of req 8 here, and it is what req 4's confidence scalar reads.
+    defaulted: tuple[str, ...] = field(default_factory=tuple)
 
     @property
     def coverage(self) -> float:
@@ -108,8 +113,12 @@ class Compiled:
 class Compiler:
     """Skeleton → zip. Pure: context is an argument and never state (req 7)."""
 
-    def __init__(self, table: ClosedClasses) -> None:
+    def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None) -> None:
         self.table = table
+        #: WHICH role an ambiguous marker fills here — `db/0012`'s rules, run by
+        #: `tk2.language.markers`. An argument so a test can state what the resource says instead
+        #: of depending on which WordNet is installed.
+        self.selector = selector or MarkerSelector()
 
     # -- the whole sentence -----------------------------------------------------------------------
 
@@ -130,6 +139,7 @@ class Compiler:
 
         covered: set[int] = set()
         abstained: list[str] = []
+        defaulted: list[str] = []
         prefix_rows: list = []
         content: dict[int, ContentRow] = {}
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
@@ -139,7 +149,7 @@ class Compiler:
             mine = {i for i, h in owner.items() if h == head.index}
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
-                open_truth, wants_antecedent)
+                open_truth, wants_antecedent, defaulted)
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
@@ -150,7 +160,7 @@ class Compiler:
         rows = [*prefix_rows, *content.values(), *extra, *joins]
         return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
-                        abstained=tuple(abstained))
+                        abstained=tuple(abstained), defaulted=tuple(defaulted))
 
     # -- the clauses ------------------------------------------------------------------------------
 
@@ -207,7 +217,8 @@ class Compiler:
 
     def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
                 covered: set[int], prefix_rows: list, abstained: list, name: str,
-                open_truth: set, wants_antecedent: set) -> ContentRow:
+                open_truth: set, wants_antecedent: set,
+                defaulted: list | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
@@ -238,7 +249,7 @@ class Compiler:
                                                     abstained, copular, name,
                                                     open_truth, wants_antecedent))
                 continue
-            role = self._role_of(word, skeleton, marks, copular)
+            role = self._role_of(word, skeleton, marks, copular, defaulted)
             if role is not None and role not in boxes:
                 boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name)
                 covered.add(index)
@@ -418,7 +429,7 @@ class Compiler:
         return keymod.key_of(word.lemma, letter)
 
     def _role_of(self, word: Word, skeleton: Skeleton, marks: dict,
-                 copular: bool = False) -> Role | None:
+                 copular: bool = False, defaulted: list | None = None) -> Role | None:
         """Which box this nominal fills — by RELATION first, then by its MARKER.
 
         Relation first because it is the stronger evidence and the narrower claim: `obj` means
@@ -451,13 +462,24 @@ class Compiler:
                 return Role(match.settled_role)
             if len(match.roles) == 1:
                 return Role(match.roles[0])
-            # **AMBIGUOUS, AND THE PHRASE STILL LANDS.** «I swam IN the pool» reads
-            # location|time|instrument|manner and nothing here chooses — but dropping the phrase
-            # would lose `pool` entirely, which is worse than admitting the role is unknown. Req 8
-            # is explicit: the caught parts stay bound and the rest is OPEN, never a silently
-            # complete nearest fit. So the box is built with its marker recorded and no role yet;
-            # the head-verb geometry is what will settle it (E3's remaining task).
-            return None
+            # **ONE OF THE THIRTEEN**, and `db/0012` says what settles it: the head's POS for «of»,
+            # the marked nominal's SUPERSENSE for «at noon» against «at the door», the head verb's
+            # for «walk to the station» against «talk to my friend». A rule that fires is evidence
+            # from the sentence; a rule that does not leaves the curation's best-first default —
+            # and the two are kept apart rather than averaged, because req 8 forbids the SILENTLY
+            # complete nearest fit and a default that is counted is not silent.
+            settled = self.selector.settle(
+                match.compiled, word.lemma, word.upos, head.lemma, head.upos)
+            if settled is None:
+                return None
+            if settled.role not in {role.value for role in Role}:
+                # The selector named a FIELD, not a box — «the office OF the Chair» is a possessor
+                # and req 26 keeps it INSIDE the record. `_box_for` takes it when the head phrase is
+                # built, so there is no role to fill here and no abstention to report.
+                return None
+            if settled.is_default and defaulted is not None:
+                defaulted.append(f"{match.form} {word.text}: {settled.role} (nothing chose)")
+            return Role(settled.role)
         return None
 
     def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: set[int],
@@ -556,9 +578,12 @@ class Compiler:
             return taken
 
         if kind == "box":
-            # A marker with several readings and nothing to choose between them ABSTAINS. Picking
-            # the first candidate would be the silently-complete nearest fit req 8 forbids.
-            if not match.settled_role and len(match.roles) > 1:
+            # The MARKER itself is accounted for here; which role it fills is decided where the
+            # nominal it marks is read (`_role_of`), because that is where the head and the noun
+            # are both in hand. A marker with several readings and NO selector — a row an older
+            # migration wrote — still abstains, which is what the absence of a rule means.
+            if not match.settled_role and len(match.roles) > 1 \
+                    and not match.compiled.get("selector"):
                 abstained.append(f"{match.form}: {'|'.join(match.roles)}")
             return taken
 

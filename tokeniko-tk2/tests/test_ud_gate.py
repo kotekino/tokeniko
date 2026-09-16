@@ -38,7 +38,7 @@ def test_the_gate_answers_what_it_can_and_the_number_is_held(scored):
     saying something about itself."""
     answered = sum(1 for _, verdict, _, _ in scored if verdict == ANSWERED)
 
-    assert answered >= 16, f"the gate answered {answered} of {len(CASES)}; it answered 16 on 2026-09-15"
+    assert answered >= 19, f"the gate answered {answered} of {len(CASES)}; it answered 19 on 2026-09-16"
 
 
 def test_every_abstention_says_WHY(scored):

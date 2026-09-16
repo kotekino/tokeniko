@@ -677,9 +677,23 @@ it).
    `202609151555_the-wh-words.md`): five kinds, and three of them are not boxes — `whether` opens
    the TRUTH, `whose` a FIELD, and **`why` an ANTECEDENT**, because req 37 left no cause box to
    open and the shape was already in the format. **21 of 25 whole, mean 96.8%.**
-   **WHAT REMAINS:** embedded questions, and the thirteen ambiguous markers — the head-verb
-   geometry, which needs the dictionary in the loop and is the last big piece of the 37 → 18
-   mapping. Context-as-argument is untouched; nothing has needed it yet.
+   ~~**WHAT REMAINS:** the thirteen ambiguous markers~~ **DONE 2026-09-16** (`db/0012`, record
+   `202609160929_the-ambiguous-markers.md`): **22 of 25 whole, mean 98.4%; the UD gate answers 19
+   of 25 with 0 WRONG.** `db/0008` predicted head-verb GEOMETRY and it was benched and lost — «is a
+   pool a place?» is a hypernymy question, and the dictionary chapter ruled a month ago that cosine
+   does not answer taxonomy. What settles them is a fact the resource STATES: **WordNet's supersense**
+   (26 noun classes + 15 verb classes, published and closed — the UD gate's own «both ends closed, so
+   the table can be complete» argument, arriving a second time). Measured on 52 cases with their
+   gold: supersense 11/11 on the independent bucket, geometry 6 with 3 wrong, first-candidate 7 with
+   4. **`of` needs no dictionary at all** — the head's POS settles it, and the gate caught the first
+   rule set getting the possessor wrong. **A `default` now fills its box and is COUNTED** in
+   `Compiled.defaulted` rather than abstaining: req 8 forbids the SILENTLY complete nearest fit, and
+   a counted default is not silent. Residual errors: «at speed» (WordNet files speed under
+   `noun.time`) and «with Anna» twice — **the named-individual hole**, parked with its own answer
+   waiting. **NAMED DEBT:** the supersense is read LIVE from WordNet and is therefore outside the
+   base's build fingerprint; its home is a `lexname` on `SenseVectorDoc`, which is a rebuild.
+   **WHAT REMAINS:** embedded questions («if you know WHO did it»), and `amod` — «Last night» leaves
+   `Last` unplaced. Context-as-argument is untouched; nothing has needed it yet.
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.

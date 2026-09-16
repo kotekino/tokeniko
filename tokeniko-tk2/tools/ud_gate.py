@@ -30,9 +30,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tests.fixtures.ud import CASES, OPEN, by_relation, covered  # noqa: E402
 from tk2.language import standing_closed_classes  # noqa: E402
+from tk2.language.markers import MarkerSelector  # noqa: E402
 from tk2.language.skeleton import UD_DEPS  # noqa: E402
 
 ANSWERED, WRONG, ABSTAINED = "answered", "WRONG", "abstained"
+
+
+SELECTOR = MarkerSelector()
 
 
 def read(case, table) -> tuple[str, str, str]:
@@ -51,14 +55,25 @@ def read(case, table) -> tuple[str, str, str]:
     if match is None:
         return ABSTAINED, "", "no closed-class row matched this token"
 
+    settled_why = ""
     kind = match.kind
     if kind == "box":
         if match.settled_role:
             # UD's own subtype named the role — `obl:agent`, `obl:tmod`. No ambiguity survives that.
             produced = match.settled_role
         elif len(match.roles) > 1:
-            return (ABSTAINED, "|".join(match.roles),
-                    f"{len(match.roles)} candidates and nothing selects between them")
+            # ONE OF THE THIRTEEN. `db/0012` says what settles it, and `tk2.language.markers` runs
+            # the rules: UD puts `case` on the marker and the phrase's own head one edge further
+            # out, so the nominal is this token's head and the verb is the nominal's.
+            nominal = skeleton[word.head]
+            governor = skeleton[nominal.head]
+            settled = SELECTOR.settle(match.compiled, nominal.lemma, nominal.upos,
+                                      governor.lemma, governor.upos)
+            if settled is None:
+                return (ABSTAINED, "|".join(match.roles),
+                        f"{len(match.roles)} candidates and nothing selects between them")
+            produced = settled.role
+            settled_why = settled.why
         else:
             produced = match.roles[0] if match.roles else ""
     elif kind == "join":
@@ -81,7 +96,7 @@ def read(case, table) -> tuple[str, str, str]:
     if not produced:
         return ABSTAINED, "", f"matched {match.form!r} but it compiles to nothing nameable"
     if produced == case.expect:
-        return ANSWERED, produced, ""
+        return ANSWERED, produced, settled_why
     return WRONG, produced, f"expected {case.expect}"
 
 
