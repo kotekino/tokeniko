@@ -176,8 +176,14 @@ def _frame(zip_) -> object | None:
     `Context.under` can read it without caring whether the attitude came from a dependency tree or
     from the sentence next door.
 
-    **A frame needs a recipient.** «John said.» addresses nobody in particular, so there is nothing
-    for a second person to rotate into and the outer addressee rightly survives.
+    **BEING A FRAME AND ROTATING ARE TWO DIFFERENT THINGS**, and the first draft conflated them by
+    requiring a recipient for both. «I asked: "Do you know the muffin man?"» is a frame — the
+    question is the content of the asking and must not be claimed — and it addresses nobody NAMED,
+    so the `you` inside it stays whoever the outer utterance was addressed to. Which is correct:
+    «I asked: do YOU know» is asking the listener.
+
+    So a frame needs only a HOLDER; the addressee rides along when there is one and is `None` when
+    there is not, and `Context.under` already keeps the outer addressee in that case.
     """
     from tk2.tkzip.schema import AttitudeRow, Role
 
@@ -185,12 +191,52 @@ def _frame(zip_) -> object | None:
         if row.kind != "content" or getattr(row, "predicate", None) not in SAYING_VERBS:
             continue
         holder = row.boxes.get(Role.AGENT)
-        addressee = row.boxes.get(Role.RECIPIENT)
-        if holder is None or addressee is None:
+        if holder is None:
             continue
         return AttitudeRow(name=row.name, scopes=row.name, holder=holder,
-                           verb=row.predicate, addressee=addressee)
+                           verb=row.predicate, addressee=row.boxes.get(Role.RECIPIENT))
     return None
+
+
+def _claim_of(zip_) -> str | None:
+    """Which row carries a zip's CLAIM — what an attitude must scope to cover the whole of it.
+
+    The outermost JOIN where there is one, because a join covers its operands and everything under
+    them; otherwise the first clause row. «You are a clever girl» is two content rows and an AND, and
+    an attitude scoping only the copular row would leave «clever» asserted outside the quotation.
+    """
+    joins = [row.name for row in zip_.rows if row.kind == "join"]
+    if joins:
+        return joins[-1]
+    clauses = [row.name for row in zip_.rows if row.kind == "content"]
+    return clauses[0] if clauses else None
+
+
+def quoted_under(zip_, frame):
+    """A quoted sentence's zip, placed UNDER the attitude that introduced it.
+
+    **THE SAME SHAPE `ccomp` ALREADY PRODUCES**, arriving across a sentence boundary instead of down
+    a dependency tree:
+
+        «he says that you swim»        attitude(he, say) scopes r1 · r1 is EMPTY · r0 is CLAIMED
+        «John said: "you swim"»        attitude(john, say) scopes s1.… · s1.… is EMPTY
+
+    **THE QUOTE IS NOT CLAIMED AND THAT IS THE WHOLE POINT.** «John said the sky is green» does not
+    assert that the sky is green — it asserts that John said so. A quote whose rows stayed CLAIMED
+    would put every reported sentence into the KB as a fact, which is the one thing the truth slot
+    exists to prevent, and it is the same distinction req 38 rests on.
+    """
+    from tk2.tkzip.schema import AttitudeRow
+
+    scopes = _claim_of(zip_)
+    if scopes is None:
+        return zip_
+    unasserted = [row.model_copy(update={"truth": None})
+                  if row.kind in ("content", "join") else row
+                  for row in zip_.rows]
+    attitude = AttitudeRow(name=f"{scopes}.pov", scopes=scopes, holder=frame.holder,
+                           verb=frame.verb, addressee=frame.addressee)
+    return zip_.model_copy(update={"rows": [attitude, *unasserted]})
 
 
 @dataclass
@@ -240,8 +286,12 @@ def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTE
         # rule applied across a sentence boundary instead of down a dependency tree.
         compiled = compiler.compile(skeleton, context=context if quoting is None
                                     else context.under(quoting))
-        quoting = _frame(compiled.zip)
+        frame, quoting = quoting, _frame(compiled.zip)
         zip_ = prefixed(compiled.zip, "" if position == 0 else f"s{position}.")
+        if frame is not None:
+            # The previous sentence introduced this one, so it is what was SAID rather than a claim
+            # of its own.
+            zip_ = quoted_under(zip_, frame)
         rows.extend(zip_.rows)
         unplaced.extend(compiled.unplaced)
         abstained.extend(compiled.abstained)

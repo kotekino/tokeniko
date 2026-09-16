@@ -27,6 +27,10 @@ def case(text):
     return next(c for c in CASES if c.text == text)
 
 
+def compiled(compiler, text):
+    return compiler.compile(case(text).skeleton)
+
+
 # ------------------------------------------------------------------------------------------------
 # 2b.1 — context as an ARGUMENT
 # ------------------------------------------------------------------------------------------------
@@ -273,3 +277,82 @@ def test_a_CONDITIONAL_does_not_rotate(compiler):
     knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
 
     assert knowing.boxes[Role.AGENT].head == "captain"
+
+
+# ------------------------------------------------------------------------------------------------
+# the quote becomes the CONTENT of the saying
+# ------------------------------------------------------------------------------------------------
+
+
+def test_A_QUOTE_IS_NOT_CLAIMED(compiler):
+    """**«John said the sky is green» does not assert that the sky is green.** A quote whose rows
+    stayed CLAIMED would put every reported sentence into the KB as a fact, which is the one thing
+    the truth slot exists to prevent — the same distinction req 38 rests on.
+
+    The shape is the one `ccomp` already produces, arriving across a sentence boundary: an attitude
+    scoping the quote, the saying claimed, the quote EMPTY.
+    """
+    out = compile_utterance(compiler, [SAID, QUOTED],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    saying = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v")
+    assert saying.truth == 1.0, "the SAYING is claimed"
+
+    quoted = [r for r in out.zip.rows if r.name.startswith("s1.") and r.kind in ("content", "join")]
+    assert quoted and all(r.truth is None for r in quoted), "and its content is not"
+
+
+def test_the_attitude_scopes_the_WHOLE_quote(compiler):
+    """«You are a clever girl» is two content rows and an AND. An attitude scoping only the copular
+    row would leave «clever» asserted OUTSIDE the quotation — so it scopes the outermost join."""
+    out = compile_utterance(compiler, [SAID, QUOTED],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    attitude = next(r for r in out.zip.rows if r.kind == "attitude")
+    joins = [r.name for r in out.zip.rows if r.kind == "join"]
+
+    assert attitude.scopes == joins[-1], "the outermost join, not one of the rows under it"
+    assert attitude.holder.head == "john.n" and attitude.verb == "say.v"
+
+
+def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
+    """**Being a frame and ROTATING are two different things**, and the first draft conflated them.
+    «I asked: "Do you know the muffin man?"» is a frame — the question is the content of the asking
+    and must not be claimed — and it addresses nobody NAMED, so the `you` stays whoever the outer
+    utterance was addressed to. Which is right: «I asked: do YOU know» is asking the listener."""
+    asked = skeleton_from_conllu("I asked", [
+        ("1", "I", "i", "PRON", "2", "nsubj"),
+        ("2", "asked", "ask", "VERB", "0", "root"),
+    ])
+    question = skeleton_from_conllu("Do you know", [
+        ("1", "Do", "do", "AUX", "3", "aux"),
+        ("2", "you", "you", "PRON", "3", "nsubj"),
+        ("3", "know", "know", "VERB", "0", "root"),
+    ])
+    out = compile_utterance(compiler, [asked, question],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    attitude = next(r for r in out.zip.rows if r.kind == "attitude")
+    assert attitude.verb == "ask.v" and attitude.addressee is None
+    knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
+    assert knowing.truth is None, "the question is the content of the asking"
+    assert knowing.boxes[Role.AGENT].head == "captain", "and «you» is still the outer listener"
+
+
+def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
+    """«that» is OPTIONAL, and without it nothing raised the POV — so «I asked: "Do you know the
+    muffin man?"» CLAIMED that you know him. **The UD gate found it**, on the very example this QM
+    passed over when transcribing `ccomp` the first time.
+
+    Both forms must produce the same shape: `ccomp` is `ccomp` whether or not there are quotation
+    marks.
+    """
+    marked = compiled(compiler, "He said that he knew the muffin man .")
+    bare = compiled(compiler, 'I asked : " Do you know the muffin man ? "')
+
+    for out in (marked, bare):
+        attitude = next(r for r in out.zip.rows if r.kind == "attitude")
+        inner = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
+        assert attitude.scopes == inner.name
+        assert inner.truth is None, "the complement is not claimed"
+        assert next(r for r in out.zip.rows if r.name == "r0").truth == 1.0, "the saying is"

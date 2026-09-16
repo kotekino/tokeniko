@@ -673,7 +673,7 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
-    """The relations the corpus reached on 2026-09-16: **11 of 19 whole, 84.5% mean.**
+    """The relations the corpus reached on 2026-09-16: **11 of 20 whole, 84.6% mean.**
 
     Low, and honestly so. What is missing is NAMED rather than averaged away — `flat`/`list` (one
     name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
@@ -684,9 +684,9 @@ def test_the_FRONTIER_half_is_where_the_work_is(compiler):
     full = sum(1 for s in scored if s.coverage == 1.0)
     mean = sum(s.coverage for s in scored) / len(scored)
 
-    assert len(scored) == 19, "a relation may gain a case; the frontier grows and the ratchet does not"
+    assert len(scored) >= 20, "a relation may gain a case; the frontier grows and the ratchet does not"
     assert full >= 11, f"{full} of {len(scored)} whole; 11 were on 2026-09-16"
-    assert mean >= 0.84, f"mean {mean:.1%}; it was 84.5% on 2026-09-16"
+    assert mean >= 0.84, f"mean {mean:.1%}; it was 84.6% on 2026-09-16"
 
 
 # ------------------------------------------------------------------------------------------------

@@ -31,7 +31,7 @@ from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
 from tk2.language.skeleton import UD_POS, Skeleton, Word
-from tk2.language.utterance import NO_CONTEXT, Context
+from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
 from tk2.tkzip.schema import (
     AttitudeRow,
     Box,
@@ -517,6 +517,21 @@ class Compiler:
                 covered.update(range(joiner_index(skeleton, head, joiner),
                                      joiner_index(skeleton, head, joiner) + joiner.length),
                                label="join")
+                continue
+
+            if head.bare_dep == "ccomp" and self._readable(outer) \
+                    and self._key(outer) in SAYING_VERBS:
+                # **A BARE `ccomp` UNDER A SAYING VERB IS REPORTED CONTENT, AND `that` IS OPTIONAL.**
+                # «he said THAT he knew» raises the POV from the marker's own row; «I asked: "Do you
+                # know the muffin man?"» has a colon and quotation marks and no marker at all — and
+                # it claimed that you know the muffin man. **The UD gate found it** on the very
+                # example this QM had passed over when transcribing `ccomp` the first time.
+                #
+                # It is the head VERB that decides, which is why `SAYING_VERBS` is reached here and
+                # why that list is on E3's frame/knowledge audit: req 55 rules the replacement —
+                # attitude verbs are open and classified by nearest-anchor geometry, which E4 owns.
+                self._attitude(skeleton, head, content, outer, prefix_rows, covered, None)
+                unasserted.add(content[head.index].name)
                 continue
 
             operator = (joiner.compiled.get("operator") if joiner else None) or "and"

@@ -156,8 +156,13 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       code · ~~the rotation~~ **DONE: «John said to Marie "You are a clever girl"» — the `you` is
       MARIE.** «John thinks I am wrong» still means the speaker, because thinking addresses nobody
       and EMPTY is what carries that. A conditional does not rotate.
-      **STILL OWED**: the quote becoming the CONTENT of the saying (the halves sit in one zip,
-      rotated, and are not yet joined into one claim), and cases in BOTH gates
+      · ~~the quote as CONTENT~~ **DONE: «John said the sky is green» does not assert that the sky
+      is green.** The quote goes under an attitude and its rows go EMPTY — `ccomp`'s own shape,
+      across a sentence boundary — and the attitude scopes the outermost JOIN so «clever» is not
+      left asserted outside the quotation. **UD's direct-quote case found a defect on arrival**:
+      `that` is OPTIONAL and without it nothing raised the POV, so «I asked: "Do you know the muffin
+      man?"» CLAIMED that you know him. **2b IS COMPLETE**; the drill still owes hand-compiled
+      quotation, which is the Captain's to write
 - [x] **embedded questions** *(2026-09-16)* — **a wh-word has THREE readings and R5's binary test
       conflated the last pair.** R5 asks «is this the root clause» and answers the MOOD question
       rightly; it was then read as «therefore relative», and an embedded question opens its slot

@@ -392,6 +392,38 @@ CASES: tuple[Case, ...] = (
     ], at=4, expect="predicate",
        note="A complement CLAUSE opens a row of its own. What relates it to the matrix is the other half — E2 made attitude a PREFIX element, so a reporting verb should raise a POV rather than a join, and that is still on E3's list."),
 
+    # ── ccomp, the DIRECT-QUOTE form ──
+    # **THE CASE THIS QM PASSED OVER.** UD's `ccomp` page prints FOUR quotation examples and the
+    # first transcription took only the indirect one («He said that he knew the muffin man»), which
+    # does not rotate a pronoun and does not need a second sentence. That omission is what kept the
+    # person axis invisible until the Captain asked — and it is named in `202609161349`.
+    #
+    # **TRANSCRIBED FROM UD'S OWN ANNOTATION, WHICH IS ONE SENTENCE**: the page prints
+    # `ccomp(asked, know)`, an edge that crosses what stanza reads as a sentence boundary. The rest
+    # of the columns are stanza's for the two halves, joined at UD's edge — so `annotated=False`,
+    # and the provider disagreement is the finding rather than a defect.
+    _c("ccomp", "I asked : \" Do you know the muffin man ? \"", [
+        ("1", "I", "i", "PRON", "2", "nsubj"),
+        ("2", "asked", "ask", "VERB", "0", "root"),
+        ("3", ":", ":", "PUNCT", "2", "punct"),
+        ("4", "\"", "\"", "PUNCT", "2", "punct"),
+        ("5", "Do", "do", "AUX", "7", "aux"),
+        ("6", "you", "you", "PRON", "7", "nsubj"),
+        ("7", "know", "know", "VERB", "2", "ccomp"),
+        ("8", "the", "the", "DET", "10", "det"),
+        ("9", "muffin", "muffin", "NOUN", "10", "compound"),
+        ("10", "man", "man", "NOUN", "7", "obj"),
+        ("11", "?", "?", "PUNCT", "7", "punct"),
+        ("12", "\"", "\"", "PUNCT", "7", "punct"),
+    ], at=6, expect="predicate",
+       note="**A QUOTED QUESTION IS STILL THE CONTENT OF THE ASKING.** The quote opens its own row "
+            "and that row is NOT CLAIMED — «I asked: do you know X» does not assert that you know "
+            "X. Same shape as the indirect form, which is the point: `ccomp` is `ccomp` whether or "
+            "not there are quotation marks. **STANZA SPLITS THIS INTO TWO SENTENCES** and UD "
+            "annotates it as one, which is why the station needed an UTTERANCE and not a sentence "
+            "(E3 task 2b.2).",
+       annotated=False),
+
     # ── conj ──
     _c("conj", "Bill is big and honest", [
         ("1", "Bill", "bill", "PROPN", "3", "nsubj"),

@@ -218,8 +218,8 @@ def run(argv=None) -> int:
           f"{len(readings) - len(agreed) - len(conflicts)} reached no common ground")
     if split:
         print(f"  MULTI-SENTENCE {len(split)} were split by stanza and ALL halves were read "
-              f"(2b.2); a quote ROTATES against its frame (2b.4) but the halves are not yet joined "
-              f"into one claim")
+              f"(2b.2); a quote rotates against its frame and becomes its CONTENT, unclaimed "
+              f"(2b.4)")
     print()
     print("  **ONLY `DISAGREED` IS A DEFECT.** A missing row is E3 not being finished, and it is")
     print("  counted apart so it can never be averaged into something that looks like agreement.")

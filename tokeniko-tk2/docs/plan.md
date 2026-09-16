@@ -822,10 +822,18 @@ it).
       **And the Captain's own sentence crosses a sentence boundary**: stanza splits a quote, so a
       FRAME sentence (a saying with an agent and a recipient) rotates the next one. «John said to
       Marie "You are a clever girl"» → the `you` is **marie.n**.
-      **STILL OWED**: the quote becoming the CONTENT of the saying — the two sentences sit in one
-      zip, correctly rotated, and are not yet joined into one claim. That is the «many rows» work
-      `ccomp` already does, arriving across a sentence boundary. Plus **cases in BOTH gates**: UD's
-      own direct-quote examples, which this QM passed over when transcribing `ccomp`.
+      **AND THE QUOTE BECOMES THE CONTENT OF THE SAYING** — finished the same afternoon. «John said
+      the sky is green» does not assert that the sky is green: the quoted sentence is placed under an
+      attitude and its rows go EMPTY, the shape `ccomp` already produced for the indirect form. The
+      attitude scopes the outermost JOIN, not a row under it, or «clever» would stay asserted outside
+      the quotation.
+      **UD's direct-quote case — the one this QM passed over — found a defect on arrival**: `that` is
+      OPTIONAL, and without it nothing raised the POV, so «I asked: "Do you know the muffin man?"»
+      CLAIMED that you know him. A bare `ccomp` under a saying verb is now reported content, and both
+      forms produce the same zip. *It also separated BEING A FRAME from ROTATING: «I asked» addresses
+      nobody named, so the `you` rightly stays the outer listener.*
+      **2b IS COMPLETE.** *The drill still has no hand-compiled quotation — that is the Captain's to
+      write, and the two gates now exist to disagree about it when he does.*
 
    *It touches E3b: «John» and «Marie» must become individuals before a rotation can NAME its
    target. The mechanisms are separable — a «you» can rotate to «the person addressed» without
