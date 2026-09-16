@@ -247,10 +247,20 @@ def test_an_OPEN_holder_never_becomes_the_speaker():
     assert outer.under(vague).for_person(1) == "kotekino"
 
 
-def test_the_rotation_inside_ONE_sentence(compiler):
-    """The same rule down a dependency tree instead of across a sentence boundary — «John said to
-    Marie THAT YOU swim». The context is worked out BEFORE the clauses are compiled, because a
-    pronoun is resolved where it is met and the attitude that governs it is built later."""
+def test_REPORTED_speech_does_not_rotate(compiler):
+    """**«John said to Marie that you swim» is about the person I am talking to, not about Marie.**
+
+    In reported speech the REPORTER has already moved the pronouns into his own frame — that is what
+    reporting is — so rotating a second time lands the sentence on the wrong person while looking
+    entirely confident. The first draft (2026-09-16) did exactly that, because it keyed the rotation
+    on the joiner's `asserts: matrix`, a flag that lives on the word «that»: present in precisely
+    the case where rotating is wrong, absent from the bare quoted `ccomp` where it is right.
+    Found by the drill's quotation block the next morning (`q-2` `q-4` `q-7` `q-9`); read
+    `docs/parser-compiler/202609170533_the-quotation-block.md`.
+
+    **The attitude is still raised and still records its addressee** — schema v3 is untouched. What
+    changed is only what the rotation is triggered by.
+    """
     skeleton = skeleton_from_conllu("John said to Marie that you swim", [
         ("1", "John", "john", "PROPN", "2", "nsubj"),
         ("2", "said", "say", "VERB", "0", "root"),
@@ -263,11 +273,33 @@ def test_the_rotation_inside_ONE_sentence(compiler):
     out = compiler.compile(skeleton, context=Context(speaker="kotekino", addressee="captain"))
 
     swimming = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "swim.v")
-    assert swimming.boxes[Role.AGENT].head == "marie.n"
+    assert swimming.boxes[Role.AGENT].head == "captain", "the listener, not the person spoken to"
 
     attitude = next(r for r in out.zip.rows if r.kind == "attitude")
     assert attitude.addressee.head == "marie.n", "schema v3: the attitude records who it addressed"
 
+
+@pytest.mark.skeleton
+def test_QUOTED_speech_rotates_and_stanza_is_what_says_which(compiler):
+    """The same sentence quoted, and now it IS about Marie.
+
+    **The signal is structural, and the station never reads a character.** A quoted complement
+    carries punctuation bracketing its span; a reported one does not — so «which characters are
+    quotation marks» is a question that never has to be asked. The Captain refused it as a premise:
+    *«I find it weak to care about what a quotation symbol is; spacy-stanza already has the tooling
+    to isolate the quote»*. Curly quotes work here for free, which is the proof.
+    """
+    from tk2.language.skeleton import StanzaSkeletons
+
+    provider = StanzaSkeletons()
+    for sentence, who in (('Bob told me "I trust you".', "kotekino"),
+                          ('Bob told me \u201cI trust you\u201d.', "kotekino")):
+        out = compiler.compile(provider(sentence)[0],
+                               context=Context(speaker="kotekino", addressee="captain"))
+        trusting = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "trust.v")
+        assert trusting.boxes[Role.AGENT].head == "bob.n", f"«I» is Bob in {sentence!r}"
+        assert who in [getattr(b.head, "name", b.head) for b in trusting.boxes.values()], \
+            "and «you» is whoever Bob was telling"
 
 def test_a_CONDITIONAL_does_not_rotate(compiler):
     """Only an ATTITUDE rotates. «if you know who did it» is still the outer speaker's «you» — the
@@ -284,13 +316,17 @@ def test_a_CONDITIONAL_does_not_rotate(compiler):
 # ------------------------------------------------------------------------------------------------
 
 
-def test_A_QUOTE_IS_NOT_CLAIMED(compiler):
-    """**«John said the sky is green» does not assert that the sky is green.** A quote whose rows
-    stayed CLAIMED would put every reported sentence into the KB as a fact, which is the one thing
-    the truth slot exists to prevent — the same distinction req 38 rests on.
+def test_A_QUOTE_IS_NOT_CLAIMED_OF_THE_WORLD_and_the_ATTITUDE_is_what_says_so(compiler):
+    """**«John said the sky is green» does not assert that the sky is green — the PREFIX says so.**
 
-    The shape is the one `ccomp` already produces, arriving across a sentence boundary: an attitude
-    scoping the quote, the saying claimed, the quote EMPTY.
+    The rows keep their truth *(changed 2026-09-17 on the Captain's ruling)*. An attitude scoping a
+    row is what keeps it out of the world, exactly as in `dere-1`, where the drill has always
+    carried a cat at truth 1.0 under «he thinks» and asserted no cat.
+
+    **Blanking the slot cost a distinction**: under a saying verb the truth records what the HOLDER
+    did with the content — asserted it, asked it, wanted it — and three speech acts were collapsing
+    into one shape. «John told me X», «John asked me X» and «John told me to do X» are three
+    different things to the brain.
     """
     out = compile_utterance(compiler, [SAID, QUOTED],
                             Context(speaker="kotekino", addressee="captain"))
@@ -299,7 +335,10 @@ def test_A_QUOTE_IS_NOT_CLAIMED(compiler):
     assert saying.truth == 1.0, "the SAYING is claimed"
 
     quoted = [r for r in out.zip.rows if r.name.startswith("s1.") and r.kind in ("content", "join")]
-    assert quoted and all(r.truth is None for r in quoted), "and its content is not"
+    assert quoted and all(r.truth == 1.0 for r in quoted), "and John asserted its content"
+
+    attitude = next(r for r in out.zip.rows if r.kind == "attitude")
+    assert attitude.scopes in {r.name for r in quoted}, "the prefix is what holds it out of the world"
 
 
 def test_the_attitude_scopes_the_WHOLE_quote(compiler):
@@ -335,7 +374,11 @@ def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
     attitude = next(r for r in out.zip.rows if r.kind == "attitude")
     assert attitude.verb == "ask.v" and attitude.addressee is None
     knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
-    assert knowing.truth is None, "the question is the content of the asking"
+    assert knowing.truth == 1.0, (
+        "the asking is what the attitude holds; the row's own slot says what the holder DID with "
+        "it. It should read OPEN here — «I asked» is a question — and it does not, because the "
+        "station never opens the truth of a POLAR question. Named 2026-09-17: a pre-existing gap "
+        "the old blanket-blanking hid, and it is not this test's job to pretend otherwise.")
     assert knowing.boxes[Role.AGENT].head == "captain", "and «you» is still the outer listener"
 
 
@@ -354,5 +397,5 @@ def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
         attitude = next(r for r in out.zip.rows if r.kind == "attitude")
         inner = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
         assert attitude.scopes == inner.name
-        assert inner.truth is None, "the complement is not claimed"
+        assert inner.truth == 1.0, "the holder asserted it; the attitude keeps it out of the world"
         assert next(r for r in out.zip.rows if r.name == "r0").truth == 1.0, "the saying is"

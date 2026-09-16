@@ -42,6 +42,18 @@ def test_readings_that_must_stay_apart_stay_apart(case):
         assert case.zip != by_id[other].zip, f"{case.id} collapsed into {other}"
 
 
+def test_quoted_and_reported_speech_converge():
+    """Two spellings of one meaning must produce ONE zip — the mirror of `distinct_from`.
+
+    «John said to Marie "You are late"» and «John said to Marie that she was late» differ only in
+    the wording John used, and tkzip stores meaning. The two get there by different machinery — a
+    rotation against the addressee, and an anaphor resolved to the recipient — which is exactly why
+    it is worth asserting that they meet.
+    """
+    by_id = {c.id: c for c in CASES}
+    assert by_id["q-5"].zip == by_id["q-6"].zip
+
+
 def test_a_partial_is_honestly_marked():
     """PARTIAL is only legal if the zip SAYS it is incomplete — unplaced material, or an open slot,
     or confidence below 1. A silently incomplete zip is a silent-wrong."""

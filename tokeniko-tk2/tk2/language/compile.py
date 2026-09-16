@@ -513,7 +513,6 @@ class Compiler:
             if joiner is not None and joiner.compiled.get("asserts") == ASSERTS_MATRIX:
                 # A POV, not a join: «he says THAT you swim» claims the saying, never the swimming.
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner)
-                unasserted.add(content[head.index].name)
                 covered.update(range(joiner_index(skeleton, head, joiner),
                                      joiner_index(skeleton, head, joiner) + joiner.length),
                                label="join")
@@ -531,7 +530,6 @@ class Compiler:
                 # why that list is on E3's frame/knowledge audit: req 55 rules the replacement —
                 # attitude verbs are open and classified by nearest-anchor geometry, which E4 owns.
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, None)
-                unasserted.add(content[head.index].name)
                 continue
 
             operator = (joiner.compiled.get("operator") if joiner else None) or "and"
@@ -756,14 +754,110 @@ class Compiler:
                 return marks[child.index]
         return None
 
+    def _is_quoted(self, skeleton: Skeleton, head: Word) -> bool:
+        """Is this clause QUOTED — the speaker's own words — or merely REPORTED?
+
+        **STANZA HAS ALREADY ANSWERED, AND THE ANSWER IS STRUCTURAL RATHER THAN LEXICAL.** A quoted
+        complement carries its own marks as `punct` children, one before it and one after. A
+        reported one carries none:
+
+            John said to Marie "You are late".      late/ccomp   punct  "  before,  "  after
+            He replied “I am late” quickly.         late/ccomp   punct  “  before,  ”  after
+            She said 'I am here' loudly.            here/ccomp   punct  '  before,  '  after
+            John said to Marie that you are late.   late/ccomp   no punct children at all
+
+        **So the station never asks which character is a quotation mark.** On 2026-09-17 the QM
+        brought the Captain the question «these characters are a set — frame or knowledge?» and he
+        refused the premise: *«I find it weak to care about what a quotation symbol is: we shouldn't
+        have this problem in the first place, meaning if we have it something went in the wrong
+        direction»* — and *«spacy-stanza already has the tooling to isolate the quote»*. He was right,
+        and the measurement above is the proof. Curly quotes, straight quotes and apostrophes all
+        work here because none of them is ever read.
+
+        *The rule's failure mode is not only hard-coding a set. It is NEEDING one.*
+
+        **THE TEST IS ON THE CLAUSE'S SPAN, NOT ON THE HEAD'S OWN CHILDREN**, and that is a
+        measurement rather than a preference: the two marks do not reliably attach to the same word.
+        In «Bob told me "I trust you"» the opening mark hangs off the ROOT and only the closing one
+        off the complement; in «John said to Marie "You are late"» both hang off the complement and
+        the opening one therefore sits INSIDE its span. A bracket is accepted at the boundary or one
+        token outside it, which covers both without asking who the parser chose as the parent.
+
+        Marks are required on BOTH SIDES, which is what keeps a merely comma-adjacent clause out and
+        what makes a trailing sentence period harmless: it gives a right bracket and never a left.
+        """
+        lo, hi = self._span(skeleton, head.index)
+
+        def punct(i: int) -> bool:
+            return 0 <= i < len(skeleton) and skeleton[i].upos == "PUNCT"
+
+        return (punct(lo) or punct(lo - 1)) and (punct(hi) or punct(hi + 1))
+
+    def _span(self, skeleton: Skeleton, index: int) -> tuple[int, int]:
+        """The first and last token of the subtree rooted at `index`.
+
+        The walk is BOUNDED by the skeleton's length for the same reason `attaches_to_root`'s is: a
+        malformed skeleton with a head cycle must not hang the station, and the bound costs nothing.
+        """
+        seen, frontier, lo, hi = {index}, [index], index, index
+        for _ in range(len(skeleton)):
+            if not frontier:
+                break
+            nxt = []
+            for node in frontier:
+                for child in skeleton.children(node):
+                    if child.index in seen:
+                        continue
+                    seen.add(child.index)
+                    lo, hi = min(lo, child.index), max(hi, child.index)
+                    nxt.append(child.index)
+            frontier = nxt
+        return lo, hi
+
+    def _participant(self, word: Word, marks: dict, context: Context):
+        """Who this word names, as the IDENTIFIER a box would be given for it.
+
+        **A ROTATION MUST NAME THE SAME SOMEBODY THE ROWS DO**, and taking the key straight off the
+        word does not: «Bob told ME "I trust you"» has a recipient whose lemma key is `i.n` while
+        its box holds whatever the outer context calls the speaker — so the quoted «you» resolved to
+        an identifier that appears nowhere else in the zip. Measured and fixed 2026-09-17, on the
+        same sentence that found the inversion.
+
+        So a pronoun carrying a `person` feature is resolved through the OUTER context exactly as
+        `_compile_word` resolves it, and everything else keeps its key. *«Bob told me» is addressed
+        to the speaker; the «you» inside Bob's quotation is therefore the speaker, not a second name
+        for him.*
+        """
+        match = marks.get(word.index)
+        person = match.features.get("person") if match is not None else None
+        if person is not None:
+            return context.for_person(person)
+        return self._key(word) if self._readable(word) else None
+
     def _contexts(self, skeleton: Skeleton, heads: list[Word], marks: dict,
                   context: Context) -> dict[int, Context]:
         """Which context each clause is compiled under — the person axis, rotated by the tree.
 
-        **Only an ATTITUDE rotates.** A conditional does not: «if you know who did it» is still the
-        outer speaker's «you». What makes a clause an attitude is its joiner saying `asserts: matrix`
-        — «he says THAT you swim» claims the saying and not the swimming — which is the same test
-        `_relate` uses to raise the `AttitudeRow`, read here one pass earlier.
+        **QUOTATION ROTATES; REPORTING DOES NOT.** Inside quotation marks the original speaker's
+        deictic centre is preserved, so «I» is the holder and «you» is the addressee. In reported
+        speech **the reporter has already done that work** — that is what reporting IS — and
+        rotating a second time moves the sentence onto the wrong person while looking entirely
+        confident:
+
+            «John said to Marie THAT you are late»    the LISTENER is late
+            «John said to Marie "You are late"»       MARIE is late
+
+        **THE FIRST DRAFT HAD THIS EXACTLY BACKWARDS**, and the way it happened is worth keeping.
+        It keyed the rotation on the joiner saying `asserts: matrix` — the same test `_relate` uses
+        to raise the `AttitudeRow`. But that flag lives on the word «that», so it is present in
+        precisely the case where rotating is wrong and absent from the bare quoted `ccomp` where it
+        is right. *The rotation was keyed on the one signal anti-correlated with it.* Found by the
+        drill's quotation block (`q-2` `q-4` `q-7` `q-9`) the morning after it landed.
+
+        **BEING AN ATTITUDE IS STILL REQUIRED, IT IS SIMPLY NOT SUFFICIENT** — a rotation needs a
+        holder, and only an attitude has one. So the test is the conjunction: the clause is one
+        `_relate` would raise an attitude over (a `matrix` joiner, or a bare `ccomp` under a saying
+        verb), AND it is quoted. A conditional still does not rotate.
 
         The holder and addressee are read from the SKELETON rather than from the compiled row,
         because the rows do not exist yet. That is a small duplication of `_role_of`'s job and it is
@@ -772,27 +866,49 @@ class Compiler:
         if context.is_empty:
             return {}
         found: dict[int, Context] = {}
-        for head in heads:
+        # **OUTERMOST FIRST, BECAUSE A ROTATION NESTS.** «Marie said "John told me \'you are late\'"»
+        # rotates three times and each one reads the one above it: the «me» inside Marie's quotation
+        # is MARIE, which makes her the addressee of John's telling, which makes the «you» inside
+        # THAT quotation her again. Walking in sentence order and resolving against the outermost
+        # context got the innermost pronoun wrong by one level — it named the narrator.
+        for head in sorted(heads, key=lambda w: self._depth(skeleton, w.index)):
             if head.is_root:
-                continue
-            joiner = self._joiner(skeleton, head, marks)
-            if joiner is None or joiner.compiled.get("asserts") != ASSERTS_MATRIX:
                 continue
             outer = self._enclosing(skeleton, head, {w.index: None for w in heads})
             if outer is None:
                 continue
+            joiner = self._joiner(skeleton, head, marks)
+            attitude = (joiner is not None
+                        and joiner.compiled.get("asserts") == ASSERTS_MATRIX) or (
+                head.bare_dep == "ccomp" and self._readable(outer)
+                and self._key(outer) in SAYING_VERBS)
+            if not (attitude and self._is_quoted(skeleton, head)):
+                continue
+            # The context THIS clause's own participants are read under is its enclosing clause's,
+            # already rotated if that one was itself quoted.
+            base = found.get(outer.index, context)
             holder = addressee = None
             for child in skeleton.children(outer.index):
-                if child.bare_dep == "nsubj" and self._readable(child):
-                    holder = self._key(child)
+                if child.bare_dep == "nsubj":
+                    holder = self._participant(child, marks, base)
                 elif self._role_of(child, skeleton, marks) is Role.RECIPIENT:
-                    addressee = self._key(child) if self._readable(child) else None
+                    addressee = self._participant(child, marks, base)
             found[head.index] = replace(
-                context,
-                speaker=holder if holder is not None else context.speaker,
-                addressee=addressee if addressee is not None else context.addressee,
+                base,
+                speaker=holder if holder is not None else base.speaker,
+                addressee=addressee if addressee is not None else base.addressee,
             )
         return found
+
+    def _depth(self, skeleton: Skeleton, index: int) -> int:
+        """How many dependency steps this word sits below the root. Bounded, like every other walk
+        here, so a malformed skeleton with a head cycle cannot hang the station."""
+        node, steps = skeleton[index], 0
+        for _ in range(len(skeleton)):
+            if node.is_root:
+                break
+            node, steps = skeleton[node.head], steps + 1
+        return steps
 
     def _attitude(self, skeleton, head, content, outer, prefix_rows, covered, joiner) -> None:
         """«he says that you swim» — an ATTITUDE over the inner row, claiming only the saying.
@@ -811,7 +927,19 @@ class Compiler:
             name=f"p{len(prefix_rows)}", scopes=content[head.index].name,
             holder=holder, addressee=outer_row.boxes.get(Role.RECIPIENT),
             verb=self._key(outer)))
-        # the inner row stays EMPTY: the attitude is claimed, its content is not
+        # **THE INNER ROW STAYS CLAIMED, AND THE PREFIX IS WHAT KEEPS IT OUT OF THE WORLD.**
+        # Changed 2026-09-17 on the Captain's ruling, to the convention the drill has always used:
+        # `dere-1` carries a cat at truth 1.0 under «he thinks» and asserts no cat. The truth slot
+        # under an attitude does not say whether the WORLD holds it — the attitude says that — it
+        # says what the HOLDER does with it, and blanking it flattened three speech acts into one:
+        #
+        #     John said  "The sky is green."     he ASSERTED   truth = 1.0
+        #     John asked "Is the sky green?"     he ASKED      truth = OPEN   (`_ask` writes it)
+        #     John said  "Make it green!"        he WANTED     truth = None
+        #
+        # «John told me X» (I may believe it if I trust John), «John asked me X» (I should answer)
+        # and «John told me to do X» (I may act) are three different things to the brain, and one
+        # blanked slot made them the same row.
 
     def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks) -> None:
         """A relative clause describes the SAME thing as the phrase it modifies — one variable in
@@ -1177,10 +1305,11 @@ class Compiler:
                 # ANAPHORA — they point at something earlier in the discourse, not at a participant
                 # in the speech act — so `Context.for_person` answers for 1 and 2 only.
                 #
-                # **AND THIS DOES NOT ROTATE YET.** A first-person pronoun under a POV names that
-                # POV's holder, not the outer speaker (req 20), and building that waits on the
-                # Captain's ruling about where an ADDRESSEE lives. What is here is the outer speech
-                # act's own participants, which is right whenever there is no POV above the word.
+                # **AND THE ROTATION HAS ALREADY HAPPENED** when it was going to: `_contexts`
+                # decides, before any clause is compiled, which context each clause is read under,
+                # so `context` here is already the innermost QUOTATION's — the holder for person 1,
+                # the addressee for person 2 (req 20). Reported speech is read under the outer
+                # context, because the reporter already moved the pronouns into his own frame.
                 who = context.for_person(match.features.get("person"))
                 boxes[role] = Box(head=who if who is not None else Open(), sense=Open(),
                                   determination=Determination.DEFINITE)

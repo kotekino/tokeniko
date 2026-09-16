@@ -2,7 +2,7 @@
 
     PYTHONPATH=. ../.venv/bin/python tools/drill_gate.py [--db tokeniko_tk2] [--json out.json]
 
-**WHY THIS EXISTS, AND THE COST OF ITS NOT EXISTING.** The drill is the FORMAT's gate: 78 sentences
+**WHY THIS EXISTS, AND THE COST OF ITS NOT EXISTING.** The drill is the FORMAT's gate: 87 sentences
 compiled BY HAND, with no parser involved, proving tkzip can hold the world. The UD gate is the
 STATION's: it compiles strangers' sentences and never looks at the drill. **Nothing compared what the
 station PRODUCES with what the Captain hand-COMPILED** — and on 2026-09-16 that cost something
@@ -13,7 +13,7 @@ contradicting 43 hand-compiled rows, and no test went red for a day.
 
 **IT SCORES AGREEMENT, NOT EQUALITY, AND THAT IS THE WHOLE DESIGN.** Most of the drill needs features
 E3 has not built — attitudes, domains, negation rows, most quantifier scoping — so a zip-equality
-check would fail all 78 and teach nothing. What is asked instead is: **where both the station and the
+check would fail all 87 and teach nothing. What is asked instead is: **where both the station and the
 drill speak about the same thing, do they say the same thing?**
 
     AGREED      the station produced a row or a role and the drill has the same one
@@ -36,9 +36,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from tests.fixtures.drill import CASES  # noqa: E402
 from tk2.language import standing_closed_classes  # noqa: E402
 from tk2.language.compile import Compiler  # noqa: E402
-from tk2.language.utterance import compile_utterance  # noqa: E402
+from tk2.language.utterance import Context, compile_utterance  # noqa: E402
 
 AGREED, DISAGREED, MISSING = "agreed", "DISAGREED", "missing"
+
+#: **THE DRILL'S OWN DEICTIC CENTRE.** The station resolves a first- or second-person pronoun against
+#: the context it is handed, and hands back the bare closed-class key when it is handed none — so a
+#: gate that passed no context could not see the person axis AT ALL, and the quotation block added on
+#: 2026-09-17 to exercise `addressee` would have been measured by an instrument blind to it.
+#:
+#: The values are not arbitrary and they are not the station's business: the drill hand-compiles «I»
+#: as `me.n` and «you» as `you.n` throughout, so passing exactly those makes every UNROTATED sentence
+#: compile to what it compiled to before, and leaves only the rotation visible. *The comparison is
+#: against the Captain's convention, stated as the argument req 7 says it must be.*
+DRILL_CONTEXT = Context(speaker="me.n", addressee="you.n")
 
 
 def filler(box) -> str:
@@ -141,6 +152,29 @@ def compare(produced, expected, case_id="", sentence="") -> Reading:
             if found not in {filler(b) for b in row.boxes.values()}:
                 reading.missing_roles.append(f"{found} ({'/'.join(roles)})")
 
+        # **THE MIRROR TEST — the right role holding the WRONG SOMEBODY.** The pass above pairs by
+        # FILLER and asks whether the two zips agree on its role. That is blind in exactly the
+        # direction the person axis fails in: «John said to Marie that you are late» compiled about
+        # Marie puts a perfectly ordinary `patient` on a perfectly ordinary row, and the only thing
+        # wrong with it is WHO. The two tests are mirrors and neither implies the other, so the gate
+        # runs both. Added 2026-09-17 with the quotation block, which it was built blind to.
+        for role, box in row.boxes.items():
+            their_box = other.boxes.get(role)
+            if their_box is None:
+                continue
+            mine_key, their_key = filler(box), filler(their_box)
+            if not mine_key or not their_key:
+                continue
+            # A variable or an OPEN is not a disagreement about anybody — the same abstention the
+            # filler pass makes, and for the same reason: the two zips number and abstain
+            # independently.
+            if {mine_key, their_key} & {"open"} or mine_key.startswith("var:") \
+                    or their_key.startswith("var:"):
+                continue
+            if mine_key != their_key:
+                reading.conflicts.append(
+                    f"{role.value}: the station says {mine_key}, the drill says {their_key}")
+
     for i, other in enumerate(theirs):
         if i not in taken:
             reading.missing_rows.append(signature(other))
@@ -183,7 +217,7 @@ def run(argv=None) -> int:
         # gap — five of the drill's sentences were split by stanza and only the first half read —
         # and `compile_utterance` is what closed it. The sentences are merged into one zip and are
         # not yet RELATED to one another; that is 2b.3, the Captain's format ruling.
-        produced = compile_utterance(compiler, skeletons)
+        produced = compile_utterance(compiler, skeletons, DRILL_CONTEXT)
         reading = compare(produced.zip, case.zip, case.id, case.sentence)
         if produced.split:
             reading.unparsed = f"stanza split this into {len(skeletons)} sentences; all were read"

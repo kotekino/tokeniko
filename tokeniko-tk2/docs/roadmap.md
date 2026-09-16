@@ -26,6 +26,32 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
 
 ## E1d — the audit's repairs ✅ 2026-09-14 — see `landed.md`
 
+## E1e — the tests, isolated *(opened 2026-09-17 — runs AFTER E3 closes)*
+
+- [ ] **⚑ SWEEP E0 → E3 FOR TEST MATERIAL LEAKING INTO THE BL** *(the Captain, 2026-09-17)*.
+      *«Tests should be the gate for each dev step, but WELL isolated from the BL… look into
+      everything we have done from E0 to E3 and see if tests, somehow, are leaking into the BL code
+      (at least from a formal order point of view).»* The known case is `dictionary_bar`, which is
+      not only stored in the body but wired into the runtime config: `DictionaryConfig.seeds`
+      forces the bar's own words into every subset (req 8), so **the acceptance test injects its
+      vocabulary into the artifact it judges** and rides in the fingerprint every consumer reads
+- [ ] **THE THIRD KINGDOM** — frame (law) · knowledge (revisable facts the app reasons with) ·
+      **evidence** (curated circumstances that JUDGE the app; isolated, never read at runtime).
+      *«A test is by its nature a curated set of circumstances: it can't be knowledge.»* Evidence
+      keeps the LEDGER properties — versioned, append-mostly, `why` verbatim — which are separable
+      from which database. `closed_classes` is NOT in this kingdom: the station reads it at runtime
+- [ ] `dictionary_bar` out of the body; the body keeps only `bar_version` + `bar_fingerprint` as
+      provenance, checkable against the hash-pinned `bar_snapshot.json` that already exists
+- [ ] bar words become `extra_seeds` on a measuring run, not standing seeds. **Cost: this moves the
+      config fingerprint**, so builds recorded under the old one stop being directly comparable —
+      E9-shaped, not a free edit
+- [ ] the doctrine line in `core/models/__init__.py` calls policy, bar and closed classes one thing;
+      it is three things now
+- [ ] **THE PACING RULE** *(the same ruling)*: during development run only the subset that STEERS
+      the next decision; **the full suite runs once, at the commit gate**. *«Burdening every single
+      move with a gargantuan suite for each micro step is really slow — many work remotely on the
+      body, so there is latency.»*
+
 ## E2 — the format (tkzip v2) ✅ COMPLETE 2026-09-14 — see `landed.md`
 
 ## E3 — the station (parser/compiler)
@@ -80,7 +106,15 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       none carries both a modal and an attributive adjective.
       **SIX DISAGREEMENTS → FOUR.** Two were curation errors (`db/0015`); the four that remain are
       questions the project has NAMED. **38 sentences agreed · 4 DISAGREED · 91 of 126 rows paired ·
-      64 of 123 roles agreed**, and the four are a RATCHET held by a test
+      64 of 123 roles agreed**, and the four are a RATCHET held by a test.
+      **WIDENED TWICE ON 2026-09-17, both times because the quotation block walked past it.** It
+      passed NO CONTEXT, so every pronoun in the drill compiled to itself and the person axis was
+      invisible by construction — it now passes the drill's own convention (`speaker="me.n"`,
+      `addressee="you.n"`), which leaves every unrotated sentence compiling exactly as before. And it
+      could see only half a disagreement: it paired boxes by FILLER and asked about the ROLE, the
+      shape of the `topic`/`patient` defect it was built for, and was blind to the mirror — **the
+      right role holding the wrong somebody**, which is the only shape the person axis fails in.
+      **47 agreed · 15 DISAGREED · 98 of 129 roles**; 11 of the 15 were always there
 - [x] **`db/0015` — a MARKED phrase has an endpoint** — «I walk TOWARD the station» compiled a
       DIRECTION and the drill says DESTINATION, across three hand-compiled rows differing only by
       marker (req 65 exists so they share a box). **The principle is sharper than the witnesses**:
@@ -88,11 +122,14 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       nominal IS the endpoint. Five rows corrected, and the migration refuses to apply if any marker
       offers `direction` alone. Plus **«She turned LEFT» read as MANNER — the sentence req 67 was
       written for** — because `db/0013`'s direction list held `sideways` and not `left`
-- [ ] **the subject's role depends on WHAT IS PREDICATED of it** — the drill gate's three remaining
-      disagreements are one question: «God exists» is a PATIENT, «the cat is hungry» an EXPERIENCER,
-      «Sue is a teacher» a patient. `RELATION_FILLS_ROLE`'s own comment defers it to the geometry —
-      *«a head-verb question, and a station that guessed would be doing the compile core's job
-      badly»*. **It now has three witnesses and a number instead of a prediction**
+- [ ] **the subject's role depends on WHAT IS PREDICATED of it** — one question: «God exists» is a
+      PATIENT, «the cat is hungry» an EXPERIENCER, «Sue is a teacher» a patient.
+      `RELATION_FILLS_ROLE`'s own comment defers it to the geometry — *«a head-verb question, and a
+      station that guessed would be doing the compile core's job badly»*. **THREE WITNESSES BECAME
+      NINE on 2026-09-17** (`exist-3` `t-ws-1` `t-ws-8` `t-dc-4` `t-mo-1` `t-of-1` `aw-11` `aw-16`
+      `aw-20`), when the gate was given a context and the pronoun subjects it had never compared —
+      «I go to sleep because I'm tired», «You learn only from minds you trust» — became comparable.
+      The largest single family in the ratchet, which is an argument about WHEN, not about what
 - [x] **content ADVERBS — requirement 23's four scopes, as rows** *(2026-09-16, `db/0013` + `db/0014`)*.
       **The resource cannot answer this**: WordNet files every adverb under ONE class (`adv.all`) and
       adverbs have NO hypernyms, so the supersense that settled the markers gives nothing. It is
@@ -161,8 +198,36 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       across a sentence boundary — and the attitude scopes the outermost JOIN so «clever» is not
       left asserted outside the quotation. **UD's direct-quote case found a defect on arrival**:
       `that` is OPTIONAL and without it nothing raised the POV, so «I asked: "Do you know the muffin
-      man?"» CLAIMED that you know him. **2b IS COMPLETE**; the drill still owes hand-compiled
-      quotation, which is the Captain's to write
+      man?"» CLAIMED that you know him. **2b IS COMPLETE** — and the drill, which owed hand-compiled
+      quotation, now has nine sentences of it
+- [x] **⚑ THE ROTATION WAS INVERTED — found AND fixed 2026-09-17** *(record
+      `202609170533_the-quotation-block.md`)*. «John said to Marie **that** you are late» is about
+      the LISTENER and the station said Marie; «John said to Marie **"You are late"**» is about
+      Marie and the station said the listener. **Both wrong, in opposite directions**: quotation
+      preserves the original speaker's deictic centre, reporting does not, because the reporter has
+      already moved the pronouns into his own frame. The rotation was keyed on the joiner's
+      `asserts: matrix`, which lives on the word «that» — present exactly where rotating is wrong.
+      **THE QM ASKED THE WRONG QUESTION AND THE CAPTAIN REFUSED IT**: *«I find it weak to care about
+      what a quotation symbol is; spacy-stanza already has the tooling to isolate the quote, and the
+      input is always English»*. Measured, and he was right — a quoted complement's SPAN is
+      bracketed by `punct` and a reported one is not, so **the station never reads a character** and
+      curly quotes work for free. *The rule's failure mode is not only hard-coding a set; it is
+      NEEDING one.* Two more things the fix needed, both measured: the rotation must **NEST**
+      (depth two named the narrator), and it must name the same somebody the ROWS do (`i.n` where
+      the box held `me.n`). `q-4` `q-7` `q-9` resolved; `q-2`'s rotation is right and what is left
+      of it is the subject-role question
+- [x] **the truth slot under an attitude — RULED 2026-09-17: the rows KEEP their truth.** The
+      station emptied it, the drill never has (`dere-1` carries a cat at truth 1.0 under «he thinks»
+      and asserts no cat). The PREFIX keeps a row out of the world; the truth slot says what the
+      HOLDER does with it — and blanking it flattened three speech acts: said-assertion (`q-8`,
+      1.0) · said-question (`q-7`, an OPEN box) · said-command (`aw-21`, None). «John told me X»,
+      «John asked me X» and «John told me to do X» are three different things to the brain
+- [ ] **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the slot above)*.
+      «Is the cat hungry?» compiles at **truth 1.0**, where the schema's own docstring says it *«has
+      every box bound and its truth OPEN»*. Wh-questions open a box and are fine; `whether` opens
+      the truth from its marker row; the bare AUX-fronted polar has nothing that fires. **It was
+      invisible while everything under an attitude was blanked anyway** — a mood question, not a
+      truth-slot one. *Making a slot mean something is how you find out who was not filling it*
 - [x] **embedded questions** *(2026-09-16)* — **a wh-word has THREE readings and R5's binary test
       conflated the last pair.** R5 asks «is this the root clause» and answers the MOOD question
       rightly; it was then read as «therefore relative», and an embedded question opens its slot

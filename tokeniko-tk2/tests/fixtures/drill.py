@@ -10,6 +10,11 @@ The bar and the scoring rules were declared and committed BEFORE this file exist
 Three halves, as allocated: the six ruled CLUSTERS (each exists to decide something genuinely open),
 real TRAFFIC from `tokeniko_mem.tkzipdebug` (sentences he actually heard), and AWKWARD cases chosen
 to be hard (README §6, plus the Captain's own first-draft rows).
+
+**EIGHTY-SEVEN AS IT STANDS.** The declared seventy-five was a floor, and the drill has grown twice
+since: to 78 while E2 folded, and to 87 on 2026-09-17 with the QUOTATION block that schema v3's
+`addressee` made expressible. Growth is amended in the bar doc, dated and with the reason — the bar
+and the scoring rules are the things that may never move, and neither has.
 """
 
 from __future__ import annotations
@@ -97,6 +102,16 @@ def no_(name, var, restriction, scopes, **kw) -> QuantifierRow:
 
 def thinks(name, who, scopes, verb="think.v", **kw) -> AttitudeRow:
     return AttitudeRow(name=name, holder=who, verb=verb, scopes=scopes, **kw)
+
+
+def says(name, who, scopes, to=None, verb="say.v", **kw) -> AttitudeRow:
+    """A SAYING — the same attitude row `thinks` builds, with the addressee schema v3 added for it.
+
+    `to` is EMPTY unless the sentence names a recipient, and that emptiness is load-bearing: it is
+    the difference between «addressed to nobody» and «addressed to someone unknown» (`Open()`), and
+    it is what decides whether a second-person pronoun inside the quotation rotates at all.
+    """
+    return AttitudeRow(name=name, holder=who, verb=verb, scopes=scopes, addressee=to, **kw)
 
 
 def not_(name, scopes) -> NegationRow:
@@ -759,3 +774,98 @@ case("aw-22", "It will rain tomorrow.", "awkward:forecast",
          theatre=Theatre(interval=[1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=1)),
      "pass", "heart 17 verbatim — same zip shape, spacetime in the future, CONFIDENCE where truth "
              "will later sit. When tomorrow comes a NEW belief is minted; this one is never rewritten.")
+
+
+# ================================================================================================
+# AWKWARD — QUOTATION: whose «I», whose «you»?
+#
+# Added 2026-09-17, after schema v3 gave `Pov` and `AttitudeRow` an `addressee` (E3 task 2b.3). The
+# amendment is recorded in `docs/tkzip/202609140917_the-drill-bar.md`; the bar itself is untouched.
+#
+# **THE POINT OF EVERY CASE BELOW IS THAT THE PRONOUN IS GONE.** A zip is meaning, not words, so a
+# «you» that survives into a row is an unresolved reference and not a reading. What the sentence says
+# is WHO — and who it is depends on whether the words are QUOTED or REPORTED, which is the one thing
+# these cases exist to pin down.
+#
+# **QUOTATION ROTATES; REPORTING DOES NOT** (q-4 against q-5). Inside quotation marks the speaker's
+# own deictic centre is preserved, so «I» is the holder and «you» is the addressee. In reported
+# speech the REPORTER has already done that work — «John said to Marie that you are late» is about
+# the person I am talking to, not about Marie — and rotating it a second time moves the sentence onto
+# the wrong person while looking entirely confident. That is a silent-wrong, which is why the two
+# carry `distinct_from` each other.
+# ================================================================================================
+
+case("q-1", 'John said to Marie "You are a clever girl".', "awkward:quotation",
+     Zip(rows=[says("a1", n("john.n"), scopes="jn", to=n("marie.n")),
+               c("gi", patient=n("marie.n"), complement=generic("girl.n")),
+               c("cl", patient=n("marie.n"), complement=n("clever.a")),
+               j("jn", Operator.AND, "gi", "cl")]),
+     "pass", "THE CAPTAIN'S OWN SENTENCE (2026-09-16): «the 'you' should rotate to take for tokeniko "
+             "the meaning of marie, not himself». It rotates because the saying was ADDRESSED TO "
+             "HER — which is what `addressee` was added to the schema to carry. Note the adjective "
+             "needs no binder here: predicate position already has a subject to carry it, so «a "
+             "clever girl» is two rows about Marie and not the ∃ that «a human body» forces (req 70).")
+
+case("q-2", 'Bob told me "I trust you".', "awkward:quotation",
+     Zip(rows=[says("a1", n("bob.n"), scopes="tr", to=n("me.n"), verb="tell.v"),
+               c("tr", "trust.v", experiencer=n("bob.n"), patient=n("me.n"))]),
+     "pass", "BOTH PERSONS ROTATE, AND THEY CROSS: the quoted «I» is the holder and the quoted «you» "
+             "is the addressee, so the row reads bob→me from a sentence whose only two names sit the "
+             "other way round. A reading that kept the pronouns would have the speaker trusting Bob.")
+
+case("q-3", "John thinks I am wrong.", "awkward:quotation",
+     Zip(rows=[thinks("a1", n("john.n"), scopes="w"),
+               c("w", patient=n("me.n"), complement=n("wrong.a"))]),
+     "pass", "the «I» is the speaker, and TWO independent reasons say so: this is reported and not "
+             "quoted, and thinking addresses nobody. The schema records the second — `addressee` "
+             "EMPTY rather than `Open()` — and q-4 is the case that isolates the first.")
+
+case("q-4", "John said to Marie that you are late.", "awkward:quotation",
+     Zip(rows=[says("a1", n("john.n"), scopes="l", to=n("marie.n")),
+               c("l", patient=n("you.n"), complement=n("late.a"))]),
+     "pass", "REPORTED SPEECH DOES NOT ROTATE, and this is the case that says so alone: the attitude "
+             "has a perfectly good addressee and the «you» still means the listener, because the "
+             "reporter already moved the pronoun into his own frame. The quotation marks are the "
+             "signal — not the attitude, and not the presence of a recipient.",
+     distinct_from=("q-5",))
+
+case("q-5", 'John said to Marie "You are late".', "awkward:quotation",
+     Zip(rows=[says("a1", n("john.n"), scopes="l", to=n("marie.n")),
+               c("l", patient=n("marie.n"), complement=n("late.a"))]),
+     "pass", "the same words, quoted — and now about Marie. Q-4 AND Q-5 DIFFER BY PUNCTUATION ALONE, "
+             "which is the sharpest form the drill's silent-wrong test can take: a reading that "
+             "ignores the marks produces one zip for two sentences that accuse different people.",
+     distinct_from=("q-4",))
+
+case("q-6", "John said to Marie that she was late.", "awkward:quotation",
+     Zip(rows=[says("a1", n("john.n"), scopes="l", to=n("marie.n")),
+               c("l", patient=n("marie.n"), complement=n("late.a"))]),
+     "pass", "AND THIS ONE CONVERGES WITH Q-5 (asserted in `test_drill.py`), by the other route: no "
+             "rotation, an anaphor resolved to the recipient. Two spellings of one meaning is the "
+             "GOOD case of two sentences sharing a zip — what `distinct_from` guards is two "
+             "different meanings collapsing, not this.")
+
+case("q-7", 'I asked Anna "Where do you live?"', "awkward:quotation",
+     Zip(rows=[says("a1", n("me.n"), scopes="lv", to=n("anna.n"), verb="ask.v"),
+               c("lv", "live.v", agent=n("anna.n"), location=Open())]),
+     "pass", "a QUESTION as the content of an asking: the rotation puts Anna in the agent box and "
+             "the OPEN is the thing asked for, exactly as «Who ate the fish?» opens its agent. What "
+             "is claimed is that I asked; what is open is where she lives.")
+
+case("q-8", 'John said "The sky is green".', "awkward:quotation",
+     Zip(rows=[says("a1", n("john.n"), scopes="g"),
+               c("g", patient=the("sky.n"), complement=n("green.a"))]),
+     "pass", "THE ROW IS CLAIMED AND THE SKY IS STILL NOT GREEN. `truth=1.0` under an attitude is "
+             "what JOHN asserts, and the attitude prefix is what keeps it out of the world — the "
+             "same machinery as dere-1, where a cat at truth 1.0 under «he thinks» is not a cat that "
+             "exists. Emptying the truth slot instead would lose the difference between a said "
+             "assertion (this), a said question (q-7) and a said command (aw-21).")
+
+case("q-9", 'Marie said "John told me \'you are late\'".', "awkward:quotation",
+     Zip(rows=[says("a1", n("marie.n"), scopes="l"),
+               says("a2", n("john.n"), scopes="l", to=n("marie.n"), verb="tell.v"),
+               c("l", patient=n("marie.n"), complement=n("late.a"))]),
+     "pass", "ROTATION AT DEPTH TWO, where every pronoun resolves to Marie by a different route: the "
+             "«me» is the speaker of the quotation she is reporting, which makes her the addressee "
+             "of John's telling, which makes the «you» inside THAT quotation her again. Order is the "
+             "nesting, as in aw-11.")

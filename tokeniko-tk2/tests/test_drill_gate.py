@@ -49,6 +49,21 @@ def test_the_same_filler_under_the_same_role_AGREES():
     assert (reading.agreed, reading.conflicts) == (2, [])
 
 
+def test_the_SAME_ROLE_holding_two_different_people_is_a_DISAGREEMENT():
+    """**THE MIRROR TEST, and the defect IT was built for.** Added 2026-09-17: the pass above pairs
+    boxes by their FILLER and asks whether the two zips agree on its role — which cannot see the only
+    shape the person axis fails in. «John said to Marie that you are late» compiled about Marie is an
+    ordinary `patient` on an ordinary row, and the sole thing wrong with it is WHO is in it.
+    """
+    station = Zip(rows=[row("r0", complement="late.a", patient="marie.n")])
+    drill = Zip(rows=[row("l", complement="late.a", patient="you.n")])
+
+    reading = compare(station, drill)
+
+    assert reading.verdict == DISAGREED
+    assert reading.conflicts == ["patient: the station says marie.n, the drill says you.n"]
+
+
 def test_a_role_the_station_did_not_reach_is_MISSING_and_never_a_conflict():
     """E3 is unfinished by construction, so «the drill has it and we do not» must be counted apart.
     Averaged in, it would make an incomplete station look like a wrong one — and the report would
@@ -123,19 +138,34 @@ def test_a_COPULAR_row_pairs_on_its_complement():
 
 
 @pytest.mark.skeleton
-def test_the_station_and_the_drill_disagree_only_where_a_question_is_OPEN():
-    """**THE RATCHET.** Four disagreements on 2026-09-16, and every one of them is a question the
-    project has open and named rather than a defect:
+def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
+    """**THE RATCHET.** Twelve disagreements on 2026-09-17, in three families — and the point of the
+    list is that every entry is named, dated and attributable. The count may only go DOWN.
 
-      `exist-3` · `aw-11` · `aw-20`  — the subject's role depends on WHAT IS PREDICATED of it, which
-                                       `RELATION_FILLS_ROLE`'s own comment defers to the geometry
-      `aw-19`                        — «I ate with Anna», the named-individual hole (E3b)
+      ten    the SUBJECT'S ROLE depends on what is predicated of it — `exist-3` `t-ws-1` `t-ws-8`
+             `t-dc-4` `t-of-1` `t-mo-1` `aw-11` `aw-16` `aw-20` `q-2`. E3's standing open question,
+             which `RELATION_FILLS_ROLE`'s own comment defers to the geometry. It had three
+             witnesses until this gate was given a context; it has ten.
+      one    the station builds no `DomainRow` yet — `aw-15`, where «In Italy» lands in `location`
+             and displaces the France that belongs there. E3 unfinished, showing as a conflict
+             rather than as a missing row because the wrong filler reached a real box.
+      one    the named-individual hole — `aw-19`, «I ate with Anna» (E3b).
 
-    A fifth would be a new defect. The count may only go DOWN.
+    **THE ROTATION FAMILY IS GONE.** `q-4` `q-7` `q-9` disagreed for one morning — the station
+    rotated reported speech and did not rotate quoted speech, having keyed the rotation on the word
+    «that». Fixed the same day on the Captain's ruling, by asking stanza what it had already parsed
+    instead of asking what a quotation mark is. `q-2` stays, but its rotation is right: what is left
+    of it is the subject-role question above.
+
+    **IT RUNS THE TOOL'S OWN PATH**, context and all. A control that compiled sentences differently
+    from the instrument it guards would be free to agree while the instrument disagreed — which is
+    the exact failure req 18 exists to prevent, one level down.
     """
     from tk2.language import standing_closed_classes
     from tk2.language.compile import Compiler
     from tk2.language.skeleton import StanzaSkeletons
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
 
     compiler = Compiler(standing_closed_classes())
     provider = StanzaSkeletons()
@@ -145,9 +175,11 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_OPEN():
         skeletons = provider(case.sentence)
         if not skeletons:
             continue
-        reading = compare(compiler.compile(skeletons[0]).zip, case.zip, case.id, case.sentence)
+        produced = compile_utterance(compiler, skeletons, DRILL_CONTEXT)
+        reading = compare(produced.zip, case.zip, case.id, case.sentence)
         if reading.verdict == DISAGREED:
             disagreed.append(case.id)
 
-    assert sorted(disagreed) == ["aw-11", "aw-19", "aw-20", "exist-3"], (
+    assert sorted(disagreed) == ["aw-11", "aw-15", "aw-16", "aw-19", "aw-20", "exist-3",
+                                 "q-2", "t-dc-4", "t-mo-1", "t-of-1", "t-ws-1", "t-ws-8"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")

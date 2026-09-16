@@ -1,7 +1,8 @@
 """THE UTTERANCE — context as an argument (req 7), and a quote that arrives as two sentences.
 
-**TWO OF E3 TASK 2b's FOUR SUB-TASKS**, and deliberately not the other two: the rotation itself waits
-on the Captain's format ruling about where an ADDRESSEE lives, and nothing here guesses at it.
+**E3 TASK 2b**, complete. The rotation itself lives in `Compiler._contexts`, where the tree says which
+clause sits under which attitude; this module is the larger unit — several sentences as one utterance
+— and the cross-boundary case of the same rule.
 
 **WHY `compile()` COULD NOT SIMPLY GROW A PARAMETER.** Requirement 7 says *«the station is pure —
 context is an ARGUMENT, never state»*, and it has been written and unbuilt since E3 opened because
@@ -10,10 +11,12 @@ nothing needed it. Two things need it now and they are different:
 - **a pronoun has to resolve to somebody.** `i` and `you` carry `person: 1` and `person: 2` in their
   closed-class rows already — the axis has had its data all along and no caller to supply the other
   end.
-- **a quote arrives as a SECOND SENTENCE.** Measured 2026-09-16: stanza splits «John said to Marie
-  " You are a clever girl "» into two skeletons, so the frame and the words it governs never meet.
-  `Compiler.compile` takes one skeleton and should keep taking one — an utterance is the larger unit
-  and it belongs here.
+- **a quote can arrive as a SECOND SENTENCE.** Measured 2026-09-16 and re-measured 2026-09-17:
+  stanza splits «John said to Marie " You are a clever girl "» into two skeletons — but ONLY when the
+  marks are spaced away from their words. `"You are a clever girl"` arrives as one skeleton with the
+  quote as a `ccomp`, so **the split is the exception and not the rule**, and `Compiler._contexts` is
+  where most quotations are actually handled. `Compiler.compile` takes one skeleton and should keep
+  taking one — an utterance is the larger unit and it belongs here.
 
 **THE SPEAKER IS WHATEVER THE CALLER SAYS IT IS.** This module never invents an identifier. The drill
 hand-compiles «I» as `me.n`; the blueprint says the self-model is carried by named individuals with
@@ -221,22 +224,24 @@ def quoted_under(zip_, frame):
         «he says that you swim»        attitude(he, say) scopes r1 · r1 is EMPTY · r0 is CLAIMED
         «John said: "you swim"»        attitude(john, say) scopes s1.… · s1.… is EMPTY
 
-    **THE QUOTE IS NOT CLAIMED AND THAT IS THE WHOLE POINT.** «John said the sky is green» does not
-    assert that the sky is green — it asserts that John said so. A quote whose rows stayed CLAIMED
-    would put every reported sentence into the KB as a fact, which is the one thing the truth slot
-    exists to prevent, and it is the same distinction req 38 rests on.
+    **THE QUOTE IS NOT CLAIMED OF THE WORLD, AND THE ATTITUDE IS WHAT SAYS SO.** «John said the sky
+    is green» does not assert that the sky is green — it asserts that John said so — and the prefix
+    row above is what carries that, exactly as it does for «he thinks a cat is in the garden», where
+    the drill has always kept the cat at truth 1.0 and asserted no cat.
+
+    **THE ROWS THEREFORE KEEP THEIR TRUTH** *(changed 2026-09-17 on the Captain's ruling)*. Blanking
+    it here was belt-and-braces that cost a distinction: under a saying verb the truth slot records
+    what the HOLDER did — asserted it, asked it, wanted it — and three speech acts were collapsing
+    into one shape. See `Compiler._attitude`, which this mirrors across a sentence boundary.
     """
     from tk2.tkzip.schema import AttitudeRow
 
     scopes = _claim_of(zip_)
     if scopes is None:
         return zip_
-    unasserted = [row.model_copy(update={"truth": None})
-                  if row.kind in ("content", "join") else row
-                  for row in zip_.rows]
     attitude = AttitudeRow(name=f"{scopes}.pov", scopes=scopes, holder=frame.holder,
                            verb=frame.verb, addressee=frame.addressee)
-    return zip_.model_copy(update={"rows": [attitude, *unasserted]})
+    return zip_.model_copy(update={"rows": [attitude, *zip_.rows]})
 
 
 @dataclass

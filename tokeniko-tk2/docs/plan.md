@@ -543,6 +543,72 @@ reads** · **D's neighbourhood cannot be tuned** (benched: no variant helps; R p
 
 *T2 precedes T3: «did it close?» cannot be answered while the verdict is a blend.*
 
+## E1e — The tests, isolated *(opened 2026-09-17 by the Captain — runs AFTER E3 closes)*
+
+> *«Tests are there to verify that the next development step is not regressing the already working
+> requirements. They should be the gate for each dev step, but they should be WELL isolated from the
+> BL. We need to look into everything we have done from E0 to E3 and see if tests, somehow, are
+> leaking into the BL code (at least from a formal order point of view) and strongly and neatly
+> separate them.»*
+
+**IT IS NOT ABOUT `dictionary_bar`, THOUGH THAT IS WHAT FOUND IT.** The bar — 37 declared pairs the
+base must satisfy — lives in the BODY database and, worse than that, **in the runtime config**:
+
+    # DictionaryConfig.seeds
+    for word in (*self.declared_seeds, *bar_words(self.bar), *self.closure.extra_seeds):
+
+Requirement 8, verbatim: *«the seeds + the bar's own words are forced into every subset»*. So **the
+acceptance test injects its own vocabulary into the artifact it judges**, and rides in the config
+fingerprint every consumer reads. The original reason is sound — `eat.v NEAR food.n` cannot be
+measured if `food.n` is not in the space — but that justifies *a bar-measuring RUN* adding them, not
+*the standing policy* declaring them for everybody.
+
+### THE THIRD KINGDOM
+
+The frame/knowledge rule governs the APP'S BUSINESS LOGIC, and the Captain drew the line explicitly:
+
+| | what it is | where it lives |
+|---|---|---|
+| **frame** | law the app obeys | code — and kept small |
+| **knowledge** | revisable facts the app reasons with | db, by migration |
+| **evidence** | curated circumstances that JUDGE the app | isolated; never read at runtime |
+
+*«A test is by its nature a curated set of circumstances: it can't be knowledge, it is curated, and
+it should be isolated by the app itself.»* Evidence still wants the LEDGER properties that sent the
+bar to a database in the first place — versioned, append-mostly, `why` kept verbatim — and those are
+separable from WHICH database. `closed_classes` is **not** in this kingdom: the station reads it at
+runtime, so it is app knowledge.
+
+### THE TASKS
+
+1. **Sweep E0 → E3 for test material in the BL** — formal order included: what does app code import,
+   read or configure that exists to judge it? `dictionary_bar` is the known case; the sweep is for
+   the ones nobody has noticed.
+2. **`dictionary_bar` out of the body.** To the test database, or to `bar_snapshot.json` alone,
+   which already exists, is hash-pinned, and already runs with no body reachable.
+3. **The body keeps only PROVENANCE** — `dictionary_builds.bar_version` + `bar_fingerprint`, a claim
+   checkable against the snapshot.
+4. **Bar words stop being standing seeds** and become `extra_seeds` on a measuring run — a mechanism
+   that already exists and whose own docstring is the argument for this: *«what a run argues with the
+   standing policy… so a run that added seeds can never be mistaken for the standard one»*.
+   **COST, STATED: this moves the config fingerprint**, so builds recorded under the old one stop
+   being directly comparable. E9-shaped, not a free edit.
+5. **The doctrine line** in `tk2/core/models/__init__.py` calls policy, bar and closed classes one
+   thing («CURATION (logic)»). It is three things now, and the comment says two.
+
+### AND THE PACING RULE, WHICH IS THE OTHER HALF
+
+> *«I would like the development of these foundational points (dictionary, tkzip) to be agile and
+> fast paced: burdening every single move with a gargantuan suite of tests for each micro step is
+> really slow — also considering that many of them work remotely on the body, so there is latency to
+> consider. Excluding single cases (where a test subset must be executed to steer the development
+> itself), tests are performed at the final commit/push, not during the intermediate steps.»*
+
+**Concretely:** during development, run only the subset that STEERS the next decision — the file
+under the hand, the one gate that answers the open question. **The full suite runs once, at the
+commit gate**, and that is when its result is reported. A green full suite is a precondition of
+asking for the commit, not a checkpoint between edits.
+
 ## E2 — The format *(tkzip v2)* — ✅ **COMPLETE 2026-09-14**
 
 **Goal:** the fixed-arity zip — limit B dies on paper before any code. The schema answers every open
@@ -714,13 +780,26 @@ it).
      adjective. **Then six disagreements, now four**: two curation errors fixed by `db/0015`, one
      E3b, and **three witnesses of ONE open question**. 38 agreed · 4 DISAGREED · 91 of 126 rows
      paired, held as a ratchet by a `skeleton`-marked test.
-   - **⚑ THE SUBJECT'S ROLE DEPENDS ON WHAT IS PREDICATED OF IT** — the drill gate's three remaining
+     **WIDENED TWICE ON 2026-09-17**, both times because the drill's new quotation block walked past
+     it. (i) It passed NO CONTEXT — the station returns the bare closed-class key for a pronoun when
+     handed none, so the person axis was invisible by construction; it now passes the DRILL'S OWN
+     convention (`speaker="me.n"`, `addressee="you.n"`), under which every unrotated sentence
+     compiles exactly as before and only the rotation moves. Roles agreed went 71/138 → 98/129: the
+     missing 27 were pronouns never compared to anything. (ii) It paired boxes by FILLER and asked
+     about the ROLE — the `topic`/`patient` shape it was built for — and was blind to the MIRROR,
+     the right role holding the wrong somebody, which is the only shape the person axis fails in.
+     *An instrument built to catch one defect was shaped by it.* **47 agreed · 15 DISAGREED**, and
+     11 of the 15 were always there. **50 agreed · 12 DISAGREED · 101 of 128 roles** once the
+     rotation and the truth slot were fixed the same morning.
+   - **⚑ THE SUBJECT'S ROLE DEPENDS ON WHAT IS PREDICATED OF IT** — TEN of the drill gate's twelve
      disagreements are one question, and it is the one `RELATION_FILLS_ROLE`'s own comment defers:
      «God exists» is a PATIENT · «the cat is hungry» an EXPERIENCER · «Sue is a teacher» a patient.
      *«Which one it is depends on the VERB, that is a head-verb question the geometry answers, and a
      station that guessed here would be doing the compile core's job badly instead of leaving it
-     open.»* **It now has three witnesses and a number instead of a prediction**, which is what it
-     needed before anybody could try the geometry on it.
+     open.»* **Three witnesses on 2026-09-16, NINE on 2026-09-17** — `exist-3` `t-ws-1` `t-ws-8`
+     `t-dc-4` `t-mo-1` `t-of-1` `aw-11` `aw-16` `aw-20`, and TEN with `q-2` — because giving the
+     gate a context made the pronoun subjects comparable for the first time. It is now the largest family in the ratchet,
+     which is an argument about WHEN it gets built, not about what the answer is.
    - ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
      `202609161251_the-adverbs.md`). Requirement 23 split adverbs four ways at E2 and nothing said
      WHICH is which. **The resource cannot say**: WordNet has ONE adverb class (`adv.all`) and
@@ -834,6 +913,69 @@ it).
       nobody named, so the `you` rightly stays the outer listener.*
       **2b IS COMPLETE.** *The drill still has no hand-compiled quotation — that is the Captain's to
       write, and the two gates now exist to disagree about it when he does.*
+
+      **AND IT DID, THE NEXT MORNING.** Nine hand-compiled quotations landed 2026-09-17 on his
+      green light (`q-1` … `q-9`, drill 78 → 87, amended in the bar doc), and they found the
+      ROTATION INVERTED — record `202609170533_the-quotation-block.md`:
+
+          «John said to Marie THAT you are late»    the LISTENER is late     station: Marie
+          «John said to Marie "You are late"»       MARIE is late            station: the listener
+
+      **Quotation preserves the original speaker's deictic centre; reporting does not**, because the
+      reporter has already moved the pronouns into his own frame. `_contexts` keys the rotation on
+      the joiner's `asserts: matrix` — which lives on the word «that», present exactly where
+      rotating is wrong and absent from the bare quoted `ccomp` where it is right. *We keyed it on
+      the one signal anti-correlated with it.* The correct signal is the QUOTATION MARKS.
+      It also corrects 2b.2's premise: **stanza splits a quote only when the marks are SPACED from
+      their words**, so all nine arrive as ONE skeleton and the cross-boundary path is the exception.
+      The fix belongs in `_contexts`, and both paths need the same test.
+      **FIXED THE SAME MORNING, AND THE CAPTAIN REFUSED THE QUESTION THE QM BROUGHT HIM.** It was
+      «which characters count as quotation marks — frame or knowledge?», recommended as knowledge on
+      multilingual grounds. His answer: *«Do we parse directly the input sentence, not through
+      spacy-stanza which already has the tooling to isolate the quote? Do we parse anything else
+      than English — the input on the parser is always English, the translation layer stays on the
+      senses. I find it weak to care about what a quotation symbol is: we shouldn't have this
+      problem in the first place, meaning if we have it something went in the wrong direction.»*
+      **Measured, and he was right on all three counts.** A quoted complement's SPAN is bracketed by
+      `punct` and a reported one is not:
+
+          John said to Marie "You are late".      late/ccomp   punct  "  before,  "  after
+          He replied “I am late” quickly.         late/ccomp   punct  “  before,  ”  after
+          John said to Marie that you are late.   late/ccomp   no punct on the clause at all
+
+      So `_is_quoted` never reads a character, and curly quotes work for free. *The rule's failure
+      mode is not only HARD-CODING a set — it is NEEDING one. A question of the form «where should
+      this list live» deserves one more question first: why is there a list?*
+      Two further things the fix needed, both found by measuring: **the rotation must NEST** (depth
+      two resolved to the narrator, because every clause was read against the outermost context),
+      and **it must name the same somebody the rows do** (the holder's key was `i.n` where the box
+      for that very token held `me.n`). `q-4` `q-7` `q-9` resolved; `q-2`'s rotation is right and
+      what remains of it is the subject-role question.
+
+   2c. **⚑ THE TRUTH SLOT UNDER AN ATTITUDE — RULED 2026-09-17: the rows KEEP their truth.** The
+      station emptied the truth slot of anything under an attitude (`quoted_under`, and the `ccomp`
+      path). **The drill never has**: `dere-1` carries a cat at truth 1.0 under «he thinks», `dere-3`
+      a marriage under «he wants», `aw-11` a hungry cat under two nested attitudes. The PREFIX is
+      what keeps a row out of the world; the TRUTH SLOT says what the holder does with it — and
+      blanking it flattened three speech acts the format otherwise separates for free:
+
+          John said "The sky is green."      the holder ASSERTS    truth = 1.0   (q-8)
+          I asked Anna "Where do you live?"  the holder ASKS       an OPEN box   (q-7)
+          John said "Close the door!"        the holder WANTS      truth = None  (aw-21)
+
+      It matters downstream and not only formally: «John told me X» (I may believe it if I trust
+      John), «John asked me X» (I should answer) and «John told me to do X» (I may act) are three
+      different things to the brain, and one blanked slot made them the same row. *A lone deviation
+      in code against the format's own gate is the deviation that moves* — the same ruling as
+      `topic`/`patient`, eight days apart.
+
+   2d. **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH — found by fixing 2c, not yet fixed.** «Is the cat
+      hungry?» compiles at **truth 1.0**, where the schema's own docstring says it *«has every box
+      bound and its truth OPEN»*. Wh-questions open a BOX and are fine; `whether` opens the truth
+      from its marker row; the bare AUX-fronted polar has nothing that fires. **It was invisible
+      while everything under an attitude was blanked anyway.** It is a MOOD question, not a
+      truth-slot one. *Making a slot mean something is how you find out who was not filling it.*
+
 
    *It touches E3b: «John» and «Marie» must become individuals before a rotation can NAME its
    target. The mechanisms are separable — a «you» can rotate to «the person addressed» without

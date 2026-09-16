@@ -483,7 +483,8 @@ def test_a_reporting_verb_opens_an_ATTITUDE_and_claims_only_the_saying(compiler)
     assert attitude.verb == "say.v"
     assert attitude.scopes == swimming.name
     assert saying.truth == 1.0
-    assert swimming.truth is None, "the content of a report is not claimed by reporting it"
+    assert swimming.truth == 1.0, (
+        "the HOLDER claims it; the attitude row is what keeps it out of the world (2026-09-17)")
     assert not rows_of(out, "join"), "an attitude is not a join"
 
 
