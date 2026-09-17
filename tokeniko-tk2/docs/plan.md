@@ -952,7 +952,7 @@ it).
       for that very token held `me.n`). `q-4` `q-7` `q-9` resolved; `q-2`'s rotation is right and
       what remains of it is the subject-role question.
 
-   2c. **⚑ THE TRUTH SLOT UNDER AN ATTITUDE — RULED 2026-09-17: the rows KEEP their truth.** The
+      **⚑ AND THE TRUTH SLOT UNDER AN ATTITUDE — RULED 2026-09-17: the rows KEEP their truth.** The
       station emptied the truth slot of anything under an attitude (`quoted_under`, and the `ccomp`
       path). **The drill never has**: `dere-1` carries a cat at truth 1.0 under «he thinks», `dere-3`
       a marriage under «he wants», `aw-11` a hungry cat under two nested attitudes. The PREFIX is
@@ -969,17 +969,17 @@ it).
       in code against the format's own gate is the deviation that moves* — the same ruling as
       `topic`/`patient`, eight days apart.
 
-   2d. **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH — found by fixing 2c, not yet fixed.** «Is the cat
-      hungry?» compiles at **truth 1.0**, where the schema's own docstring says it *«has every box
-      bound and its truth OPEN»*. Wh-questions open a BOX and are fine; `whether` opens the truth
-      from its marker row; the bare AUX-fronted polar has nothing that fires. **It was invisible
-      while everything under an attitude was blanked anyway.** It is a MOOD question, not a
-      truth-slot one. *Making a slot mean something is how you find out who was not filling it.*
-
-
    *It touches E3b: «John» and «Marie» must become individuals before a rotation can NAME its
    target. The mechanisms are separable — a «you» can rotate to «the person addressed» without
    knowing who that is — but a rotation that cannot name its target is half an answer.*
+
+2c. **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
+   2b — and it is NOT a person-axis task, which is why it has a number of its own)*. «Is the cat
+   hungry?» compiles at **truth 1.0**, where the schema's own docstring says it *«has every box
+   bound and its truth OPEN»*. Wh-questions open a BOX and are fine; `whether` opens the truth from
+   its marker row; **the bare AUX-fronted polar has nothing that fires.** It was invisible while
+   everything under an attitude was blanked anyway. A MOOD question, and the witness is written.
+   *Making a slot mean something is how you find out who was not filling it.*
 
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip

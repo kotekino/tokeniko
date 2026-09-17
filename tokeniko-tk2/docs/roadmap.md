@@ -222,8 +222,8 @@ grammatical class is KB, not frame. E3 pays the first real bill.*
       HOLDER does with it — and blanking it flattened three speech acts: said-assertion (`q-8`,
       1.0) · said-question (`q-7`, an OPEN box) · said-command (`aw-21`, None). «John told me X»,
       «John asked me X» and «John told me to do X» are three different things to the brain
-- [ ] **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the slot above)*.
-      «Is the cat hungry?» compiles at **truth 1.0**, where the schema's own docstring says it *«has
+- [ ] **task 2c — ⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the
+      truth slot above)*. «Is the cat hungry?» compiles at **truth 1.0**, where the schema says *«has
       every box bound and its truth OPEN»*. Wh-questions open a box and are fine; `whether` opens
       the truth from its marker row; the bare AUX-fronted polar has nothing that fires. **It was
       invisible while everything under an attitude was blanked anyway** — a mood question, not a
