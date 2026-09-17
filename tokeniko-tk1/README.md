@@ -6,8 +6,14 @@ MongoDB as **permanent, queryable, geometrically-comparable memory**. It pairs s
 parsing (POS tagging, dependency parsing, formal logical operators) with sub-symbolic
 fuzzy-logic vector fusion (NumPy).
 
-> This README is the conceptual overview. For the internal developer reference
-> (architecture, module layout, runtime dependencies), see `CLAUDE.md`.
+> This README is the conceptual overview of **v1**. For the internal developer reference
+> (architecture, module layout, runtime dependencies), see `CLAUDE.md`. For what the project *is*
+> and how we work across it, see `../README.md` and `../CLAUDE.md`; the north star is
+> `../docs/vision.md`.
+>
+> **⚠ Development is FROZEN (2026-09-17).** v1 keeps running and keeps witnessing — its corpora are
+> the no-regression ratchet v2 must clear — but it stops growing. Active work is in
+> `../tokeniko-tk2/`.
 
 ## Tokeniko's Compilation Flow
 

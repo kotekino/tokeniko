@@ -180,7 +180,7 @@ sample migration alters a parameter live (slow-tick pickup, no restart).
 
 ## E1 — The dictionary at scale *(the two-matrix base, industrialized)*
 
-**Goal:** the PoC (983 dims, `scripts/tk2/`) becomes the full base: every lexicon word under
+**Goal:** the PoC (983 dims, `docs/dictionary/origin-prototype/`) becomes the full base: every lexicon word under
 POS-split keys, R and D built whole, the curation loop production-grade. **Assets migrate** — the
 curated senses, scaffolds and anchor sets cross intact (inheritance ledger).
 
@@ -1365,7 +1365,7 @@ reconciliation has run through the machinery.
 
 **Tasks**
 1. **The interpreter runtime on the mini** — process split (mind / surface / connectors), boot
-   cache, slow tick; deploy-by-migration runbook evolved from `scripts/body/`.
+   cache, slow tick; deploy-by-migration runbook evolved from `body/tools/`.
 2. **Cutover** — sandbox → the real dbs, the guard's boundary formally moved; v1 stays runnable
    (the instrument is not a museum piece yet — its corpora remain the ratchet).
 3. **The window rewire** — `/api/mind` mock → live KPI feed (the contract shape holds); transmit
@@ -1380,6 +1380,6 @@ the window — and the register's sixteen requirements files each read true agai
 ## What deliberately stays OUT of this plan
 
 - **v1's remaining road** (microscope residue, anchor audit, bug list) — the asset track, tracked in
-  `tokeniko-tk1/doc/roadmap.md`, never here. tk1 stops growing; it keeps witnessing.
+  `tokeniko-tk1/docs/roadmap.md`, never here. tk1 stops growing; it keeps witnessing.
 - **The multi-body horizon, open-world growth** (captain-hunches) — awareness only.
 - **Anything the register doesn't hold** — the list is closed; extending it takes an argument.

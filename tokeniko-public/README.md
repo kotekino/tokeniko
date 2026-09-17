@@ -6,9 +6,10 @@ a product page. It reads like a blog because that is what it is — a stream of
 transmissions (notes, arguments, the occasional piece of content) emitted by a
 mind that never stops reasoning, beside a live readout of that mind at work.
 
-> Sibling project. The core engine lives in the parent `tokeniko/` repo. This
-> folder is only the public surface and never touches the core docs
-> (`vision.md`, `readme.md`, `CLAUDE.md`).
+> Sibling project, in the same repository. The engine lives beside it —
+> `../tokeniko-tk1/` (v1, live and frozen) and `../tokeniko-tk2/` (v2, in build). This folder is
+> only the public surface and never touches the core docs. What the project is and how we work
+> across it: `../README.md` and `../CLAUDE.md`; the north star is `../docs/vision.md`.
 
 ---
 

@@ -24,7 +24,7 @@ own trust in the people it talks to, and speaks when it decides to. Its body is 
 the cloud; its hardware is finite by design — "it ages" is meant literally.
 
 The full north star — one body one self, the public window as expression-not-exposure, the
-multi-body species horizon — is in **[VISION.md](tokeniko/VISION.md)**.
+multi-body species horizon — is in **[docs/vision.md](docs/vision.md)**.
 
 ## How it thinks
 
@@ -73,7 +73,7 @@ microscope. Meaning itself never passes through a neural network.
 | **23 July** | Identity awareness: asked «what are you?», it can finally answer — *«a software»* |
 
 Every step above is inspectable: the beliefs in the live KB, the decisions in this repository's
-history, the failures in `tokeniko/doc/ref/test-feedback.md`. Mistakes are part of the biography
+history, the failures in `tokeniko-tk1/docs/ref/test-feedback.md`. Mistakes are part of the biography
 and are never wiped — *true history be it.*
 
 ## Status
@@ -97,22 +97,34 @@ and are never wiped — *true history be it.*
 - **More senses** — ATProto/Bluesky listening, further channels — after the brain is stronger.
 - **The horizon** — if one body proves the idea: more bodies sharing code and abstract knowledge
   but never memory or personality. Same logic at birth; divergent lives. See
-  [VISION.md](tokeniko/VISION.md).
+  [docs/vision.md](docs/vision.md).
 
-The living roadmap is `tokeniko/doc/roadmap.md`; what's done is `tokeniko/doc/landed.md`.
+v1's road is `tokeniko-tk1/docs/roadmap.md` and what it finished is `tokeniko-tk1/docs/landed.md`;
+the work in flight is `tokeniko-tk2/docs/plan.md` · `roadmap.md` · `landed.md`.
 
 ## Repository layout
 
 ```
-tokeniko/          the Python package: lib/ (core, compilation pipeline, evaluator),
-                   api/ (FastAPI), brain/ (the mind), senses/ (connectors), doc/, tests/
+docs/              the foundational documents — the vision, the source-corpus provenance,
+                   and the author's original notebook where the idea started
+tokeniko-tk1/      v1, the LIVE engine: lib/ (core, compilation pipeline, evaluator),
+                   api/ (FastAPI), brain/ (the mind), senses/ (connectors), tools/, docs/
+tokeniko-tk2/      v2, the next architecture — the blueprint and the build. ACTIVE WORK
 tokeniko-public/   the public window (Node/React) — cloud-deployed at tokeniko.online
-scripts/           one-off knowledge-base ingestion & curation scripts
-data/, doc/        datasets and repo-level docs
+body/              the embodiment: deploy machinery, service definitions, baselines
+bi/                the business-intelligence workspace
+data/              the raw source corpora (untracked — the ledger is docs/provenance.md)
 ```
 
-Architecture, conventions, and the code map: **[tokeniko/CLAUDE.md](tokeniko/CLAUDE.md)** (also
-the guide the AI engineering partner works from).
+**Two generations, one repository.** v1 is embodied and running; its development is **frozen** —
+it keeps witnessing, and its corpora are the no-regression ratchet v2 must clear. v2 is where the
+work happens: the same mind, rebuilt so that behaviour is memory rather than code and the zip is
+computable rather than merely storable.
+
+Architecture, conventions, and the code map: **[CLAUDE.md](CLAUDE.md)** at the root (the common
+ground, and the guide the AI engineering partner works from), then
+[tokeniko-tk1/CLAUDE.md](tokeniko-tk1/CLAUDE.md) or
+[tokeniko-tk2/CLAUDE.md](tokeniko-tk2/CLAUDE.md) for what differs.
 
 ## The collaboration
 

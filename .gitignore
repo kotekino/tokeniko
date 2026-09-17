@@ -2,7 +2,7 @@
 /data
 /dump
 /atlas
-/doc/~$notes.xlsx
+/docs/~$notes.xlsx
 __pycache__/
 *.pyc
 # Claude Code local state stays private — but the CREW's working record (the 1st Officier's
@@ -15,10 +15,10 @@ __pycache__/
 .env
 ci/.DS_Store
 
-# the body (scripts/body/): the LaunchAgents' log destination, and the machine-local address of
+# the body (body/tools/): the LaunchAgents' log destination, and the machine-local address of
 # the mini. Both are per-machine facts, not code.
-/tokeniko/logs/
-/scripts/body/body.conf
+/tokeniko-tk1/logs/
+/body/tools/body.conf
 ci/.DS_Store
 ci/1.0/.DS_Store
 ci/1.0/assets/.DS_Store

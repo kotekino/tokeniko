@@ -3,7 +3,7 @@
  * seed-growth.mjs — push the Growth Rings content into Atlas via the public API.
  *
  * The rings are the crew's curation (doc/growth-rings.md): each one a season
- * retold from `tokeniko/doc/landed.md`, added here BY HAND at doc-reconciliation
+ * retold from `tokeniko-tk1/docs/landed.md`, added here BY HAND at doc-reconciliation
  * time and re-run — upserts by slug make it idempotent, so the whole file is
  * safe to send again whenever a new season is appended.
  *

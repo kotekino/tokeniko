@@ -1,6 +1,6 @@
 """What the body reads from the environment — and it is one thing.
 
-The pattern is `scripts/tk2/tk2_config.py`'s, proven by the dictionary review: load the body's `.env`
+The pattern is `docs/dictionary/origin-prototype/tk2_config.py`'s, proven by the dictionary review: load the body's `.env`
 from a path relative to THIS file, before the first `os.getenv`, so the body runs from any working
 directory. A daemon started by launchd has no working directory worth the name.
 

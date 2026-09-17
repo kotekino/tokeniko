@@ -1,17 +1,26 @@
-# CLAUDE.md
+# CLAUDE.md — tokeniko v1, the live engine
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+*The repository-wide rules are in `../CLAUDE.md`, and the north star is `../docs/vision.md` — read it
+first, and again when a decision is unclear. **This file carries only what is specific to v1.***
+
+> ## ⚠ DEVELOPMENT IS FROZEN *(2026-09-17)*
+> v1 is **not deprecated and not a museum**: it keeps running, keeps witnessing, and its corpora are
+> the no-regression ratchet tk2 has to clear. But it **stops growing** — active development moved to
+> `../tokeniko-tk2/`, which is far enough along that spending effort here is not worth it. Changes
+> here are limited to keeping the body alive. Its stored journeys remain the empirical instrument.
 
 ## What this is
 
-> **Read `VISION.md` first.** It is the north star — the end goal and *why* tokeniko exists (a single,
-> persistent, logic-first thinking entity; a digital twin of its author; logic hardwired as the first
-> axiom, all knowledge and behavior in memory). When a design decision is unclear, `VISION.md` is the
-> tie-breaker; this file and the roadmap below are the tactical *how*.
-
 Tokeniko is a **neuro-symbolic NLP engine** that compiles a natural-language sentence into a fixed-size mathematical representation ("the zip") that can be stored in MongoDB as permanent, queryable, geometrically-comparable memory. It combines symbolic parsing (POS tagging, dependency parsing, formal logical operators) with sub-symbolic fuzzy-logic vector fusion (NumPy). See `README.md` for the conceptual overview of the compilation flow.
 
-Note: the git repository root is the **parent** directory (`../`), which also holds `scripts/` (one-off scripts, split `tk1/` · `tk2/` · `body/` — see below), `atlas/` (local MongoDB data volumes), `data/`, `doc/`, and `tokeniko-public/` (the public website — a self-contained Node/React sibling project, **not** part of the Python package; cloud-deployed against a public MongoDB Atlas — see the topology note below). This directory (`tokeniko-tk1/`, formerly `tokeniko/` — renamed 2026-08-24) is the installable Python package and the FastAPI app.
+Note: the git repository root is the **parent** directory (`../`) — see `../README.md` for the folder
+map. This directory (`tokeniko-tk1/`, formerly `tokeniko/` — renamed 2026-08-24) is the installable
+Python package and the FastAPI app. Its one-off scripts now live **here**, in `tools/` (moved
+2026-09-17 from the old repo-root `tools/`): data-ingestion, seeding, curation and probe
+scripts, run as `python tools/<name>.py`, which populate the knowledge-base collections (`base`,
+`dictionary`, `names`, `places`, `markers`, `properties`). The deploy machinery moved to
+`../body/tools/`, and the superseded tk2 prototype to `../tokeniko-tk2/docs/dictionary/
+origin-prototype/`.
 
 ## Commands
 
@@ -22,14 +31,17 @@ Tasks are defined in `pyproject.toml` via `taskipy` (run from this directory):
 - `task senses` — run the connectors daemon (`python -m senses.main`): the Discord + ATProto/Bluesky listeners (tokeniko's I/O to the outside)
 - `pip install -e .` — editable install of the `tokeniko` package (`lib*`, `api*`)
 
-There is **no test suite, linter, or formatter** configured. Files under `scripts/` (in the repo root) are standalone executable scripts run directly from the repo root, and are not imported by the app. The directory is split by project generation: **`scripts/tk1/`** — the v1 engine's data-ingestion, seeding, curation and probe scripts (`python scripts/tk1/<name>.py`), which populate the MongoDB knowledge-base collections (`base`, `dictionary`, `names`, `places`, `markers`, `properties`); **`scripts/tk2/`** — the tokeniko-2 blueprint experiments (see `../tokeniko-tk2/docs/`), which are read-only on the body and write only to a sandbox database; **`scripts/body/`** — the deploy machinery, deliberately NOT under a generation folder because the deploy path is referenced on the body itself.
+There is **no test suite, linter, or formatter** configured. The scripts in `tools/` are standalone
+executables run from this directory (`python tools/<name>.py`) and are never imported by the app.
+They populate the MongoDB knowledge-base collections (`base`, `dictionary`, `names`, `places`,
+`markers`, `properties`), and `tools/legacy scripts/` keeps the superseded ones.
 
 ### Three entry points: `api`, `brain`, `senses`
 
 There are three distinct processes, with different startup requirements:
 
 - **`task api`** (`api/main.py`) — the FastAPI server. Its lifespan calls `parser_init()`, which loads the spaCy/Stanza pipelines. (The Ollama `preparser_init`/`decompiler_init` calls were RETIRED 2026-07-16 — no local models are pulled or used; the ears are rag1/Claude and the decompile surface is Claude.) This is where the full compilation pipeline runs.
-- **`task brain`** (`brain/main.py`) — the background "mind": ONE coordinator loop that, each tick, runs ONE bounded unit of the highest-priority phase WITH WORK — **Actions > Priorities > Thinking** (the reactive path wins; thinking is the background filler) — then cooperatively yields. The three phases: **thinking** (cycle over memory, derive theorems, validate axioms for inconsistencies), **priorities** (form wishes/ideas — the `TKIdeaDoc` urge layer), and **actions** (carry out what it decides). It only calls `init_io()` (Mongo clients + an inert legacy Ollama handle, never called), not the spaCy/Stanza pipeline. Needs MongoDB reachable. The reasoning + volitional layers are BUILT (the Brain v1.1 Unified-KB arc is complete — `doc/landed.md`): thinking evaluates memory + answers questions, KB-wondering forward-saturates the unified KB (definitions/axioms/theorems, trust-tiered, provenance-cascaded) and materializes theorems via the API (sense-pinned — the derivation's senses are pinned into the compiled zip so the NL render round-trip can never corrupt the dedup key). The brain's orchestration design (the single coordinator over the three phases, queue-priority routing, the `brain_state` continuity singleton) is written up in `brain/README.md`: the build order (A HOW-before-WHAT → B the **data model** Ideas/Actions/brain_state → C the **meta-language** of reserved `eval:*`/`tokeniko:*` behavior rules → D the loops' logic), the cooperative-preemption model (brain reacts to input via the memory-trace + throttles; `api`/`senses` are separate processes), and the KB-driven personality. With the reasoning core done, **going-live (the `senses` I/O — Discord private messages first) is the active frontier** — see `doc/roadmap.md` Next.
+- **`task brain`** (`brain/main.py`) — the background "mind": ONE coordinator loop that, each tick, runs ONE bounded unit of the highest-priority phase WITH WORK — **Actions > Priorities > Thinking** (the reactive path wins; thinking is the background filler) — then cooperatively yields. The three phases: **thinking** (cycle over memory, derive theorems, validate axioms for inconsistencies), **priorities** (form wishes/ideas — the `TKIdeaDoc` urge layer), and **actions** (carry out what it decides). It only calls `init_io()` (Mongo clients + an inert legacy Ollama handle, never called), not the spaCy/Stanza pipeline. Needs MongoDB reachable. The reasoning + volitional layers are BUILT (the Brain v1.1 Unified-KB arc is complete — `docs/landed.md`): thinking evaluates memory + answers questions, KB-wondering forward-saturates the unified KB (definitions/axioms/theorems, trust-tiered, provenance-cascaded) and materializes theorems via the API (sense-pinned — the derivation's senses are pinned into the compiled zip so the NL render round-trip can never corrupt the dedup key). The brain's orchestration design (the single coordinator over the three phases, queue-priority routing, the `brain_state` continuity singleton) is written up in `brain/README.md`: the build order (A HOW-before-WHAT → B the **data model** Ideas/Actions/brain_state → C the **meta-language** of reserved `eval:*`/`tokeniko:*` behavior rules → D the loops' logic), the cooperative-preemption model (brain reacts to input via the memory-trace + throttles; `api`/`senses` are separate processes), and the KB-driven personality. With the reasoning core done, **going-live (the `senses` I/O — Discord private messages first) is the active frontier** — see `docs/roadmap.md` Next.
 - **`task senses`** (`senses/main.py`) — the connectors daemon (the former stubbed brain listeners, now their own subproject): the **Discord** bot and **ATProto/Bluesky** listener — tokeniko's I/O to the outside world. Concurrent listener tasks; needs MongoDB.
 
 Note also that importing the `lib/llc` pipeline modules (`parser`, `compiler`) loads `en_core_web_lg` at **module import time** — so any process that imports the pipeline needs that model present. (`preparser.py`/`translator.py` — the retired local machinery — still import SymSpell/`transformers` at import time, but nothing imports THEM since 2026-07-16, so neither loads.)
@@ -78,7 +90,7 @@ Changing a dimension means updating the constraints in `lib/core/tk.py`, `tkllc.
 (full REST, each a `*Service`), stakeholders (read-only), memory (list/get/search/insert, NO update —
 it's a Mongo **timeseries**), `POST /evaluate`, utils, compiler. Implementation notes README doesn't carry:
 - **Definitions** store the full compiled `TKZip` (`MEMDefinition.zip`, single OR multi-clause; all
-  WordNet glosses). `scripts/tk1/migrate_glosses.py` did the one-time re-home (`content`→`zip` + move the
+  WordNet glosses). `tools/migrate_glosses.py` did the one-time re-home (`content`→`zip` + move the
   gloss-axiom batches into definitions); `NotASingleClauseError` is gone (multi-clause is legal).
 - **`/memory/search`** is declared *before* `/memory/{id}` so `search` isn't read as an id; `?from=`
   is the aliased keyword (epoch **seconds** → UTC on `timestamp`).
@@ -114,10 +126,10 @@ The recursive models use forward references and **discriminated unions** (`Field
 ## Conventions
 
 - Comments and log messages are a mix of **English and Italian**; module headers in Italian are common. Match the surrounding language when editing a file.
-- Versioned modules: older implementations are kept alongside (`compilerV1.py`, `markersV1/V2/V3.py`, `scripts/tk1/legacy scripts/`). The live "V2" compiler is now the `compiler/` package (was `compiler.py`); `parser.py` (internally "V2") is the live parser.
+- Versioned modules: older implementations are kept alongside (`compilerV1.py`, `markersV1/V2/V3.py`, `tools/legacy scripts/`). The live "V2" compiler is now the `compiler/` package (was `compiler.py`); `parser.py` (internally "V2") is the live parser.
 - `lib/llc/` = the language-compilation pipeline **+ shared utilities** (`lib/llc/utils.py`: the antonym column-read primitive `utils_antonyms` + dictionary/token similarity — moved here from the former `lib/tkll/`); `lib/core/` = data models & IO; `lib/rag/` = the Claude API machinery, concentrated (2026-07-16): `client.py` (ONE lazy client + `rag_call` — graceful None, never raises + `json_envelope`/`rag_enabled`) over `registry.py` (per-instrument `RagSpec`: model/system prompt/schema — rag1 normalizer, rag2 decompile, rag3 judge, blog polish; every Claude call site refers here). `senses/` (a sibling subproject of `lib/`) = the external connectors (Discord, ATProto/Bluesky).
 - **Anchor resolver** (`lib/llc/anchors.py`) — the unified "surface word → logical/semantic category" mechanism. Semantic-native: maps ANY input to the **nearest of a small anchor set** (exact-hit fast path → nearest-anchor fallback above a floor) rather than fixed dictionaries, with a per-category backend (dictionary 2925-dim vectors for content words vs spaCy for function words), an **antonym polarity-guard** on polarity-sensitive categories (so "but" never resolves to AND), and **in-memory cached** anchor vectors (no per-call DB). The parser/compiler resolution sites — `parser_ccToOperator` (operators), `compiler_parseMarker` (subordinate types), attitude / comparison / advmod-intensifier / spatial / sequence — resolve **through it** instead of ad-hoc lemma lists, spaCy similarity, or Mongo `$vectorSearch`.
-- **`brain/behavior.py`** — the reserved-token **meta-language** (step C): the `eval:*`/`tokeniko:*` dispatch (`behavior_for`/`spawn_ideas_for`/`dispatch_action` + the hardwired `_DISPATCH` registry) over the `behavior_rules` personality table (`MEMBehaviorRule`→`TKBehaviorRuleDoc`); `priorities_phase` consumes it (urge-desc). Seed: `scripts/tk1/seed_behavior_rules.py`.
+- **`brain/behavior.py`** — the reserved-token **meta-language** (step C): the `eval:*`/`tokeniko:*` dispatch (`behavior_for`/`spawn_ideas_for`/`dispatch_action` + the hardwired `_DISPATCH` registry) over the `behavior_rules` personality table (`MEMBehaviorRule`→`TKBehaviorRuleDoc`); `priorities_phase` consumes it (urge-desc). Seed: `tools/seed_behavior_rules.py`.
 - **Questions (interrogative mood).** A `?`/wh-word marks an input as a **question** — *answered, not believed*. The pipeline carries the mood: `TKZipContent.dubitative` (statement/question) + `wh_role` (the gap = variable X to solve for), detected in the parser (`?` survival + spaCy `PronType=Int` + the `anchor_whType` resolver). The parser-free `evaluation_harness.answer_zip` produces an `AnswerResult` (`lib/core/evaluation.py`): a POLAR question reuses the truth machinery (inconsistent→a confident **NO**, true→YES, false→NO, else IDK); a WH question is solved by `lib/llc/evaluator/e_wh_solve.py` (role-gap KB query: what→is_a hypernym, why→derivation chain; others staged → honest UNKNOWN). The brain (`brain/thinking.py`) branches on mood: a question fans `eval:question → tokeniko:answer` (the verdict/value + the asker as `target` in the idea/action payload) and **skips the assertion + cross-item paths**; `dispatch_action` directs the reply at the asker. A coordinated predicate shares the head clause's subject + copula aux onto its conjunct leaves (`compiler_evaluateCoordinates._inherit_shared`), so "the cat is dead and alive(?)" is one same-subject contradiction.
 - `parser.py` monkey-patches `torch.load` (`weights_only=False`) to load Stanza models — keep that patch when touching parser imports.
 
@@ -181,28 +193,17 @@ Flow mirrors the sense-bridge: `TKName.uid/vector/ner` (`parser_getIndividual`) 
 — only on storing paths, NEVER on `/evaluate` (which stays pure/read-only). `evaluator_sameIndividual`
 is the entity-linking primitive (same uid→True, different→False, missing→None).
 
-**Status lives in three sibling files in `doc/` → `doc/roadmap.md`** (the road ahead: in-progress +
-ordered next), **`doc/landed.md`** (what's done), **`doc/parked.md`** (the icebox — deliberately
-deferred). Everything else in `doc/` is **reference material, homed under `doc/ref/`** (extended
+**Status lives in three sibling files in `docs/` → `docs/roadmap.md`** (the road ahead: in-progress +
+ordered next), **`docs/landed.md`** (what's done), **`docs/parked.md`** (the icebox — deliberately
+deferred). Everything else in `docs/` is **reference material, homed under `docs/ref/`** (extended
 context per task + future-reference to fill the roadmap): the consolidated design notes
-(`doc/ref/notes.md` — phased execution detail + reasoning-engine design/findings + parser/compiler
-quirks & gaps), the living empirical fragility log (`doc/ref/test-feedback.md`), and the rest
+(`docs/ref/notes.md` — phased execution detail + reasoning-engine design/findings + parser/compiler
+quirks & gaps), the living empirical fragility log (`docs/ref/test-feedback.md`), and the rest
 (`kb-growing-outward.md`, `paper_outline.md`, `captain-hunches.md`).
 
-**Status-doc invariants (STRICT — these three docs are the single source of truth for status).** An
-item has exactly ONE status and lives in exactly ONE of the three docs:
-1. **One item, one status.** Never list the same task under two statuses (e.g. in `roadmap.md` Next
-   *and* `parked.md`, or `landed.md` *and* `roadmap.md`). Its current status decides the one doc it
-   belongs to: in-flight/next → `roadmap.md`; done → `landed.md`; deferred → `parked.md`.
-2. **No cross-doc duplication.** The same item never appears in two of {`roadmap.md`, `landed.md`,
-   `parked.md`}. When an item moves status, **MOVE it** (delete from the old doc, add to the new) —
-   never copy. A one-line *pointer* is allowed (e.g. `roadmap.md` may say "steps 1–2 ✅ — see
-   `landed.md`") but the pointer carries no status detail of its own — it references, it does not
-   duplicate.
-3. **Reconcile at every commit.** Before each commit, check all three against the code reality and
-   update them so they reflect it with precision: land what the commit finished (roadmap→landed), park
-   what the commit deferred (roadmap→parked), add any newly-surfaced next work to `roadmap.md`. The
-   roadmap is the road *ahead* only — nothing landed, nothing parked lingers in it.
+**The status invariants are repository-wide** — one item one status, no cross-doc duplication,
+reconcile before the commit. They are stated once in `../CLAUDE.md`; here they bind `roadmap.md`,
+`landed.md` and `parked.md`.
 
-`doc/ref/notes.md` (design reference) and `doc/ref/test-feedback.md` (empirical log) are NOT status docs — they
+`docs/ref/notes.md` (design reference) and `docs/ref/test-feedback.md` (empirical log) are NOT status docs — they
 are exempt from the invariants above (an item may be discussed there *and* have a status entry).

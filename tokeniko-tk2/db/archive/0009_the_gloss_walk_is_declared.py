@@ -7,7 +7,7 @@ walk is the same category-2 set for the same reason, so it arrives as rows on it
 than being moved into them later.
 
 **THE VALUES ARE THE PROTOTYPE'S, VERBATIM**, and that is deliberate for T4b-i's reason: «today's
-values migrate across VERBATIM — a value edited here would corrupt the comparison». `scripts/tk2/`
+values migrate across VERBATIM — a value edited here would corrupt the comparison». `docs/dictionary/origin-prototype/`
 is where every one of them comes from (`tk2_config.py`: `WEIGHTS["identity"] = 1.0`,
 `GLOSS_JACCARD_CAP = 0.5`, `GLOSS_JACCARD_FLOOR = 0.1`, the `jaccard * 5` of `tk2_matrix.cell`, its
 `len(inter) >= 2`, and `_lemmas_in_base`'s base-word vocabulary), and the notes below record what

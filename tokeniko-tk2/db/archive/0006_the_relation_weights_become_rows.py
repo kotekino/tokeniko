@@ -13,7 +13,7 @@ read. Nothing below edits, retires or deletes an older row.
 WHAT IS IN IT, and what argued for each:
 
   1. **THE MINED WEIGHTS** — nineteen relations, carried VERBATIM from the prototype's `WEIGHTS`
-     (`scripts/tk2/tk2_config.py`), signs included, in the order its cell walk evaluated them. The
+     (`docs/dictionary/origin-prototype/tk2_config.py`), signs included, in the order its cell walk evaluated them. The
      order is now load-bearing rather than incidental: `position` is the PRECEDENCE two equally
      strong relations are resolved by, so a rebuild cannot flip a cell's provenance by iteration
      luck. Two of the prototype's twenty-one entries are NOT here: `gloss_overlap`, which is

@@ -1,35 +1,49 @@
-# tokeniko 2 — the body
+# tokeniko 2 — the blueprint and the body
 
-The next architecture of tokeniko: one persistent, logic-first thinking entity, embodied on bare
-metal beside its own MongoDB. This directory is the **build**; `docs/` is the **blueprint** that the
-build answers to.
+The next architecture: one persistent, logic-first thinking entity, embodied on bare metal beside its
+own MongoDB. **This is where active development happens.**
 
-The two limits tokeniko 2 exists to kill, stated so they can be falsified (`docs/README.md` §1):
+*The vision, the folder map and how we work are at the repository root — `../docs/vision.md`,
+`../README.md`, `../CLAUDE.md`. This file carries only what is true of tk2.*
+
+## Why there is a second architecture
+
+Two limits of v1, stated so they can be falsified (argued in full in `docs/charter.md` §1):
 
 - **A — behaviour is hardwired.** Rules become zips: policy in memory, over a vocabulary that is not
   fixed in advance.
 - **B — the zip is not computable.** The format becomes fixed-arity: two arbitrary sentences compared
   by uniform numeric operations, with no code that knows their individual shape.
 
-v1 (`../tokeniko/`) is not deprecated and not frozen out of usefulness: it stops growing, and it
-keeps witnessing. Its corpora are the no-regression ratchet this build has to clear.
+v1 is **frozen, not deprecated**. It stops growing and keeps witnessing: its corpora are the
+no-regression ratchet this build has to clear, and its stored journeys are evidence about what the
+format must hold.
 
 ## The map
 
 ```
 tokeniko-tk2/
-  docs/        the blueprint — sixteen requirements files, the plan, the roadmap  (read first)
+  docs/        the blueprint — read first (see below)
   tk2/         the installable package: the body's binary
     core/        pydantic models + the constants          — shape
     datatier/    client, guard, r-cache, bunnet wrapping  — movement
+    dictionary/  the semantic space and its policy
+    language/    the station: skeleton, closed classes, the compile core
+    tkzip/       the format's schema
   db/          numbered migrations; deploys are migrations (body req. 3)
-  tools/       runnable utilities (the migration runner, probes, bars)
+  tools/       runnable instruments — the migration runner, the gates, the probes, the bars
+  tests/       the checks
 ```
 
-Where to start reading `docs/`: **`docs/README.md`** (why this project exists and what must survive),
-then **`docs/plan.md`** (the epics, their dependencies, and their acceptance contracts), then the
-requirements file of whatever you are about to touch. `docs/roadmap.md` is the checkable mirror of
-the plan; what finishes moves to `docs/landed.md`.
+### Reading `docs/`
+
+| file | what it is |
+|---|---|
+| `plan.md` | **the plan** — the epics, their tasks, their dependencies and acceptance contracts |
+| `roadmap.md` | the checkable mirror: one line per item, ticked when it lands |
+| `landed.md` | what finished. Items **move** here, never get copied |
+| `charter.md` | the phase-1 record: the two limits, the continuity contract, the inheritance ledger, the open-questions ledger, the success criteria, and the requirements method |
+| `<component>/` | **the decision record** — `requirements.md` plus the dated notes beside it. Read the chapter in full before elaborating any point in it |
 
 ## The database
 
@@ -40,8 +54,8 @@ Two other databases exist on that host, and neither is this one:
 
 - `tokeniko` / `tokeniko_mem` — **tk1's live body: the biography.** Never opened from here. The
   datatier's guard refuses them by name.
-- `tokeniko_tk2` — the dictionary-review instruments' sandbox (`../scripts/tk2/`). Its assets cross
-  into the body by migration, never by a live read across the fence.
+- `tokeniko_tk2` — the sandbox the dictionary instruments write. Its assets cross into the body by
+  migration, never by a live read across the fence.
 
 The guard is standard equipment (datatier req. 4): every entry point names its db and refuses one it
 was not explicitly given. Go-live (E10) moves that boundary deliberately, with the Captain's hand on

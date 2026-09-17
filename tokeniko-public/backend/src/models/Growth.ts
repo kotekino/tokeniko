@@ -6,7 +6,7 @@ import { Schema, model, Document } from 'mongoose';
  *
  * The page stays HAND-WRITTEN in the sense that matters (doc/growth-rings.md):
  * the entries are the crew's judgement about progress, curated from
- * `tokeniko/doc/landed.md` at doc-reconciliation time. Only the *storage* moved
+ * `tokeniko-tk1/docs/landed.md` at doc-reconciliation time. Only the *storage* moved
  * out of the bundle. The frontend keeps `data/growth.ts` as its offline
  * fallback — the first seasons, frozen, honest when the API is unreachable.
  *

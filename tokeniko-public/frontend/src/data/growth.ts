@@ -7,7 +7,7 @@
  * a judgement about progress, and judgements about progress are the crew's.
  *
  * The entries live in Atlas (`growth_rings` + the `growth_edge` singleton),
- * written at doc-reconciliation time from `tokeniko/doc/landed.md` and
+ * written at doc-reconciliation time from `tokeniko-tk1/docs/landed.md` and
  * `doc/roadmap.md` via the authed API — backend/scripts/seed-growth.mjs holds
  * both the recipe and the current curation — so a new season lands with one
  * call, not a deploy. Same discipline as the Stream: NO bundled content; the
