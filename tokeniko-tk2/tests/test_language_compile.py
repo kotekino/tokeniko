@@ -831,3 +831,269 @@ def test_the_numeral_reader_never_stops_a_parse(compiler):
     assert "word2number" not in [n for n in dir(mod)], "not imported at module scope"
     assert "from word2number import w2n" in inspect.getsource(mod.numeral_value)
     assert "ImportError" in inspect.getsource(mod.numeral_value)
+
+
+# ------------------------------------------------------------------------------------------------
+# the polar question — req 21 (E3 task 2c). Skeletons are stanza's own parses, measured 2026-09-18.
+# ------------------------------------------------------------------------------------------------
+
+def _row(out, name):
+    return next(r for r in out.zip.rows if r.name == name)
+
+
+POLAR = skeleton_from_conllu("Is the cat hungry ?", [
+    ("1", "Is", "be", "AUX", "4", "cop"),
+    ("2", "the", "the", "DET", "3", "det"),
+    ("3", "cat", "cat", "NOUN", "4", "nsubj"),
+    ("4", "hungry", "hungry", "ADJ", "0", "root"),
+    ("5", "?", "?", "PUNCT", "4", "punct"),
+])
+
+DECLARATIVE_QUESTION = skeleton_from_conllu("The cat is hungry ?", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "cat", "cat", "NOUN", "4", "nsubj"),
+    ("3", "is", "be", "AUX", "4", "cop"),
+    ("4", "hungry", "hungry", "ADJ", "0", "root"),
+    ("5", "?", "?", "PUNCT", "4", "punct"),
+])
+
+EXCLAMATION = skeleton_from_conllu("Is he tall !", [
+    ("1", "Is", "be", "AUX", "3", "cop"),
+    ("2", "he", "he", "PRON", "3", "nsubj"),
+    ("3", "tall", "tall", "ADJ", "0", "root"),
+    ("4", "!", "!", "PUNCT", "3", "punct"),
+])
+
+CLAIM_THEN_QUESTION = skeleton_from_conllu("I know you are tired , but is the cat hungry ?", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "know", "know", "VERB", "0", "root"),
+    ("3", "you", "you", "PRON", "5", "nsubj"),
+    ("4", "are", "be", "AUX", "5", "cop"),
+    ("5", "tired", "tired", "ADJ", "2", "ccomp"),
+    ("6", ",", ",", "PUNCT", "11", "punct"),
+    ("7", "but", "but", "CCONJ", "11", "cc"),
+    ("8", "is", "be", "AUX", "11", "cop"),
+    ("9", "the", "the", "DET", "10", "det"),
+    ("10", "cat", "cat", "NOUN", "11", "nsubj"),
+    ("11", "hungry", "hungry", "ADJ", "2", "conj"),
+    ("12", "?", "?", "PUNCT", "2", "punct"),
+])
+
+QUOTED_QUESTION = skeleton_from_conllu('I asked : " Do you know the muffin man ? "', [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "asked", "ask", "VERB", "0", "root"),
+    ("3", ":", ":", "PUNCT", "2", "punct"),
+    ("4", '"', '"', "PUNCT", "2", "punct"),
+    ("5", "Do", "do", "AUX", "7", "aux"),
+    ("6", "you", "you", "PRON", "7", "nsubj"),
+    ("7", "know", "know", "VERB", "2", "ccomp"),
+    ("8", "the", "the", "DET", "10", "det"),
+    ("9", "muffin", "muffin", "NOUN", "10", "compound"),
+    ("10", "man", "man", "NOUN", "7", "obj"),
+    ("11", "?", "?", "PUNCT", "2", "punct"),
+    ("12", '"', '"', "PUNCT", "2", "punct"),
+])
+
+CONDITIONAL_QUESTION = skeleton_from_conllu("Will you stay if it rains ?", [
+    ("1", "Will", "will", "AUX", "3", "aux"),
+    ("2", "you", "you", "PRON", "3", "nsubj"),
+    ("3", "stay", "stay", "VERB", "0", "root"),
+    ("4", "if", "if", "SCONJ", "6", "mark"),
+    ("5", "it", "it", "PRON", "6", "nsubj"),
+    ("6", "rains", "rain", "VERB", "3", "advcl"),
+    ("7", "?", "?", "PUNCT", "3", "punct"),
+])
+
+TAG_QUESTION = skeleton_from_conllu("The cat is hungry , is n't it ?", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "cat", "cat", "NOUN", "4", "nsubj"),
+    ("3", "is", "be", "AUX", "4", "cop"),
+    ("4", "hungry", "hungry", "ADJ", "0", "root"),
+    ("5", ",", ",", "PUNCT", "6", "punct"),
+    ("6", "is", "be", "AUX", "4", "parataxis"),
+    ("7", "n't", "not", "PART", "6", "advmod"),
+    ("8", "it", "it", "PRON", "6", "nsubj"),
+    ("9", "?", "?", "PUNCT", "4", "punct"),
+])
+
+
+def test_a_POLAR_question_opens_its_truth(compiler):
+    """«Is the cat hungry?» — every box bound, and the TRUTH is what is asked (E2, tkzip req 48). It
+    compiled at 1.0 until 2026-09-18: a question stored as a belief."""
+    assert isinstance(main_row(compiler.compile(POLAR)).truth, Open)
+
+
+def test_the_QUESTION_MARK_decides_and_the_word_order_does_not(compiler):
+    """Req 21. «The cat is hungry?» has declarative syntax — stanza reads it correctly — and asks
+    anyway; «Is he tall!» is inverted and asks nothing. `!` is not `?`."""
+    assert isinstance(main_row(compiler.compile(DECLARATIVE_QUESTION)).truth, Open)
+    assert main_row(compiler.compile(EXCLAMATION)).truth == 1.0
+
+
+def test_a_question_belongs_to_the_STATEMENT_it_closes(compiler):
+    """Stanza hangs the `?` on the ROOT, *know*. The question is the coordinate: the tiredness stays
+    claimed, the hunger is asked, and the AND binding them is not claimed either."""
+    out = compiler.compile(CLAIM_THEN_QUESTION)
+    assert _row(out, "r0").truth == 1.0
+    assert _row(out, "r1").truth == 1.0, "«you are tired» is still asserted"
+    assert isinstance(_row(out, "r2").truth, Open)
+    between = next(j for j in out.zip.rows if j.kind == "join" and "r2" in j.operands)
+    assert isinstance(between.truth, Open), "«A, but B?» does not claim A-and-B"
+
+
+def test_a_QUOTED_question_asks_while_the_saying_stays_claimed(compiler):
+    """«I asked: "Do you know the muffin man?"» — the asking happened; the knowing is what was
+    asked. A quote is a statement of its own (req 21)."""
+    out = compiler.compile(QUOTED_QUESTION)
+    assert _row(out, "r0").truth == 1.0
+    assert isinstance(_row(out, "r1").truth, Open)
+
+
+def test_a_conditional_question_opens_the_JOIN_that_carries_the_claim(compiler):
+    """«Will you stay if it rains?» claims neither half — the IMPLY carries the claim, so that is
+    what the question opens. The halves stay unasserted rather than becoming questions."""
+    out = compiler.compile(CONDITIONAL_QUESTION)
+    imply = next(j for j in out.zip.rows if j.kind == "join")
+    assert isinstance(imply.truth, Open)
+    assert _row(out, "r0").truth is None and _row(out, "r1").truth is None
+
+
+def test_a_WH_question_keeps_its_truth(compiler):
+    """«When do you sleep?» asks WHEN. That you sleep stays claimed: a `?` closing a statement that
+    already asks through its wh-word opens nothing more."""
+    out = compiler.compile(WHEN)
+    assert isinstance(main_row(out).boxes[Role.TIME].head, Open)
+    assert main_row(out).truth == 1.0
+
+
+def test_a_TAG_question_claims_and_then_asks(compiler):
+    """«The cat is hungry, isn't it?» — the claim stands and the tag asks for its confirmation."""
+    out = compiler.compile(TAG_QUESTION)
+    assert _row(out, "r0").truth == 1.0
+    assert isinstance(_row(out, "r1").truth, Open)
+
+
+WONDER_WHETHER = skeleton_from_conllu("I wonder whether the cat is hungry .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "wonder", "wonder", "VERB", "0", "root"),
+    ("3", "whether", "whether", "SCONJ", "7", "mark"),
+    ("4", "the", "the", "DET", "5", "det"),
+    ("5", "cat", "cat", "NOUN", "7", "nsubj"),
+    ("6", "is", "be", "AUX", "7", "cop"),
+    ("7", "hungry", "hungry", "ADJ", "2", "ccomp"),
+    ("8", ".", ".", "PUNCT", "2", "punct"),
+])
+
+ASKED_IF = skeleton_from_conllu("I asked if the cat is hungry .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "asked", "ask", "VERB", "0", "root"),
+    ("3", "if", "if", "SCONJ", "7", "mark"),
+    ("4", "the", "the", "DET", "5", "det"),
+    ("5", "cat", "cat", "NOUN", "7", "nsubj"),
+    ("6", "is", "be", "AUX", "7", "cop"),
+    ("7", "hungry", "hungry", "ADJ", "2", "ccomp"),
+    ("8", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
+@pytest.mark.parametrize("skeleton, verb", [(WONDER_WHETHER, "wonder.v"), (ASKED_IF, "ask.v")])
+def test_WHETHER_and_IF_on_a_complement_ASK(compiler, skeleton, verb):
+    """Req 21, and req 14 finally true. The word is `mark` whether it asks or supposes; the CLAUSE
+    decides — a complement is asked, an `advcl` supposed. Until 2026-09-18 `mark` always read the
+    subordinator row, and «I wonder whether the cat is hungry» was a CONDITIONAL."""
+    out = compiler.compile(skeleton)
+    attitude = next(r for r in out.zip.rows if r.kind == "attitude")
+    assert attitude.verb == verb and attitude.scopes == "r1"
+    assert _row(out, "r0").truth == 1.0, "the wondering, the asking, is claimed"
+    assert isinstance(_row(out, "r1").truth, Open), "the hunger is what is asked"
+    assert not [r for r in out.zip.rows if r.kind == "join"], "and it is not a conditional"
+
+
+def test_IF_on_an_ADVERBIAL_clause_still_supposes(compiler):
+    """The other reading of the same word, chosen by the same tree: «If it rains I stay home»."""
+    out = compiler.compile(IF)
+    assert next(r for r in out.zip.rows if r.kind == "join").operator == Operator.IMPLY
+    assert not [r for r in out.zip.rows if r.kind == "content" and isinstance(r.truth, Open)]
+
+
+# ------------------------------------------------------------------------------------------------
+# the imperative — E3 task 2d. Stanza's `Mood=Imp` is added by hand: CoNLL-U here carries no FEATS.
+# ------------------------------------------------------------------------------------------------
+
+def _with_mood(skeleton, *indices):
+    from dataclasses import replace as _replace
+    words = tuple(_replace(w, feats={**w.feats, "Mood": "Imp"}) if w.index in indices else w
+                  for w in skeleton.words)
+    return _replace(skeleton, words=words)
+
+
+CLOSE_THE_DOOR = _with_mood(skeleton_from_conllu("Close the door !", [
+    ("1", "Close", "close", "VERB", "0", "root"),
+    ("2", "the", "the", "DET", "3", "det"),
+    ("3", "door", "door", "NOUN", "1", "obj"),
+    ("4", "!", "!", "PUNCT", "1", "punct"),
+]), 0)
+
+BE_QUIET = _with_mood(skeleton_from_conllu("Be quiet !", [
+    ("1", "Be", "be", "AUX", "2", "cop"),
+    ("2", "quiet", "quiet", "ADJ", "0", "root"),
+    ("3", "!", "!", "PUNCT", "2", "punct"),
+]), 0)
+
+GO_AND_SEE = _with_mood(skeleton_from_conllu("Go and see .", [
+    ("1", "Go", "go", "VERB", "0", "root"),
+    ("2", "and", "and", "CCONJ", "3", "cc"),
+    ("3", "see", "see", "VERB", "1", "conj"),
+    ("4", ".", ".", "PUNCT", "1", "punct"),
+]), 0, 2)
+
+HE_SAID_I_AM_LATE = skeleton_from_conllu('He said " I am late "', [
+    ("1", "He", "he", "PRON", "2", "nsubj"),
+    ("2", "said", "say", "VERB", "0", "root"),
+    ("3", '"', '"', "PUNCT", "6", "punct"),
+    ("4", "I", "I", "PRON", "6", "nsubj"),
+    ("5", "am", "be", "AUX", "6", "cop"),
+    ("6", "late", "late", "ADJ", "2", "ccomp"),
+    ("7", '"', '"', "PUNCT", "6", "punct"),
+])
+
+
+def _speech():
+    from tk2.language.utterance import Context
+    return Context(speaker="me.n", addressee="you.n")
+
+
+def test_the_IMPERATIVE_is_a_WANT_over_an_unstated_row(compiler):
+    """«Close the door!» — the drill's `aw-21`, exactly: POV(me · want) over «close.v», agent = the
+    addressee, and NOTHING CLAIMED. It compiled as «you close the door», stated, until 2026-09-18."""
+    out = compiler.compile(CLOSE_THE_DOOR, _speech())
+    want = next(r for r in out.zip.rows if r.kind == "attitude")
+    row = _row(out, "r0")
+    assert (want.verb, want.holder.head, want.scopes) == ("want.v", "me.n", "r0")
+    assert row.truth is None, "wanted, not claimed"
+    assert row.boxes[Role.AGENT].head == "you.n", "the understood subject is the addressee"
+    assert want.strength is None, "how strongly is not a fact the tree states"
+
+
+def test_the_understood_subject_takes_the_box_a_subject_WOULD_have(compiler):
+    """«Be quiet!» is copular, and a copular subject is `patient` (E2) — so the addressee is too.
+    The mood is on the copula, not on the head."""
+    row = _row(compiler.compile(BE_QUIET, _speech()), "r0")
+    assert row.boxes[Role.PATIENT].head == "you.n"
+    assert row.truth is None
+
+
+def test_a_JOIN_of_wants_claims_nothing(compiler):
+    """«Go and see» — two wants; the AND between them, left claimed, asserted that you go and see."""
+    out = compiler.compile(GO_AND_SEE, _speech())
+    assert len([r for r in out.zip.rows if r.kind == "attitude"]) == 2
+    assert next(r for r in out.zip.rows if r.kind == "join").truth is None
+
+
+def test_a_holder_the_station_cannot_name_is_SOMEBODY_not_the_narrator(compiler):
+    """«He said "I am late"» — `he` is anaphora and cannot be named from the speech act, so the
+    quoted «I» is somebody OPEN. Falling back to the outer speaker made the NARRATOR late. Found
+    2026-09-18 by the imperative, on «He said: "Close the door!"»."""
+    out = compiler.compile(HE_SAID_I_AM_LATE, _speech())
+    late = next(r for r in out.zip.rows if r.kind == "content" and r.name != "r0")
+    assert isinstance(late.boxes[Role.PATIENT].head, Open), "somebody — never `me.n`"

@@ -160,3 +160,48 @@ for l in api brain senses; do ssh $BODY_HOST "launchctl kickstart -k gui/\$(id -
 ```
 
 The database is never touched by any of this. `tk-atlas` does not restart because code changed.
+
+---
+
+## ⚠ The next pull crosses two renames — `deploy.sh` cannot do it alone *(measured 2026-09-18)*
+
+The body is parked on `a40ab83` (2026-08-12), deliberately: every later commit that touches tk1 is a
+pure rename, so there is nothing to deploy. **Deferred to tk2's go-live** (the Captain, 2026-09-18).
+
+The pull crosses `tokeniko/` → `tokeniko-tk1/` (56bec80) and `scripts/body/` → `body/tools/`
+(244954a). Four machine-local things do not follow a `git pull`:
+
+| what | where it is on the body | why it breaks |
+|---|---|---|
+| `.env` | `tokeniko/.env` (git-ignored) | `run_service.sh` reads `tokeniko-tk1/.env` → FATAL, no service starts |
+| editable install | `pip` points at `tokeniko/` | the package imports from a folder that is now only leftovers |
+| logs | `tokeniko/logs/` | the plists and rotation now write `tokeniko-tk1/logs/` |
+| the three plists | `~/Library/LaunchAgents/` → `scripts/body/run_service.sh` | the file no longer exists after the pull |
+
+Run by `deploy.sh`, the pull succeeds, the restart fails, the health-check fails, and the automatic
+rollback puts him back on `a40ab83` — safe, but never done. So this one is by hand, on the mini, in an
+awake-and-quiet window:
+
+```sh
+cd /Users/renzosala/Develop/personal/tokeniko
+# 1. stop
+for s in api brain senses; do launchctl bootout gui/$(id -u)/online.tokeniko.$s; done
+# 2. pull (the egg-info edits are regenerated build files)
+git checkout -- tokeniko/tokeniko.egg-info && git pull --ff-only
+# 3. carry the machine-local files across the rename
+mv tokeniko/.env tokeniko-tk1/.env
+mv tokeniko/logs tokeniko-tk1/logs
+.venv/bin/pip install -e tokeniko-tk1
+# 4. the new plists and rotation
+cp body/tools/online.tokeniko.*.plist ~/Library/LaunchAgents/
+sudo cp body/tools/newsyslog-tokeniko.conf /etc/newsyslog.d/tokeniko.conf
+for s in api brain senses; do launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/online.tokeniko.$s.plist; done
+# 5. verify
+launchctl list | grep online.tokeniko                                          # PIDs, exit 0
+curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/openapi.json   # 200
+```
+
+**Rollback** is the same steps reversed: `bootout` · `git checkout a40ab83` · move `.env` and `logs`
+back into `tokeniko/` · `pip install -e tokeniko` · copy the plists from `scripts/body/` · `bootstrap`.
+
+After this, `deploy.sh` is the normal path again. Delete this section when it has run.

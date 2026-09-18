@@ -37,6 +37,7 @@ from tests.fixtures.drill import CASES  # noqa: E402
 from tk2.language import standing_closed_classes  # noqa: E402
 from tk2.language.compile import Compiler  # noqa: E402
 from tk2.language.utterance import Context, compile_utterance  # noqa: E402
+from tk2.tkzip.schema import Open  # noqa: E402
 
 AGREED, DISAGREED, MISSING = "agreed", "DISAGREED", "missing"
 
@@ -175,10 +176,31 @@ def compare(produced, expected, case_id="", sentence="") -> Reading:
                 reading.conflicts.append(
                     f"{role.value}: the station says {mine_key}, the drill says {their_key}")
 
+        # **THE TRUTH SLOT — the third blindness, closed 2026-09-18 (req 21).** Roles were compared
+        # and truth never was, so «Is the cat hungry?» compiled at 1.0 against a drill that
+        # hand-compiles it OPEN (`exist-4`, `t-mo-1`) and nothing disagreed. The STATE is compared,
+        # not the value: the drill writes a negated row as `truth=0.0` where the station raises a
+        # negation prefix, and a forecast as a confidence — a value against a value is not a
+        # disagreement about whether anything was claimed or asked.
+        mine_state, their_state = truth_state(row), truth_state(other)
+        if mine_state != their_state:
+            reading.conflicts.append(
+                f"truth of {signature(row)}: the station says {mine_state}, "
+                f"the drill says {their_state}")
+
     for i, other in enumerate(theirs):
         if i not in taken:
             reading.missing_rows.append(signature(other))
     return reading
+
+
+def truth_state(row) -> str:
+    """What a row's truth slot SAYS, not its value: `stated` (a value — claimed, denied, or held at
+    a confidence) · `OPEN` (asked) · `unstated` (neither claimed nor asked: a supposition, a want)."""
+    truth = getattr(row, "truth", None)
+    if truth is None:
+        return "unstated"
+    return "OPEN" if isinstance(truth, Open) else "stated"
 
 
 def run(argv=None) -> int:

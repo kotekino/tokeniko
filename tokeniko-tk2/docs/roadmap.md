@@ -59,11 +59,14 @@
 - [x] **⚑ the rotation was INVERTED — found and fixed** *(09-17)* — quotation rotates, reporting does
       not; the signal is structural and no character is ever read. Record `202609170533_…`
 - [x] **the truth slot under an attitude — RULED: the rows keep their truth** *(09-17)*
-- [ ] **task 2c — ⚑ a polar question never opens its truth** — «Is the cat hungry?» compiles at 1.0
+- [x] **task 2c — ⚑ a polar question opens its truth** *(09-18, req 21)* — the `?` decides, per statement. Record `202609180900_…`
+- [x] **task 2d — ⚑ the imperative is a want, not a claim** *(09-18)* — `Mood=Imp`; `aw-21` agrees. `strength` and «Suppose…» asked
+- [x] **`whether` / `if` on a complement ask** *(09-18, `db/0016`)* — the clause decides: `ccomp` asks, `advcl` supposes
+- [ ] **`or` asserts both halves** — `db/0010`'s row (curation)
 - [ ] **the subject's role depends on WHAT IS PREDICATED of it** — ten witnesses in the drill gate's
       ratchet; `RELATION_FILLS_ROLE` defers it to the geometry
 - [ ] **the placement floor** — the base's +0.15 says NEAR to 99.7% of placed senses; needs its own
-- [ ] **`mark` under a reporting verb opens a POV**, not a join
+- [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
 - [ ] drill automated = acceptance gate

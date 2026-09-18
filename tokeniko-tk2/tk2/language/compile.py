@@ -180,6 +180,25 @@ DEPS_THAT_COMPILE_TO_NOTHING = frozenset({"vocative"})
 #: full strength. What the claim is WORTH is the evaluator's question, not the parser's.
 CLAIMED = 1.0
 
+#: **THE `?` IS THE WHOLE SIGNAL OF A POLAR QUESTION** (req 21, the Captain, 2026-09-18). English
+#: writes «The cat is hungry?» with a declarative syntax, and stanza reads it CORRECTLY as one: the
+#: question survives only in the punctuation, as a token stanza has already isolated. With a `?` the
+#: statement asks; without one nothing does, and `!` is not `?`. Word order is not read at all.
+#: **Frame**: this is the decoded tree's punctuation, and decoding is frame (root `CLAUDE.md`).
+QUESTION_MARK = "?"
+
+#: The relations by which a clause stands BESIDE the one it hangs off, as a statement of its own —
+#: provided it has its own subject. «I know you are tired, BUT IS THE CAT HUNGRY?» is two statements
+#: (as in tk1); «Is the cat hungry OR TIRED?» is one statement with a coordinated predicate. Frame:
+#: the tree's shape (req 21).
+COORDINATE_DEPS = frozenset({"conj", "parataxis"})
+SUBJECT_DEPS = frozenset({"nsubj", "csubj", "expl"})
+
+#: **THE IMPERATIVE IS A WANT OF THE SPEAKER'S** — tkzip req 48, and the drill's `aw-21`: «Close the
+#: door!» is POV(me · want) over an UNSTATED row whose agent is the addressee. The key is the FORMAT's
+#: own ruling (mood is not a field; the imperative collapses into this attitude), so it is frame.
+IMPERATIVE_VERB = "want.v"
+
 
 class Placements:
     """Which tokens reached the zip, **and where each one went.**
@@ -306,6 +325,7 @@ class Compiler:
         content: dict[int, ContentRow] = {}
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
+        asked: set[str] = set()               # rows a wh-word already made ask — the `?` adds nothing
 
         # **THE ROTATION IS DECIDED BEFORE THE CLAUSES ARE COMPILED, AND IT HAS TO BE.** A pronoun
         # is resolved where it is met, and the attitude that governs it is built later, in
@@ -319,10 +339,12 @@ class Compiler:
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
                 open_truth, wants_antecedent, defaulted, modifiers, adverb_joins,
-                inner.get(head.index, context))
+                inner.get(head.index, context), asked)
 
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
+        self._question(skeleton, heads, owner, content, joins, asked)
+        self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
         extra += self._modify(modifiers, joins)
         self._connect(adverb_joins, content, joins, abstained)
 
@@ -394,7 +416,7 @@ class Compiler:
                 open_truth: set, wants_antecedent: set,
                 defaulted: list | None = None, modifiers: list | None = None,
                 adverb_joins: list | None = None,
-                context: Context = NO_CONTEXT) -> ContentRow:
+                context: Context = NO_CONTEXT, asked: set | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
@@ -435,7 +457,8 @@ class Compiler:
             if match is not None:
                 covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
                                                     abstained, copular, name,
-                                                    open_truth, wants_antecedent, context),
+                                                    open_truth, wants_antecedent, context,
+                                                    asked),
                                label=CLOSED_KIND_PLACES[match.kind] if match.kind in
                                CLOSED_KIND_PLACES else (match.kind or "structure"))
                 continue
@@ -510,8 +533,11 @@ class Compiler:
                 self._share_variable(skeleton, head, content, outer, prefix_rows, covered, marks)
                 continue
 
-            if joiner is not None and joiner.compiled.get("asserts") == ASSERTS_MATRIX:
+            if joiner is not None and (joiner.compiled.get("asserts") == ASSERTS_MATRIX
+                                       or joiner.compiled.get("opens") == "truth"):
                 # A POV, not a join: «he says THAT you swim» claims the saying, never the swimming.
+                # And «I wonder WHETHER you swim» claims the wondering and ASKS the swimming — the
+                # clause's truth is opened by `_ask`, from the word's own row (req 21).
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner)
                 covered.update(range(joiner_index(skeleton, head, joiner),
                                      joiner_index(skeleton, head, joiner) + joiner.length),
@@ -604,6 +630,143 @@ class Compiler:
             joins.append(JoinRow(name=f"j{len(joins)}", operator=Operator.IMPLY,
                                  operands=[unknown.name, row.name], truth=CLAIMED))
         return raised
+
+    def _statements(self, skeleton: Skeleton, heads: list[Word]) -> tuple[dict[int, int], set[int]]:
+        """Which STATEMENT each clause belongs to — and which clauses carry that statement's claim.
+
+        **A QUESTION IS A PROPERTY OF A STATEMENT, NOT OF A SENTENCE** (req 21 — the Captain, as it
+        was in tk1): «I know you are tired, but is the cat hungry?» is a statement and a question.
+        The statements are the main clause, a coordinate or paratactic clause with a subject of its
+        own, and a QUOTED complement (a quote breaks into a statement of its own, bound to the saying
+        by its attitude). A subordinate clause belongs to its statement and asks only through its
+        own word — `whether`, a wh-word.
+
+        Returns `statement_of` (clause head → the head of its statement) and `core`: the clauses
+        whose rows ARE the statement's claim — its head, plus any predicate coordinated with it
+        («is the cat hungry OR TIRED»). A coordinate inside a subordinate clause («if it rains AND
+        SNOWS») belongs to the subordinate clause, not to the core.
+        """
+        clauses = {w.index: w for w in heads}
+        statement_of: dict[int, int] = {}
+        core: set[int] = set()
+        # Outermost first: a clause's statement is decided from its enclosing clause's.
+        for head in sorted(heads, key=lambda w: self._depth(skeleton, w.index)):
+            outer = None if head.is_root else self._enclosing(skeleton, head, clauses)
+            if outer is None:
+                statement_of[head.index] = head.index
+                core.add(head.index)
+                continue
+            parent = statement_of.get(outer.index, outer.index)
+            coordinate = head.bare_dep in COORDINATE_DEPS and outer.index in core
+            has_subject = any(c.bare_dep in SUBJECT_DEPS for c in skeleton.children(head.index))
+            if (head.bare_dep == "ccomp" and self._is_quoted(skeleton, head)) \
+                    or (coordinate and has_subject):
+                statement_of[head.index] = head.index
+                core.add(head.index)
+            else:
+                statement_of[head.index] = parent
+                if coordinate:
+                    core.add(head.index)
+        return statement_of, core
+
+    def _question(self, skeleton: Skeleton, heads: list[Word], owner: dict[int, int],
+                  content: dict, joins: list, asked: set) -> None:
+        """A `?` makes the statement it closes ASK — its truth, and the claim of what it joins.
+
+        **STANZA HANGS THE `?` ON THE ROOT**, not on the clause that asks: on *asked* in «I asked:
+        "Do you know the muffin man?"», on *know* in «I know you are tired, but is the cat hungry?».
+        So the mark is given to **the last statement it closes** — the one whose words come
+        nearest before it — and that is the quote in the first sentence and the coordinate in the
+        second, while the saying and the tiredness stay claimed.
+
+        **WHAT OPENS IS THE STATEMENT'S CLAIM, WHEREVER IT SITS.** Usually its row's truth. In «Will
+        you stay if it rains?» neither half is claimed and the IMPLY carries the claim, so the join
+        opens; in «Is the cat hungry or tired?» the disjunction does. A claimed join binding the
+        asking statement to another one opens too: «A, but B?» does not claim A-and-B. Only what
+        was CLAIMED opens — a row the joins left unasserted was never the speaker's claim to ask.
+
+        **A STATEMENT THAT ALREADY ASKS THROUGH A WH-WORD KEEPS ITS TRUTH**: «Where is the cat?»
+        asks where, not whether.
+        """
+        marks = [w.index for w in skeleton if w.upos == "PUNCT" and w.text == QUESTION_MARK]
+        if not marks:
+            return
+        statement_of, core = self._statements(skeleton, heads)
+        # The statement each token belongs to, through the clause that owns it. Punctuation is
+        # nobody's evidence: stanza attaches it to the root whatever it closes.
+        words_of: dict[int, list[int]] = {}
+        for index, clause in owner.items():
+            if skeleton[index].upos != "PUNCT" and clause in statement_of:
+                words_of.setdefault(statement_of[clause], []).append(index)
+
+        asking: set[int] = set()
+        for mark in marks:
+            before = {s: max(i for i in idx if i < mark)
+                      for s, idx in words_of.items() if any(i < mark for i in idx)}
+            if before:
+                asking.add(max(before, key=before.get))
+
+        for statement in asking:
+            claim = [content[h] for h in core
+                     if statement_of.get(h) == statement and h in content]
+            if any(row.name in asked for row in claim):
+                continue
+            names = {row.name for row in claim}
+            for row in claim:
+                if row.truth == CLAIMED:
+                    row.truth = Open()
+            for join in joins:
+                if join.truth == CLAIMED and names.intersection(join.operands):
+                    join.truth = Open()
+
+    def _imperative(self, skeleton: Skeleton, heads: list[Word], content: dict, prefix_rows: list,
+                    inner: dict, context: Context, joins: list) -> None:
+        """«Close the door!» — the speaker WANTS it, and claims nothing (task 2d, tkzip req 48).
+
+        **STANZA CARRIES THE MOOD STRUCTURALLY**: `Mood=Imp` on the verb, or on its copula or
+        auxiliary — «BE quiet», «DON'T touch it» — in a quote, under a conditional, coordinated. So
+        no character is read and no word order either. The one it misses, «You close the door!», is
+        one English leaves ambiguous too.
+
+        Three things follow from the drill's own shape (`aw-21`):
+          - an ATTITUDE: the holder is the speaker of THIS clause — rotated inside a quote, so «He
+            said: "Close the door!"» is HIS want — and the verb is `want.v`;
+          - the row is UNSTATED (`truth = None`): nothing is claimed, the heart and the evaluator
+            must not read it as the world;
+          - the UNDERSTOOD SUBJECT is the addressee, in the box the subject would have filled —
+            `patient` for a copula, `agent` otherwise, as `_role_of` rules for any subject.
+
+        `strength` is left EMPTY: how strongly a bare imperative wants is not a fact the tree
+        states, and the drill's 0.9 is a question for the Captain before it is a number in code.
+
+        **A JOIN OF WANTS CLAIMS NOTHING EITHER.** «Go and see» is two wants; the AND between them,
+        left claimed, asserted that you go and see.
+        """
+        wanted: set[str] = set()
+        for head in heads:
+            carriers = [head, *(c for c in skeleton.children(head.index)
+                                if c.bare_dep in ("aux", "cop"))]
+            if not any(w.feats.get("Mood") == "Imp" for w in carriers):
+                continue
+            row = content.get(head.index)
+            if row is None:
+                continue
+            here = inner.get(head.index, context)
+            speaker = here.speaker if here.speaker is not None else Open()
+            addressee = here.addressee if here.addressee is not None else Open()
+            prefix_rows.append(AttitudeRow(
+                name=f"p{len(prefix_rows)}", scopes=row.name, verb=IMPERATIVE_VERB,
+                holder=Box(head=speaker, sense=Open())))
+            if row.truth == CLAIMED:
+                row.truth = None
+            wanted.add(row.name)
+            has_subject = any(c.bare_dep in SUBJECT_DEPS for c in skeleton.children(head.index))
+            role = Role.PATIENT if row.predicate is None else Role.AGENT
+            if not has_subject and role not in row.boxes:
+                row.boxes[role] = Box(head=addressee, sense=Open())
+        for join in joins:
+            if join.truth == CLAIMED and wanted and set(join.operands) <= wanted:
+                join.truth = None
 
     def _connect(self, adverb_joins: list, content: dict, joins: list, abstained: list) -> None:
         """A DISCOURSE adverb relates two ROWS, so it can only be built once both exist.
@@ -893,9 +1056,14 @@ class Compiler:
                     holder = self._participant(child, marks, base)
                 elif self._role_of(child, skeleton, marks) is Role.RECIPIENT:
                     addressee = self._participant(child, marks, base)
+            # **A HOLDER THE STATION CANNOT NAME IS SOMEBODY, NOT THE NARRATOR.** «He said "I am
+            # late"» — `he` is anaphora (third person resolves against `recent`, not the speech act),
+            # so the holder cannot be named here; falling back to the OUTER speaker made the narrator
+            # late. Inside a quotation «I» is the quoted speaker, and an unknown one is OPEN. Found
+            # 2026-09-18 by the imperative: «He said: "Close the door!"» was the narrator's want.
             found[head.index] = replace(
                 base,
-                speaker=holder if holder is not None else base.speaker,
+                speaker=holder if holder is not None else Open(),
                 addressee=addressee if addressee is not None else base.addressee,
             )
         return found
@@ -1210,12 +1378,14 @@ class Compiler:
                         copular: bool = False, scopes: str = "r0",
                         open_truth: set | None = None,
                         wants_antecedent: set | None = None,
-                        context: Context = NO_CONTEXT) -> set[int]:
+                        context: Context = NO_CONTEXT,
+                        asked: set | None = None) -> set[int]:
         """What a closed-class form does to the zip. Returns the token indices it accounted for."""
         kind = match.kind
         taken = {word.index + n for n in range(match.length)}
         open_truth = open_truth if open_truth is not None else set()
         wants_antecedent = wants_antecedent if wants_antecedent is not None else set()
+        asked = asked if asked is not None else set()
 
         if kind == "prefix":
             element = match.compiled.get("element")
@@ -1251,6 +1421,12 @@ class Compiler:
             # **A QUESTION IS SOMETHING OPEN** — there is no mood field (E2). Which slot, the row
             # says; five kinds, and three of them are not boxes at all.
             opens = match.compiled["opens"]
+
+            if opens in ("box", "participant", "antecedent", "field"):
+                # This clause already ASKS, through its wh-word — so a `?` closing it opens a slot
+                # that is already open, and must not open its truth as well (req 21): «Where is the
+                # cat?» asks where, and that the cat is somewhere stays claimed.
+                asked.add(scopes)
 
             if opens == "box":
                 boxes[Role(match.compiled["role"])] = Box(head=Open(), sense=Open())

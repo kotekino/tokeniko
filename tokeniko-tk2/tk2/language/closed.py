@@ -91,6 +91,13 @@ UD_DEP_TO_ROLE: dict[str, tuple[str, ...]] = {
 #: code — though this one is a reading of UD's own definition rather than a judgement about English.
 RELATIVE_CLAUSE_DEPS = frozenset({"acl"})
 
+#: The dependencies of a clause that is an ARGUMENT — a complement or a clausal subject — which is
+#: what separates «I wonder WHETHER it rains» (the question: its truth is asked) from «WHETHER it
+#: rains or not, I go» and «IF it rains I stay» (an `advcl`: supposed). Nothing else in the tree
+#: separates them: the word is `mark` in all three. FRAME: the tree's shape, and decoding is frame
+#: (root `CLAUDE.md`, 2026-09-18; parser-compiler req 21).
+COMPLEMENT_CLAUSE_DEPS = frozenset({"ccomp", "csubj"})
+
 #: UD dependency -> the tkzip ROLE it settles, for markers the table alone cannot disambiguate.
 #: FRAME, and narrow on purpose: every entry is a relation whose UD definition NAMES the role, so
 #: nothing here is a judgement about English — it is a reading of UD's own documentation.
@@ -302,6 +309,16 @@ class ClosedClasses:
                                    if r["role"] == "interrogative"), None)
                 if better is not None:
                     row = better
+        # **A SUBORDINATOR ON A COMPLEMENT CLAUSE ASKS, ON AN ADVERBIAL ONE IT SUPPOSES** (req 21).
+        # «I wonder WHETHER the cat is hungry» and «I asked IF it rains» are embedded polar
+        # questions; «IF it rains, I stay» is a condition. The rows hold both readings — the
+        # knowledge — and the clause's own dependency picks one, exactly as it picks a wh-word's.
+        # Until 2026-09-18 `mark` filtered to the subordinator, so `whether` never opened a truth.
+        if bare(dep or "") == "mark" and bare(head_dep or "") in COMPLEMENT_CLAUSE_DEPS:
+            asking = next((r for r in self._by_form[form]
+                           if (r.get("compiled") or {}).get("opens") == "truth"), None)
+            if asking is not None:
+                row = asking
         candidates = self._by_form[form]
         certain = len(candidates) == 1 or bool(upos or dep)
         compiled = dict(row.get("compiled") or {})

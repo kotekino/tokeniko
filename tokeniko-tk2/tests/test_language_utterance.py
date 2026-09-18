@@ -363,10 +363,11 @@ def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
         ("1", "I", "i", "PRON", "2", "nsubj"),
         ("2", "asked", "ask", "VERB", "0", "root"),
     ])
-    question = skeleton_from_conllu("Do you know", [
+    question = skeleton_from_conllu("Do you know ?", [
         ("1", "Do", "do", "AUX", "3", "aux"),
         ("2", "you", "you", "PRON", "3", "nsubj"),
         ("3", "know", "know", "VERB", "0", "root"),
+        ("4", "?", "?", "PUNCT", "3", "punct"),
     ])
     out = compile_utterance(compiler, [asked, question],
                             Context(speaker="kotekino", addressee="captain"))
@@ -374,11 +375,10 @@ def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
     attitude = next(r for r in out.zip.rows if r.kind == "attitude")
     assert attitude.verb == "ask.v" and attitude.addressee is None
     knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
-    assert knowing.truth == 1.0, (
+    assert isinstance(knowing.truth, Open), (
         "the asking is what the attitude holds; the row's own slot says what the holder DID with "
-        "it. It should read OPEN here — «I asked» is a question — and it does not, because the "
-        "station never opens the truth of a POLAR question. Named 2026-09-17: a pre-existing gap "
-        "the old blanket-blanking hid, and it is not this test's job to pretend otherwise.")
+        "it — and the holder ASKED. Pinned at 1.0 on 2026-09-17 as a named gap; OPEN since task 2c "
+        "(req 21), across the sentence boundary stanza draws at the quote.")
     assert knowing.boxes[Role.AGENT].head == "captain", "and «you» is still the outer listener"
 
 
@@ -388,7 +388,8 @@ def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
     passed over when transcribing `ccomp` the first time.
 
     Both forms must produce the same shape: `ccomp` is `ccomp` whether or not there are quotation
-    marks.
+    marks. **What differs is what the holder DID** (the truth-slot ruling, 2026-09-17): he SAID the
+    first and ASKED the second, so the first is stated and the second is OPEN (req 21).
     """
     marked = compiled(compiler, "He said that he knew the muffin man .")
     bare = compiled(compiler, 'I asked : " Do you know the muffin man ? "')
@@ -397,5 +398,8 @@ def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
         attitude = next(r for r in out.zip.rows if r.kind == "attitude")
         inner = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
         assert attitude.scopes == inner.name
-        assert inner.truth == 1.0, "the holder asserted it; the attitude keeps it out of the world"
+        if out is marked:
+            assert inner.truth == 1.0, "the holder asserted it; the attitude keeps it out of the world"
+        else:
+            assert isinstance(inner.truth, Open), "the holder ASKED it — the `?` closes the quote"
         assert next(r for r in out.zip.rows if r.name == "r0").truth == 1.0, "the saying is"

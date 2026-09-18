@@ -981,6 +981,57 @@ it).
    everything under an attitude was blanked anyway. A MOOD question, and the witness is written.
    *Making a slot mean something is how you find out who was not filling it.*
 
+   **RULED 2026-09-18 — THE `?` DECIDES, AND IT BELONGS TO ONE STATEMENT** (req 21). Benched first
+   on 31 sentences through both stanza parsers: word order separates most polar questions from
+   literary inversion, but is blind to the declarative question («The cat is hungry?»), and stanza
+   is not wrong there — the syntax IS declarative, and English writes the question only as the `?`
+   token stanza already isolates. The Captain: *«if it is there, it IS a question out of any doubt»*
+   — and `!` is not `?`, so «Is he tall!» stays a statement. **Word order is not used at all.**
+   **A question is a property of the STATEMENT, not the sentence** (as in tk1): main, coordinate and
+   quoted clauses are statements; a subordinate clause belongs to its statement and asks only
+   through its own word (`whether`, `who`). Stanza hangs the `?` on the root, so the station hands
+   it to **the last statement it closes** — the coordinate in «I know you are tired, but is the cat
+   hungry?», the quote in «I asked: "Do you know the muffin man?"», the main in «Will you stay if it
+   rains?». A statement that already asks through a wh-word keeps its truth. The tag question falls
+   out: «The cat is hungry, isn't it?» asserts the claim and asks the tag. **No `?`, no question**: a
+   dropped `?` is untidy input, and restoring it is the pre-input layer's work, not the station's.
+   *The `?` is frame: reading the decoded tree's punctuation is decoding (root `CLAUDE.md`).*
+   **BUILT THE SAME DAY.** `_statements` + `_question`; 7 tests. What opens is the statement's
+   CLAIM wherever it sits — the row, or the IMPLY in «Will you stay if it rains?», or the OR in «Is
+   the cat hungry or tired?». **The drill gate had a third blindness: it never compared truth**, so
+   it could see neither the bug nor the fix. It now compares the truth slot's STATE (a value · OPEN
+   · unstated): on the old station it flags `t-mo-1` «Do you exist?», on the new one it does not —
+   and it found `aw-21`, the imperative, at once (task 2d).
+   **TWO ROW DEFECTS FOUND ON THE BENCH, both curation (db), not yet fixed:**
+   - **`whether` never opens its truth.** Its row reads it as a JOIN (`imply`, `asserts: neither`),
+     so «I wonder whether the cat is hungry» is a conditional and req 14's subordinate polar never
+     fires. `if` has the same second life: «I asked IF the cat is hungry» is an embedded question,
+     and the tree separates it from a conditional (`ccomp` against `advcl`).
+     **FIXED THE SAME DAY, on the Captain's «whether/if first»**, split along the frame line: the
+     ROWS say what each word can do (`db/0016`: `if` gains the asking reading `whether` already had),
+     the TREE picks (`COMPLEMENT_CLAUSE_DEPS` — a `mark` on `ccomp`/`csubj` asks, on `advcl`
+     supposes), and an asking clause relates to its matrix as `that`'s does: an attitude, the
+     wondering claimed, the content OPEN.
+   - **`or` asserts BOTH halves** (`db/0010`): «The cat is hungry or tired» claims both.
+
+2d. **⚑ THE IMPERATIVE IS COMPILED AS A CLAIM** *(found 2026-09-18 by the widened drill gate —
+   `aw-21`)*. «Close the door!» compiles as «you close the door», stated; the drill (and tkzip req
+   48) has POV(me · want) over an UNSTATED row. **Stanza carries it structurally**: `Mood=Imp` on
+   the verb — in a quote, under a conditional («If it rains, stay home»), in coordination («Go and
+   see»), negated («Don't touch it!»). The one it misses is «You close the door!», which English
+   leaves ambiguous. No character is read.
+   **BUILT THE SAME DAY** (`_imperative`, 4 tests). The drill's shape exactly: POV(speaker · want)
+   over an UNSTATED row, the understood subject being the addressee in the box a subject would have
+   taken (`patient` for «Be quiet!»). Inside a quote the holder is the quoted speaker; a join of
+   wants claims nothing. **`aw-21` now AGREES** — drill gate 50 · 12, roles 102/128.
+   **It found a rotation defect**: a holder the station cannot name («He said "I am late"» — `he`
+   is anaphora) fell back to the OUTER speaker and made the narrator late. It is now OPEN.
+   **Two questions for the Captain, not decided in code:** (1) `strength` — the drill writes 0.9 for
+   a bare imperative; the station leaves it empty, since the tree states no such number. (2)
+   «Suppose the cat is hungry» (`aw-20`): E2 collapses it into the speaker's own supposition; the
+   station now reads *I want you to suppose it*. Which imperatives collapse is per-verb («Remember
+   that I love you» does not) — knowledge, and the attitude-verb question of req 55.
+
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.

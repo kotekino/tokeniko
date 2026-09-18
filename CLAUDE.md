@@ -114,6 +114,17 @@ which characters count as quotation marks, the right answer was not «put them i
 that the parser had already isolated the quote structurally and no such list was needed. *Before
 asking where a list should live, ask why there is a list.*
 
+**Where the line falls: DECODING is frame, what is checked against the decoded is knowledge**
+*(2026-09-18)*.
+
+> *«tokeniko starts being a mind AFTER the parsing. What comes in a tkzip is a thought, and as such
+> the more we rely on knowledge the better. An input string before being parsed is gibberish, so the
+> knowledge concept isn't even applicable.»*
+
+Turning a string into a tree, and reading the tree's SHAPE — its relations, its word order, its
+punctuation — is frame. Anything matched against what was decoded — the dictionary, the closed
+classes, the marker rules, the adverb table — is knowledge, and stays in the db.
+
 **At the end of every epic, audit what was built** and ask which things called frame belong in the
 knowledge kingdom.
 

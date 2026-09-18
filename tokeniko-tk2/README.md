@@ -47,15 +47,13 @@ tokeniko-tk2/
 
 ## The database
 
-The running body uses the sandbox database **`tokeniko_tk2_body`**, on the same local MongoDB as the
-rest of the project (`MONGO_URI`, default `mongodb://localhost:27018`).
-
-Two other databases exist on that host, and neither is this one:
+The running body uses the sandbox database **`tokeniko_tk2`** (`constants.TK2_BODY_DB`; called
+`tokeniko_tk2_body` until E1b), on the same local MongoDB as the rest of the project (`MONGO_URI`,
+default `mongodb://localhost:27018`). The checks use `tokeniko_tk2_test`. Those two are the guard's
+whole whitelist.
 
 - `tokeniko` / `tokeniko_mem` — **tk1's live body: the biography.** Never opened from here. The
   datatier's guard refuses them by name.
-- `tokeniko_tk2` — the sandbox the dictionary instruments write. Its assets cross into the body by
-  migration, never by a live read across the fence.
 
 The guard is standard equipment (datatier req. 4): every entry point names its db and refuses one it
 was not explicitly given. Go-live (E10) moves that boundary deliberately, with the Captain's hand on
@@ -76,7 +74,7 @@ task test                        # the unit checks
 **Migrate before you boot.** The body is an interpreter of the db: with no rows there is nothing to
 interpret, and it will say so and keep ticking rather than invent defaults.
 
-`task body` is `python -m tk2.body`. It boots against `tokeniko_tk2_body`, loads the r-tier into the
+`task body` is `python -m tk2.body`. It boots against `tokeniko_tk2`, loads the r-tier into the
 cache, and ticks until SIGTERM or SIGINT — it finishes the tick it is in and then stops. `--max-ticks
 N` bounds a run; `--db NAME` points it elsewhere, subject to the guard.
 

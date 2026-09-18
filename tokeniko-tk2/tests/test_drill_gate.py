@@ -138,8 +138,25 @@ def test_a_COPULAR_row_pairs_on_its_complement():
 
 
 @pytest.mark.skeleton
+def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():
+    """**THE THIRD BLINDNESS, and the defect it hid** (req 21, 2026-09-18). The gate compared roles
+    and never truth, so «Is the cat hungry?» compiled at 1.0 against the drill's OPEN and agreed.
+    The STATE is compared — a value, OPEN, or unstated — never the value itself."""
+    asked = ContentRow(name="e", predicate="exist.v", truth=Open(), boxes={})
+    claimed = ContentRow(name="r0", predicate="exist.v", truth=1.0, boxes={})
+    denied = ContentRow(name="d", predicate="exist.v", truth=0.0, boxes={})
+
+    reading = compare(Zip(rows=[claimed]), Zip(rows=[asked]))
+    assert reading.verdict == DISAGREED
+    assert reading.conflicts == [
+        "truth of exist.v: the station says stated, the drill says OPEN"]
+
+    assert compare(Zip(rows=[claimed]), Zip(rows=[denied])).conflicts == [], (
+        "a value against a value is not a disagreement about whether anything was asked")
+
+
 def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
-    """**THE RATCHET.** Twelve disagreements on 2026-09-17, in three families — and the point of the
+    """**THE RATCHET.** Twelve disagreements on 2026-09-18, in three families — and the point of the
     list is that every entry is named, dated and attributable. The count may only go DOWN.
 
       ten    the SUBJECT'S ROLE depends on what is predicated of it — `exist-3` `t-ws-1` `t-ws-8`
@@ -150,6 +167,11 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
              and displaces the France that belongs there. E3 unfinished, showing as a conflict
              rather than as a missing row because the wrong filler reached a real box.
       one    the named-individual hole — `aw-19`, «I ate with Anna» (E3b).
+
+    **THE POLAR QUESTION AND THE IMPERATIVE ARE GONE** (tasks 2c, 2d — 2026-09-18). The gate began
+    comparing TRUTH that morning and flagged `t-mo-1` «Do you exist?» (asked, compiled as a claim)
+    and `aw-21` «Close the door!» (wanted, compiled as a claim). Both fixed the same day; `aw-21`
+    now agrees outright, its understood subject included.
 
     **THE ROTATION FAMILY IS GONE.** `q-4` `q-7` `q-9` disagreed for one morning — the station
     rotated reported speech and did not rotate quoted speech, having keyed the rotation on the word
