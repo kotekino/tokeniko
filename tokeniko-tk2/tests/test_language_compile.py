@@ -1097,3 +1097,40 @@ def test_a_holder_the_station_cannot_name_is_SOMEBODY_not_the_narrator(compiler)
     out = compiler.compile(HE_SAID_I_AM_LATE, _speech())
     late = next(r for r in out.zip.rows if r.kind == "content" and r.name != "r0")
     assert isinstance(late.boxes[Role.PATIENT].head, Open), "somebody — never `me.n`"
+
+
+# ------------------------------------------------------------------------------------------------
+# a disjunction claims the disjunction — `db/0017`, the Captain's ruling (b), 2026-09-18
+# ------------------------------------------------------------------------------------------------
+
+HUNGRY_OR_TIRED = skeleton_from_conllu("The cat is hungry or tired .", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "cat", "cat", "NOUN", "4", "nsubj"),
+    ("3", "is", "be", "AUX", "4", "cop"),
+    ("4", "hungry", "hungry", "ADJ", "0", "root"),
+    ("5", "or", "or", "CCONJ", "6", "cc"),
+    ("6", "tired", "tired", "ADJ", "4", "conj"),
+    ("7", ".", ".", "PUNCT", "4", "punct"),
+])
+
+HUNGRY_NOR_TIRED = skeleton_from_conllu("The cat is hungry nor tired .", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "cat", "cat", "NOUN", "4", "nsubj"),
+    ("3", "is", "be", "AUX", "4", "cop"),
+    ("4", "hungry", "hungry", "ADJ", "0", "root"),
+    ("5", "nor", "nor", "CCONJ", "6", "cc"),
+    ("6", "tired", "tired", "ADJ", "4", "conj"),
+    ("7", ".", ".", "PUNCT", "4", "punct"),
+])
+
+
+@pytest.mark.parametrize("skeleton, operator", [(HUNGRY_OR_TIRED, Operator.OR),
+                                                (HUNGRY_NOR_TIRED, Operator.NOR)])
+def test_a_DISJUNCTION_claims_the_join_and_neither_half(compiler, skeleton, operator):
+    """«hungry or tired» does not tell you it is hungry; «neither hungry nor tired» claimed both
+    halves AND that neither holds — a zip that contradicted itself. The halves are stated, the join
+    is the claim: the shape `if` has had since `db/0010`."""
+    out = compiler.compile(skeleton)
+    join = next(r for r in out.zip.rows if r.kind == "join")
+    assert join.operator == operator and join.truth == 1.0
+    assert _row(out, "r0").truth is None and _row(out, "r1").truth is None

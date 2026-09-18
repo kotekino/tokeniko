@@ -156,7 +156,7 @@ def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():
 
 
 def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
-    """**THE RATCHET.** Twelve disagreements on 2026-09-18, in three families — and the point of the
+    """**THE RATCHET.** Thirteen disagreements on 2026-09-18, in four families — and the point of the
     list is that every entry is named, dated and attributable. The count may only go DOWN.
 
       ten    the SUBJECT'S ROLE depends on what is predicated of it — `exist-3` `t-ws-1` `t-ws-8`
@@ -167,6 +167,10 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
              and displaces the France that belongs there. E3 unfinished, showing as a conflict
              rather than as a missing row because the wrong filler reached a real box.
       one    the named-individual hole — `aw-19`, «I ate with Anna» (E3b).
+      one    FREE CHOICE UNDER A MODAL — `t-ws-7`, «a mind CAN be an animal or a mind CAN be a
+             software». The Captain ruled (2026-09-18) that its halves are claimed ON PURPOSE: under
+             `can` the speaker means both possibilities hold. `or` in general claims only the join
+             (`db/0017`), and the station cannot yet see the modal exception.
 
     **THE POLAR QUESTION AND THE IMPERATIVE ARE GONE** (tasks 2c, 2d — 2026-09-18). The gate began
     comparing TRUTH that morning and flagged `t-mo-1` «Do you exist?» (asked, compiled as a claim)
@@ -203,5 +207,5 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
             disagreed.append(case.id)
 
     assert sorted(disagreed) == ["aw-11", "aw-15", "aw-16", "aw-19", "aw-20", "exist-3",
-                                 "q-2", "t-dc-4", "t-mo-1", "t-of-1", "t-ws-1", "t-ws-8"], (
+                                 "q-2", "t-dc-4", "t-mo-1", "t-of-1", "t-ws-1", "t-ws-7", "t-ws-8"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")

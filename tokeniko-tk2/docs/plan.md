@@ -1012,7 +1012,16 @@ it).
      the TREE picks (`COMPLEMENT_CLAUSE_DEPS` — a `mark` on `ccomp`/`csubj` asks, on `advcl`
      supposes), and an asking clause relates to its matrix as `that`'s does: an attitude, the
      wondering claimed, the content OPEN.
-   - **`or` asserts BOTH halves** (`db/0010`): «The cat is hungry or tired» claims both.
+   - **`or` asserts BOTH halves** (`db/0010`): «The cat is hungry or tired» claims both. **And `nor`
+     is worse**: «neither hungry nor tired» claimed both halves AND that neither holds — a zip that
+     contradicts itself. **RULED 2026-09-18 (the Captain, (b))**: both become `asserts: neither`, the
+     shape `if` has — the halves stated, the join claimed (`db/0017`). The drill's one disjunction,
+     `t-ws-7` («a mind CAN be an animal or a mind CAN be a software»), keeps its halves at 1.0 **on
+     purpose**: under a possibility modal the speaker means both possibilities hold (FREE CHOICE —
+     «it doesn't contradict»). That is not how `or` behaves in general and the station cannot see it
+     yet, so `t-ws-7` enters the gate's ratchet as a named family: **free choice under a modal**.
+     *Side findings, recorded not touched: «EITHER … or» and «NEITHER … nor» raise a stray quantifier
+     row from the first word, and «Either … or» loses the second verb's predicate.*
 
 2d. **⚑ THE IMPERATIVE IS COMPILED AS A CLAIM** *(found 2026-09-18 by the widened drill gate —
    `aw-21`)*. «Close the door!» compiles as «you close the door», stated; the drill (and tkzip req

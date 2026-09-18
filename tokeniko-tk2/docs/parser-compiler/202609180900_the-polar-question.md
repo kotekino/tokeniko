@@ -155,3 +155,22 @@ supposition while the station reads it compositionally as a want. Which imperati
 per-verb, so it is knowledge — the attitude-verb question req 55 already holds.
 
     drill gate       50 agreed · 12 DISAGREED   roles 102 of 128   (aw-21 agrees)
+
+## AND `OR` — A DISJUNCTION CLAIMS THE DISJUNCTION *(ruled (b), the Captain)*
+
+    «The cat is hungry or tired»             hungry CLAIMED · tired CLAIMED · OR CLAIMED
+    «The cat is neither hungry nor tired»    hungry CLAIMED · tired CLAIMED · NOR CLAIMED — contradicts itself
+
+Both rows become `asserts: neither` (`db/0017`), the shape `if` already has. `nor` needed no ruling:
+its zip was inconsistent on its own terms. `or` did, because the drill's only disjunction holds its
+halves at 1.0:
+
+> `t-ws-7` — «It doesn't contradict, because a mind CAN be an animal or a mind CAN be a software.»
+
+**Reading (b), ruled: deliberate.** Under a possibility modal the speaker means BOTH possibilities hold
+— free choice — which is exactly why «it doesn't contradict». That is a property of `or` under `can`,
+not of `or`, and the station cannot see it yet; so `t-ws-7` becomes a named disagreement rather than a
+reason to leave every other disjunction claiming its halves.
+
+    drill gate       49 agreed · 13 DISAGREED   roles 102 of 128 — the new entry is t-ws-7, free
+                                                 choice, named in the ratchet as ruled
