@@ -292,15 +292,19 @@ def test_QUOTED_speech_rotates_and_stanza_is_what_says_which(compiler):
     from tk2.language.skeleton import StanzaSkeletons
 
     provider = StanzaSkeletons()
-    for sentence, who in (('Bob told me "I trust you".', "kotekino"),
-                          ('Bob told me \u201cI trust you\u201d.', "kotekino")):
+    for sentence in ('Bob told me "I trust you".',
+                     'Bob told me \u201cI trust you\u201d.'):
         out = compiler.compile(provider(sentence)[0],
                                context=Context(speaker="kotekino", addressee="captain"))
         trusting = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "trust.v")
         # `trust` is cognition, so its subject is an experiencer (req 22) — WHO it is is the point here
         assert trusting.boxes[Role.EXPERIENCER].head == "bob.n", f"«I» is Bob in {sentence!r}"
-        assert who in [getattr(b.head, "name", b.head) for b in trusting.boxes.values()], \
-            "and «you» is whoever Bob was telling"
+        # **AND THE QUOTED «you» HAS NO BOX, ON PURPOSE.** Stanza labels the only object of «trust»
+        # `iobj`, which UD reserves for a clause that also has a direct object — so the station
+        # abstains rather than inventing a recipient (req 22, `q-2`). The rotation above is what this
+        # test is for, and it is unaffected: a provider's mislabel costs a role, never a person.
+        assert any("iobj" in reason for reason in out.abstained), \
+            f"the lone `iobj` is abstained, not read, in {sentence!r}"
 
 def test_a_CONDITIONAL_does_not_rotate(compiler):
     """Only an ATTITUDE rotates. «if you know who did it» is still the outer speaker's «you» — the

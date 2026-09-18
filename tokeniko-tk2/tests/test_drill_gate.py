@@ -156,7 +156,7 @@ def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():
 
 
 def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
-    """**THE RATCHET.** Four disagreements on 2026-09-18, in four families — and the point of the
+    """**THE RATCHET.** Three disagreements on 2026-09-18, in three families — and the point of the
     list is that every entry is named, dated and attributable. The count may only go DOWN.
 
       one    the station builds no `DomainRow` yet — `aw-15`, where «In Italy» lands in `location`
@@ -167,9 +167,11 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
              Its halves are claimed ON PURPOSE (free choice, the Captain's ruling (b)), and the
              station builds free choice — but stanza reads «an animal or A MIND» as one noun phrase.
              Where the provider gives a structure we know is wrong the station abstains (`q-5`).
-      one    A PROVIDER DEFECT — `q-2`, «Bob told me "I trust you"». Its rotation is right; stanza
-             labels the lone object of «trust» `iobj`, which UD reserves for a clause that also has
-             a direct object, so the station reads a recipient where the drill has the patient.
+
+    **`q-2` LEFT TOO**: stanza labels the lone object of «I trust you» `iobj`, which UD reserves for
+    a clause that also has a direct object, and the station now abstains on that mislabel rather
+    than inventing a recipient — the role goes MISSING, which is not a defect, and the rotation the
+    case exists to test is untouched.
 
     **THE SUBJECT-ROLE FAMILY IS GONE** (req 22, `db/0018`, 2026-09-18) — ten witnesses, the largest
     family this list ever held, closed by a supersense rule as rows plus one exception; and the
@@ -199,5 +201,5 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
         if reading.verdict == DISAGREED:
             disagreed.append(case.id)
 
-    assert sorted(disagreed) == ["aw-15", "aw-19", "q-2", "t-ws-7"], (
+    assert sorted(disagreed) == ["aw-15", "aw-19", "t-ws-7"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")

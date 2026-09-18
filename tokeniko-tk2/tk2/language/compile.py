@@ -71,6 +71,11 @@ RELATION_FILLS_ROLE: dict[str, Role] = {
 #: UD POS → the dictionary's POS letter. Only the content classes: a function word never earns a key.
 POS_LETTER = {"NOUN": "n", "PROPN": "n", "VERB": "v", "AUX": "v", "ADJ": "a", "ADV": "r"}
 
+#: What can be the OTHER object of a double-object clause — a nominal, or a clause («I asked Anna
+#: WHAT SHE WANTED»). UD's `iobj` presupposes one of these beside it, which is how a lone `iobj` is
+#: known to be a mislabel (req 22's `q-2`).
+OBJECT_DEPS = frozenset({"obj", "ccomp", "xcomp"})
+
 #: The relations that hang a NOMINAL off a head — the candidates for a box.
 NOMINAL_DEPS = frozenset({"nsubj", "obj", "iobj", "obl", "nmod"})
 
@@ -476,7 +481,7 @@ class Compiler:
                 # `Zip.unplaced` is for the first (req 21).
                 covered.add(index, "structure")
                 continue
-            role = self._role_of(word, skeleton, marks, copular, defaulted)
+            role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
             if role is not None and role not in boxes:
                 boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name,
                                             modifiers, abstained)
@@ -1214,13 +1219,32 @@ class Compiler:
         return False
 
     def _role_of(self, word: Word, skeleton: Skeleton, marks: dict,
-                 copular: bool = False, defaulted: list | None = None) -> Role | None:
+                 copular: bool = False, defaulted: list | None = None,
+                 abstained: list | None = None) -> Role | None:
         """Which box this nominal fills — by RELATION first, then by its MARKER.
 
         Relation first because it is the stronger evidence and the narrower claim: `obj` means
         patient in every sentence, while `in` means four things. Where the relation says nothing
         (`obl`, `nmod` — «a nominal dependent», which is not a role) the marker is asked.
         """
+        # **A LONE `iobj` IS NOT UD's `iobj`, AND THE STATION ABSTAINS.** UD reserves it for the
+        # double-object clause — «she gave ME a raise» — so an `iobj` with no `obj` beside it is a
+        # structure we know to be wrong: stanza labels the only object of «I trust YOU» that way, and
+        # the drill has the patient there (`q-2`). Reading it as the object would be COMPENSATING for
+        # the provider; abstaining is the `q-5` precedent, and req 8's whole distinction — a role
+        # left open is half-understood, a recipient invented is wrongly understood.
+        #
+        # **AND THE OTHER OBJECT MAY BE A CLAUSE.** «I asked ANNA "Where do you live?"» is a genuine
+        # double-object clause whose second object is the quotation — the drill gate found this the
+        # moment the abstention was too strict, because Anna is the ADDRESSEE the rotation reads
+        # (`q-7`, `q-9`).
+        if word.bare_dep == "iobj" and not any(
+                c.bare_dep in OBJECT_DEPS for c in skeleton.children(word.head)):
+            if abstained is not None:
+                abstained.append(f"{word.text}: `iobj` with no direct object — UD reserves it for "
+                                 f"the double-object clause, so the label is not read")
+            return None
+
         settled = RELATION_FILLS_ROLE.get(word.dep) or RELATION_FILLS_ROLE.get(word.bare_dep)
         if settled is not None and word.dep == "nsubj" and word.head != word.index:
             # **THE SUBJECT IS WHAT ITS PREDICATE MAKES IT** (req 22, `db/0018`). The rule reads the
@@ -1526,7 +1550,8 @@ class Compiler:
             # otherwise understood. The ROW says which box; the head stays OPEN because the form is
             # indexical and context resolves it (req 7).
             named = match.compiled.get("roles") or ()
-            role = Role(named[0]) if named else self._role_of(word, skeleton, {}, copular)
+            role = (Role(named[0]) if named
+                    else self._role_of(word, skeleton, {}, copular, abstained=abstained))
             if role is not None and role not in boxes:
                 # **THE PERSON AXIS, AS FAR AS IT GOES WITHOUT THE ROTATION.** `i` and `you` carry
                 # `person: 1` and `person: 2` in their own rows — the axis has had its data since

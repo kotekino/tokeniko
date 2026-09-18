@@ -810,6 +810,10 @@ it).
      ROWS (`db/0018`, `language_subject_roles`), run by `MarkerSelector`: verb `emotion`/`cognition`/
      `perception` → experiencer · `stative` → patient · else agent · ONE exception row, `disagree`.
      `develop` is a named sense-dependent miss (req 11: the station never picks a sense).
+     **And the ratchet fell to THREE**: `q-2` left it too — stanza labels the lone object of «I
+     trust you» `iobj`, which UD reserves for a double-object clause, and the station now
+     abstains on that mislabel rather than inventing a recipient (the `q-5` precedent). The
+     first cut was too strict and the gate said so at once: a QUOTATION is a second object.
    - ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
      `202609161251_the-adverbs.md`). Requirement 23 split adverbs four ways at E2 and nothing said
      WHICH is which. **The resource cannot say**: WordNet has ONE adverb class (`adv.all`) and

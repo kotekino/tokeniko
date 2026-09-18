@@ -5,7 +5,7 @@ depends on what is predicated of it. «The cat CHASED» is an agent, «I LOVE» 
 EXISTS» a patient. The station wrote `agent` for every subject and its own comment deferred the
 question. Req 22.*
 
-**Drill gate: 49 agreed · 13 DISAGREED → 58 agreed · 4 DISAGREED. Roles 102/128 → 115/140.**
+**Drill gate: 49 agreed · 13 DISAGREED → 59 agreed · 3 DISAGREED. Roles 102/128 → 115/141.**
 
 ---
 
@@ -85,9 +85,18 @@ have gone empty the moment «Anna THINKS that…» made Anna an experiencer.
 - **Agentive perception** — «look», «watch», «listen». Likewise.
 - **The provenance debt deepens** — the supersense is still read live from WordNet (req 15's debt).
 
-## WHAT REMAINS IN THE RATCHET — FOUR, AND TWO ARE STANZA'S
+## AND ONE MORE PROVIDER DEFECT, ABSTAINED — `q-2`
+
+Stanza labels the only object of «I trust **you**» as `iobj`, which UD reserves for the
+double-object clause («she gave ME a raise»). The station now **abstains on a lone `iobj`** rather
+than reading a recipient the sentence does not have: a role left open is half-understood, a
+recipient invented is wrongly understood (req 8), and compensating for a provider is what `q-5`
+ruled against. *The first attempt was too strict and the gate said so within a minute: «I asked ANNA
+"Where do you live?"» IS a double-object clause whose second object is the quotation, and abstaining
+there broke the rotation in `q-7` and `q-9`. A clause counts as the other object.*
+
+## WHAT REMAINS IN THE RATCHET — THREE
 
     aw-15   no DomainRow yet                                        E3 unfinished
     aw-19   «I ate with Anna» — the named-individual hole           E3b
     t-ws-7  «an animal or A MIND» read as one noun phrase            provider defect, abstained
-    q-2     «I trust YOU» — stanza labels a lone object `iobj`      provider defect
