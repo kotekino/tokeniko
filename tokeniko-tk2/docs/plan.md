@@ -800,6 +800,16 @@ it).
      `t-dc-4` `t-mo-1` `t-of-1` `aw-11` `aw-16` `aw-20`, and TEN with `q-2` — because giving the
      gate a context made the pronoun subjects comparable for the first time. It is now the largest family in the ratchet,
      which is an argument about WHEN it gets built, not about what the answer is.
+     **BUILT 2026-09-18 (req 22, record `202609181400_the-subject-role.md`).** Benched on all 49
+     drill subjects: **copular adjectives separate perfectly** by the supersense of their related
+     noun (`noun.state` → experiencer 4/4, `noun.attribute` → patient 6/6); **verbs do not** by
+     supersense or by VerbNet, and three predicates contradicted each other. Asked whether they were
+     deliberate, the QM judged them against E2's ruling 2 and the Captain acknowledged: `exist` →
+     patient stands, `disagree` → experiencer stands (a stance; WordNet files it `communication`),
+     **`think` and `live` were errors** — twelve drill rows amended, in nine sentences (bar doc, dated). The rule is
+     ROWS (`db/0018`, `language_subject_roles`), run by `MarkerSelector`: verb `emotion`/`cognition`/
+     `perception` → experiencer · `stative` → patient · else agent · ONE exception row, `disagree`.
+     `develop` is a named sense-dependent miss (req 11: the station never picks a sense).
    - ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
      `202609161251_the-adverbs.md`). Requirement 23 split adverbs four ways at E2 and nothing said
      WHICH is which. **The resource cannot say**: WordNet has ONE adverb class (`adv.all`) and
@@ -1022,6 +1032,15 @@ it).
      yet, so `t-ws-7` enters the gate's ratchet as a named family: **free choice under a modal**.
      *Side findings, recorded not touched: «EITHER … or» and «NEITHER … nor» raise a stray quantifier
      row from the first word, and «Either … or» loses the second verb's predicate.*
+     **FREE CHOICE, BUILT THE SAME DAY (the Captain: «free choice first»).** An OR whose halves are
+     BOTH under a possibility modal claims its halves — unless the disjunction is itself supposed
+     («IF you can have tea or you can have coffee…»). Structural: the modality rows and the join are
+     already in the zip. *Free choice is cancellable* («…but I don't know which»); that exception is
+     not built. **`t-ws-7` ITSELF CANNOT BENEFIT — stanza misparses it**: «an animal or A MIND» is
+     read as one noun phrase, so «can be a software» loses its subject. The same shape with verbs
+     parses right («You can have tea or you can have coffee»). Where the provider gives a structure
+     we know is wrong the station abstains (the `q-5` precedent), so `t-ws-7` stays in the ratchet,
+     re-labelled a provider defect.
 
 2d. **⚑ THE IMPERATIVE IS COMPILED AS A CLAIM** *(found 2026-09-18 by the widened drill gate —
    `aw-21`)*. «Close the door!» compiles as «you close the door», stated; the drill (and tkzip req

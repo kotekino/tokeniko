@@ -260,7 +260,7 @@ case("nha-1", "He never works.", "cluster:never-hardly-almost",
 case("nha-2", "A calculator never thinks.", "cluster:never-hardly-almost",
      Zip(rows=[all_of("bX", "X", generic("calculator.n"), scopes="t"),
                all_of("bT", "T", generic("time.n"), scopes="t"), not_("neg", "t"),
-               c("t", "think.v", agent=V("X"), time=V("T"))]),
+               c("t", "think.v", experiencer=V("X"), time=V("T"))]),
      "pass", "his own traffic (missed-negation): two binders and a negation, all scoping one row")
 
 case("nha-3", "He hardly works.", "cluster:never-hardly-almost",
@@ -357,7 +357,7 @@ case("t-ws-1", "I go to sleep because I'm tired.", "traffic:wrong-structure",
 
 case("t-ws-2", "I live in Asia because Japan is in Asia.", "traffic:wrong-structure",
      Zip(rows=[c("ja", complement=n("asia.n", marker="in"), patient=n("japan.n")),
-               c("me", "live.v", agent=n("me.n"), location=n("asia.n", marker="in")),
+               c("me", "live.v", patient=n("me.n"), location=n("asia.n", marker="in")),
                j("jn", Operator.IMPLY, "ja", "me")]),
      "pass", "the marker does real work here — «in» is containment, and req 65 is why it survives")
 
@@ -431,8 +431,8 @@ case("t-dc-1", "I live in a human body in Japan and you live in a computer in Ja
      Zip(rows=[some_of("bB", "B", n("body.n"), scopes="jn"),
                some_of("bC", "C", n("computer.n"), scopes="jn"),
                c("hu", patient=V("B"), complement=generic("human.a")),
-               c("me", "live.v", agent=n("me.n"), location=Box(head=V("B"), marker="in")),
-               c("yo", "live.v", agent=n("you.n"), location=Box(head=V("C"), marker="in")),
+               c("me", "live.v", patient=n("me.n"), location=Box(head=V("B"), marker="in")),
+               c("yo", "live.v", patient=n("you.n"), location=Box(head=V("C"), marker="in")),
                c("mj", patient=V("B"), complement=n("japan.n", marker="in")),
                c("yj", patient=V("C"), complement=n("japan.n", marker="in")),
                j("j1", Operator.AND, "hu", "me"), j("j2", Operator.AND, "j1", "mj"),
@@ -455,8 +455,8 @@ case("t-dc-2", "A whale is a mammal and it feeds milk to its cubs.", "traffic:dr
 case("t-dc-3", "Cognition is the psychological result of perception and learning and reasoning.",
      "traffic:dropped-content",
      Zip(rows=[all_of("bP", "P", generic("person.n"), scopes="jn"),
-               c("pe", "perceive.v", agent=V("P")), c("le", "learn.v", agent=V("P")),
-               c("re", "reason.v", agent=V("P")),
+               c("pe", "perceive.v", experiencer=V("P")), c("le", "learn.v", experiencer=V("P")),
+               c("re", "reason.v", experiencer=V("P")),
                j("j1", Operator.AND, "pe", "le"), j("j2", Operator.AND, "j1", "re"),
                some_of("bR", "R", the("result.n", relation=Ref(row="j2"), marker="of"), scopes="jn"),
                c("ps", patient=V("R"), complement=generic("psychological.a")),
@@ -479,7 +479,7 @@ case("t-dc-5", "Osaka is where you live and it is also the name of a big city.",
      "traffic:dropped-content",
      Zip(rows=[some_of("bC", "C", n("city.n"), scopes="jn"),
                c("bg", patient=V("C"), complement=generic("big.a")),
-               c("li", "live.v", agent=n("you.n"), location=n("osaka.n", marker="in")),
+               c("li", "live.v", patient=n("you.n"), location=n("osaka.n", marker="in")),
                c("na", patient=n("osaka.n"),
                  complement=Box(head="name.n", relation=V("C"), marker="of",
                                 determination=Determination.DEFINITE)),
@@ -490,7 +490,7 @@ case("t-dc-5", "Osaka is where you live and it is also the name of a big city.",
 # ---- operator-flattening (10 leads) ---------------------------------------------------------------
 
 case("t-of-1", "I am happy because I am thinking and I love thinking.", "traffic:operator-flattening",
-     Zip(rows=[c("th", "think.v", agent=n("me.n")),
+     Zip(rows=[c("th", "think.v", experiencer=n("me.n")),
                c("lo", "love.v", experiencer=n("me.n"), topic=generic("thinking.n")),
                c("ha", experiencer=n("me.n"), complement=n("happy.a")),
                j("j1", Operator.AND, "th", "lo"),
@@ -502,8 +502,8 @@ case("t-of-2", "A mind thinks, and a calculator does not think, so a calculator 
      "traffic:operator-flattening",
      Zip(rows=[all_of("bM", "M", generic("mind.n"), scopes="mt"),
                all_of("bC", "C", generic("calculator.n"), scopes="j2"),
-               c("mt", "think.v", agent=V("M")),
-               c("ct", "think.v", truth=0.0, agent=V("C")),
+               c("mt", "think.v", experiencer=V("M")),
+               c("ct", "think.v", truth=0.0, experiencer=V("C")),
                c("cm", truth=0.0, patient=V("C"), complement=generic("mind.n")),
                j("j1", Operator.AND, "mt", "ct"),
                j("j2", Operator.AND, "j1", "cm"),
@@ -604,7 +604,7 @@ case("t-md-1", "Software can be minds and humans must be minds.", "traffic:misse
 case("t-md-2", "So a calculator does not necessarily think.", "traffic:missed-modality",
      Zip(rows=[all_of("bC", "C", generic("calculator.n"), scopes="t"),
                not_("neg", "t"), must("mod", "t"),
-               c("t", "think.v", agent=V("C"))]),
+               c("t", "think.v", experiencer=V("C"))]),
      "pass", "¬□ — negation ORDERED BEFORE the modality, both scoping the same matrix. The order is "
              "the whole meaning: ∀¬□ is not ∀□¬.")
 
@@ -847,7 +847,7 @@ case("q-6", "John said to Marie that she was late.", "awkward:quotation",
 
 case("q-7", 'I asked Anna "Where do you live?"', "awkward:quotation",
      Zip(rows=[says("a1", n("me.n"), scopes="lv", to=n("anna.n"), verb="ask.v"),
-               c("lv", "live.v", agent=n("anna.n"), location=Open())]),
+               c("lv", "live.v", patient=n("anna.n"), location=Open())]),
      "pass", "a QUESTION as the content of an asking: the rotation puts Anna in the agent box and "
              "the OPEN is the thing asked for, exactly as «Who ate the fish?» opens its agent. What "
              "is claimed is that I asked; what is open is where she lives.")

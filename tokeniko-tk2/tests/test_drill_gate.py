@@ -156,32 +156,25 @@ def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():
 
 
 def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
-    """**THE RATCHET.** Thirteen disagreements on 2026-09-18, in four families — and the point of the
+    """**THE RATCHET.** Four disagreements on 2026-09-18, in four families — and the point of the
     list is that every entry is named, dated and attributable. The count may only go DOWN.
 
-      ten    the SUBJECT'S ROLE depends on what is predicated of it — `exist-3` `t-ws-1` `t-ws-8`
-             `t-dc-4` `t-of-1` `t-mo-1` `aw-11` `aw-16` `aw-20` `q-2`. E3's standing open question,
-             which `RELATION_FILLS_ROLE`'s own comment defers to the geometry. It had three
-             witnesses until this gate was given a context; it has ten.
       one    the station builds no `DomainRow` yet — `aw-15`, where «In Italy» lands in `location`
              and displaces the France that belongs there. E3 unfinished, showing as a conflict
              rather than as a missing row because the wrong filler reached a real box.
       one    the named-individual hole — `aw-19`, «I ate with Anna» (E3b).
-      one    FREE CHOICE UNDER A MODAL — `t-ws-7`, «a mind CAN be an animal or a mind CAN be a
-             software». The Captain ruled (2026-09-18) that its halves are claimed ON PURPOSE: under
-             `can` the speaker means both possibilities hold. `or` in general claims only the join
-             (`db/0017`), and the station cannot yet see the modal exception.
+      one    A PROVIDER DEFECT — `t-ws-7`, «a mind CAN be an animal or a mind CAN be a software».
+             Its halves are claimed ON PURPOSE (free choice, the Captain's ruling (b)), and the
+             station builds free choice — but stanza reads «an animal or A MIND» as one noun phrase.
+             Where the provider gives a structure we know is wrong the station abstains (`q-5`).
+      one    A PROVIDER DEFECT — `q-2`, «Bob told me "I trust you"». Its rotation is right; stanza
+             labels the lone object of «trust» `iobj`, which UD reserves for a clause that also has
+             a direct object, so the station reads a recipient where the drill has the patient.
 
-    **THE POLAR QUESTION AND THE IMPERATIVE ARE GONE** (tasks 2c, 2d — 2026-09-18). The gate began
-    comparing TRUTH that morning and flagged `t-mo-1` «Do you exist?» (asked, compiled as a claim)
-    and `aw-21` «Close the door!» (wanted, compiled as a claim). Both fixed the same day; `aw-21`
-    now agrees outright, its understood subject included.
-
-    **THE ROTATION FAMILY IS GONE.** `q-4` `q-7` `q-9` disagreed for one morning — the station
-    rotated reported speech and did not rotate quoted speech, having keyed the rotation on the word
-    «that». Fixed the same day on the Captain's ruling, by asking stanza what it had already parsed
-    instead of asking what a quotation mark is. `q-2` stays, but its rotation is right: what is left
-    of it is the subject-role question above.
+    **THE SUBJECT-ROLE FAMILY IS GONE** (req 22, `db/0018`, 2026-09-18) — ten witnesses, the largest
+    family this list ever held, closed by a supersense rule as rows plus one exception; and the
+    drill itself was corrected in twelve rows where the bench showed it contradicting its own
+    principle. **The polar question and the imperative went the same day** (tasks 2c, 2d).
 
     **IT RUNS THE TOOL'S OWN PATH**, context and all. A control that compiled sentences differently
     from the instrument it guards would be free to agree while the instrument disagreed — which is
@@ -206,6 +199,5 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
         if reading.verdict == DISAGREED:
             disagreed.append(case.id)
 
-    assert sorted(disagreed) == ["aw-11", "aw-15", "aw-16", "aw-19", "aw-20", "exist-3",
-                                 "q-2", "t-dc-4", "t-mo-1", "t-of-1", "t-ws-1", "t-ws-7", "t-ws-8"], (
+    assert sorted(disagreed) == ["aw-15", "aw-19", "q-2", "t-ws-7"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")

@@ -297,7 +297,8 @@ def test_QUOTED_speech_rotates_and_stanza_is_what_says_which(compiler):
         out = compiler.compile(provider(sentence)[0],
                                context=Context(speaker="kotekino", addressee="captain"))
         trusting = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "trust.v")
-        assert trusting.boxes[Role.AGENT].head == "bob.n", f"«I» is Bob in {sentence!r}"
+        # `trust` is cognition, so its subject is an experiencer (req 22) — WHO it is is the point here
+        assert trusting.boxes[Role.EXPERIENCER].head == "bob.n", f"«I» is Bob in {sentence!r}"
         assert who in [getattr(b.head, "name", b.head) for b in trusting.boxes.values()], \
             "and «you» is whoever Bob was telling"
 
@@ -308,7 +309,7 @@ def test_a_CONDITIONAL_does_not_rotate(compiler):
                            context=Context(speaker="kotekino", addressee="captain"))
     knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
 
-    assert knowing.boxes[Role.AGENT].head == "captain"
+    assert knowing.boxes[Role.EXPERIENCER].head == "captain"  # `know` is cognition (req 22)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -379,7 +380,7 @@ def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
         "the asking is what the attitude holds; the row's own slot says what the holder DID with "
         "it — and the holder ASKED. Pinned at 1.0 on 2026-09-17 as a named gap; OPEN since task 2c "
         "(req 21), across the sentence boundary stanza draws at the quote.")
-    assert knowing.boxes[Role.AGENT].head == "captain", "and «you» is still the outer listener"
+    assert knowing.boxes[Role.EXPERIENCER].head == "captain", "and «you» is still the outer listener"
 
 
 def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):

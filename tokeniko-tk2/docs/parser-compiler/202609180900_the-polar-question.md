@@ -174,3 +174,21 @@ reason to leave every other disjunction claiming its halves.
 
     drill gate       49 agreed · 13 DISAGREED   roles 102 of 128 — the new entry is t-ws-7, free
                                                  choice, named in the ratchet as ruled
+
+## FREE CHOICE — BUILT, AND ITS OWN WITNESS CANNOT USE IT
+
+An OR whose halves are both under a possibility modal claims its halves — unless the disjunction is
+itself supposed. Nothing new is read: the modality rows and the join are already in the zip.
+
+    «You can have tea or you can have coffee»           both halves CLAIMED · OR claimed
+    «You have tea or you have coffee»                   only the OR (db/0017)
+    «If you can have tea or you can have coffee, stay»  neither — the disjunction is supposed
+    «You can have tea or you have coffee»               only the OR — one half has no modal
+    «Can you have tea or can you have coffee?»          all OPEN — the halves were claimed only
+                                                        through the disjunction, so asking it asks them
+
+**`t-ws-7` — the sentence that forced the ruling — is misparsed by stanza.** It reads «an animal or A
+MIND» as one noun phrase, so «can be a software» loses its subject and the second modal scopes a row
+the OR never joins. The verb-headed shape parses correctly. The station abstains (the `q-5`
+precedent), and `t-ws-7` stays in the ratchet as a provider defect rather than a station one.
+*Cancellation — «…but I don't know which» — is the known exception to free choice, and is not built.*

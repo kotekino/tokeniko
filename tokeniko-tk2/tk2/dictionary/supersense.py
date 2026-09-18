@@ -76,3 +76,27 @@ def supersense_for(lemma: str, upos: str) -> str | None:
     """The same, for a token described the way a skeleton describes it."""
     letter = UD_POS_TO_WORDNET.get((upos or "").upper())
     return None if letter is None else supersense_of(lemma, letter)
+
+
+def derived_supersense(adjective: str) -> str | None:
+    """The supersense of the NOUN an adjective is about — *hungry* → *hunger* → `noun.state`.
+
+    **WordNet files almost every adjective under ONE class, `adj.all`**, so the adjective's own
+    supersense says nothing (parser-compiler req 22). What it does record is the noun the adjective
+    measures — its ATTRIBUTE (*happy* → *happiness*) — or, failing that, the noun it is derived with
+    (*hungry* → *hunger*). The primary reading only, for `db/0006`'s reason.
+    """
+    if not adjective:
+        return None
+    lemma = adjective.lower().replace(" ", "_")
+    readings = wn.synsets(lemma, "a") + wn.synsets(lemma, "s")
+    if not readings:
+        return None
+    first = readings[0]
+    for attribute in first.attributes():
+        return attribute.lexname()
+    for form in first.lemmas():
+        for related in form.derivationally_related_forms():
+            if related.synset().pos() == "n":
+                return related.synset().lexname()
+    return None

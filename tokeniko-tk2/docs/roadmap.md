@@ -63,9 +63,9 @@
 - [x] **task 2d — ⚑ the imperative is a want, not a claim** *(09-18)* — `Mood=Imp`; `aw-21` agrees. `strength` and «Suppose…» asked
 - [x] **`whether` / `if` on a complement ask** *(09-18, `db/0016`)* — the clause decides: `ccomp` asks, `advcl` supposes
 - [x] **`or` / `nor` claim only the join** *(09-18, `db/0017`)* — the Captain's (b)
-- [ ] **free choice under a modal** — «can be X or can be Y» means both; `t-ws-7` in the ratchet
-- [ ] **the subject's role depends on WHAT IS PREDICATED of it** — ten witnesses in the drill gate's
-      ratchet; `RELATION_FILLS_ROLE` defers it to the geometry
+- [x] **free choice under a modal** *(09-18)* — both halves under «can»/«may» are claimed; `t-ws-7` is a stanza misparse, abstained
+- [x] **the subject's role depends on WHAT IS PREDICATED of it** *(09-18, req 22, `db/0018`)* — a
+      supersense rule as rows; twelve drill roles amended
 - [ ] **the placement floor** — the base's +0.15 says NEAR to 99.7% of placed senses; needs its own
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [ ] renderer (same lib)

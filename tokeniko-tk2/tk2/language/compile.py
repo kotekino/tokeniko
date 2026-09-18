@@ -30,6 +30,7 @@ from tk2.dictionary import keys as keymod
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
+from tk2.language.subjects import SubjectRoles, standing_subject_roles
 from tk2.language.skeleton import UD_POS, Skeleton, Word
 from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
 from tk2.tkzip.schema import (
@@ -54,9 +55,9 @@ from tk2.tkzip.schema import (
 #: role, so this is a reading of UD's documentation and not a judgement about English. FRAME: it
 #: relates two closed vocabularies, and no evidence revises what `obj` corresponds to.
 #:
-#: `nsubj` is deliberately `agent` and not «agent or experiencer»: which one it is depends on the
-#: VERB («the cat chased» vs «the cat saw»), that is a head-verb question the geometry answers, and
-#: a station that guessed here would be doing the compile core's job badly instead of leaving it.
+#: `nsubj` → `agent` is only the STARTING POINT: which role a subject takes depends on what is
+#: predicated of it («the cat CHASED» · «I LOVE» · «God EXISTS»), and `db/0018`'s rows settle it —
+#: see `Compiler._subject_role` (req 22). The deferral this comment used to make is closed.
 RELATION_FILLS_ROLE: dict[str, Role] = {
     "nsubj": Role.AGENT,
     "nsubj:pass": Role.PATIENT,     # the passive subject IS the patient — «the cat was chased»
@@ -279,8 +280,10 @@ class Compiler:
     """Skeleton → zip. Pure: context is an argument and never state (req 7)."""
 
     def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None,
-                 adverbs: AdverbKinds | None = None) -> None:
+                 adverbs: AdverbKinds | None = None, subjects: SubjectRoles | None = None) -> None:
         self.table = table
+        #: Requirement 22 — the subject's role, as rows (`db/0018`), run by the marker selector.
+        self.subjects = subjects if subjects is not None else standing_subject_roles()
         #: Requirement 23's four-way split, as rows (`db/0013`). A miss is the MANNER default, which
         #: is measured rather than assumed: 79% of English's adverbs are `-ly` and describe the
         #: action. Two rosters, one vocabulary — `compiled` here is the closed classes' own.
@@ -578,7 +581,15 @@ class Compiler:
                 # before the clause it encloses — which is why this reads `unasserted` rather than
                 # needing a second pass.
                 unasserted.add(inner.name)
-            if asserts == ASSERTS_NEITHER:
+            if asserts == ASSERTS_NEITHER and operator == Operator.OR.value \
+                    and outer_row.name not in unasserted \
+                    and self._possible(prefix_rows, inner) and self._possible(prefix_rows, outer_row):
+                # **FREE CHOICE UNDER A MODAL** (the Captain, 2026-09-18): «you CAN have tea or you
+                # CAN have coffee» means both are possible, so both halves are claimed — `or` alone
+                # claims only the join (`db/0017`). Not when the disjunction is itself supposed:
+                # «IF you can have tea or you can have coffee…» claims neither.
+                pass
+            elif asserts == ASSERTS_NEITHER:
                 # STATED, NOT CLAIMED — both halves. The JOIN carries the claim, and the heart reads
                 # this shape as supposition (heart 16) exactly as the evaluator reads a claim.
                 unasserted.add(inner.name)
@@ -602,6 +613,14 @@ class Compiler:
             if row.truth is None and row.name not in unasserted:
                 row.truth = CLAIMED
         return joins
+
+    @staticmethod
+    def _possible(prefix_rows: list, row) -> bool:
+        """Is this row under a POSSIBILITY modal — «can», «may»? The modality is the format's own
+        enum, read off the prefix row `_compile_closed` already raised for the auxiliary."""
+        return any(getattr(p, "scopes", None) == row.name
+                   and getattr(getattr(p, "modality", None), "value", None) == "possibility"
+                   for p in prefix_rows)
 
     def _ask(self, content: dict, joins: list, open_truth: set, wants_antecedent: set) -> list:
         """The two questions that are not boxes: an OPEN truth, and an unknown antecedent.
@@ -715,9 +734,17 @@ class Compiler:
             for row in claim:
                 if row.truth == CLAIMED:
                     row.truth = Open()
+            rows = {row.name: row for row in content.values()}
             for join in joins:
                 if join.truth == CLAIMED and names.intersection(join.operands):
                     join.truth = Open()
+                    if join.operator == Operator.OR:
+                        # A disjunct is claimed only THROUGH its disjunction — free choice under a
+                        # modal — so asking the disjunction asks it too: «Can you have tea or can
+                        # you have coffee?» claims neither. «A, but B?» keeps A: AND claims it.
+                        for name in join.operands:
+                            if name in rows and rows[name].truth == CLAIMED:
+                                rows[name].truth = Open()
 
     def _imperative(self, skeleton: Skeleton, heads: list[Word], content: dict, prefix_rows: list,
                     inner: dict, context: Context, joins: list) -> None:
@@ -761,7 +788,7 @@ class Compiler:
                 row.truth = None
             wanted.add(row.name)
             has_subject = any(c.bare_dep in SUBJECT_DEPS for c in skeleton.children(head.index))
-            role = Role.PATIENT if row.predicate is None else Role.AGENT
+            role = self._subject_role(head, copular=row.predicate is None, skeleton=skeleton)
             if not has_subject and role not in row.boxes:
                 row.boxes[role] = Box(head=addressee, sense=Open())
         for join in joins:
@@ -1086,7 +1113,10 @@ class Compiler:
         over a small anchor set and never misses the verb nobody thought of (req 55).
         """
         outer_row = content[outer.index]
-        holder = outer_row.boxes.get(Role.AGENT) or Box(head=Open(), sense=Open())
+        # The holder is the attitude verb's SUBJECT, whichever role req 22 gave it — «Anna THINKS»
+        # has an experiencer, «John SAYS» an agent.
+        holder = (outer_row.boxes.get(Role.AGENT) or outer_row.boxes.get(Role.EXPERIENCER)
+                  or outer_row.boxes.get(Role.PATIENT) or Box(head=Open(), sense=Open()))
         # **THE ADDRESSEE, schema v3.** «John said TO MARIE that…» — the person the attitude is
         # directed at, which an attitude with only a holder could not say. It is the `recipient` of
         # the attitude verb's own row, and it is EMPTY where there is none: thinking addresses
@@ -1192,6 +1222,10 @@ class Compiler:
         (`obl`, `nmod` — «a nominal dependent», which is not a role) the marker is asked.
         """
         settled = RELATION_FILLS_ROLE.get(word.dep) or RELATION_FILLS_ROLE.get(word.bare_dep)
+        if settled is not None and word.dep == "nsubj" and word.head != word.index:
+            # **THE SUBJECT IS WHAT ITS PREDICATE MAKES IT** (req 22, `db/0018`). The rule reads the
+            # clause's head — the verb, or the copular complement.
+            return self._subject_role(skeleton[word.head], copular, skeleton)
         if settled is not None:
             if settled is Role.AGENT and copular:
                 # Nobody is acting in «Sue is a teacher» — the subject of a copula is what the
@@ -1219,6 +1253,27 @@ class Compiler:
             return None
 
         return self._marker_role(word, skeleton, marks, defaulted)
+
+    def _subject_role(self, head: Word, copular: bool, skeleton: Skeleton | None = None) -> Role:
+        """An `nsubj`'s role, from what is predicated of it (req 22) — the rows decide.
+
+        With no rule for this kind of predicate, the pre-rule answer stands: `patient` for a copula
+        (E2's copular shape), `agent` otherwise.
+
+        **THE RELATION OUTRANKS THE RULE (req 12).** A clause with a direct object has its patient
+        already — `obj` → patient is frame — so its subject cannot also be one. «Sam SPENT forty
+        dollars» read `spend` by its primary sense («pass time», `verb.stative`) and made Sam the
+        patient, pushing the dollars out; the rule yields and the default stands.
+        """
+        default = Role.PATIENT if copular else Role.AGENT
+        found = self.subjects.settle(self.selector, head.lemma, head.upos, copular)
+        if found is None:
+            return default
+        role = Role(found.role)
+        if role is Role.PATIENT and not copular and skeleton is not None and any(
+                c.bare_dep == "obj" for c in skeleton.children(head.index)):
+            return Role.AGENT
+        return role
 
     def _marker_role(self, word: Word, skeleton: Skeleton, marks: dict,
                      defaulted: list | None = None) -> Role | None:

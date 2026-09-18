@@ -1134,3 +1134,84 @@ def test_a_DISJUNCTION_claims_the_join_and_neither_half(compiler, skeleton, oper
     join = next(r for r in out.zip.rows if r.kind == "join")
     assert join.operator == operator and join.truth == 1.0
     assert _row(out, "r0").truth is None and _row(out, "r1").truth is None
+
+
+def _tea_or_coffee(text, question=False):
+    """«You can have tea or you can have coffee» — stanza's parse, measured 2026-09-18."""
+    rows = [
+        ("1", "You", "you", "PRON", "3", "nsubj"),
+        ("2", "can", "can", "AUX", "3", "aux"),
+        ("3", "have", "have", "VERB", "0", "root"),
+        ("4", "tea", "tea", "NOUN", "3", "obj"),
+        ("5", "or", "or", "CCONJ", "8", "cc"),
+        ("6", "you", "you", "PRON", "8", "nsubj"),
+        ("7", "can", "can", "AUX", "8", "aux"),
+        ("8", "have", "have", "VERB", "3", "conj"),
+        ("9", "coffee", "coffee", "NOUN", "8", "obj"),
+        ("10", "?" if question else ".", "?" if question else ".", "PUNCT", "3", "punct"),
+    ]
+    return skeleton_from_conllu(text, rows)
+
+
+def test_FREE_CHOICE_under_a_modal_claims_both_halves(compiler):
+    """The Captain's ruling (b), 2026-09-18: «you CAN have tea or you CAN have coffee» means both
+    are possible. `or` alone claims only the join (`db/0017`); under a possibility modal on both
+    halves, the halves are claimed too."""
+    out = compiler.compile(_tea_or_coffee("You can have tea or you can have coffee ."))
+    assert _row(out, "r0").truth == 1.0 and _row(out, "r1").truth == 1.0
+    assert next(r for r in out.zip.rows if r.kind == "join").truth == 1.0
+
+
+def test_an_ASKED_free_choice_claims_neither_half(compiler):
+    """«Can you have tea or can you have coffee?» — the halves were claimed only through the
+    disjunction, so asking the disjunction asks them too."""
+    out = compiler.compile(_tea_or_coffee("You can have tea or you can have coffee ?", question=True))
+    assert isinstance(_row(out, "r0").truth, Open) and isinstance(_row(out, "r1").truth, Open)
+
+
+# ------------------------------------------------------------------------------------------------
+# the subject's role — req 22, `db/0018`. Skeletons are stanza's parses, measured 2026-09-18.
+# ------------------------------------------------------------------------------------------------
+
+def _svo(text, subject, verb, lemma, obj=None):
+    rows = [("1", subject, subject.lower(), "PRON" if subject in ("I", "You") else "PROPN", "2", "nsubj"),
+            ("2", verb, lemma, "VERB", "0", "root")]
+    if obj:
+        rows.append(("3", obj[0], obj[1], "NOUN", "2", "obj"))
+    return skeleton_from_conllu(text, rows)
+
+
+@pytest.mark.parametrize("text, verb, lemma, role", [
+    ("God exists", "exists", "exist", Role.PATIENT),            # verb.stative — one shape with «there is»
+    ("I love", "love", "love", Role.EXPERIENCER),                # verb.emotion
+    ("I understand", "understand", "understand", Role.EXPERIENCER),   # verb.cognition
+    ("I disagree", "disagree", "disagree", Role.EXPERIENCER),    # the exception row: a held position
+    ("I walk", "walk", "walk", Role.AGENT),                      # the default
+])
+def test_the_SUBJECT_is_what_its_predicate_makes_it(compiler, text, verb, lemma, role):
+    subject = text.split()[0]
+    out = compiler.compile(_svo(text, subject, verb, lemma), _speech())
+    assert role in main_row(out).boxes, f"{text!r}: the subject should be {role.value}"
+
+
+def test_a_TRANSITIVE_clause_keeps_its_patient_for_the_object(compiler):
+    """«Sam spent forty dollars» — `spend`'s primary sense is stative («pass time»), which would make
+    Sam the patient and push the dollars out. The relation outranks the rule (req 12)."""
+    out = compiler.compile(_svo("Sam spent money", "Sam", "spent", "spend", obj=("money", "money")))
+    row = main_row(out)
+    assert row.boxes[Role.AGENT].head == "sam.n"
+    assert row.boxes[Role.PATIENT].head == "money.n"
+
+
+@pytest.mark.parametrize("adjective, role", [("hungry", Role.EXPERIENCER), ("green", Role.PATIENT)])
+def test_a_copular_ADJECTIVE_is_read_through_its_noun(compiler, adjective, role):
+    """WordNet files almost every adjective under `adj.all`; the noun it measures is what speaks —
+    *hunger* is `noun.state`, *greenness* `noun.attribute`."""
+    out = compiler.compile(skeleton_from_conllu(f"The cat is {adjective} .", [
+        ("1", "The", "the", "DET", "2", "det"),
+        ("2", "cat", "cat", "NOUN", "4", "nsubj"),
+        ("3", "is", "be", "AUX", "4", "cop"),
+        ("4", adjective, adjective, "ADJ", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    assert main_row(out).boxes[role].head == "cat.n"

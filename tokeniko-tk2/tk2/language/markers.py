@@ -29,10 +29,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
-from tk2.dictionary.supersense import supersense_for
+from tk2.dictionary.supersense import derived_supersense, supersense_for
 
 #: What a rule may read. Frame — `db/0012` writes these strings and this file runs them.
 NOMINAL, VERB, HEAD_POS, DEFAULT = "nominal", "verb", "head_pos", "default"
+#: Two probes added for the subject's role (req 22, `db/0018`): the head's own LEMMA — an
+#: exception row, «disagree» — and the supersense of the noun an adjectival head is DERIVED with.
+LEMMA, DERIVED = "lemma", "derived"
 
 #: How a role was reached. `settled` = a rule fired on evidence in the sentence; `default` = nothing
 #: did, and the curation's best-first answer stands.
@@ -61,8 +64,10 @@ class MarkerSelector:
     depending on which WordNet is installed — the same seam `ClosedClasses` uses for its rows.
     """
 
-    def __init__(self, supersense: Callable[[str, str], str | None] = supersense_for) -> None:
+    def __init__(self, supersense: Callable[[str, str], str | None] = supersense_for,
+                 derived: Callable[[str], str | None] = derived_supersense) -> None:
         self._supersense = supersense
+        self._derived = derived
 
     def settle(self, compiled: dict, nominal_lemma: str = "", nominal_upos: str = "",
                head_lemma: str = "", head_upos: str = "") -> Settled | None:
@@ -83,10 +88,16 @@ class MarkerSelector:
                 if (head_upos or "").upper() in wanted:
                     return Settled(rule["then"], SETTLED, f"{HEAD_POS}:{head_upos}")
                 continue
+            if reads == LEMMA:
+                if (head_lemma or "").lower() in wanted:
+                    return Settled(rule["then"], SETTLED, f"{LEMMA}:{head_lemma}")
+                continue
             if reads == NOMINAL:
                 found = self._supersense(nominal_lemma, nominal_upos)
             elif reads == VERB:
                 found = self._supersense(head_lemma, head_upos)
+            elif reads == DERIVED:
+                found = self._derived(head_lemma)
             else:
                 # A probe this frame does not implement. Skipped rather than raised: a row written
                 # by a later migration must not stop an older station, and the default still stands.
