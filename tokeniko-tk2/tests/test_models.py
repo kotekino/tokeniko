@@ -77,6 +77,7 @@ def test_the_named_collections_are_all_present():
         "language_closed_classes",
         "language_adverb_kinds",
         "language_subject_roles",
+        "language_attitude_strengths",
         "dictionary_curated_edges",
     }
 
@@ -94,6 +95,7 @@ def test_the_architecture_is_rows_not_code():
         "language_closed_classes",
         "language_adverb_kinds",
         "language_subject_roles",
+        "language_attitude_strengths",
         # An INPUT to a build, not an output of one — the E1d T4 repair. Two approved edges were
         # lost in the E1b rebuild because they lived only as cells in a regenerated matrix.
         "dictionary_curated_edges",

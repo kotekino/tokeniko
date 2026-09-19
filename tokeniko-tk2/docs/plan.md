@@ -1063,6 +1063,18 @@ it).
    «Suppose the cat is hungry» (`aw-20`): E2 collapses it into the speaker's own supposition; the
    station now reads *I want you to suppose it*. Which imperatives collapse is per-verb («Remember
    that I love you» does not) — knowledge, and the attitude-verb question of req 55.
+   **BOTH ANSWERED 2026-09-19 — reqs 23 and 24.** (1) **Knowledge**, in rows with a counted default —
+   *«the heart can influence the base value, staying on the knowledge, but let's see when we do the
+   heart»*. (2) **Do not collapse**; `aw-20` stands as a named divergence until req 55 is opened.
+   **AND THE GATE WAS WIDENED BEFORE EITHER WAS BUILT**, on his «widen the gate now, then docs
+   first»: `strength` lives on a prefix row, and the gate compared CONTENT rows only — 89 prefix rows
+   and 50 joins were outside the instrument, so the number would have been unmeasurable. The
+   widening found `aw-21`'s empty strength, as intended, and **a coin toss nobody was looking for**:
+   NLTK stores a synset's pointers in a `set`, so `derived_supersense`'s `attributes()[0]` made «the
+   cat is dead» an experiencer in one process and a patient in the next — the cause of the 09-18 test
+   that would not reproduce. The reader now abstains when the resource is of two minds, which costs
+   *happy* and buys a lemma exception row. Record `202609190900_the-gate-sees-the-prefix.md`.
+   **Gate: 59 · 3 → 59 · 5, and the two new reds are what `db/0019` and `db/0020` close.**
 
 3. **The renderer** — zip → faithful scaffold, same lib (req 9).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip

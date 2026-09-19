@@ -24,6 +24,13 @@ drill speak about the same thing, do they say the same thing?**
 rows which have no predicate by req 31, on their complement's head); boxes pair on their HEAD key.
 That is what makes a disagreement meaningful: `patient: sue.n` against `topic: sue.n` is the same
 filler under two names, which is precisely the defect this gate was built for.
+
+**AND SINCE 2026-09-19 IT READS THE PREFIX AND THE JOINS.** For three widenings it compared
+`kind="content"` and nothing else, so 89 prefix rows and 50 joins the Captain hand-compiled — every
+attitude's holder, verb, addressee and strength, every negation, modality, domain and quantifier, and
+every join's truth slot — were outside the instrument. A prefix row is resolved to the row it SCOPES
+(`target_keys`, so no name is ever compared), pairs on what it IS (`about`) and is compared on what
+it SAYS (`says_what`). Record: `docs/parser-compiler/202609190900_the-gate-sees-the-prefix.md`.
 """
 
 import argparse
@@ -90,6 +97,96 @@ def signature(row) -> str:
     return "=" + "|".join(sorted(filler(b) for b in boxes.values()))
 
 
+#: The five scope-bearing kinds (tkzip req 35), in the order the schema declares them.
+PREFIX_KINDS = ("quantifier", "negation", "modality", "attitude", "domain")
+
+
+def target_keys(zip_) -> dict[str, str]:
+    """Every row's name mapped to a NAME-FREE key, so two zips can pair rows they named differently.
+
+    A prefix element scopes a row BY NAME (`scopes`), and the two zips number their rows
+    independently — `aw-21`'s want scopes `cl`, the station's scopes `r0`. Comparing the prefix at
+    all therefore needs the target resolved to something both sides produce: a content row's
+    signature, or, for a join, its operator over its operands' keys, recursively.
+
+    The schema guarantees `scopes` names a content or join row, so this terminates on any valid zip;
+    the depth guard is for a zip that is being CHECKED rather than trusted.
+    """
+    rows = {r.name: r for r in zip_.rows}
+
+    def resolve(name: str, depth: int = 0) -> str:
+        row = rows.get(name)
+        if row is None or depth > 8:
+            return "?"
+        if row.kind == "content":
+            return signature(row)
+        if row.kind == "join":
+            halves = " | ".join(resolve(n, depth + 1) for n in row.operands)
+            return f"({row.operator.value} {halves})"
+        # A PREFIX row's key is the key of what it SCOPES — the row it is about. Resolving its own
+        # name instead gave every prefix row the same key, `?`, and the first widening's run paired
+        # quantifiers that had nothing to do with one another and called them a disagreement.
+        return resolve(row.scopes, depth + 1)
+
+    return {name: resolve(name) for name in rows}
+
+
+def says_what(row) -> dict[str, str]:
+    """What a prefix row SAYS, field by field, as strings both zips can produce.
+
+    One dict per kind, holding only what is COMPARABLE across two independently-built zips: an enum
+    value, a box's filler, or a slot's STATE. **No magnitude is ever compared** — `strength` is
+    reported as stated/unstated exactly as `truth_state` reports the truth slot, because a value is
+    curation and the gate is not the curator. It is the difference between «the station says nothing
+    about how strongly this wants» and «the station says 0.85 where the table says 0.9»: the first is
+    a defect, the second is a migration.
+    """
+    if row.kind == "attitude":
+        return {
+            "verb": str(row.verb),
+            "holder": filler(row.holder),
+            "addressee": "(nobody)" if row.addressee is None else filler(row.addressee),
+            "strength": "unstated" if row.strength is None else "stated",
+        }
+    if row.kind == "modality":
+        return {"modality": row.modality.value}
+    if row.kind == "domain":
+        return {"domain": filler(row.domain)}
+    if row.kind == "quantifier":
+        return {"quantity": row.quantity.value, "restriction": filler(row.restriction)}
+    return {}                                     # a negation says only that it is there
+
+
+def about(row) -> str:
+    """What a prefix row IS, inside its kind — the half of it that pairs rather than compares.
+
+    The gate's standing doctrine, applied a third time: a content row pairs on its PREDICATE and is
+    compared on its boxes; a box pairs on its FILLER and is compared on its role. So an attitude
+    pairs on its VERB and is compared on who holds it, whom it addresses and how strongly. Pairing
+    two attitudes over one row by document order instead read «Marie said "John told me…"» as the
+    station getting Marie's saying wrong, when what it had actually done was get John's telling
+    exactly right and miss the outer saying — a MISSING dressed as a defect.
+
+    A quantifier pairs on its restriction («all CATS») and a domain on its domain, for the same
+    reason: those are what the row is about, and the station producing a different one is a row the
+    drill does not have, not a disagreement about this one.
+    """
+    if row.kind == "attitude":
+        return str(row.verb)
+    if row.kind == "quantifier":
+        return filler(row.restriction)
+    if row.kind == "domain":
+        return filler(row.domain)
+    return ""
+
+
+def _comparable(mine: str, theirs: str) -> bool:
+    """The same abstention the box pass makes: an OPEN or a VARIABLE is nobody's disagreement."""
+    if not mine or not theirs:
+        return False
+    return not any(v == "open" or v.startswith("var:") for v in (mine, theirs))
+
+
 @dataclass
 class Reading:
     """What the gate makes of one drill sentence."""
@@ -101,13 +198,20 @@ class Reading:
     conflicts: list = field(default_factory=list)
     missing_roles: list = field(default_factory=list)
     missing_rows: list = field(default_factory=list)
+    #: The prefix and the joins are counted APART from the content rows and their roles. Folding
+    #: them in would move both figures on the day the gate widened and make the history unreadable.
+    prefix_paired: int = 0
+    said: int = 0
+    missing_prefix: list = field(default_factory=list)
+    joins_paired: int = 0
+    missing_joins: list = field(default_factory=list)
     unparsed: str = ""
 
     @property
     def verdict(self) -> str:
         if self.conflicts:
             return DISAGREED
-        return AGREED if self.agreed else MISSING
+        return AGREED if (self.agreed or self.said) else MISSING
 
 
 def compare(produced, expected, case_id="", sentence="") -> Reading:
@@ -191,7 +295,107 @@ def compare(produced, expected, case_id="", sentence="") -> Reading:
     for i, other in enumerate(theirs):
         if i not in taken:
             reading.missing_rows.append(signature(other))
+
+    _prefix_pass(produced, expected, reading)
+    _join_pass(produced, expected, reading)
     return reading
+
+
+def _prefix_pass(produced, expected, reading) -> None:
+    """**THE FOURTH BLINDNESS, closed 2026-09-19.** The gate read `kind="content"` and nothing else,
+    so the whole PREFIX was uncompared: every attitude's holder, verb, addressee and strength, every
+    negation, modality and domain row. `aw-21`'s POV(me · want) — the imperative, built the day
+    before — was measured by an instrument that could not see it, and so were the quotation holders
+    the person axis exists for.
+
+    **Pairing is by (kind, the row scoped, what the row is ABOUT)** — see `about`. No name is
+    compared: the target is resolved through `target_keys`, so «the want over close.v» is a thing
+    both zips can say.
+
+    **AND THE LEFTOVERS ARE READ, because absence and substitution are different facts.** When the
+    drill has a prefix row nothing paired with, the gate asks whether the station has an unpaired row
+    OF THE SAME KIND OVER THE SAME ROW. If it does, that is a SUBSTITUTION and a defect: the station
+    said something ELSE about that row. If it does not, it is MISSING and no defect — most of the
+    prefix is E3 unfinished. An extra station row over a row the drill left bare is passed over in
+    silence, exactly as an extra content row is: the drill is a floor, not a ceiling.
+
+    *The substitution branch is a GUARD and fires nowhere in the drill today.* The case it is written
+    for is `aw-20` — «Suppose the cat is hungry» read as a WANT where the drill holds a SUPPOSE — and
+    that one does not reach it, because the station's want scopes the `suppose.v` row it builds and
+    the drill's supposition scopes the cat's. Named as a guard so a later reader does not take its
+    silence for evidence.
+    """
+    mine_keys, their_keys = target_keys(produced), target_keys(expected)
+
+    pool: dict[tuple, list] = {}
+    for row in expected.rows:
+        if row.kind in PREFIX_KINDS:
+            pool.setdefault((row.kind, their_keys[row.name], about(row)), []).append(row)
+
+    spare: dict[tuple, list] = {}
+    for row in produced.rows:
+        if row.kind not in PREFIX_KINDS:
+            continue
+        waiting = pool.get((row.kind, mine_keys[row.name], about(row)))
+        if not waiting:
+            spare.setdefault((row.kind, mine_keys[row.name]), []).append(row)
+            continue
+        other = waiting.pop(0)
+        reading.prefix_paired += 1
+        mine_says, their_says = says_what(row), says_what(other)
+        if not mine_says:                             # a negation: being there IS the agreement
+            reading.said += 1
+        for slot, value in mine_says.items():
+            theirs = their_says.get(slot, "")
+            if not _comparable(value, theirs):
+                continue
+            if value == theirs:
+                reading.said += 1
+            else:
+                reading.conflicts.append(
+                    f"{row.kind} over {mine_keys[row.name]}: {slot} — the station says {value}, "
+                    f"the drill says {theirs}")
+
+    for (kind, target, what), waiting in pool.items():
+        label = f"{kind} {what} over {target}" if what else f"{kind} over {target}"
+        for _ in waiting:
+            instead = spare.get((kind, target))
+            if instead:
+                row = instead.pop(0)
+                reading.conflicts.append(
+                    f"{kind} over {target}: the station says {about(row)}, the drill says {what}")
+            else:
+                reading.missing_prefix.append(label)
+
+
+def _join_pass(produced, expected, reading) -> None:
+    """The joins were uncompared too, and `db/0017` and free choice both turned on their TRUTH.
+
+    A join's key already says everything it is — its operator over its operands' keys — so it pairs
+    on that, and what is compared is the same thing a content row's is: the STATE of the truth slot.
+    «A or B» claiming its halves was the defect of 2026-09-18; a gate blind to the join could not
+    have reported it.
+    """
+    mine_keys, their_keys = target_keys(produced), target_keys(expected)
+
+    pool: dict[str, list] = {}
+    for row in rows_of(expected, "join"):
+        pool.setdefault(their_keys[row.name], []).append(row)
+
+    for row in rows_of(produced, "join"):
+        waiting = pool.get(mine_keys[row.name])
+        if not waiting:
+            continue
+        other = waiting.pop(0)
+        reading.joins_paired += 1
+        mine_state, their_state = truth_state(row), truth_state(other)
+        if mine_state != their_state:
+            reading.conflicts.append(
+                f"truth of {mine_keys[row.name]}: the station says {mine_state}, "
+                f"the drill says {their_state}")
+
+    for target, waiting in pool.items():
+        reading.missing_joins.extend(target for _ in waiting)
 
 
 def truth_state(row) -> str:
@@ -267,9 +471,17 @@ def run(argv=None) -> int:
     rows_total = paired + sum(len(r.missing_rows) for r in readings)
     roles_agreed = sum(r.agreed for r in readings)
     roles_total = roles_agreed + sum(len(r.missing_roles) for r in readings)
+    prefix_paired = sum(r.prefix_paired for r in readings)
+    prefix_total = prefix_paired + sum(len(r.missing_prefix) for r in readings)
+    said = sum(r.said for r in readings)
+    joins_paired = sum(r.joins_paired for r in readings)
+    joins_total = joins_paired + sum(len(r.missing_joins) for r in readings)
 
     print(f"  ROWS PAIRED    {paired} of {rows_total} the drill hand-compiled")
     print(f"  ROLES AGREED   {roles_agreed} of {roles_total} on the rows that paired")
+    print(f"  PREFIX PAIRED  {prefix_paired} of {prefix_total} — attitude · negation · modality · "
+          f"domain · quantifier, and {said} of their slots agree")
+    print(f"  JOINS PAIRED   {joins_paired} of {joins_total}, compared on the truth slot")
     print(f"  SENTENCES      {len(agreed)} agreed · {len(conflicts)} DISAGREED · "
           f"{len(readings) - len(agreed) - len(conflicts)} reached no common ground")
     if split:
@@ -287,6 +499,9 @@ def run(argv=None) -> int:
             "case": r.case_id, "sentence": r.sentence, "verdict": r.verdict,
             "paired": r.paired, "agreed": r.agreed, "conflicts": r.conflicts,
             "missing_roles": r.missing_roles, "missing_rows": r.missing_rows,
+            "prefix_paired": r.prefix_paired, "said": r.said,
+            "missing_prefix": r.missing_prefix,
+            "joins_paired": r.joins_paired, "missing_joins": r.missing_joins,
             "note": r.unparsed,
         } for r in readings], indent=2))
         print(f"\n  written to {args.json}")

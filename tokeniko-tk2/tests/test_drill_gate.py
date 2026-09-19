@@ -11,7 +11,20 @@ The one test that actually parses carries `@pytest.mark.skeleton`, like the rest
 import pytest
 
 from tests.fixtures.drill import CASES
-from tk2.tkzip.schema import Box, ContentRow, Open, Operator, Role, Var, Zip
+from tk2.tkzip.schema import (
+    AttitudeRow,
+    Box,
+    ContentRow,
+    DomainRow,
+    JoinRow,
+    Modality,
+    ModalityRow,
+    Open,
+    Operator,
+    Role,
+    Var,
+    Zip,
+)
 from tools.drill_gate import AGREED, DISAGREED, MISSING, compare, filler, signature
 
 
@@ -138,6 +151,111 @@ def test_a_COPULAR_row_pairs_on_its_complement():
 
 
 @pytest.mark.skeleton
+# ------------------------------------------------------------------------------------------------
+# THE PREFIX AND THE JOINS — the fourth widening, 2026-09-19
+# ------------------------------------------------------------------------------------------------
+
+
+def wants(name, scopes, who="me.n", verb="want.v", to=None, strength=None):
+    return AttitudeRow(name=name, scopes=scopes, verb=verb, holder=Box(head=who),
+                       addressee=None if to is None else Box(head=to), strength=strength)
+
+
+def test_an_attitude_whose_STRENGTH_the_station_leaves_EMPTY_is_a_DISAGREEMENT():
+    """**THE FOURTH BLINDNESS, and the case it was widened for** (req 23). `aw-21` hand-compiles
+    «Close the door!» as POV(me · want) at 0.9; the station wrote nothing there, and for a day the
+    gate could not say so, because it compared `kind="content"` and nothing else.
+
+    The STATE is compared and never the magnitude — «the station says nothing about how strongly
+    this wants» is a defect, «0.85 where the table says 0.9» is a migration."""
+    closing = row("r0", "close.v", agent="you.n")
+    station = Zip(rows=[wants("p0", "r0"), closing])
+    drill = Zip(rows=[wants("w", "cl", strength=0.9), row("cl", "close.v", agent="you.n")])
+
+    reading = compare(station, drill)
+
+    assert reading.verdict == DISAGREED
+    assert reading.conflicts == [
+        "attitude over close.v: strength — the station says unstated, the drill says stated"]
+    assert compare(Zip(rows=[wants("p0", "r0", strength=0.4), closing]), drill).conflicts == [], (
+        "a value against a value says nothing about whether a strength was stated")
+
+
+def test_attitudes_over_ONE_row_pair_by_their_VERB_and_not_by_position():
+    """**A MISSING DRESSED AS A DEFECT, caught the day the widening was written.** «Marie said "John
+    told me 'you are late'"» holds two sayings over one row. Paired by document order, the station's
+    single telling was compared against Marie's saying and reported three conflicts — while what it
+    had actually done was read John's telling exactly right and miss the outer saying."""
+    late = row("l", complement="late.a", patient="marie.n")
+    station = Zip(rows=[wants("p0", "l", who="john.n", verb="tell.v", to="marie.n"), late])
+    drill = Zip(rows=[wants("a1", "l", who="marie.n", verb="say.v"),
+                      wants("a2", "l", who="john.n", verb="tell.v", to="marie.n"), late])
+
+    reading = compare(station, drill)
+
+    assert reading.conflicts == []
+    assert reading.missing_prefix == ["attitude say.v over =late.a"]
+
+
+def test_the_station_saying_something_ELSE_about_the_same_row_is_a_SUBSTITUTION():
+    """Absence and substitution are different facts, and identity pairing alone can only see the
+    first. A leftover on BOTH sides over the same row is the station saying something else — the
+    shape `aw-20` would have, if the station built an attitude for «suppose» at all (req 24)."""
+    hungry = row("h", complement="hungry.a", experiencer="cat.n")
+    station = Zip(rows=[wants("p0", "h", verb="want.v"), hungry])
+    drill = Zip(rows=[wants("sup", "h", verb="suppose.v"), hungry])
+
+    reading = compare(station, drill)
+
+    assert reading.verdict == DISAGREED
+    assert reading.conflicts == [
+        "attitude over =hungry.a: the station says want.v, the drill says suppose.v"]
+
+
+def test_a_prefix_row_the_station_did_not_BUILD_is_MISSING_and_never_a_conflict():
+    """Two thirds of the prefix is E3 unfinished — domains, most quantifiers, the negation rows. A
+    widening that turned all of it red would have taught nothing."""
+    driving = row("d", "drive.v", agent="you.n")
+    station = Zip(rows=[ModalityRow(name="m0", scopes="d", modality=Modality.POSSIBILITY), driving])
+    drill = Zip(rows=[DomainRow(name="dom", scopes="d", domain=Box(head="italy.n")),
+                      ModalityRow(name="mod", scopes="d", modality=Modality.POSSIBILITY), driving])
+
+    reading = compare(station, drill)
+
+    assert reading.conflicts == []
+    assert reading.missing_prefix == ["domain italy.n over drive.v"]
+    assert reading.said == 1, "the modality paired and agreed"
+
+
+def test_a_MODALITY_read_as_the_other_one_IS_a_conflict():
+    """◇ against □ is not a magnitude and not an absence: «software CAN be minds» compiled as «MUST»
+    is a different claim about the world."""
+    being = row("d", "be.v", patient="software.n")
+    station = Zip(rows=[ModalityRow(name="m0", scopes="d", modality=Modality.NECESSITY), being])
+    drill = Zip(rows=[ModalityRow(name="m", scopes="d", modality=Modality.POSSIBILITY), being])
+
+    assert compare(station, drill).conflicts == [
+        "modality over be.v: modality — the station says necessity, the drill says possibility"]
+
+
+def test_a_JOIN_claiming_what_the_drill_leaves_UNCLAIMED_is_a_DISAGREEMENT():
+    """The joins were outside the instrument too, and `db/0017` turned on exactly this: «A or B»
+    claimed its halves, and `nor` claiming both contradicted its own join. A join pairs on its
+    operator over its operands' keys — no name is compared — and is read on its truth slot."""
+    halves = [row("a", "rain.v"), row("b", "stay.v")]
+    station = Zip(rows=[*halves, JoinRow(name="j", operator=Operator.IMPLY,
+                                         operands=["a", "b"], truth=1.0)])
+    drill = Zip(rows=[*halves, JoinRow(name="x", operator=Operator.IMPLY,
+                                       operands=["a", "b"], truth=None)])
+
+    reading = compare(station, drill)
+
+    assert reading.verdict == DISAGREED
+    assert reading.conflicts == [
+        "truth of (imply rain.v | stay.v): the station says stated, the drill says unstated"]
+    assert compare(drill, drill).conflicts == [], "the same join against itself agrees"
+
+
 def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():
     """**THE THIRD BLINDNESS, and the defect it hid** (req 21, 2026-09-18). The gate compared roles
     and never truth, so «Is the cat hungry?» compiled at 1.0 against the drill's OPEN and agreed.
@@ -177,6 +295,13 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
     family this list ever held, closed by a supersense rule as rows plus one exception; and the
     drill itself was corrected in twelve rows where the bench showed it contradicting its own
     principle. **The polar question and the imperative went the same day** (tasks 2c, 2d).
+
+    **AND THE LIST SURVIVED A FOURTH WIDENING, 2026-09-19** — which is the only kind of survival
+    that means anything. The gate now reads the PREFIX and the JOINS as well: 89 prefix rows and 50
+    joins that had never been compared. It went to five on the instant, and both new entries were
+    real — `aw-21`'s empty `strength` (req 23, closed by `db/0020`) and `t-of-1`'s *happy*, the one
+    witness lost to repairing a hash-order coin toss in `derived_supersense` (closed by `db/0019`).
+    *Three entries, measured by a strictly larger instrument, is not the same three entries.*
 
     **IT RUNS THE TOOL'S OWN PATH**, context and all. A control that compiled sentences differently
     from the instrument it guards would be free to agree while the instrument disagreed — which is

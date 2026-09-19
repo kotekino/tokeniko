@@ -30,6 +30,7 @@ from tk2.dictionary import keys as keymod
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
+from tk2.language.strength import IMPERATIVE, AttitudeStrengths, standing_attitude_strengths
 from tk2.language.subjects import SubjectRoles, standing_subject_roles
 from tk2.language.skeleton import UD_POS, Skeleton, Word
 from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
@@ -285,8 +286,11 @@ class Compiler:
     """Skeleton → zip. Pure: context is an argument and never state (req 7)."""
 
     def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None,
-                 adverbs: AdverbKinds | None = None, subjects: SubjectRoles | None = None) -> None:
+                 adverbs: AdverbKinds | None = None, subjects: SubjectRoles | None = None,
+                 strengths: AttitudeStrengths | None = None) -> None:
         self.table = table
+        #: Requirement 23 — how strongly a shape of wanting wants, as rows (`db/0020`).
+        self.strengths = strengths if strengths is not None else standing_attitude_strengths()
         #: Requirement 22 — the subject's role, as rows (`db/0018`), run by the marker selector.
         self.subjects = subjects if subjects is not None else standing_subject_roles()
         #: Requirement 23's four-way split, as rows (`db/0013`). A miss is the MANNER default, which
@@ -768,8 +772,11 @@ class Compiler:
           - the UNDERSTOOD SUBJECT is the addressee, in the box the subject would have filled —
             `patient` for a copula, `agent` otherwise, as `_role_of` rules for any subject.
 
-        `strength` is left EMPTY: how strongly a bare imperative wants is not a fact the tree
-        states, and the drill's 0.9 is a question for the Captain before it is a number in code.
+        `strength` COMES FROM THE ROWS (req 23, `db/0020`): how strongly a bare imperative wants
+        is not a fact the tree states, and the Captain ruled it knowledge — so the compiler asks the
+        table and leaves the slot empty when the table has no row, rather than holding a number of
+        its own. The drill's 0.9 measures «Close the door!»; «please» will move it, and will do so
+        by migration.
 
         **A JOIN OF WANTS CLAIMS NOTHING EITHER.** «Go and see» is two wants; the AND between them,
         left claimed, asserted that you go and see.
@@ -788,7 +795,8 @@ class Compiler:
             addressee = here.addressee if here.addressee is not None else Open()
             prefix_rows.append(AttitudeRow(
                 name=f"p{len(prefix_rows)}", scopes=row.name, verb=IMPERATIVE_VERB,
-                holder=Box(head=speaker, sense=Open())))
+                holder=Box(head=speaker, sense=Open()),
+                strength=self.strengths.of(IMPERATIVE)))
             if row.truth == CLAIMED:
                 row.truth = None
             wanted.add(row.name)

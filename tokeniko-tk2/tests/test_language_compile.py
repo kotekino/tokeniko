@@ -1072,7 +1072,27 @@ def test_the_IMPERATIVE_is_a_WANT_over_an_unstated_row(compiler):
     assert (want.verb, want.holder.head, want.scopes) == ("want.v", "me.n", "r0")
     assert row.truth is None, "wanted, not claimed"
     assert row.boxes[Role.AGENT].head == "you.n", "the understood subject is the addressee"
-    assert want.strength is None, "how strongly is not a fact the tree states"
+    assert want.strength == 0.9, "the drill's own number, and it comes from `db/0020`"
+
+
+def test_how_strongly_an_imperative_wants_comes_from_THE_ROWS(compiler):
+    """**Requirement 23, and the seam is the point.** The tree states no number; the Captain ruled
+    the gradation «close the door» → «would you mind closing the door» KNOWLEDGE, so the compiler
+    asks the table. Handed a table with no row it says NOTHING rather than a number of its own —
+    half-understood is legal, wrongly-understood is not (req 8)."""
+    from tk2.language.compile import Compiler
+    from tk2.language.strength import AttitudeStrengths
+
+    empty = Compiler(compiler.table, strengths=AttitudeStrengths({}, "a table with no rows"))
+    silent = next(r for r in empty.compile(CLOSE_THE_DOOR, _speech()).zip.rows
+                  if r.kind == "attitude")
+    assert silent.strength is None
+
+    louder = Compiler(compiler.table,
+                      strengths=AttitudeStrengths({"imperative": {"strength": 0.4}}, "a curation"))
+    softened = next(r for r in louder.compile(CLOSE_THE_DOOR, _speech()).zip.rows
+                    if r.kind == "attitude")
+    assert softened.strength == 0.4, "re-curating the number is a migration, not a code change"
 
 
 def test_the_understood_subject_takes_the_box_a_subject_WOULD_have(compiler):
@@ -1203,7 +1223,14 @@ def test_a_TRANSITIVE_clause_keeps_its_patient_for_the_object(compiler):
     assert row.boxes[Role.PATIENT].head == "money.n"
 
 
-@pytest.mark.parametrize("adjective, role", [("hungry", Role.EXPERIENCER), ("green", Role.PATIENT)])
+@pytest.mark.parametrize("adjective, role", [
+    ("hungry", Role.EXPERIENCER), ("green", Role.PATIENT),
+    # **THE RESOURCE IS OF TWO MINDS ABOUT THESE THREE** (2026-09-19, `db/0019`). `dead` and `alive`
+    # are filed under noun.state AND noun.attribute, so the reader abstains and the copular default
+    # stands — which is what the drill hand-compiled anyway. `happy` is noun.state AND noun.feeling,
+    # and `noun.feeling` cannot enter the rule («Be QUIET!»), so a LEMMA ROW settles it.
+    ("dead", Role.PATIENT), ("alive", Role.PATIENT), ("happy", Role.EXPERIENCER),
+])
 def test_a_copular_ADJECTIVE_is_read_through_its_noun(compiler, adjective, role):
     """WordNet files almost every adjective under `adj.all`; the noun it measures is what speaks —
     *hunger* is `noun.state`, *greenness* `noun.attribute`."""

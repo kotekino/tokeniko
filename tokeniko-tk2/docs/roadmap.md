@@ -66,13 +66,21 @@
 - [x] **free choice under a modal** *(09-18)* — both halves under «can»/«may» are claimed; `t-ws-7` is a stanza misparse, abstained
 - [x] **the subject's role depends on WHAT IS PREDICATED of it** *(09-18, req 22, `db/0018`)* — a
       supersense rule as rows; twelve drill roles amended; the ratchet falls to three
+- [x] **⚑ the drill gate sees the PREFIX** *(09-19, req 18's fourth widening)* — 89 prefix rows and
+      50 joins enter the instrument; attitudes pair on their verb. Record `202609190900_…`
+- [x] **⚑ a coin toss in the station's own reading** *(09-19)* — NLTK keeps synset pointers in a
+      `set`; `derived_supersense` now reads the whole relation and abstains when it disagrees
+- [ ] **task 2d's two questions — `strength` is knowledge, an imperative does not collapse**
+      *(09-19, reqs 23-24)* — `db/0019` (the `happy` exception) and `db/0020` (the strength rows)
 - [ ] **the placement floor** — the base's +0.15 says NEAR to 99.7% of placed senses; needs its own
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
 - [ ] drill automated = acceptance gate
 - [ ] **⚑ the frame/knowledge audit — E3's closing act.** Suspect already: `RELATION_FILLS_ROLE` ·
-      `CLAUSE_DEPS` · `UD_DEP_TO_ROLE` · `UD_POS_TO_WORD_CLASS` · `CLAIMED = 1.0` · `SAYING_VERBS`
+      `CLAUSE_DEPS` · `UD_DEP_TO_ROLE` · `UD_POS_TO_WORD_CLASS` · `CLAIMED = 1.0` · `SAYING_VERBS` ·
+      `COORDINATE_DEPS` · `SUBJECT_DEPS` · `OBJECT_DEPS` · `COMPLEMENT_CLAUSE_DEPS` · `QUESTION_MARK` ·
+      `IMPERATIVE_VERB` *(that an imperative is a WANT — the other half of `db/0020`'s fact)*
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence

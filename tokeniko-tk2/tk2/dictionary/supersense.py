@@ -85,6 +85,20 @@ def derived_supersense(adjective: str) -> str | None:
     supersense says nothing (parser-compiler req 22). What it does record is the noun the adjective
     measures — its ATTRIBUTE (*happy* → *happiness*) — or, failing that, the noun it is derived with
     (*hungry* → *hunger*). The primary reading only, for `db/0006`'s reason.
+
+    **IT READS THE WHOLE RELATION, AND IT ABSTAINS WHEN THE RELATION IS NOT OF ONE MIND** — and both
+    halves of that were forced, on 2026-09-19, by a defect the drill gate caught at the fourth
+    widening. **NLTK stores a synset's pointers in a `set`**, so `attributes()` comes back in the
+    process's own string-hash order and `[0]` is a coin toss. *dead* has two: `animation.n.01`
+    (`noun.state`) and `animation.n.02` (`noun.attribute`), so «the cat is dead» compiled an
+    experiencer in one process and a patient in the next — **the same sentence read as two different
+    thoughts**, which for a mind is worse than reading it wrongly twice.
+
+    Ordering the set would only have hidden the question: WordNet publishes no priority among a
+    synset's attributes, so any order we imposed would be our invention wearing the resource's
+    clothes. When the readings disagree the answer is None — the caller's own default stands and is
+    COUNTED as a default (req 8, req 15). *This is the provider-defect doctrine at the dictionary's
+    end of the station: where the resource does not say, we do not decide.*
     """
     if not adjective:
         return None
@@ -93,10 +107,9 @@ def derived_supersense(adjective: str) -> str | None:
     if not readings:
         return None
     first = readings[0]
-    for attribute in first.attributes():
-        return attribute.lexname()
-    for form in first.lemmas():
-        for related in form.derivationally_related_forms():
-            if related.synset().pos() == "n":
-                return related.synset().lexname()
-    return None
+    stated = {attribute.lexname() for attribute in first.attributes()}
+    if not stated:
+        stated = {related.synset().lexname() for form in first.lemmas()
+                  for related in form.derivationally_related_forms()
+                  if related.synset().pos() == "n"}
+    return stated.pop() if len(stated) == 1 else None

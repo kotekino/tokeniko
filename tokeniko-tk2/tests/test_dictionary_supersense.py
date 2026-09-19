@@ -14,6 +14,7 @@ from tk2.dictionary.supersense import (
     NOUN_SUPERSENSES,
     SUPERSENSES,
     VERB_SUPERSENSES,
+    derived_supersense,
     supersense_for,
     supersense_of,
 )
@@ -56,3 +57,44 @@ def test_a_ud_tag_reaches_the_right_half_of_the_resource():
     assert supersense_for("talk", "NOUN") == "noun.communication"
     assert supersense_for("paris", "PROPN") == "noun.location", "a PROPN is still asked as a noun"
     assert supersense_for("the", "DET") is None, "a function word is nobody's noun"
+
+
+# ------------------------------------------------------------------------------------------------
+# the NOUN an adjective is about — parser-compiler req 22, and the hash-order defect of 2026-09-19
+# ------------------------------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("adjective, expected", [
+    ("hungry", "noun.state"), ("tired", "noun.state"), ("ready", "noun.state"),
+    ("green", "noun.attribute"), ("late", "noun.attribute"), ("cute", "noun.attribute"),
+])
+def test_the_adjectives_the_subject_rule_depends_on(adjective, expected):
+    """These are not examples, they are the evidence `db/0018`'s copular rule fires on: WordNet files
+    almost every adjective under `adj.all`, so the noun it measures is what speaks."""
+    assert derived_supersense(adjective) == expected
+
+
+@pytest.mark.parametrize("adjective", ["dead", "alive", "happy"])
+def test_an_adjective_the_resource_files_TWO_WAYS_gets_no_answer(adjective):
+    """**THE DEFECT THAT MADE ONE SENTENCE TWO THOUGHTS** (2026-09-19, found by the drill gate's
+    fourth widening). NLTK keeps a synset's pointers in a `set`, so `attributes()` comes back in the
+    process's own string-hash order — and *dead* has TWO attribute nouns, `animation.n.01`
+    (`noun.state`) and `animation.n.02` (`noun.attribute`). Taking `[0]` made «the cat is dead» an
+    experiencer under one `PYTHONHASHSEED` and a patient under the next.
+
+    Sorting the set would have hidden the question: **WordNet publishes no priority among a synset's
+    attributes**, so an order imposed by us would be our invention in the resource's clothes. Where
+    the resource does not say, we do not decide — and `db/0019` answers for *happy*, on E2's ruling.
+    """
+    first = (wn.synsets(adjective, "a") + wn.synsets(adjective, "s"))[0]
+    assert len({a.lexname() for a in first.attributes()}) > 1, (
+        f"{adjective!r} no longer has disagreeing attributes — this test's premise moved")
+    assert derived_supersense(adjective) is None
+
+
+def test_it_reads_the_WHOLE_relation_and_not_whichever_came_first():
+    """The repair, stated as a property rather than as a case: the answer depends on the SET of
+    lexnames the resource states, so it cannot depend on the order they arrive in."""
+    assert derived_supersense("hungry") == "noun.state", "one reading, and it answers"
+    assert derived_supersense("zzzqx") is None
+    assert derived_supersense("") is None
