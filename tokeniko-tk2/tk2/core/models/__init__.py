@@ -47,6 +47,7 @@ from tk2.core.models.heart import (
 from tk2.core.models.adverbs import AdverbKindDoc
 from tk2.core.models.strength import AttitudeStrengthDoc
 from tk2.core.models.subjects import SubjectRoleDoc
+from tk2.core.models.inflection import InflectionDoc
 from tk2.core.models.language import ClosedClassDoc
 from tk2.core.models.micro_nn import MicroNnInstanceDoc, MicroNnWeightsDoc, OutputKind
 from tk2.core.models.params import ParamDoc
@@ -69,6 +70,7 @@ LOGIC_MODELS = [
     AdverbKindDoc,
     SubjectRoleDoc,
     AttitudeStrengthDoc,
+    InflectionDoc,
     # CURATION, and an INPUT to a build rather than an output of one — which is the whole reason it
     # is a collection. Two approved edges were lost in the E1b rebuild because they existed only as
     # cells in a matrix that gets regenerated; outputs get regenerated, inputs survive.
@@ -128,6 +130,7 @@ __all__ = [
     "AdverbKindDoc",
     "SubjectRoleDoc",
     "AttitudeStrengthDoc",
+    "InflectionDoc",
     "ClosedClassDoc",
     "DerivedPointDoc",
     "CuratedEdgeDoc",

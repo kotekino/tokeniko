@@ -5,8 +5,8 @@
 1. **A sense is a boundary adapter** — mouth and ear of one channel; it stamps provenance (who · channel · spacetime) and hands the raw stream to the service ladder.
 2. **Dumb, under a certain extent** — the sense never decides the WHAT; heart-influenced, it decides the tone and the way of saying what the brain decided.
 3. **The channel register is learned kb rows** — each channel's etiquette and jargon, fed by its own traffic (jargon flows into the figurative layer), learned via micro-nn; never config.
-4. **The brain queues a tkzip; the MOUTH creates the sentence** — render (faithful scaffold) → color (synonym palette, steered by heart deviation + register + micro-nn) → polish (rag-out, if enabled).
-5. **The mouth styles, never restates** — the round-trip fence: re-parse the final sentence, compare zips with the queued one; drift in the WHAT → ship the scaffold verbatim.
+4. **The brain queues a tkzip; the MOUTH creates the sentence** — DECOMPILE (the sentence that compiles back to the zip; parser-compiler req 9, renamed 2026-09-19) → color (synonym palette, steered by heart deviation + register + micro-nn) → polish (rag-out, if enabled).
+5. **The mouth styles, never restates** — the round-trip fence: re-parse the final sentence, compare zips with the queued one; drift in the WHAT → ship the DECOMPILED sentence verbatim.
 6. **Articulation belongs to the mouth** — structure, length, rhythm vary with channel AND inner status (anxiety clips, joy expands); the zip bounds meaning, the mouth owns all surface freedom.
 7. **The ear is fully dumb.**
 8. **Uids are channel-scoped at the ear** — that two channel-identities are the same person is a KB belief, inferred and retreatable, never adapter config.

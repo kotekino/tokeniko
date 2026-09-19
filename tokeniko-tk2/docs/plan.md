@@ -1076,7 +1076,31 @@ it).
    *happy* and buys a lemma exception row. Record `202609190900_the-gate-sees-the-prefix.md`.
    **Gate: 59 · 3 → 59 · 5, and the two new reds are what `db/0019` and `db/0020` close.**
 
-3. **The renderer** — zip → faithful scaffold, same lib (req 9).
+3. **The DECOMPILER** — zip → a sentence that compiles back to that zip, same lib (req 9).
+   *Named by the Captain on 2026-09-19, and the name is the design: «mimicking the compiler/decompiler of computer languages». Decompiled source is never the original source — it is A source that compiles to the same object — so the acceptance test comes with the analogy: RECOMPILE AND COMPARE THE ZIPS, using the drill gate's own `compare()` over the drill's 87 hand-compiled zips. It is faithful to the ZIP, not to the sentence: the gap between the two is the misparse signal (req 3) and the confidence scalar's input (reqs 4, 6). The senses speak its output, and rag-out only POLISHES it — which is what keeps the LLM from inventing content (rag reqs 3, 5).*
+   **FIRST SLICE BUILT AND MEASURED 2026-09-19** — `tk2/language/decompile.py`, one content row to
+   one clause, with `tools/roundtrip.py` as its gate from the first run. **46 of 87 → 79 of 82 read
+   back as the same thought; the failures went 32 → 3.** Two walls, both ruled:
+   **(1) a lemma verb is an IMPERATIVE** — «A calculator never thinks» decompiled as «Think.» is
+   read back as a command, and that ONE artefact was 26 of the first 32 failures. So the decompiler
+   inflects: the spelling rule is frame (orthography, like `a`/`an`), the 21 words it gets wrong are
+   rows (`db/0022`). *The library that found them does not ship — `lemminflect` loads spacy and
+   torch on import, and those are deliberately off the closed dependency list, so it was used
+   OFFLINE as an instrument, like WordNet for the base; 22 of its 43 answers were its own defects
+   (hyphens, spaces, `torpedo → torpedo`).*
+   **(2) the inverse map is not a function** — 47 of the table's 81 meanings are many-formed, so
+   meaning → form has no answer in the rows. `db/0021` adds a `spoken` flag, ten meanings, one form
+   each, the choices listed in the migration as curation. Where nothing can be chosen the
+   decompiler RECORDS the silence; where saying it wrong would change the CLAIM — a negation it
+   cannot speak — it refuses the clause outright.
+   **The three that remain**: `aw-19` (the E3b named-individual hole), `aw-6` (the joins, slice 3c)
+   and **`dir-3`, a COMPILE defect the round trip found**: «I walked as far as the bridge» compiles
+   with the bridge dropped entirely, which the drill gate could only see as a missing role. Named
+   for a curation row (`db/0015` already ruled a marked phrase with an endpoint a destination).
+   *Also named: `me.n` speaks as «me» in subject position — the person axis has not been read
+   backwards yet. It round-trips, so it is a wart and not a defect.*
+   Record `202609191700_the-decompiler.md`. **Next slices**: the prefix · the quantifiers · the
+   joins · the questions.
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
 5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI

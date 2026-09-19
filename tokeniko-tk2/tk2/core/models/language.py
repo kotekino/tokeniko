@@ -108,6 +108,20 @@ class ClosedClassDoc(LogicDocument, Timestamped):
     #: complete?» is answerable by re-walking the source rather than by re-remembering.
     source: str = Field(min_length=1)
 
+    #: **THE FORM THIS MEANING IS SPOKEN WITH** *(the Captain, 2026-09-19, for the decompiler —
+    #: parser-compiler req 9)*. The forward reading is many-to-one and that is correct: thirty-two
+    #: prepositions all mean `location`, eighteen subordinators all mean an asserted `imply`. The
+    #: BACKWARD reading therefore has no answer in the rows — and a decompiler that picked one
+    #: anyway would be choosing our own set and hard-coding it, which is the standing law's own
+    #: failure, merely relocated from a list to a `next(iter(...))`.
+    #:
+    #: So exactly one row per (role, meaning) may carry `spoken`, and it is CURATION: «not» rather
+    #: than «n't» or «no», «because» rather than the seventeen other asserted implications. Most
+    #: rows never need it — a meaning with a single form is already unambiguous, and `Box.marker`
+    #: records the preposition a PARSED zip actually used (req 65), so the flag is only consulted
+    #: where the zip itself does not say.
+    spoken: bool = False
+
     #: Why this row is here, or what is odd about it: the archaic forms, the forms that also spell
     #: open-class words, the judgment calls at the class's edge.
     note: str = ""

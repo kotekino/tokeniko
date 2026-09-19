@@ -78,7 +78,12 @@
 - [x] **⚑ the placement rule, in place of a number** *(09-19, dictionary req 22)* — a stated
       edge is trusted, the sibling fallback and D abstain; 19.4% coverage, 0 wrong trusts
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
-- [ ] renderer (same lib)
+- [ ] **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — first
+      slice DONE: one content row to one clause; round trip 79/82 same thought, 3 changed.
+      `db/0021` the `spoken` flag · `db/0022` the inflection roster. Record `202609191700_…`
+- [ ] **the decompiler's next slices** — the prefix · quantifiers · joins · questions
+- [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
+      trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
 - [ ] drill automated = acceptance gate
 - [ ] **⚑ the frame/knowledge audit — E3's closing act.** Suspect already: `RELATION_FILLS_ROLE` ·
