@@ -70,8 +70,8 @@
       50 joins enter the instrument; attitudes pair on their verb. Record `202609190900_…`
 - [x] **⚑ a coin toss in the station's own reading** *(09-19)* — NLTK keeps synset pointers in a
       `set`; `derived_supersense` now reads the whole relation and abstains when it disagrees
-- [ ] **task 2d's two questions — `strength` is knowledge, an imperative does not collapse**
-      *(09-19, reqs 23-24)* — `db/0019` (the `happy` exception) and `db/0020` (the strength rows)
+- [x] **task 2d's two questions — `strength` is knowledge, an imperative does not collapse**
+      *(09-19, reqs 23-24)* — `db/0019` and `db/0020` applied; `aw-20` a named divergence on req 55
 - [ ] **the placement floor** — the base's +0.15 says NEAR to 99.7% of placed senses; needs its own
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [ ] renderer (same lib)
