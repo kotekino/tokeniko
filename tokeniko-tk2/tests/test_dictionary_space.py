@@ -458,6 +458,67 @@ def test_a_placement_is_ranked_IN_THE_HALF_it_was_projected_from():
 
 
 # ------------------------------------------------------------------------------------------------
+# the placement rule — dictionary req 22, the Captain's ruling of 2026-09-19 (E3 task 6)
+# ------------------------------------------------------------------------------------------------
+
+
+DEVOURS = [{
+    "key": "devour.v.01", "base": "devour.v", "ordinal": 1, "synset": "devour.v.01",
+    "definition": "eat greedily",
+    "relations": [{"column": "eat.v", "w": 0.8, "rel": "hypernym_1"}],
+    "distribution": [{"column": "food.n", "w": 0.5}],
+}, {
+    "key": "devour.v.02", "base": "devour.v", "ordinal": 2, "synset": "devour.v.02",
+    "definition": "destroy completely",
+    "relations": [],
+    "distribution": [{"column": "food.n", "w": 0.5}, {"column": "eat.v", "w": 0.2}],
+}]
+
+
+def test_a_placement_is_trusted_only_where_R_STATES_THE_EDGE():
+    """**THE FLOOR, MEASURED AND REFUSED** (E3 task 6). The verdict used to come from the BASE's
+    floor, fitted on base-to-base cosines where p90 is +0.000 — which read NEAR for 99.5% of
+    relations placements and 91.1% of distributional ones. On the forty placements the Captain ruled
+    the cosine does not separate the good from the bad in EITHER half, so no floor replaced it: a
+    placement is trusted where the sense STATES an edge to that dimension, and abstains otherwise.
+
+    `devour.v.01` states `eat.v` and is trusted there; the dimensions it merely ranks NEAR abstain,
+    which is the sibling fallback that produced every one of the bar's six relational failures.
+    """
+    held = space(senses=DEVOURS)
+
+    placed = held.place("devour")["devour.v.01"]
+    assert placed[0].key == "eat.v" and placed[0].verdict == "NEAR"
+    assert all(n.verdict == "ABSTAIN" for n in placed[1:]), (
+        "a dimension the sense does not state is a sibling of a sibling, whatever its cosine")
+
+
+def test_a_DISTRIBUTIONAL_placement_can_never_be_trusted_and_that_is_structural():
+    """It is not a policy choice: a sense reaches D precisely BECAUSE it states no relations, so a
+    stated edge cannot exist there. Measured over the whole build: 0.0% of 44,666 distributional
+    placements state their nearest dimension, against 31.5% of the relational ones."""
+    held = space(senses=DEVOURS)
+
+    placed = held.place("devour")["devour.v.02"]
+    assert placed, "it is still PLACED — the abstention is about trust, not about coverage"
+    assert all(n.source == SOURCE_DISTRIBUTIONAL for n in placed)
+    assert all(n.verdict == "ABSTAIN" for n in placed)
+
+
+def test_a_placement_never_issues_FAR():
+    """«I cannot vouch for this» and «the resource says these are opposed» are different statements.
+    A placement has no opposition to declare: below the FAR ceiling is R's own signed reading of two
+    DIMENSIONS, and a sense that states nothing states nothing in either direction."""
+    held = space(senses=DEVOURS)
+
+    every = [n for placed in held.place("devour").values() for n in placed]
+    assert every and not any(n.verdict == "FAR" for n in every)
+    assert held.placement_verdict("devour.v.01", "eat.v") == "NEAR"
+    assert held.placement_verdict("devour.v.01", "food.n") == "ABSTAIN"
+    assert held.placement_verdict("nobody.v.99", "eat.v") == "ABSTAIN", "an unknown sense abstains"
+
+
+# ------------------------------------------------------------------------------------------------
 # the cell decides — requirement 19, honoured at last (policy v12)
 # ------------------------------------------------------------------------------------------------
 

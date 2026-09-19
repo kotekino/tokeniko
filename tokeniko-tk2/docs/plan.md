@@ -462,7 +462,7 @@ did, so the same +0.15 reads **NEAR for 99.7%** of relations-placed senses and 8
 distribution-placed ones. **A floor that says NEAR to everything is not discriminating** — it is a
 threshold calibrated on another population. Nothing is wrong with the base's floor, which is the
 point: the sense layer needs its OWN, fitted its own way, and E3 is where a placement first has to
-be trusted or refused.*
+be trusted or refused.* ***ANSWERED 2026-09-19 (E3 task 6): it needs no floor of its own. On forty ruled placements the cosine does not separate the trustworthy from the rest in either half — what separates them is WHICH HALF placed the sense. Record `docs/dictionary/202609191500_the-placement-floor.md`.***
 
 ---
 
@@ -1128,6 +1128,30 @@ it).
    population first, then put the threshold in the MIDDLE of a real gap, never on a wall. *And the
    bar it is fitted against has to be built: the base's 37 pairs are base-to-base and say nothing
    about placements.*
+   **MEASURED AND REFUSED, 2026-09-19 — THERE IS NO NUMBER, AND THAT IS THE RESULT.** The bar was
+   built first: 40 placements drawn from the 116,725 the build holds, stratified by half and by
+   cosine band, restricted to senses the corpus attests. The Captain ruled all forty against the
+   QM's own lean and agreed with each — and **the verdicts INTERLEAVE with the cosine in both
+   halves**. R's highest declared FAR (+0.4454) sits above its lowest declared NEAR (+0.2606); D's
+   (+0.3780) above its (+0.1654). There is no gap to sit in. The best floor possible for R is
+   +0.4555, still 3 of 20 wrong, and it would throw away `involve -> include`, the most exact
+   placement in the sample; **the best floor possible for D is +1.0000 — trust nothing — and still
+   2 of 20 wrong.** Each half fails in exactly one way: R ranks CONCENTRATION and falls to a sibling
+   of a sibling; D reads the definition's GRAMMAR (`mark.v` is rank 1 for three unrelated senses,
+   each glossed «marked by»).
+   **RULED AND BUILT IN PLACE OF A NUMBER, the same day.** The first proposal — «R is trusted,
+   D abstains» — was approved and then WITHDRAWN on one more measurement: «R placed it» and «R
+   STATES that edge» are different claims, and all six relational failures are the SIBLING
+   FALLBACK, so that rule would have carried six wrong trusts in twenty. The three-way rule the
+   Captain then ruled («if coverage allows»): a stated edge is NEAR, the sibling fallback
+   ABSTAINS, D ABSTAINS. **Coverage allowed** — 31.5% of relations placements state their
+   nearest dimension, 19.4% of all of them; D is 0.0% and cannot be otherwise, since a sense
+   reaches D by stating no relations. Built in `DictionarySpace.place`; `FAR` is never issued.
+   D's gloss reading admitting function words is a NAMED DEFECT owed by E1 (dictionary req 23). The forty are EVIDENCE in
+   `tests/fixtures/placement_bar.py`, NOT `dictionary_bar` rows: every bar word becomes a seed
+   (dictionary req 12), so declaring them there would have pulled the senses under test into the
+   base as dimensions and invalidated the build they were measured on. Bench
+   `tools/placement_bench.py`; record `docs/dictionary/202609191500_the-placement-floor.md`.
 7. **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
    them. The count is in the manifest, so it is predictable rather than surprising.
 8. **⚑ THE FRAME/KNOWLEDGE AUDIT — the epic's closing act** *(the Captain, 2026-09-16, and the first

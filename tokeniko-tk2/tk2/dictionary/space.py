@@ -38,7 +38,7 @@ threshold — the standing law of 2026-08-25 put acceptance floors in rows, and 
 be exactly the quieter of two declarations.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import numpy as np
 
@@ -591,13 +591,49 @@ class DictionarySpace:
 
         Each reading is ranked IN THE HALF IT WAS PROJECTED FROM (`projection` picks the half), so
         the `source` on every neighbour is a true statement about how that answer was reached.
+
+        **THE VERDICT IS THE PLACEMENT RULE'S, NOT THE BASE FLOOR'S** (dictionary req 22, the
+        Captain's ruling of 2026-09-19). A placement is trusted when R STATES an edge to that very
+        dimension, and abstains otherwise — including every distributional placement, which cannot
+        have one, since a sense reaches D precisely by stating no relations at all.
+
+        **The floor it replaces was measured and refused.** On the forty placements the Captain
+        ruled, the cosine does not separate the trustworthy from the rest in either half: R's highest
+        declared FAR (+0.4454) sits above its lowest declared NEAR (+0.2606), so there is no gap for
+        a threshold. The stated edge has no such crossing — all four stated placements in the bar are
+        good, and all six R failures are the SIBLING FALLBACK, where the sense's edge points at
+        something that is not a dimension and the projection lands on a sibling of a sibling.
+
+        **It costs coverage and that was the deciding number**: 31.5% of relations-placed senses
+        state their nearest dimension (22,692 of 72,059), 19.4% of all placements. The other four
+        fifths are ABSTAIN — half-understood, which is legal, rather than wrongly-understood, which
+        is the sin (parser-compiler req 8). *The alternative on the table trusted every R placement
+        and would have carried six wrong trusts in twenty.*
+
+        Record: `docs/dictionary/202609191500_the-placement-floor.md`.
         """
         out: dict[str, list[Neighbour]] = {}
         for sense_key in sorted(self._senses_by_word.get(keys.normalize_word(word), ())):
             found = self.projection(sense_key)
-            out[sense_key] = ([] if found is None else
-                              self.neighbours_of_vector(found.vector, count, source=found.source))
+            if found is None:
+                out[sense_key] = []
+                continue
+            ranked = self.neighbours_of_vector(found.vector, count, source=found.source)
+            out[sense_key] = [replace(n, verdict=self.placement_verdict(sense_key, n.key))
+                              for n in ranked]
         return out
+
+    def placement_verdict(self, sense: str, dimension: str) -> str:
+        """`NEAR` when R states an edge from this sense to this dimension, else `ABSTAIN`.
+
+        `FAR` is never issued: the question a placement asks is «may I trust this», and the space
+        saying nothing about a pair is not the space declaring them opposed. That distinction is the
+        same one `verdict`'s own FAR ceiling keeps — below zero is R's statement of opposition, and a
+        placement has no such statement to make.
+        """
+        reading = self._by_sense.get(sense)
+        stated = {cell[0] for cell in reading.relations} if reading is not None else set()
+        return "NEAR" if dimension in stated else "ABSTAIN"
 
     def neighbours_of_vector(self, vector, count: int = 12,
                              source: str = SOURCE_DISTRIBUTIONAL) -> list[Neighbour]:

@@ -72,7 +72,11 @@
       `set`; `derived_supersense` now reads the whole relation and abstains when it disagrees
 - [x] **task 2d's two questions — `strength` is knowledge, an imperative does not collapse**
       *(09-19, reqs 23-24)* — `db/0019` and `db/0020` applied; `aw-20` a named divergence on req 55
-- [ ] **the placement floor** — the base's +0.15 says NEAR to 99.7% of placed senses; needs its own
+- [x] **⚑ the placement floor — MEASURED AND REFUSED** *(09-19)* — 40 placements ruled; the
+      verdicts interleave with the cosine in both halves, so no floor separates them. Record
+      `202609191500_…`
+- [x] **⚑ the placement rule, in place of a number** *(09-19, dictionary req 22)* — a stated
+      edge is trusted, the sibling fallback and D abstain; 19.4% coverage, 0 wrong trusts
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [ ] renderer (same lib)
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
