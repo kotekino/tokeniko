@@ -1099,8 +1099,42 @@ it).
    for a curation row (`db/0015` already ruled a marked phrase with an endpoint a destination).
    *Also named: `me.n` speaks as «me» in subject position — the person axis has not been read
    backwards yet. It round-trips, so it is a wart and not a defect.*
-   Record `202609191700_the-decompiler.md`. **Next slices**: the prefix · the quantifiers · the
-   joins · the questions.
+   Record `202609191700_the-decompiler.md`.
+   **SECOND AND THIRD SLICES, 2026-09-20, and the Captain's instruction is the method**: *«what the
+   decompiler can't do, either is because the compiler doesn't encode the missed information in the
+   zip OR the decompiler doesn't extract the information encoded in the tkzip … everything that
+   emerged should be fixed … until the input sentence is 100% equivalent to the output one. The
+   decompiler is another CORE feature, so it must be perfect from the beginning (at least it should
+   be the reverse operation of what the compiler does).»* And on pace: *«let's try to break down in
+   small steps less … so more consistent chunks code-wise, less tests. After each feedback from the
+   tests, it's absolutely necessary to fix the findings: no point in deferring.»*
+   **THAT NEEDED AN INSTRUMENT THE DRILL COMPARISON CANNOT BE.** `tools/roundtrip.py --fixpoint`:
+   sentence → zip → sentence → zip, the two zips IDENTICAL, normalising only what the format says
+   carries no meaning (row names, `and`-chain nesting, `unplaced`) and reporting the sentences the
+   compiler read WHOLE apart from the rest. **24 → 59 of 87; 50 of the 69 read whole.**
+   *Built*: the joins · the quantifiers and their variables · the whole prefix · the questions in
+   three shapes · the person axis backwards · agreement · the existential · the expletive · the
+   passive. *And five of the defects it found were the COMPILER's* — the tense (req 25), the voice
+   (req 26), a clause left as a claim after becoming an attitude, a bare `ccomp` read as a
+   conjunction unless the verb was in `SAYING_VERBS`, and a zip that came out a DAG where a sentence
+   is a tree. Knowledge: `db/0023` (v12 — the features a form is CHOSEN by, and «although» loses the
+   `spoken` flag it should never have had), `db/0024` (862 past/participle rows, two resources),
+   `db/0025` (`look` → agent, `die` → patient).
+   Record `202609201100_the-station-against-itself.md`.
+
+3b. **⚑ THE OPEN SLOT CANNOT SAY WHAT IS KNOWN ABOUT THE UNKNOWN** *(2026-09-20, req 27 — THE
+   CAPTAIN'S, because it is a FORMAT ruling under the frozen schema, tkzip req 73)*. «who» vs
+   «what», «he» vs «she», «its cubs»: three defects, one missing field. `Open` carries a `prior` and
+   nothing else. Partly bought back by keeping an unresolved pronoun's own key, which is what the
+   drill writes — but that stand-in abstains on the wrong grounds («In Italy, HE is married» sees
+   *Italy* as an antecedent) and it is not the field.
+
+3c. **The fixpoint's remaining 19** — the decompiler's own, on sentences the compiler read whole.
+   Named: a conjunct with an elided subject («the cat is dead and alive»), `only`, the free-choice
+   `or` asserting both, the attitude strengths and the hedged truth (both need the compiler to read
+   them first), an unmarked domain («legally» is an adverb derived from `law.n` and the table holds
+   no derivation), and the operators English does not mark — `conv`, `eq`, `nimply` have no row, and
+   adding one changes the PARSE side too.
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
 5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
@@ -1228,6 +1262,27 @@ is already keyed by uid.
 
 **Answers to:** parser-compiler req 16 · micro-nn reqs 1–4, 7, **9** (the admission criterion, which
 this epic is the first case of).
+
+**⚑ AND ANAPHORA DEPENDS ON IT, which is why anaphora is parked here and not in E3** *(the Captain,
+2026-09-20: «agree with your lean, park it for E3b, absolutely in scope for it from which it
+depends»)*. The station resolves the FIRST and SECOND person — they are participants in the speech
+act and the `Context` names them. The THIRD person points backwards into the discourse, and after
+schema v4 the zip knows exactly what the speaker said about it: «John said to Marie that SHE was
+late» carries *feminine · singular · third person*. **What is missing is that Marie is feminine and
+John is not** — WordNet has no gender for a name, stanza's NER says `PERSON` for both, and the
+dictionary's supersense says `noun.person` for both. So the blocker is an ATTRIBUTE OF A NAMED
+INDIVIDUAL, which is this epic's whole subject.
+
+    a   E3b gives a name an identity, gender among its attributes
+    b   fill `Context.recent` — declared 2026-09-16, never written; `compile_utterance` already
+        holds the preceding zips of a multi-sentence utterance and drops them
+    c   the search: walk the candidates, keep those whose features agree, ABSTAIN on a tie — the
+        marker selector's discipline and `derived_supersense`'s
+
+*(c) is small and could be written today, and on its own it would resolve only the unambiguous
+cases — which are not the two the drill holds. Written without (a) it would be a resolver that
+guesses, and an OPEN carrying its features is a better zip than a coin-flipped `marie.n`.* **The two
+drill-gate reds `q-6` and `t-dc-5` are this, named** (parser-compiler req 7).
 
 **Where it sits:** after E3 closes, and it may run BESIDE E4 — the evaluator does not wait on name
 resolution, and a zip with an unresolved name is still a zip. It should be in before **PS1**, because

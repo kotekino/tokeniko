@@ -303,6 +303,20 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
     witness lost to repairing a hash-order coin toss in `derived_supersense` (closed by `db/0019`).
     *Three entries, measured by a strictly larger instrument, is not the same three entries.*
 
+    **AND A FIFTH WIDENING, 2026-09-20 — THE GATE LEARNED TO READ AN OPEN SLOT.** Every open box
+    used to flatten to the word «open», so «he» compared EQUAL to «she», and a box the drill had
+    described compared equal to one the station left blank. Schema v4 gives an open slot the person,
+    number, gender and sort the sentence gave it, and the comparator reads them — an OPEN nobody
+    described still abstains, because «I do not know» contradicts nothing.
+
+    **It went to five, and both new entries are the same unbuilt thing, named:** `q-6` and `t-dc-5`,
+    where the station says *an unidentified feminine singular person* and the drill says `marie.n`.
+    **That is ANAPHORA** (req 7, never built), and it had been invisible twice over — first because
+    the pronoun compiled to a bare OPEN, then because the gate could not have told the difference.
+    *A red that names an unbuilt feature is worth more than a number that was measuring nothing;
+    this is the second time in one day that an abstention turned out to be hiding a defect, after
+    `look` and `die` (`db/0025`).*
+
     **IT RUNS THE TOOL'S OWN PATH**, context and all. A control that compiled sentences differently
     from the instrument it guards would be free to agree while the instrument disagreed — which is
     the exact failure req 18 exists to prevent, one level down.
@@ -326,5 +340,5 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
         if reading.verdict == DISAGREED:
             disagreed.append(case.id)
 
-    assert sorted(disagreed) == ["aw-15", "aw-19", "t-ws-7"], (
+    assert sorted(disagreed) == ["aw-15", "aw-19", "q-6", "t-dc-5", "t-ws-7"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")

@@ -53,6 +53,27 @@ def n(head=None, **kw) -> Box:
     return Box(head=head, **kw)
 
 
+#: The third-person pronouns the drill's own sentences leave UNRESOLVED, and what the speaker said
+#: about each. Written this way since **schema v4** (2026-09-20): before it, the format had no way to
+#: record «a male singular person nobody has identified», so these boxes held the pronoun's
+#: dictionary key — and `he.n` claims the referent is the CONCEPT of «he», which contradicts this
+#: file's own doctrine that *«a pronoun that survives into a row is an unresolved reference and not a
+#: reading»*. The sentences are untouched; only their spelling of the unknown moves.
+#:
+#: *Not every pronoun: `q-4` · `q-5` · `q-6` resolve theirs, because the quotation names who.*
+UNRESOLVED = {
+    "he": {"person": 3, "number": "sg", "gender": "m"},
+    "she": {"person": 3, "number": "sg", "gender": "f"},
+    "it": {"person": 3, "number": "sg", "gender": "n"},
+    "they": {"person": 3, "number": "pl"},
+}
+
+
+def who(word: str, **kw) -> Box:
+    """An unidentified person the sentence described — «HE never works» (tkzip req 2, schema v4)."""
+    return Box(head=Open(**UNRESOLVED[word]), **kw)
+
+
 def the(head, **kw) -> Box:
     return Box(head=head, determination=Determination.DEFINITE, **kw)
 
@@ -215,12 +236,12 @@ case("dir-3", "I walked as far as the bridge.", "cluster:direction",
      "pass", "a multi-word marker; the closed-class rows are rows, so length costs nothing")
 
 case("dir-4", "He looked up.", "cluster:direction",
-     Zip(rows=[c("l", "look.v", agent=n("he.n"), direction=n("up.r"))]),
+     Zip(rows=[c("l", "look.v", agent=who("he"), direction=n("up.r"))]),
      "pass", "FORCED CHANGE #1 — a direction with NO ENDPOINT. Before the box existed this was an "
              "honest PARTIAL: not a destination (he does not arrive at *up*), not a path, not a manner.")
 
 case("dir-5", "She turned left.", "cluster:direction",
-     Zip(rows=[c("t", "turn.v", agent=n("she.n"), direction=n("left.r"))]),
+     Zip(rows=[c("t", "turn.v", agent=who("she"), direction=n("left.r"))]),
      "pass", "the second witness, a different verb — so it was not an idiom of «look»")
 
 
@@ -253,7 +274,7 @@ case("exist-4", "Is there a cat?", "cluster:existential",
 
 case("nha-1", "He never works.", "cluster:never-hardly-almost",
      Zip(rows=[all_of("bT", "T", generic("time.n"), scopes="w"), not_("neg", "w"),
-               c("w", "work.v", agent=n("he.n"), time=V("T"))]),
+               c("w", "work.v", agent=who("he"), time=V("T"))]),
      "pass", "∀T ¬work — a universal over the time variable and a negation, both in the prefix. "
              "`never` collapses exactly as req 23 says.")
 
@@ -264,12 +285,12 @@ case("nha-2", "A calculator never thinks.", "cluster:never-hardly-almost",
      "pass", "his own traffic (missed-negation): two binders and a negation, all scoping one row")
 
 case("nha-3", "He hardly works.", "cluster:never-hardly-almost",
-     Zip(rows=[c("w", "work.v", agent=n("he.n"), manner=Box(degree=0.1))]),
+     Zip(rows=[c("w", "work.v", agent=who("he"), manner=Box(degree=0.1))]),
      "pass", "a manner box carrying ONLY a degree — «works, to a small degree». FINDING: `hardly` is "
              "not structure in the way `never` is; it is a degree on the manner.")
 
 case("nha-4", "He almost died.", "cluster:never-hardly-almost",
-     Zip(rows=[c("d", "die.v", truth=0.0, patient=n("he.n"))],
+     Zip(rows=[c("d", "die.v", truth=0.0, patient=who("he"))],
          unplaced=["almost"], parse_confidence=0.6),
      "partial", "FINDING: req 23 over-grouped. `almost` is neither negation-plus-quantifier (`never`) "
                 "nor a degree on a manner (`hardly`): «he almost died» asserts he did NOT die AND "
@@ -316,7 +337,7 @@ case("freq-4", "How often do you work?", "cluster:frequency",
 # ================================================================================================
 
 case("dere-1", "He thinks a cat is in the garden.  [de dicto]", "cluster:de-re",
-     Zip(rows=[thinks("att", n("he.n"), scopes="g"),
+     Zip(rows=[thinks("att", who("he"), scopes="g"),
                some_of("bC", "C", n("cat.n"), scopes="g"),
                c("g", patient=V("C"), location=the("garden.n", marker="in"))]),
      "pass", "the binder sits INSIDE the attitude's scope: no cat is asserted to exist",
@@ -324,14 +345,14 @@ case("dere-1", "He thinks a cat is in the garden.  [de dicto]", "cluster:de-re",
 
 case("dere-2", "He thinks a cat is in the garden.  [de re]", "cluster:de-re",
      Zip(rows=[some_of("bC", "C", n("cat.n"), scopes="g"),
-               thinks("att", n("he.n"), scopes="g"),
+               thinks("att", who("he"), scopes="g"),
                c("g", patient=V("C"), location=the("garden.n", marker="in"))]),
      "pass", "the binder sits OUTSIDE: a particular cat exists and he is wrong about where it is")
 
 case("dere-3", "He wants to marry a Norwegian.  [de dicto]", "cluster:de-re",
-     Zip(rows=[thinks("att", n("he.n"), scopes="m", verb="want.v"),
+     Zip(rows=[thinks("att", who("he"), scopes="m", verb="want.v"),
                some_of("bN", "N", n("norwegian.n"), scopes="m"),
-               c("m", "marry.v", agent=n("he.n"), patient=V("N"))]),
+               c("m", "marry.v", agent=who("he"), patient=V("N"))]),
      "pass", "the textbook case, and the reason a flat-only POV was refused: it would have asserted "
              "that a particular Norwegian exists")
 
@@ -637,7 +658,7 @@ case("aw-2", "John wrote the mail.", "awkward:passive",
      distinct_from=("aw-1",))
 
 case("aw-3", "She painted the door red.", "awkward:resultative",
-     Zip(rows=[c("p", "paint.v", agent=n("she.n"), patient=the("door.n")),
+     Zip(rows=[c("p", "paint.v", agent=who("she"), patient=the("door.n")),
                c("r", patient=the("door.n"), complement=n("red.a")),
                j("jn", Operator.IMPLY, "p", "r")]),
      "pass", "OQ5: a second row, joined by IMPLY with the theatre giving the order. The explicit "
@@ -645,7 +666,7 @@ case("aw-3", "She painted the door red.", "awkward:resultative",
              "succession must not derive causation — is met better, because IMPLY is the link.")
 
 case("aw-4", "He ate the fish raw.", "awkward:depictive",
-     Zip(rows=[c("e", "eat.v", agent=n("he.n"), patient=the("fish.n")),
+     Zip(rows=[c("e", "eat.v", agent=who("he"), patient=the("fish.n")),
                c("r", patient=the("fish.n"), complement=n("raw.a")),
                j("jn", Operator.AND, "e", "r")]),
      "pass", "depictive is CO-ASSERTED, not implied — the fish was already raw. One operator apart "
@@ -686,8 +707,8 @@ case("aw-8", "The hammer is made of titanium.", "awkward:draft",
      "pass", "the draft's `material` column folds into `source`, as ruled at task 1")
 
 case("aw-9", "She works for her family.", "awkward:draft",
-     Zip(rows=[c("w", "work.v", agent=n("she.n"),
-                 beneficiary=Box(head="family.n", relation="she.n", marker="for",
+     Zip(rows=[c("w", "work.v", agent=who("she"),
+                 beneficiary=Box(head="family.n", relation=Open(**UNRESOLVED["she"]), marker="for",
                                  determination=Determination.DEFINITE))]),
      "pass", "the draft's `advantage` column, renamed — and kept apart from `recipient`")
 
@@ -743,7 +764,7 @@ case("aw-16", "As a doctor I disagree; as a father I understand.", "awkward:doma
 
 case("aw-17", "Legally, in Italy, he is still married.", "awkward:domain",
      Zip(rows=[within("d1", generic("law.n"), "m"), within("d2", n("italy.n", marker="in"), "m"),
-               c("m", patient=n("he.n"), complement=n("married.a"))]),
+               c("m", patient=who("he"), complement=n("married.a"))]),
      "pass", "domains nest by order, like every other prefix element")
 
 case("aw-18", "I ate with a fork.", "awkward:comitative",

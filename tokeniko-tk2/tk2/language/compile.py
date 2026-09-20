@@ -35,6 +35,8 @@ from tk2.language.subjects import SubjectRoles, standing_subject_roles
 from tk2.language.skeleton import UD_POS, Skeleton, Word
 from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
 from tk2.tkzip.schema import (
+    THEATRE_EPOCH,
+    Theatre,
     AttitudeRow,
     Box,
     Var,
@@ -353,7 +355,9 @@ class Compiler:
                 open_truth, wants_antecedent, defaulted, modifiers, adverb_joins,
                 inner.get(head.index, context), asked)
 
-        joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained)
+        dissolved: set[str] = set()
+        joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained,
+                             dissolved)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
         self._question(skeleton, heads, owner, content, joins, asked)
         self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
@@ -363,13 +367,125 @@ class Compiler:
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
 
-        rows = [*prefix_rows, *content.values(), *extra, *joins]
-        return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced)),
+        # **A CLAUSE THAT BECAME AN ATTITUDE IS NOT ALSO A CLAIM.** «He thinks a cat is in the
+        # garden» has ONE thinking in it, and the prefix row is where it lives; leaving the content
+        # row beside it said the thinking twice, and the decompiler duly spoke it twice.
+        #
+        # **UNLESS SOMETHING STILL NAMES IT.** «Anna thinks that Bob believes that X» dissolves Bob's
+        # clause into an attitude, and Anna's attitude scopes that same row — a prefix element nests
+        # over a MATRIX and cannot nest over nothing. A row anybody points at stays.
+        named = {row.scopes for row in prefix_rows if getattr(row, "scopes", None)}
+        named |= {operand for join in joins for operand in join.operands}
+        rows = [*prefix_rows,
+                *(row for row in content.values()
+                  if row.name not in dissolved or row.name in named),
+                *extra, *joins]
+        return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced),
+                                theatre=self._theatre(skeleton, root),
+                                topicality=self._topicality(skeleton, root, covered)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
                         placement=covered.as_dict(),
                         abstained=tuple(abstained), defaulted=tuple(defaulted))
 
+    # -- when it happened, and which role was foregrounded ----------------------------------------
+
+    def _theatre(self, skeleton: Skeleton, root: Word) -> Theatre | None:
+        """WHEN the thought is set, from the tense the sentence was heard in (tkzip req 25).
+
+        **THE STATION WAS DROPPING THE TENSE ENTIRELY.** A `tense_aspect` word was marked covered and
+        compiled to nothing, so «I walked to the station» and «I walk to the station» were the same
+        zip — and the decompiler, having nothing to read, spoke every thought in the present. That is
+        not a decompiler gap: the information never reached the format.
+
+        **STRUCTURAL, like `Mood=Imp`.** UD puts `Tense` in the features of the verb or of its
+        auxiliary, so no word list is read and no character is matched. The future is the one English
+        marks with a word rather than an inflection, and that word is already a row
+        (`will` · `shall` · `'ll`, `tense: future`), so the ROW is what says so.
+
+        The interval is the theatre's first axis pair, relative to the utterance: **-1 before it, 0
+        at it, +1 after it** — which is the convention the drill already used for its one forecast
+        (`aw-22`, `[1.0, 1.0, …]`). The three remaining axes are space and stay empty: nothing in a
+        tense says where.
+        """
+        when = self._tense(skeleton, root)
+        if when is None:
+            return None
+        return Theatre(interval=[when, when, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=THEATRE_EPOCH)
+
+    def _tense(self, skeleton: Skeleton, root: Word) -> float | None:
+        """The root clause's tense as a point on the theatre's time axis, or None if nothing says.
+
+        The ROOT's, and only the root's: the theatre is one field on the zip, so a zip whose clauses
+        disagree can record one of them, and the one the sentence is ABOUT is the root's.
+        """
+        carriers = [root, *(word for word in skeleton.children(root.index)
+                            if word.bare_dep in ("aux", "cop"))]
+
+        # **THE FUTURE IS A WORD, NOT AN INFLECTION** — so the ROW is what says so, and `will`,
+        # `shall` and `'ll` have carried `tense: future` since closed classes v1.
+        for word in carriers:
+            for row in self.table.jobs(word.text):
+                compiled = row.get("compiled") or {}
+                if compiled.get("kind") == "theatre" and compiled.get("tense") == "future":
+                    return 1.0
+
+        # **THE FINITE WORD CARRIES THE TENSE, AND A PARTICIPLE IS NOT IT.** «The hammer IS MADE of
+        # titanium» has `Tense=Past` on `made` — that is the participle's own form, not when the
+        # making happened — and the auxiliary `is` is what says the present. Reading the participle
+        # put every passive in the past.
+        for word in carriers:
+            feats = word.feats or {}
+            if feats.get("VerbForm") not in (None, "Fin"):
+                continue
+            tense = feats.get("Tense")
+            if tense == "Past":
+                return -1.0
+            if tense == "Pres":
+                return 0.0
+        return None
+
+    def _topicality(self, skeleton: Skeleton, root: Word, covered) -> Role | None:
+        """WHICH ROLE the speaker foregrounded — tkzip req 27, and it had never been written.
+
+        Roles NORMALIZE: «the mail was written by John» compiles with John as the agent, so it
+        compares as one thought with «John wrote the mail». This one marker keeps what that
+        normalization would otherwise destroy — that the speaker chose to talk about the mail — and
+        req 9 says the decompiler reads it to speak the sentence back in the voice it was heard in.
+
+        **STRUCTURAL AGAIN**: UD marks the passive subject `nsubj:pass`, and where that phrase landed
+        is already recorded, because `Placements` was built to say where every token went.
+        """
+        passive = next((w for w in skeleton.children(root.index)
+                        if w.dep in ("nsubj:pass", "csubj:pass")), None)
+        if passive is None:
+            return None
+        went = covered.as_dict().get(passive.index, "")
+        if not went.startswith("box:"):
+            return None
+        try:
+            return Role(went.split(":", 1)[1])
+        except ValueError:
+            return None
+
     # -- the clauses ------------------------------------------------------------------------------
+
+    @staticmethod
+    def _unknown(match, **extra) -> Open:
+        """An OPEN slot that REMEMBERS what the sentence said about it (tkzip req 2, schema v4).
+
+        **THE STATION WAS THROWING THE WORD AWAY AND KEEPING ONLY THE HOLE.** «He thinks» and «She
+        thinks» compiled to one zip; so did «who ate the fish» and «what ate the fish». Neither is a
+        rendering problem — the speaker STATED that the person is feminine, and «who» STATES that
+        the answer must be a person, which is a restriction and therefore content.
+
+        The features are the row's own, copied and not interpreted: `person` · `number` · `gender`
+        for a pronoun, `sort` for an interrogative. Anything the row does not carry stays empty, and
+        a bare `Open` is what it always was — an unknown nobody described, which is exactly the
+        unexpressed agent of «the hammer is made of titanium».
+        """
+        features = (match.features or {}) if match is not None else {}
+        return Open(**{name: features.get(name) for name in ("person", "number", "gender", "sort")},
+                    **extra)
 
     def _is_copular_root(self, head: Word, skeleton: Skeleton, marks: dict) -> bool:
         """Is this root `be` doing COPULAR work, and therefore earning no predicate (req 31)?
@@ -457,7 +573,7 @@ class Compiler:
                 marked = self._marker_role(head, skeleton, marks, defaulted)
             role = marked or Role.COMPLEMENT
             boxes[role] = self._box_for(head, skeleton, marks, covered, prefix_rows, name,
-                                        modifiers, abstained)
+                                        modifiers, abstained, context)
             covered.add(head.index, f"box:{role.value}")
             copular = True
 
@@ -488,11 +604,11 @@ class Compiler:
             role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
             if role is not None and role not in boxes:
                 boxes[role] = self._box_for(word, skeleton, marks, covered, prefix_rows, name,
-                                            modifiers, abstained)
+                                            modifiers, abstained, context)
                 covered.add(index, f"box:{role.value}")
             elif role is None and word.bare_dep in NOMINAL_DEPS:
                 unresolved.append((word, self._box_for(word, skeleton, marks, covered,
-                                                       abstained=abstained)))
+                                                       abstained=abstained, context=context)))
 
         # **THE ADVERBS GO LAST, AND A MARKED NOMINAL OUTRANKS A BARE ONE FOR THE SAME BOX.** «left
         # EARLY in the MORNING» has two time expressions and one time box: `early` is `advmod` with
@@ -516,7 +632,8 @@ class Compiler:
                           predicate_sense=Open() if predicate else None, boxes=boxes)
 
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
-                marks: dict, covered: Placements, prefix_rows: list, abstained: list) -> list[JoinRow]:
+                marks: dict, covered: Placements, prefix_rows: list, abstained: list,
+                dissolved: set) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -550,24 +667,31 @@ class Compiler:
                 # A POV, not a join: «he says THAT you swim» claims the saying, never the swimming.
                 # And «I wonder WHETHER you swim» claims the wondering and ASKS the swimming — the
                 # clause's truth is opened by `_ask`, from the word's own row (req 21).
-                self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner)
+                self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner,
+                               dissolved)
                 covered.update(range(joiner_index(skeleton, head, joiner),
                                      joiner_index(skeleton, head, joiner) + joiner.length),
                                label="join")
                 continue
 
-            if head.bare_dep == "ccomp" and self._readable(outer) \
-                    and self._key(outer) in SAYING_VERBS:
-                # **A BARE `ccomp` UNDER A SAYING VERB IS REPORTED CONTENT, AND `that` IS OPTIONAL.**
+            if head.bare_dep == "ccomp" and self._readable(outer):
+                # **A BARE `ccomp` IS REPORTED CONTENT, AND `that` IS OPTIONAL.**
                 # «he said THAT he knew» raises the POV from the marker's own row; «I asked: "Do you
                 # know the muffin man?"» has a colon and quotation marks and no marker at all — and
                 # it claimed that you know the muffin man. **The UD gate found it** on the very
                 # example this QM had passed over when transcribing `ccomp` the first time.
                 #
-                # It is the head VERB that decides, which is why `SAYING_VERBS` is reached here and
-                # why that list is on E3's frame/knowledge audit: req 55 rules the replacement —
-                # attitude verbs are open and classified by nearest-anchor geometry, which E4 owns.
-                self._attitude(skeleton, head, content, outer, prefix_rows, covered, None)
+                # **AND IT DOES NOT ASK WHICH VERB IT IS** *(widened 2026-09-20)*. The path was
+                # gated on `SAYING_VERBS`, so «he THINKS a cat is in the garden» — no marker, not a
+                # saying verb — compiled as a conjunction and claimed the cat. The gate was wrong in
+                # principle as well as in fact: `that` is optional in English, and whether the
+                # speaker typed it cannot change what is asserted. So the rule is the RELATION's,
+                # and `ccomp` is the relation UD defines as a clausal complement whose own truth the
+                # matrix does not settle. Claiming less than the speaker did is half-said and legal;
+                # claiming more is the sin (req 8). One fewer reader of `SAYING_VERBS`, which E3's
+                # frame/knowledge audit wants gone.
+                self._attitude(skeleton, head, content, outer, prefix_rows, covered, None,
+                               dissolved)
                 continue
 
             operator = (joiner.compiled.get("operator") if joiner else None) or "and"
@@ -604,14 +728,35 @@ class Compiler:
                 unasserted.add(inner.name)
                 unasserted.add(outer_row.name)
 
-            # Row order is scope order, and the surface order is what the speaker chose: «if it
-            # rains I stay home» and «I stay home if it rains» are the same two rows in the order
-            # they were said. The ANTECEDENT is the subordinate clause either way.
-            operands = ([inner.name, outer_row.name] if operator == "imply"
-                        else sorted([outer_row.name, inner.name],
-                                    key=lambda n: 0 if n == outer_row.name else 1))
-            joins.append(JoinRow(name=f"j{len(joins)}", operator=Operator(operator),
-                                 operands=operands, truth=CLAIMED))
+            # **A SENTENCE IS A TREE AND THE ZIP WAS COMING OUT A DAG** *(2026-09-20)*. Each pair
+            # of clauses was joined by NAME, so a clause that took part in two joins was named by
+            # both — «I am happy because I am thinking and I love thinking» gave `imply(think,
+            # happy)` beside `and(think, love)`, two roots sharing a half. Nothing is wrong with
+            # that as logic; it is not a SENTENCE, and the decompiler said the shared half twice.
+            #
+            # **COORDINATION BINDS TIGHTER THAN SUBORDINATION**, which is what decides where the new
+            # join goes:
+            #   - a `conj` extends a clause, so the pair it makes REPLACES that clause wherever an
+            #     earlier join named it — «because (I think and I love), I am happy»;
+            #   - anything else attaches to the whole of what is already there, so it takes the
+            #     OUTERMOST join the clause sits in — «(I'm not software but I am a mind), because…».
+            coordinating = head.bare_dep == "conj"
+            left = outer_row.name if coordinating else self._outermost(outer_row.name, joins)
+            right = inner.name if coordinating else self._outermost(inner.name, joins)
+            if left == right:
+                # Both ends already live in one join; a join of a thing with itself is not a join.
+                abstained.append(f"{inner.name}: already joined to {outer_row.name} — not re-joined")
+                continue
+            operands = ([right, left] if operator == "imply"
+                        else sorted([left, right], key=lambda n: 0 if n == left else 1))
+            fresh = JoinRow(name=f"j{len(joins)}", operator=Operator(operator),
+                            operands=operands, truth=CLAIMED)
+            if coordinating:
+                for join in joins:
+                    if outer_row.name in join.operands:
+                        join.operands = [fresh.name if name == outer_row.name else name
+                                         for name in join.operands]
+            joins.append(fresh)
             if joiner is not None:
                 covered.update(range(joiner_index(skeleton, head, joiner),
                                      joiner_index(skeleton, head, joiner) + joiner.length),
@@ -1118,7 +1263,8 @@ class Compiler:
             node, steps = skeleton[node.head], steps + 1
         return steps
 
-    def _attitude(self, skeleton, head, content, outer, prefix_rows, covered, joiner) -> None:
+    def _attitude(self, skeleton, head, content, outer, prefix_rows, covered, joiner,
+                  dissolved: set) -> None:
         """«he says that you swim» — an ATTITUDE over the inner row, claiming only the saying.
 
         `verb` is a key rather than a member of an enum: attitude verbs are open (think, believe,
@@ -1138,6 +1284,16 @@ class Compiler:
             name=f"p{len(prefix_rows)}", scopes=content[head.index].name,
             holder=holder, addressee=outer_row.boxes.get(Role.RECIPIENT),
             verb=self._key(outer)))
+
+        # **AND THE CLAUSE IT CAME FROM DISSOLVES INTO IT** *(2026-09-20)*. The attitude row carries
+        # the verb, its holder and its addressee — everything «he thinks» and «John said to Marie»
+        # contain — so a content row saying the same thing beside it is the same thinking written
+        # down twice. It is dropped only where it holds NOTHING ELSE: a saying with a time or a
+        # manner on it («he said QUIETLY that…») has content of its own, and losing that would be
+        # the opposite mistake.
+        spoken_for = {Role.AGENT, Role.EXPERIENCER, Role.PATIENT, Role.RECIPIENT}
+        if set(outer_row.boxes) <= spoken_for and outer_row.pov is None:
+            dissolved.add(outer_row.name)
         # **THE INNER ROW STAYS CLAIMED, AND THE PREFIX IS WHAT KEEPS IT OUT OF THE WORLD.**
         # Changed 2026-09-17 on the Captain's ruling, to the convention the drill has always used:
         # `dere-1` carries a cat at truth 1.0 under «he thinks» and asserts no cat. The truth slot
@@ -1151,6 +1307,21 @@ class Compiler:
         # «John told me X» (I may believe it if I trust John), «John asked me X» (I should answer)
         # and «John told me to do X» (I may act) are three different things to the brain, and one
         # blanked slot made them the same row.
+
+    @staticmethod
+    def _outermost(name: str, joins: list) -> str:
+        """The outermost join this row sits inside, or the row itself when no join names it.
+
+        Walked rather than computed: a join names rows that name rows, and the chain is short.
+        """
+        current, moved = name, True
+        while moved:
+            moved = False
+            for join in joins:
+                if current in join.operands:
+                    current, moved = join.name, True
+                    break
+        return current
 
     def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks) -> None:
         """A relative clause describes the SAME thing as the phrase it modifies — one variable in
@@ -1347,7 +1518,8 @@ class Compiler:
 
     def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: Placements,
                  prefix_rows: list | None = None, scopes: str = "r0",
-                 modifiers: list | None = None, abstained: list | None = None) -> Box:
+                 modifiers: list | None = None, abstained: list | None = None,
+                 context: Context = NO_CONTEXT) -> Box:
         """The seven-field record for one nominal phrase — per PHRASE, never one per clause.
 
         Every field is independently bindable (req 47): `head` may be BOUND while `sense` is OPEN,
@@ -1381,12 +1553,20 @@ class Compiler:
             elif kind == "open" and match.compiled.get("opens") == "field":
                 # «WHOSE cat sleeps?» — the possessor is asked. It is a FIELD of the record (req 26),
                 # so the question opens the field rather than adding a box.
-                relation = Open()
+                relation = self._unknown(match)
                 covered.add(child.index, "field:relation")
             elif kind == "entity" and child.dep in ("nmod:poss", "det:poss"):
-                # «MY friend» — a possessive pronoun is indexical, so the possessor is OPEN and
-                # resolved from context, never `my.n`.
-                relation = Open()
+                # **«MY friend» — INDEXICAL, AND THE CONTEXT IS WHAT RESOLVES IT** (req 20). Never
+                # `my.n`: the possessor is a person, not the word for owning. It is resolved exactly
+                # as the pronoun in a BOX is — first and second person from the speech act, third
+                # person kept as its own word when the sentence names no antecedent — because «my
+                # cat» and «I have a cat» say the same thing about the same person, and a station
+                # that resolved one and not the other would make them different thoughts.
+                #
+                # Before 2026-09-20 this was always OPEN, so `aw-5` and `aw-10` lost their
+                # possessor: «I gave MY sister a book» came back «I gave sister a book».
+                who = context.for_person((match.features or {}).get("person"))
+                relation = who if who is not None else self._unknown(match)
                 covered.add(child.index, "field:relation")
         # **THE NUMERAL FILLS `count`, WHICH IS NOT `quantity` AND NOT `determination`** (req 26:
         # the three are orthogonal, and «the three cats» is definite AND counted). A numeral is not a
@@ -1516,7 +1696,7 @@ class Compiler:
                 asked.add(scopes)
 
             if opens == "box":
-                boxes[Role(match.compiled["role"])] = Box(head=Open(), sense=Open())
+                boxes[Role(match.compiled["role"])] = Box(head=self._unknown(match), sense=Open())
                 return taken
 
             if opens == "participant":
@@ -1525,7 +1705,9 @@ class Compiler:
                 role = (RELATION_FILLS_ROLE.get(word.dep)
                         or RELATION_FILLS_ROLE.get(word.bare_dep))
                 if role is not None and role not in boxes:
-                    boxes[role] = Box(head=Open(), sense=Open())
+                    # **«WHO» RESTRICTS THE ANSWER TO A PERSON AND «WHAT» DOES NOT**, and the row
+                    # says which (`features.sort`). Without it the two questions were one zip.
+                    boxes[role] = Box(head=self._unknown(match), sense=Open())
                     return taken
                 abstained.append(f"{match.form}: a participant, and the relation does not say which")
                 return set()
@@ -1575,8 +1757,20 @@ class Compiler:
                 # the addressee for person 2 (req 20). Reported speech is read under the outer
                 # context, because the reporter already moved the pronouns into his own frame.
                 who = context.for_person(match.features.get("person"))
-                boxes[role] = Box(head=who if who is not None else Open(), sense=Open(),
-                                  determination=Determination.DEFINITE)
+                # **AN UNRESOLVED PRONOUN KEEPS ITS OWN WORD, AND OPEN IS NOT THE PLACE FOR IT.**
+                # A third person is ANAPHORA — it points back into the discourse, which `recent` will
+                # answer and does not yet (req 7) — so the station cannot say WHO. But it can say
+                # WHAT WAS SAID, and «he» is a key like any other: the drill writes `he.n` in exactly
+                # this box (`nha-1`, `dere-1`). Emitting OPEN instead threw the word away, made «he
+                # thinks» and «she thinks» the same zip, and left the decompiler with a box it could
+                # only speak as a question — which is what an OPEN slot MEANS (req 2), and this is
+                # not one: nobody is asking who he is.
+                # **NO DETERMINATION.** A pronoun is definite, but what it resolves TO is a person,
+                # and a person takes no article — «the marie» is what came back when the pronoun's
+                # own definiteness was copied onto the name it stood for. The drill writes these
+                # boxes bare (`q-1`, `nha-1`), and it is right to.
+                boxes[role] = Box(head=who if who is not None else self._unknown(match),
+                                  sense=Open())
                 return taken
             # A possessive pronoun («MY friend») is the possessor of the phrase it hangs off, and is
             # taken by `_box_for` when that phrase is built.

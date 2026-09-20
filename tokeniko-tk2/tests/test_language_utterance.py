@@ -407,4 +407,8 @@ def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
             assert inner.truth == 1.0, "the holder asserted it; the attitude keeps it out of the world"
         else:
             assert isinstance(inner.truth, Open), "the holder ASKED it — the `?` closes the quote"
-        assert next(r for r in out.zip.rows if r.name == "r0").truth == 1.0, "the saying is"
+        # **THE SAYING IS THE ATTITUDE ROW AND NOTHING ELSE** *(2026-09-20)*. It used to be both —
+        # a prefix row AND a content row for the same verb — and the decompiler said it twice.
+        assert not [r for r in out.zip.rows
+                    if getattr(r, "predicate", None) in ("say.v", "ask.v")], (
+            "the saying dissolved into the attitude that replaced it")

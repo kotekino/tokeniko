@@ -28,13 +28,51 @@ actually used (req 65); everything else is looked up in `language_closed_classes
 **AND WHERE THE ROWS CANNOT ANSWER, IT REFUSES RATHER THAN CHOOSING.** The inverse map is not a
 function — 385 rows carry 81 distinct meanings and 47 of those are many-formed (32 prepositions all
 mean `location`, 18 subordinators all mean an asserted `imply`). Where a meaning has exactly one
-form, that form is the answer. Where it has several, this module says nothing and records what it
-could not say. **An omission that changes what the sentence CLAIMS is not an omission but a lie**, so
-a row whose negation cannot be spoken is not rendered at all: half-said is legal, wrongly-said is the
-sin (req 8), in this direction as in the other.
+form, or where curation has flagged one as `spoken`, that form is the answer. Where it has several
+and curation has not chosen, this module says nothing and records what it could not say. **An
+omission that changes what the sentence CLAIMS is not an omission but a lie**, so a row whose
+negation cannot be spoken is not rendered at all: half-said is legal, wrongly-said is the sin
+(req 8), in this direction as in the other.
 
-*Written as E3 task 3's first slice: one content row to one clause. The prefix, the joins and the
-questions follow, each measured by the round trip.*
+--------------------------------------------------------------------------------------------------
+THE SECOND SLICE — A ZIP IS NOT A LIST OF SENTENCES *(2026-09-20)*
+--------------------------------------------------------------------------------------------------
+The first slice said one content row as one clause. That is right for a zip of one row and wrong for
+every other, because **the zip is FLAT and the sentence is NESTED** — Tseitin naming is what made the
+format arbitrary-depth without arbitrary nesting (req 33), and the decompiler is where that
+transformation is paid back. Four things follow, all of them clause structure and therefore frame:
+
+1. **A row that something else names is not a sentence of its own.** The sentences are the ROOTS —
+   rows nothing points at. A join operand is spoken inside its join; a prefix target is spoken
+   inside its prefix.
+2. **A join is a connective, and which connective is the rows read backwards** — by `operator` AND by
+   what the halves claim, which is the difference between «because» and «if» (req 38) and is read
+   off the halves' own truth rather than guessed.
+3. **A bound variable is spoken where it first occurs**, as the noun phrase its binder describes.
+   Later occurrences are definite: a variable mentioned twice is one thing mentioned twice.
+4. **AND THE COMPILER DISTRIBUTED WHAT ENGLISH KEEPS TOGETHER.** «a human body in Japan» compiles to
+   three rows — B is a body, B is human, B is in Japan — conjoined. Said back as three clauses it is
+   unspeakable, because B has no name. So a claimed copular row whose only participant is a variable
+   is FOLDED into that variable's phrase, as an adjective or as a marked phrase. It is the inverse of
+   the distribution the compiler performed, and it is what lets the join above collapse to the one
+   clause that is really being made.
+
+--------------------------------------------------------------------------------------------------
+THE THIRD SLICE — AN UNKNOWN IS NOT NOTHING *(schema v4, 2026-09-20)*
+--------------------------------------------------------------------------------------------------
+An `Open` slot used to say «unbound» and nothing else, so «who» and «what», «he» and «she», «its»
+and «his» arrived here indistinguishable — and a word this module cannot tell apart is a word it
+cannot say. v4 gives the slot what the SENTENCE said about it, and three kinds of unknown separate
+with no heuristic anywhere:
+
+    Open(sort="person")           the sentence ASKED         ->  a question word
+    Open(person=3, gender="f")    the sentence DESCRIBED it  ->  «she»
+    Open()                        nobody described it        ->  the passive leaves it out
+
+*What is still not said is still recorded: `unsaid` names every row and every element that did not
+reach the text, so the round trip's number can never flatter itself. And the acceptance test grew a
+second half — `tools/roundtrip.py --fixpoint` runs the station against itself, sentence to zip to
+sentence to zip, where the two zips must be IDENTICAL.*
 """
 
 from __future__ import annotations
@@ -43,13 +81,18 @@ from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
 from tk2.language.closed import ClosedClasses, standing_closed_classes
-from tk2.language.inflect import PRESENT, Inflections, standing_inflections
+from tk2.language.inflect import (
+    PARTICIPLE, PAST, PRESENT, Inflections, standing_inflections,
+)
+from tk2.language.utterance import NO_CONTEXT, Context
 from tk2.tkzip.schema import (
     Box,
     ContentRow,
     Determination,
     Open,
+    Operator,
     Quantity,
+    Ref,
     Role,
     Var,
     Zip,
@@ -64,11 +107,17 @@ SUBJECT_ORDER = (Role.AGENT, Role.EXPERIENCER, Role.PATIENT, Role.TOPIC, Role.CO
 #: because English says «give Anna a book» with no marker at all.
 OBJECT_ORDER = (Role.RECIPIENT, Role.PATIENT, Role.TOPIC, Role.MEASURE, Role.COMPLEMENT)
 
-#: Manner, then place, then time — English's own ordering of circumstances, and frame for the same
-#: reason the two above are. A box with a marker carries it; one without is placed by position.
+#: Manner, then place, then the rest, then time — English's own ordering of circumstances, and frame
+#: for the same reason the two above are. A box with a marker carries it; one without is placed by
+#: position.
+#:
+#: **PLACE BEFORE INSTRUMENT**, measured: «you can drive with a licence IN FRANCE» puts the place at
+#: the end of the clause, where a FRONTED domain — «In Italy, …» — is the nearer candidate for the
+#: location box, and the round trip read `aw-15` as being about the wrong country.
 CIRCUMSTANCE_ORDER = (
-    Role.MANNER, Role.INSTRUMENT, Role.COMITATIVE, Role.BENEFICIARY,
+    Role.MANNER,
     Role.SOURCE, Role.PATH, Role.DIRECTION, Role.DESTINATION, Role.LOCATION,
+    Role.INSTRUMENT, Role.COMITATIVE, Role.BENEFICIARY,
     Role.TIME, Role.DURATION,
 )
 
@@ -76,6 +125,21 @@ CIRCUMSTANCE_ORDER = (
 #: (req 31) because English's «be» carries no meaning there — it is the structure of a predication,
 #: which is frame. Recorded here so the audit sees it rather than having to find it.
 COPULA = "be"
+
+#: Do-support: English's own repair for a clause that needs a carrier for negation or inversion and
+#: has only a lexical verb. Frame — it is word order and nothing else, and the WORD comes from the
+#: inflection roster like every other.
+DO = "do"
+
+#: The two cases a box position calls for. WHICH form spells a case is knowledge and sits in the
+#: rows' `features`; that the subject takes the nominative is grammar, and grammar is frame.
+NOMINATIVE = "nominative"
+ACCUSATIVE = "accusative"
+
+#: The theatre's time axis, relative to the utterance (`Theatre.interval`): before it, at it,
+#: after it. The compiler writes the point and this reads it back — the same three values, because a
+#: tense that survives one direction and not the other is a tense that is lost.
+BEFORE, AT, AFTER = -1.0, 0.0, 1.0
 
 CLAIMED = 1.0
 DENIED = 0.0
@@ -100,35 +164,92 @@ class Decompiled:
         return not self.unsaid and not self.refused
 
 
+@dataclass
+class _Said:
+    """A rendered stretch of text and the mark that ends it, when it ends one.
+
+    Punctuation is structure on the way in — the compiler reads `?` and `!` and never stores them as
+    words — so it is structure on the way out, decided by the row and not by the vocabulary.
+    """
+
+    text: str
+    mark: str = "."
+    #: True when the text already opens with a question word, which is what makes a complementizer
+    #: wrong in front of it: «I don't know THAT WHO ate the fish» is not English.
+    asks: bool = False
+
+
+@dataclass
+class _Reading:
+    """One zip being read backwards: the indexes a sentence needs that a flat row list does not give.
+
+    Built per call and thrown away. The decompiler itself stays stateless — two zips decompiled in
+    either order give the same two sentences.
+    """
+
+    out: Decompiled
+    rows: dict[str, object] = field(default_factory=dict)
+    #: target row name -> the prefix rows scoping it, in ZIP ORDER, which is scope order (req 35).
+    prefix: dict[str, list] = field(default_factory=dict)
+    #: variable name -> the binder that introduces it.
+    binders: dict[str, object] = field(default_factory=dict)
+    #: variable name -> the claimed copular rows that are really modifiers of its noun phrase.
+    modifiers: dict[str, list] = field(default_factory=dict)
+    #: rows spoken somewhere other than as a sentence of their own.
+    consumed: set = field(default_factory=set)
+    #: rows that became part of a noun phrase and must not be said again as clauses.
+    folded: set = field(default_factory=set)
+    #: variables already introduced; a second mention is definite, not a second thing.
+    said: set = field(default_factory=set)
+    #: variables whose BINDER is negated — «not every glitterer is gold». The negation is spoken at
+    #: the quantifier, so the phrase is where it has to be delivered.
+    negated_binders: set = field(default_factory=set)
+    #: WHEN, off the theatre's time axis. Every clause of one zip is spoken in it: the theatre is one
+    #: field on the thought, so the thought has one tense.
+    when: float = AT
+    #: WHICH ROLE the speaker foregrounded (req 27) — the voice the sentence was heard in.
+    topic: object = None
+
+
 class Decompiler:
     """Zip → sentence. Pure: it reads the rows it is handed and keeps no state between calls."""
 
     def __init__(self, table: ClosedClasses | None = None,
-                 inflections: Inflections | None = None) -> None:
+                 inflections: Inflections | None = None,
+                 context: Context = NO_CONTEXT) -> None:
         self.table = table if table is not None else standing_closed_classes()
         #: The spelling rule and the words it gets wrong (`db/0022`). Without it every clause is a
         #: string of lemmas, and a lemma verb is an IMPERATIVE to the parser — 26 of the round
         #: trip's first 32 failures were that one artefact.
         self.inflections = inflections if inflections is not None else standing_inflections()
+        #: **THE SAME CONTEXT THE COMPILER TOOK** (`Context`, req 20). The station resolved «I» to
+        #: the speaker's key on the way in; without the same object on the way out, `me.n` is spoken
+        #: as «me» in subject position and the sentence is not English. Symmetry again: what one
+        #: direction consumed, the other needs.
+        self.context = context
         self._by_meaning = self._invert(self.table)
         self._spoken = self._voices(self.table)
+        self._pronouns = self._persons(self.table)
 
     # -- the rows, read backwards -----------------------------------------------------------------
 
     @staticmethod
-    def _invert(table: ClosedClasses) -> dict[tuple, set[str]]:
+    def _key(role, compiled: dict) -> tuple:
+        return (role, tuple(sorted((k, str(v)) for k, v in compiled.items())))
+
+    @classmethod
+    def _invert(cls, table: ClosedClasses) -> dict[tuple, set[str]]:
         """MEANING → the forms that carry it. Built once, like the forward index it mirrors."""
         found: dict[tuple, set[str]] = {}
         for row in table._rows:                       # noqa: SLF001 — the table's own inverse index
             compiled = row.get("compiled") or {}
             if not compiled:
                 continue
-            key = (row.get("role"), tuple(sorted((k, str(v)) for k, v in compiled.items())))
-            found.setdefault(key, set()).add(row["form"])
+            found.setdefault(cls._key(row.get("role"), compiled), set()).add(row["form"])
         return found
 
-    @staticmethod
-    def _voices(table: ClosedClasses) -> dict[tuple, str]:
+    @classmethod
+    def _voices(cls, table: ClosedClasses) -> dict[tuple, str]:
         """MEANING → the one form curation says it is SPOKEN with (`db/0021`'s flag).
 
         This is where the inverse map stops being a guess. The table's own check holds that at most
@@ -138,163 +259,994 @@ class Decompiler:
         for row in table._rows:                       # noqa: SLF001 — the table's own inverse index
             if not row.get("spoken"):
                 continue
-            compiled = row.get("compiled") or {}
-            key = (row.get("role"), tuple(sorted((k, str(v)) for k, v in compiled.items())))
-            found[key] = row["form"]
+            found[cls._key(row.get("role"), row.get("compiled") or {})] = row["form"]
         return found
 
-    def forms_for(self, role: str, **compiled) -> set[str]:
-        """Every form the table gives this meaning — empty when it gives none."""
-        key = (role, tuple(sorted((k, str(v)) for k, v in compiled.items())))
-        return set(self._by_meaning.get(key, ()))
+    @staticmethod
+    def _persons(table: ClosedClasses) -> list[dict]:
+        """The rows that carry a grammatical PERSON — the person axis, as data rather than as code.
 
-    def the_form(self, role: str, **compiled) -> str | None:
+        One list, not three: a pronoun's person, number and gender are the same three features
+        whether it is standing in a box (`referential`), possessing something (`possessive`) or
+        pointing back at the subject (`reflexive`), and the row's `role` is what says which job it
+        does. Reading them together is what lets `me.n` become «I» in one place and «my» in another
+        without this module knowing either word.
+        """
+        return [row for row in table._rows                       # noqa: SLF001
+                if (row.get("features") or {}).get("person") is not None
+                and not (row.get("features") or {}).get("archaic")
+                and not (row.get("features") or {}).get("generic")]
+
+    def forms_for(self, _role: str, **compiled) -> set[str]:
+        """Every form the table gives this meaning — empty when it gives none.
+
+        The leading underscore is not decoration: `role` is itself a COLUMN of some meanings —
+        an interrogative names the role it opens — so the parameter that carries the row's role
+        must not collide with a compiled field of the same name.
+        """
+        return set(self._by_meaning.get(self._key(_role, compiled), ()))
+
+    def the_form(self, _role: str, **compiled) -> str | None:
         """The form, when the table names exactly ONE. None when it names several or none.
 
         This is the whole of the module's vocabulary discipline: a meaning with one spelling is a
         lookup, and a meaning with several is a CHOICE — which is curation, does not live in code,
         and is not made here. The caller records the silence.
         """
-        key = (role, tuple(sorted((k, str(v)) for k, v in compiled.items())))
-        spoken = self._spoken.get(key)
+        spoken = self._spoken.get(self._key(_role, compiled))
         if spoken is not None:
             return spoken
-        found = self.forms_for(role, **compiled)
+        found = self.forms_for(_role, **compiled)
         return next(iter(found)) if len(found) == 1 else None
+
+    # -- the person axis, read backwards -----------------------------------------------------------
+
+    def _features_of(self, key: object) -> dict | None:
+        """The person features of the word a key names, when that word is a pronoun of this table.
+
+        `me.n` is the dictionary key the station writes for «me» (req 20), and «me» is a row with
+        `person: 1, number: sg`. So the key carries its own person — it does not have to be told —
+        and the decompiler never has to know which words are pronouns.
+        """
+        if not isinstance(key, str) or not keys.is_base_key(key):
+            return None
+        word = keys.word_of(key).lower()
+        for row in self._pronouns:
+            if row["form"] == word and row.get("role") == "referential":
+                return dict(row.get("features") or {})
+        return None
+
+    def _same_person(self, features: dict, role: str, **wanted) -> str | None:
+        """The form of `role` that matches these features — the rows answering, not this module.
+
+        `either` on a row's case or number is the row saying it does not distinguish, so it matches
+        whatever is asked; a feature the asker does not name is not compared at all.
+        """
+        found = []
+        for row in self._pronouns:
+            if row.get("role") != role:
+                continue
+            feats = row.get("features") or {}
+            if feats.get("person") != features.get("person"):
+                continue
+            if not self._agrees(feats.get("number"), features.get("number")):
+                continue
+            if not self._agrees(feats.get("gender"), features.get("gender")):
+                continue
+            if any(not self._agrees(feats.get(k), v) for k, v in wanted.items()):
+                continue
+            found.append(row)
+        if len(found) != 1:
+            return None
+        return found[0]["form"]
+
+    @staticmethod
+    def _agrees(theirs: object, ours: object) -> bool:
+        if theirs is None or ours is None or theirs == "either" or ours == "either":
+            return True
+        return theirs == ours
+
+    def _pronoun(self, key: object, case: str, rd: _Reading) -> str | None:
+        """A key spoken as a pronoun in the case its position calls for, or None if it is not one."""
+        features = self._features_of(key)
+        if features is None:
+            return None
+        form = self._same_person(features, "referential", case=case)
+        if form is None:
+            rd.out.unsaid.append(f"«{keys.word_of(str(key))}» in the {case}: no single form")
+            return None
+        # **«I» IS WRITTEN CAPITALISED** wherever it stands — orthography, like `a`/`an` and like the
+        # full stop, and derived from the features rather than from the spelling of the word.
+        if features.get("person") == 1 and form != form.upper() and case == NOMINATIVE \
+                and self._agrees(features.get("number"), "sg"):
+            return form.upper() if len(form) == 1 else form
+        return form
+
+    # -- reading the zip ----------------------------------------------------------------------------
+
+    def _read(self, zip_: Zip, out: Decompiled) -> _Reading:
+        """The indexes a nested sentence needs from a flat list of rows."""
+        rd = _Reading(out=out, rows={row.name: row for row in zip_.rows})
+        for row in zip_.rows:
+            target = getattr(row, "scopes", None)
+            if target is not None:
+                rd.prefix.setdefault(target, []).append(row)
+            if row.kind == "quantifier":
+                rd.binders[row.binds] = row
+            if row.kind == "join":
+                rd.consumed.update(row.operands)
+        self._fold(zip_, rd)
+        return rd
+
+    def _fold(self, zip_: Zip, rd: _Reading) -> None:
+        """Put back inside the noun phrase what the compiler distributed out of it.
+
+        «a human body in Japan» is three rows and one phrase. A claimed copular row whose only
+        participant is a bound variable is not a clause at all — it is what English says as an
+        adjective or as a marked phrase hanging off the noun — and saying it as a clause is
+        impossible anyway, because a variable has no name to be the subject of one.
+        """
+        conjoined = {operand for row in zip_.rows if row.kind == "join"
+                     and row.operator is Operator.AND for operand in row.operands}
+        for row in zip_.rows:
+            if row.kind != "content" or row.truth != CLAIMED or row.pov is not None:
+                continue
+            if row.predicate is not None or len(row.boxes) != 2:
+                continue
+            # **ONLY OUT OF A CONJUNCTION.** A modifier distributes over «and» and nowhere else: the
+            # antecedent of an implication says «every person WHO says a falsehood», which is a
+            # relative clause and a different thing from «every wrong person». Folding it would move
+            # what is asserted, which is the one move this module may never make.
+            if row.name not in conjoined:
+                continue
+            carrier = [(role, box) for role, box in row.boxes.items()
+                       if isinstance(box.head, Var) and self._bare(box)]
+            if len(carrier) != 1:
+                continue
+            var = carrier[0][1].head.name
+            if var not in rd.binders or rd.prefix.get(row.name):
+                continue
+            other = next(box for role, box in row.boxes.items() if role != carrier[0][0])
+            if other.marker is None and not self._adjective(other):
+                continue
+            rd.modifiers.setdefault(var, []).append(row)
+            rd.consumed.add(row.name)
+            rd.folded.add(row.name)
+
+    @staticmethod
+    def _bare(box: Box) -> bool:
+        """A box that holds a variable and says nothing else about it."""
+        return (box.marker is None and box.quantity is None and box.count is None
+                and box.determination is None and box.relation is None)
+
+    @staticmethod
+    def _adjective(box: Box) -> bool:
+        return (isinstance(box.head, str) and keys.is_base_key(box.head)
+                and keys.pos_of(box.head) == "a" and box.marker is None)
 
     # -- the sentence ------------------------------------------------------------------------------
 
     def decompile(self, zip_: Zip) -> Decompiled:
-        """Every content row as a clause, in the order the zip holds them.
+        """Every ROOT row as a sentence — a root being a row nothing else in the zip names.
 
-        The first slice: content rows only. A zip carrying prefix rows or joins says MORE than this
-        text does, and every one of them is recorded as unsaid rather than quietly dropped — which
-        is what keeps the round trip's number honest while the rest is built.
+        A join operand is spoken inside its join, a prefix target inside its prefix, a folded
+        modifier inside a noun phrase. What is left is what the zip is actually saying.
         """
         out = Decompiled()
+        rd = self._read(zip_, out)
+        if zip_.theatre is not None:
+            rd.when = zip_.theatre.interval[0]
+        rd.topic = zip_.topicality
         sentences = []
         for row in zip_.rows:
-            if row.kind != "content":
-                out.unsaid.append(f"{row.kind} row {row.name}")
+            if row.name in rd.consumed or getattr(row, "scopes", None) is not None:
                 continue
-            said = self._clause(row, out)
-            if said is None:
-                out.refused.append(f"content row {row.name}")
+            if row.kind not in ("content", "join"):
+                continue
+            said = self._render(row.name, rd)
+            if said is None or not said.text.strip():
+                out.refused.append(f"{row.kind} row {row.name}")
                 continue
             sentences.append(said)
         out.text = " ".join(self._finish(s) for s in sentences)
         return out
 
     @staticmethod
-    def _finish(clause: str) -> str:
-        """Capital, full stop. Orthography, and orthography is frame — the compiler reads the `?`
-        and the `!` as structure and never as vocabulary, so the decompiler writes them the same."""
-        clause = clause.strip()
-        return (clause[:1].upper() + clause[1:] + ".") if clause else ""
+    def _finish(said: _Said) -> str:
+        """Capital, then the mark the structure asked for. Orthography, and orthography is frame —
+        the compiler reads the `?` and the `!` as structure and never as vocabulary, so the
+        decompiler writes them the same."""
+        text = said.text.strip()
+        return (text[:1].upper() + text[1:] + said.mark) if text else ""
 
-    def _clause(self, row: ContentRow, out: Decompiled) -> str | None:
+    # -- a row, with everything that scopes it ------------------------------------------------------
+
+    def _render(self, name: str, rd: _Reading, embedded: bool = False) -> _Said | None:
+        """One row and its prefix — the five scope-bearing elements, in the order the zip holds them.
+
+        Each element is placed where English places it: a quantifier inside the noun phrase it binds,
+        a modality on the verb, a domain at the front, an attitude wrapped around the whole. A
+        NEGATION attaches to whatever comes NEXT in scope order, which is the whole of the difference
+        between «not all that glitters is gold» and «all that glitters is not gold» — two zips that
+        differ only in the order of two prefix rows, and two readings English spells the same way.
+        """
+        row = rd.rows.get(name)
+        if row is None:
+            return None
+        prefix = list(rd.prefix.get(name, []))
+
+        # **A NEGATION APPLIES TO WHAT FOLLOWS IT IN SCOPE ORDER**, and where it cannot be
+        # delivered the ROW IS REFUSED. Dropping it would not lose half a sentence: it would produce
+        # the sentence's own opposite, which is the one thing req 8 forbids in either direction.
+        negated_by: set[int] = set()
+        negate_clause = False
+        owed = []
+        for at, element in enumerate(prefix):
+            if element.kind != "negation":
+                continue
+            following = prefix[at + 1] if at + 1 < len(prefix) else None
+            if following is None:
+                negate_clause = True
+            elif following.kind == "quantifier":
+                rd.negated_binders.add(following.binds)
+                owed.append(following.binds)
+            elif following.kind in ("attitude", "modality"):
+                negated_by.add(id(following))
+            else:
+                rd.out.refused.append(f"{name}: a negation over a {following.kind} cannot be said")
+                return None
+
+        modal = ""
+        for element in prefix:
+            if element.kind != "modality":
+                continue
+            if id(element) in negated_by:
+                # «must not» is not «not must»: a negation OUTSIDE a necessity is «does not
+                # necessarily», an adverb the table does not carry. Saying the modal would move the
+                # negation inside it and claim the opposite, so the row is not said at all.
+                rd.out.refused.append(f"{name}: a negation outside a {element.modality.value} "
+                                      f"has no form in the table")
+                return None
+            form = self.the_form("modality", kind="prefix", element="modality",
+                                 modality=element.modality.value)
+            if form is None:
+                rd.out.refused.append(f"{name}: the table names several forms for "
+                                      f"{element.modality.value} and none is preferred")
+                return None
+            modal = form
+
+        attitudes = [element for element in prefix if element.kind == "attitude"]
+        imperative = self._imperative(row, attitudes, rd)
+        if imperative is not None:
+            return imperative
+
+        body = self._body(row, rd, negated=negate_clause, modal=modal,
+                          embedded=embedded or bool(attitudes), asks=bool(attitudes))
+        if body is None:
+            return None
+
+        for element in reversed(attitudes):
+            body = self._attitude(element, body, negated=id(element) in negated_by, rd=rd)
+            if body is None:
+                return None
+
+        for element in prefix:
+            if element.kind != "domain":
+                continue
+            if element.domain.marker is None:
+                # «legally» is an ADVERB derived from `law.n`, and the table holds no derivation.
+                # Fronting the bare noun would say «Law, he is married», which is not the claim.
+                rd.out.unsaid.append(f"{element.name}: an unmarked domain has no form to be said in")
+                continue
+            said = self._phrase(element.domain, rd)
+            if said:
+                body = _Said(f"{said}, {body.text}", body.mark, asks=body.asks)
+            else:
+                rd.out.unsaid.append(f"{element.name}: the domain could not be said")
+
+        # A binder that never reached a variable site said nothing at all — and if it was the one
+        # carrying a NEGATION, the sentence that came back is the opposite of the zip.
+        for element in prefix:
+            if element.kind == "quantifier" and element.binds not in rd.said:
+                rd.out.unsaid.append(f"{name}: the binder for {element.binds} reached no box")
+        undelivered = [binds for binds in owed if binds in rd.negated_binders]
+        if undelivered:
+            rd.out.refused.append(f"{name}: a negation over {', '.join(undelivered)} was not said")
+            return None
+        return body
+
+    def _body(self, row, rd: _Reading, negated: bool, modal: str,
+              embedded: bool, asks: bool) -> _Said | None:
+        if row.kind == "join":
+            if negated or modal:
+                rd.out.unsaid.append(f"{row.name}: a join cannot carry a modality or a negation yet")
+            return self._join(row, rd, embedded=embedded)
+        if row.kind == "content":
+            return self._clause(row, rd, negated=negated, modal=modal, embedded=embedded,
+                                asks=asks)
+        rd.out.unsaid.append(f"{row.kind} row {row.name}")
+        return None
+
+    # -- the join ------------------------------------------------------------------------------------
+
+    def _join(self, row, rd: _Reading, embedded: bool) -> _Said | None:
+        """`Y = A op B` as a connective between two clauses — the rows read backwards by MEANING.
+
+        The meaning of a connective is its operator AND what it asserts about its halves, and the
+        second half of that is not a guess: it is written in the halves' own `truth`. «I stayed home
+        because it rained» claims both; «if it rains I stay home» claims neither; same operator, and
+        `db/0010` ruled that the difference is exactly this (req 38). So the key is read off the zip
+        and the form comes from the table.
+        """
+        halves = [None if operand in rd.folded else self._render(operand, rd, embedded=True)
+                  for operand in row.operands]
+        alive = [half for half in halves if half is not None and half.text.strip()]
+        if not alive:
+            return None
+        if len(alive) == 1:
+            # Everything the other half said was folded into a noun phrase — which is the normal
+            # outcome, not a loss: «a human body in Japan» IS those rows. **Unless the survivor is
+            # the half that claims nothing**: without its connective, a clause standing alone is a
+            # declarative, and a declarative asserts by being one. That is the join's own version of
+            # the negation rule, and it was found by the round trip saying «You learn the thing» for
+            # a row the zip only SUPPOSES.
+            survivor = next(operand for operand, half in zip(row.operands, halves)
+                            if half is not None and half.text.strip())
+            if getattr(rd.rows.get(survivor), "truth", None) is None:
+                rd.out.refused.append(f"{row.name}: its unclaimed half would stand alone as a claim")
+                return None
+            return alive[0]
+
+        asserts = self._asserts(row, rd)
+        if asserts is None:
+            rd.out.unsaid.append(f"{row.name}: halves claimed unevenly, and no connective says that")
+            return None
+        form, subordinating = self._connective(row.operator.value, asserts)
+        if form is None:
+            rd.out.unsaid.append(f"{row.name}: no form in the table for {row.operator.value} "
+                                 f"asserting {asserts}")
+            return None
+        if subordinating:
+            # «Because it rained, I stayed home» — the marked half is the FIRST operand, which is the
+            # antecedent for every implication in the table and is order-free for the rest.
+            return _Said(f"{form} {alive[0].text}, {alive[1].text}", alive[1].mark,
+                         asks=alive[0].asks)
+        return _Said(f"{alive[0].text} {form} {alive[1].text}", alive[1].mark, asks=alive[0].asks)
+
+    def _asserts(self, row, rd: _Reading) -> str | None:
+        """What this join's halves claim, as the table spells it: `both` · `neither` · `matrix`."""
+        claims = []
+        for operand in row.operands:
+            half = rd.rows.get(operand)
+            truth = getattr(half, "truth", None)
+            claims.append("open" if isinstance(truth, Open) else
+                          "empty" if truth is None else "claimed")
+        if claims == ["claimed", "claimed"]:
+            return "both"
+        if claims == ["empty", "empty"]:
+            return "neither"
+        return None
+
+    def _connective(self, operator: str, asserts: str) -> tuple[str | None, bool]:
+        """The word for an operator-and-assertion, and whether it SUBORDINATES.
+
+        A coordinator and a subordinator carrying the same meaning are two clause structures for one
+        thought, and which structure is used is frame; but the WORD is the table's, so a meaning with
+        a coordinator and a subordinator both flagged `spoken` is curation contradicting itself and
+        is reported rather than resolved here.
+        """
+        found = [(role, self._spoken.get(self._key(role, {"kind": "join", "operator": operator,
+                                                          "asserts": asserts})))
+                 for role in ("coordinator", "subordinator")]
+        voiced = [(role, form) for role, form in found if form is not None]
+        if len(voiced) == 1:
+            return voiced[0][1], voiced[0][0] == "subordinator"
+        if len(voiced) > 1:
+            return None, False
+        single = [(role, self.forms_for(role, kind="join", operator=operator, asserts=asserts))
+                  for role in ("coordinator", "subordinator")]
+        lone = [(role, forms) for role, forms in single if len(forms) == 1]
+        if len(lone) == 1:
+            return next(iter(lone[0][1])), lone[0][0] == "subordinator"
+        return None, False
+
+    # -- the attitude --------------------------------------------------------------------------------
+
+    def _attitude(self, element, body: _Said, negated: bool, rd: _Reading) -> _Said | None:
+        """«Anna thinks that …» — a holder, a verb, and the complementizer the table names.
+
+        The complementizer is not punctuation and not a choice: `that` is the one form the table
+        gives for a join that asserts only its matrix, which is precisely what an attitude does to
+        the clause under it.
+        """
+        agreement = self._agreement(element.holder, rd)
+        holder = self._phrase(element.holder, rd, case=NOMINATIVE)
+        if not holder:
+            rd.out.unsaid.append(f"{element.name}: the attitude's holder could not be said")
+            return None
+        said = [holder]
+        if negated:
+            form = self.the_form("negation", kind="prefix", element="negation")
+            if form is None:
+                rd.out.refused.append(f"{element.name}: the negation has no single form")
+                return None
+            said += [self._agreeing(DO, agreement, rd), form, keys.word_of(element.verb)]
+        else:
+            said.append(self._agreeing(keys.word_of(element.verb), agreement, rd))
+        if element.addressee is not None:
+            # **MARKED, AND THE MARKER IS THE TABLE'S.** «say TO Marie» is right and «tell TO me» is
+            # not: whether an attitude verb marks its addressee or takes it bare is LEXICAL, and
+            # nothing in tk2 holds that fact yet (req 55 rules the CLASSIFICATION of attitude verbs,
+            # not their syntax). Measured both ways on the corpus: marking costs one case and
+            # leaving it bare costs two, and a marked phrase names its role out loud.
+            # The box may already carry the word the sentence used (req 65); only an addressee that
+            # arrived unmarked has to be asked about.
+            to = "" if element.addressee.marker else self._marker_for("recipient")
+            spoken = self._phrase(element.addressee, rd, case=ACCUSATIVE)
+            if spoken:
+                said.append(f"{to} {spoken}" if to else spoken)
+        if element.strength is not None:
+            rd.out.unsaid.append(f"{element.name}: a strength of {element.strength} is not spoken")
+        complementizer = self._complementizer(body)
+        said.append(f"{complementizer} {body.text}" if complementizer else body.text)
+        return _Said(" ".join(said), "." if body.mark != "?" else "?")
+
+    def _marker_for(self, role: str) -> str:
+        """The preposition that marks a role, when the table names exactly one that CAN mark it.
+
+        A parsed box already carries the word it met (req 65) and never asks this. An attitude's
+        addressee is not a box the sentence marked — it is a field of the row — so the marker has to
+        be found, and `roles` is the column that knows: exactly one form in the table can mark a
+        recipient, which is why this is a lookup rather than a choice.
+        """
+        found = {row["form"] for row in self.table._rows                  # noqa: SLF001
+                 if role in ((row.get("compiled") or {}).get("roles") or ())}
+        return next(iter(found)) if len(found) == 1 else ""
+
+    def _complementizer(self, body: _Said) -> str:
+        """`that`, except before a clause that already opens with its own wh-word.
+
+        «I don't know THAT WHO ate the fish» is not English: an embedded question is introduced by
+        the question word itself, which the clause has already put at its front.
+        """
+        if body.asks:
+            return ""
+        return self.the_form("subordinator", kind="join", operator="and", asserts="matrix") or ""
+
+    def _imperative(self, row, attitudes: list, rd: _Reading) -> _Said | None:
+        """«Close the door!» — the inverse of the compiler's own imperative (task 2d).
+
+        The shape is the drill's and the compiler builds exactly it: the SPEAKER wants something of
+        the ADDRESSEE, and nothing is claimed. Recognising it here is not a special case bolted on —
+        it is the same rule read in the other direction, and without it the sentence comes back as
+        «I want you to close the door», which is a different zip.
+        """
+        if len(attitudes) != 1 or row.kind != "content" or row.truth is not None:
+            return None
+        element = attitudes[0]
+        if keys.word_of(element.verb) != "want":
+            return None
+        holder = getattr(element.holder, "head", None)
+        if holder is None or holder != self.context.speaker:
+            return None
+        subject_role = next((role for role in SUBJECT_ORDER if role in row.boxes), None)
+        if subject_role is None:
+            return None
+        if getattr(row.boxes[subject_role], "head", None) != self.context.addressee:
+            return None
+        rest = dict(row.boxes)
+        rest.pop(subject_role)
+        said = self._clause(row.model_copy(update={"boxes": rest, "truth": CLAIMED}), rd,
+                            negated=False, modal="", embedded=False, imperative=True)
+        if said is None:
+            return None
+        if element.strength is not None:
+            rd.out.unsaid.append(f"{element.name}: a strength of {element.strength} is not spoken")
+        return _Said(said.text, "!")
+
+    # -- the clause -----------------------------------------------------------------------------------
+
+    def _clause(self, row: ContentRow, rd: _Reading, negated: bool, modal: str,
+                embedded: bool, asks: bool = False, imperative: bool = False) -> _Said | None:
         """One content row to one clause, or None when it cannot be said without lying."""
         boxes = dict(row.boxes)
+        asked = isinstance(row.truth, Open)
 
-        if isinstance(row.truth, Open):
-            out.unsaid.append(f"{row.name} is ASKED and the question is not built yet")
+        if row.truth is None and not imperative and not embedded:
+            # **A ROW THAT CLAIMS NOTHING IS SAYABLE EXACTLY WHEN SOMETHING ABOVE IT SAYS SO.** The
+            # antecedent of «if it rains, I stay home» claims nothing and the JOIN is what is
+            # asserted there (req 38); standing alone, the same row is a sentence English has no
+            # form for, because a declarative clause asserts by being one.
+            rd.out.unsaid.append(f"{row.name} is stated but claims nothing, and no form says that")
             return None
-        if row.truth is None:
-            out.unsaid.append(f"{row.name} is stated-but-unclaimed and the prefix is not built yet")
-            return None
+        if not asked and not imperative and row.truth not in (CLAIMED, DENIED):
+            rd.out.unsaid.append(f"{row.name} is held at {row.truth} and a hedge is not built yet")
 
-        negated = row.truth == DENIED
+        negated = negated or (not asked and row.truth == DENIED)
         negation = self.the_form("negation", kind="prefix", element="negation")
         if negated and negation is None:
             # The table gives «not» and «no» the same meaning, so nothing here can choose. Saying
             # the clause without its negation would say the OPPOSITE of the zip.
-            out.refused.append(f"{row.name}: the negation has no single form in the table")
+            rd.out.refused.append(f"{row.name}: the negation has no single form in the table")
             return None
-        if row.truth not in (CLAIMED, DENIED):
-            out.unsaid.append(f"{row.name} is held at {row.truth} and a hedge is not built yet")
+        if row.pov is not None:
+            rd.out.unsaid.append(f"{row.name}: a point of view held by "
+                                 f"«{keys.word_of(str(getattr(row.pov.holder, 'head', '?')))}»")
 
-        subject_role = next((r for r in SUBJECT_ORDER if r in boxes), None)
-        subject = ""
-        if subject_role is not None:
-            subject = self._phrase(boxes.pop(subject_role), out)
+        # **AN OPEN BOX IS NOT ALWAYS A QUESTION.** «The hammer is made of titanium» leaves its
+        # agent open because nobody knows who made it, not because anybody is asking; the zip records
+        # both as OPEN and nothing distinguishes them (req 2 — an unbound slot is a variable at every
+        # depth). What distinguishes them here is the SENTENCE: an open box is asked when the clause
+        # is a question, or when it stands under an attitude, which is what an embedded question is.
+        # **AN OPEN BOX IS A SLOT TO SOLVE FOR** (req 2), and English has two ways of saying one:
+        # ask about it, or — for an AGENT, and only for an agent — leave it out with the passive.
+        # «The hammer is made of titanium» does not ask who made it; «Who ate the fish?» does. The
+        # agent is where the two readings meet, and what separates them is whether anything is being
+        # asked at all: a clause under an attitude is an embedded question, a clause standing alone
+        # and claiming something is not.
+        wh, wh_role = self._question_word(boxes, rd)
+        if wh_role is Role.AGENT and not (asked or asks) and row.predicate is not None \
+                and len(boxes) > 1 and not boxes[wh_role].head.described:
+            # An agent nobody described and nobody asked about is what the PASSIVE leaves out.
+            # One the sentence described — «who», «what» — is a question, wherever it stands.
+            wh, wh_role = None, None
+        # **AN IMPERATIVE HAS NO SUBJECT** — the compiler put the addressee in the box a subject
+        # would have taken, and this is the same step backwards: the box is already gone.
+        subject_role = None if imperative else next(
+            (role for role in SUBJECT_ORDER if role in boxes), None)
 
-        lemma = keys.word_of(row.predicate) if row.predicate else COPULA
-        verb = self.inflections.of(lemma, PRESENT)
-        if negated:
-            # «does not think», «is not a mind» — the auxiliary carries the inflection and the verb
-            # falls back to its lemma, which is English's own rule and therefore frame.
-            verb = (f"{self.inflections.of('do', PRESENT)} {negation} {lemma}"
-                    if row.predicate else f"{verb} {negation}")
+        # **A QUESTION WORD THAT IS THE SUBJECT DOES NOT MOVE, AND NOTHING INVERTS.** «Who ate the
+        # fish?» — the gap is already at the front, so English leaves the clause alone; it is «What
+        # did he eat?» that fronts a word and pulls the auxiliary with it. Said the other way round,
+        # «who the fish eats» makes the fish the eater.
+        wh_is_subject = wh is not None and wh_role is subject_role
+        if wh is not None:
+            boxes.pop(wh_role)
+            if wh_is_subject:
+                subject_role = next((role for role in SUBJECT_ORDER if role in boxes), None)
 
+        # **THE VOICE THE SENTENCE WAS HEARD IN** (req 27). Roles normalize, so «the mail was written
+        # by John» and «John wrote the mail» are one zip — and `topicality` is the one marker that
+        # keeps what normalization would otherwise destroy. Where it names a role that the active
+        # voice would not have made the subject, English has exactly one way to say it, and that way
+        # is the passive.
+        # **TOPICALITY NAMING A NON-AGENT IS WHAT A PASSIVE IS.** Not «the foregrounded role is not
+        # the one the active voice would pick» — that test fails exactly where the passive matters
+        # most, on «The hammer is made of titanium», whose agent is not in the zip at all, so the
+        # patient is already the only subject candidate and the two roles coincide.
+        passive = (rd.topic is not None and rd.topic in boxes and rd.topic is not Role.AGENT
+                   and row.predicate is not None and not imperative)
+        agent_role = subject_role if passive else None
+        if passive:
+            subject_role = rd.topic
+        lemma = self._lemma(row, rd)
+        if lemma is None:
+            return None
+
+        # **EXISTENTIAL `be` IS CONTENT, AND ENGLISH SAYS IT WITH THE EXPLETIVE** (req 31). «There is
+        # a cat» — the thing said to exist is not the subject of the clause, the expletive is, and
+        # the compiler separates the two readings by exactly this word; said the other way round,
+        # «A cat is» is not a sentence anybody would parse back as an existential.
+        #
+        # **DECIDED BEFORE THE SUBJECT IS RENDERED**, which is not tidiness: rendering the phrase and
+        # then moving it says a bound variable TWICE, and a variable's second mention is definite —
+        # «There are no cats» came back as «There is the cat».
+        existential = (lemma == COPULA and row.predicate is not None and not imperative
+                       and subject_role is not None and len(boxes) == 1)
+        there = self.the_form("existential", kind="structure") if existential else None
+        if existential and not there:
+            rd.out.unsaid.append(f"{row.name}: the existential has no form in the table")
+
+        subject, agreement = "", {"person": 3, "number": "sg"}
+        if there:
+            subject, subject_role = there, None
+        elif wh_is_subject:
+            subject, subject_role = wh, None
+        elif subject_role is not None:
+            agreement = self._agreement(boxes[subject_role], rd)
+            subject = self._phrase(boxes.pop(subject_role), rd, case=NOMINATIVE)
+            if not subject and passive:
+                rd.out.refused.append(f"{row.name}: the foregrounded role could not be said")
+                return None
+            if not subject:
+                # **THE UNEXPRESSED AGENT IS A PASSIVE WITH NOBODY IN THE `by` PHRASE** — «the
+                # hammer is made of titanium». The zip says the making happened and does not say who
+                # did it, and English's way of saying exactly that is to leave the agent out.
+                if row.predicate is not None:
+                    passive, agent_role = True, subject_role
+                    subject_role = next((role for role in SUBJECT_ORDER if role in boxes), None)
+                    if subject_role is not None:
+                        agreement = self._agreement(boxes[subject_role], rd)
+                        subject = self._phrase(boxes.pop(subject_role), rd, case=NOMINATIVE)
+                if not subject:
+                    rd.out.refused.append(f"{row.name}: nothing in the row can be its subject")
+                    return None
+        elif not imperative and row.predicate is not None:
+            # «It rains» — a clause with a predicate and no participant at all. English requires a
+            # subject and the table holds the word it requires; the requirement is frame, the word
+            # is a row.
+            subject = self.the_form("expletive", kind="structure") or ""
+            if not subject:
+                rd.out.unsaid.append(f"{row.name}: nothing fills the subject and no expletive does")
+
+
+        after_agent = ""
+        if passive and agent_role is not None and agent_role in boxes:
+            agent = boxes.pop(agent_role)
+            said = self._phrase(agent, rd)
+            # **THE PARSE ALREADY RECORDED THE MARKER** (req 65) — «written BY John» stored `by` on
+            # the box — so a marked agent needs nothing from the table. Only an agent that arrived
+            # unmarked (a zip built by hand, or by the brain) has to be asked about.
+            by = "" if agent.marker else self._marker_for("agent")
+            if said and (agent.marker or by):
+                after_agent = f"{by} {said}" if by else said
+            elif said:
+                rd.out.unsaid.append(f"{row.name}: the agent of the passive could not be marked")
+
+        # **AN UNMARKED OBJECT COMES FIRST, WHATEVER ITS ROLE.** «She feeds milk TO THE CUBS» —
+        # a marked phrase can stand anywhere after the verb, and a bare one cannot, so putting the
+        # bare one first is the order that is always readable. Measured on `t-dc-2`, which came back
+        # with its milk as a destination.
         after = []
-        for role in OBJECT_ORDER:
-            if role in boxes:
-                after.append(self._phrase(boxes.pop(role), out))
-        for role in CIRCUMSTANCE_ORDER:
-            if role in boxes:
-                after.append(self._phrase(boxes.pop(role), out))
+        for marked in (False, True):
+            for role in (*OBJECT_ORDER, *CIRCUMSTANCE_ORDER):
+                if role not in boxes or bool(boxes[role].marker) is not marked:
+                    continue
+                said = self._phrase(boxes.pop(role), rd)
+                if said:
+                    after.append(said)
         for role in list(boxes):
-            out.unsaid.append(f"{row.name}: the {role.value} box has no place in a clause yet")
+            rd.out.unsaid.append(f"{row.name}: the {role.value} box has no place in a clause yet")
             boxes.pop(role)
 
-        parts = [part for part in (subject, verb, *after) if part]
-        return " ".join(parts) if parts else None
+        # **INVERSION.** A question that is not embedded puts its carrier before the subject, and a
+        # negation needs a carrier whether or not anything is asked. Word order, therefore frame;
+        # do-support is the repair English itself uses when the clause has only a lexical verb.
+        # The agent of a passive is a marked phrase like any other, and the marker is the table's:
+        # exactly one form in it can mark an agent.
+        fronted = "" if wh is None or wh_is_subject else wh
+        invert = bool(asked or fronted) and not embedded
+        parts = self._verb_phrase(lemma, subject, negated, modal, negation or "", invert,
+                                  imperative, row, agreement, rd, passive)
+        after = ([after_agent] if after_agent else []) + after
+        said = " ".join(part for part in (fronted, *parts, *after) if part)
+        if not said.strip():
+            return None
+        return _Said(said, "?" if (asked or wh is not None) and not embedded else ".",
+                     asks=wh is not None)
+
+    def _lemma(self, row: ContentRow, rd: _Reading) -> str | None:
+        if row.predicate is None:
+            return COPULA
+        if isinstance(row.predicate, (Open, Var)):
+            rd.out.unsaid.append(f"{row.name}: the predicate itself is unbound")
+            return None
+        return keys.word_of(str(row.predicate))
+
+    def _verb_phrase(self, lemma: str, subject: str, negated: bool, modal: str,
+                     negation: str, invert: bool, imperative: bool, row,
+                     agreement: dict, rd: _Reading, passive: bool = False) -> list[str]:
+        """Subject and verb in the order and the shape the clause asked for.
+
+        Seven English rules, all of them word order or inflection and none of them vocabulary: the
+        verb AGREES with its subject and carries the TENSE; the future is an auxiliary rather than an
+        inflection; a modal takes the agreement and leaves the verb bare; the passive is `be` plus a
+        participle; a negated lexical verb needs do-support; an inverted clause puts the carrier
+        first; and the copula inverts and negates on its own.
+
+        **The carrier is whatever comes first** — will · can · is · does — and everything after it
+        is bare. That is one rule rather than five, and it is why this reads as a list.
+        """
+        copular = row.predicate is None
+        if imperative:
+            return [lemma]
+
+        if passive:
+            # «the mail WAS WRITTEN by John» — be, in the tense and the agreement, then the
+            # participle. Under a modal the modal is the carrier and `be` goes bare.
+            participle = self.inflections.of(lemma, PARTICIPLE)
+            if modal:
+                head = [modal] + ([negation] if negated else []) + [COPULA, participle]
+            else:
+                head = ([self._copula(agreement, rd)]
+                        + ([negation] if negated else []) + [participle])
+            return [head[0], subject, *head[1:]] if invert else [subject, *head]
+
+        if rd.when == AFTER:
+            # **THE FUTURE IS A WORD.** English inflects the past and not the future, so the carrier
+            # is an auxiliary, and which auxiliary is the table's to say.
+            future = self.the_form("tense_aspect", kind="theatre", aspect=None, tense="future",
+                                   was="modality")
+            if future is None:
+                rd.out.unsaid.append(f"{row.name}: the table names several futures and none is "
+                                     f"preferred")
+            else:
+                head = [future] + ([negation] if negated else []) + [lemma]
+                return [head[0], subject, *head[1:]] if invert else [subject, *head]
+
+        if modal:
+            head = [modal] + ([negation] if negated else []) + [lemma]
+            return [*head[:1], subject, *head[1:]] if invert else [subject, *head]
+        if copular:
+            be = self._copula(agreement, rd)
+            tail = [be] + ([negation] if negated else [])
+            return [tail[0], subject, *tail[1:]] if invert else [subject, *tail]
+        if negated or invert:
+            do = self._agreeing(DO, agreement, rd)
+            tail = [do] + ([negation] if negated else []) + [lemma]
+            return [tail[0], subject, *tail[1:]] if invert else [subject, *tail]
+        return [subject, self._agreeing(lemma, agreement, rd)]
+
+    # -- agreement -----------------------------------------------------------------------------------
+
+    def _agreement(self, box: Box, rd: _Reading) -> dict:
+        """The person and number the verb has to agree with. Grammar, therefore frame.
+
+        A pronoun carries both in its row. Everything else is third person — «the cat», «Anna», a
+        bound variable — and singular unless the box counts otherwise, which is the reading the
+        compiler took on the way in.
+        """
+        head = box.head
+        if isinstance(head, Var):
+            binder = rd.binders.get(head.name)
+            box = binder.restriction if binder is not None else box
+            head = box.head
+        features = self._features_of(head)
+        if features is not None:
+            return {"person": features.get("person"), "number": features.get("number")}
+        plural = isinstance(box.count, int) and box.count > 1
+        return {"person": 3, "number": "pl" if plural else "sg"}
+
+    def _agreeing(self, lemma: str, agreement: dict, rd: _Reading) -> str:
+        """A lexical verb in the tense the theatre gives, agreeing where English agrees.
+
+        **THE PAST DOES NOT AGREE** — «I walked», «she walked», «they walked» — so the roster answers
+        once. The present inflects in exactly one cell, which is why `db/0022` only ever had to
+        answer for `VBZ`: everywhere else the form IS the lemma, and that is a fact about the
+        language rather than a gap in the data.
+        """
+        if rd.when == BEFORE:
+            return self.inflections.of(lemma, PAST)
+        third_singular = (agreement.get("person") in (3, None)
+                          and agreement.get("number") in ("sg", "either", None))
+        return self.inflections.of(lemma, PRESENT) if third_singular else lemma
+
+    def _copula(self, agreement: dict, rd: _Reading) -> str:
+        """`be`, agreeing — «I am» · «you are» · «the cat is».
+
+        The copula is the one English verb whose present has three cells, and its forms are already
+        closed-class rows: they are function words, they sit in the table beside the pronouns whose
+        person they agree with, and the features that pair them are the same three. Where the table
+        does not carry those features the roster answers instead, which is `is` — right for the
+        third person and visibly wrong elsewhere, so the gap reports itself.
+        """
+        wanted = "past" if rd.when == BEFORE else "present"
+        cells = [row for row in self.table._rows                       # noqa: SLF001
+                 if (row.get("features") or {}).get("lemma") == COPULA
+                 and (row["features"]).get("tense") == wanted
+                 and not (row["features"]).get("clitic")]
+        exact = [row for row in cells
+                 if (row["features"]).get("person") == agreement.get("person")
+                 and self._agrees((row["features"]).get("number"), agreement.get("number"))]
+        if len(exact) == 1:
+            return exact[0]["form"]
+        elsewhere = [row for row in cells if (row["features"]).get("elsewhere")]
+        if len(elsewhere) == 1 and not exact:
+            return elsewhere[0]["form"]
+        if cells:
+            rd.out.unsaid.append(f"the copula for person {agreement.get('person')}: the paradigm "
+                                 f"gives {len(exact) or len(elsewhere)} forms and not one")
+        return self.inflections.of(COPULA, PAST if rd.when == BEFORE else PRESENT)
+
+    def _question_word(self, boxes: dict, rd: _Reading) -> tuple[str | None, object]:
+        """The box that is ASKED, and the word English asks it with — by ROLE, from the rows.
+
+        The interrogatives are indexed on the role they open (`where` a location, `when` a time) and
+        on «a participant» for the rest, which is where the table stops being able to answer: what ·
+        which · who · whom all open a participant, and the zip does not record the animacy that
+        chooses between them.
+        """
+        for role, box in boxes.items():
+            if not isinstance(box.head, Open) or box.head.person is not None:
+                continue           # a described person is an anaphor; `_head` says it as a pronoun
+            form = self.the_form("interrogative", kind="open", binds=None, opens="box",
+                                 role=role.value)
+            if form is not None:
+                return form, role
+
+            # **THE SORT IS WHAT SEPARATES «who» FROM «what»**, and it is in the zip now (v4):
+            # «who» asks for a person and «what» for a thing, which is a restriction on the answer
+            # and not a matter of taste. Where the zip says nothing, the gap the POSITION opens
+            # narrows the rows instead — and where that still leaves a choice, nothing is said.
+            subject = next((other for other in SUBJECT_ORDER if other in boxes), None)
+            gap = "subject" if role is subject else "predicate"
+            found = [row["form"] for row in self.table._rows          # noqa: SLF001
+                     if row.get("role") == "interrogative"
+                     and (row.get("compiled") or {}).get("opens") == "participant"
+                     and ((row.get("features") or {}).get("sort") == box.head.sort
+                          if box.head.sort else
+                          (row.get("features") or {}).get("gap") == gap)
+                     and not (row.get("features") or {}).get("selective")
+                     and not (row.get("features") or {}).get("archaic")]
+            if len(found) > 1 and box.head.sort:
+                # «who» and «whom» are one sort in two gaps, and the position settles that.
+                found = [row["form"] for row in self.table._rows      # noqa: SLF001
+                         if row["form"] in found
+                         and (row.get("features") or {}).get("gap") == gap]
+            if len(found) != 1:
+                rd.out.unsaid.append(f"an OPEN {role.value}: {len(found)} question words fit, and "
+                                     f"the rows do not choose between them")
+                return None, None
+            return found[0], role
+        return None, None
 
     # -- the noun phrase ---------------------------------------------------------------------------
 
-    def _phrase(self, box: Box, out: Decompiled) -> str:
+    def _phrase(self, box: Box, rd: _Reading, case: str = ACCUSATIVE) -> str:
         """A box as a phrase: its marker, its determiner, its head — in that order, which is frame."""
-        head = self._head(box, out)
+        if isinstance(box.head, Var):
+            return self._variable(box, rd, case)
+        head = self._head(box, rd, case)
         if not head:
             return ""
+        return self._dress(box, rd, head, pronoun=self._features_of(box.head) is not None)
 
+    def _dress(self, box: Box, rd: _Reading, head: str, pronoun: bool = False,
+               quantity: Quantity | None = None, adjectives: tuple = (), tails: tuple = (),
+               negation: str = "") -> str:
+        """Marker · determiner · count · adjectives · head · marked phrases. English's own order."""
         words = []
         if box.marker:
             words.append(box.marker)                  # req 65: the preposition actually used
-        determiner = self._determiner(box, out, head)
-        if determiner:
-            words.append(determiner)
-        if box.relation is not None:
-            out.unsaid.append("a possessor: the possessive forms are many and none is preferred")
-        if box.count is not None and not isinstance(box.count, (Open, Var)):
-            words.append(str(box.count))
+        possessor = self._possessive(box, rd)
+        if not pronoun:
+            determiner = possessor or self._determiner(box, rd, head, quantity)
+            if determiner:
+                # «NOT every glitterer» — a negation that outscopes a quantifier is spoken in front
+                # of it, which is the only place English puts it.
+                words.append(f"{negation} {determiner}" if negation else determiner)
+            if box.count is not None and not isinstance(box.count, (Open, Var)):
+                words.append(str(box.count))
+        words += [word for word in adjectives if word]
         words.append(head)
+        words += [word for word in tails if word]
         return " ".join(words)
 
-    def _head(self, box: Box, out: Decompiled) -> str:
+    def _variable(self, box: Box, rd: _Reading, case: str) -> str:
+        """A bound variable, spoken as the noun phrase its binder describes.
+
+        **FIRST OCCURRENCE ONLY.** «Every man loves a woman and the woman loves him» introduces the
+        woman once; saying «a woman» twice would be two women, which is a different thought. A later
+        mention is DEFINITE, which is what English does and what the compiler will read back.
+        """
+        name = box.head.name
+        binder = rd.binders.get(name)
+        if binder is None:
+            rd.out.unsaid.append(f"the variable {name}: nothing in the zip binds it")
+            return ""
+        restriction = binder.restriction
+        head = self._head(restriction, rd, case)
+        if not head:
+            return ""
+        if name in rd.said:
+            again = box.model_copy(update={"determination": Determination.DEFINITE,
+                                           "head": restriction.head})
+            return self._dress(again, rd, head)
+        rd.said.add(name)
+
+        adjectives, tails = [], []
+        for row in rd.modifiers.get(name, ()):
+            carrier = next(role for role, other in row.boxes.items()
+                           if isinstance(other.head, Var) and other.head.name == name)
+            other = next(other for role, other in row.boxes.items() if role != carrier)
+            said = self._phrase(other, rd)
+            if not said:
+                continue
+            (tails if other.marker else adjectives).append(said)
+
+        merged = restriction.model_copy(update={
+            "marker": box.marker or restriction.marker,
+            "count": box.count if box.count is not None else restriction.count,
+        })
+        negation = ""
+        if name in rd.negated_binders:
+            negation = self.the_form("negation", kind="prefix", element="negation") or ""
+            if not negation:
+                return ""                              # the caller refuses; it is owed this word
+            rd.negated_binders.discard(name)
+        return self._dress(merged, rd, head, quantity=binder.quantity,
+                           adjectives=tuple(adjectives), tails=tuple(tails), negation=negation)
+
+    def _head(self, box: Box, rd: _Reading, case: str = ACCUSATIVE) -> str:
         """The word in the box — a key becomes its word, and an abstention stays an abstention."""
         if isinstance(box.head, Open):
-            out.unsaid.append("an OPEN head: the wh-word is not built yet")
+            # **AN OPEN THE SENTENCE DESCRIBED IS AN ANAPHOR** (schema v4): «she» is a slot nobody
+            # has resolved and a person the speaker told us three things about, so it is SAID, as
+            # the pronoun those three things pick. An undescribed OPEN is a hole, and the clause has
+            # already decided what to do with it — ask, or leave it out of a passive.
+            if box.head.person is not None:
+                form = self._same_person(
+                    {"person": box.head.person, "number": box.head.number,
+                     "gender": box.head.gender}, "referential", case=case)
+                if form is not None:
+                    return form
+                rd.out.unsaid.append(f"a person-{box.head.person} pronoun in the {case}: "
+                                     f"no single form")
             return ""
         if isinstance(box.head, Var):
-            out.unsaid.append(f"the variable {box.head.name}: quantifiers are not built yet")
+            return self._variable(box, rd, case)
+        if isinstance(box.head, Ref):
+            rd.out.unsaid.append(f"a box valued by row {box.head.row}: not built yet")
             return ""
         if box.head is None:
             return ""
-        return keys.word_of(str(box.head))
+        pronoun = self._pronoun(box.head, case, rd)
+        return pronoun if pronoun is not None else keys.word_of(str(box.head))
 
-    def _determiner(self, box: Box, out: Decompiled, head: str) -> str:
-        """«the» / «a» where the table names one form, and silence where it names several.
+    def _possessive(self, box: Box, rd: _Reading) -> str:
+        """«my cat» · «Liguria's sea» — the possessor, in the form English gives a possessor.
 
-        `quantity` is where it goes silent: *universal* is «every», «all», «each» and thirty more,
-        and choosing among them is curation nobody has done. `determination` is luckier — English has
-        ONE definite article — and `indefinite` is «a» or «an», which is not a choice of word but a
-        SPELLING of one, so the vowel rule is applied here as orthography.
+        A pronoun possessor has a WORD of its own and the rows carry it, keyed by the same person
+        features that spell «I» and «me». Anything else takes the genitive clitic, which is also a
+        row. Neither is chosen here; what is chosen here is that a possessor precedes its head, and
+        that is word order.
         """
-        if isinstance(box.quantity, Quantity):
-            form = self.the_form("quantificational", kind="quantifier", quantity=box.quantity.value)
+        if box.relation is None:
+            return ""
+        if isinstance(box.relation, Open):
+            # «ITS cubs» — the possessor is unresolved and the sentence still said whose kind of
+            # thing it is. Same three features, different slot, and the rows hold both paradigms.
+            if box.relation.person is not None:
+                form = self._same_person(
+                    {"person": box.relation.person, "number": box.relation.number,
+                     "gender": box.relation.gender}, "possessive", use="determiner")
+                if form is not None:
+                    return form
+            rd.out.unsaid.append("a possessor the rows give no single form for")
+            return ""
+        if isinstance(box.relation, (Var, Ref)):
+            rd.out.unsaid.append("a possessor that is a variable or a row: not built yet")
+            return ""
+        features = self._features_of(box.relation)
+        if features is not None:
+            form = self._same_person(features, "possessive", use="determiner")
             if form is None:
-                out.unsaid.append(f"a {box.quantity.value} quantity: the table names several forms "
-                                  f"and none is preferred")
+                rd.out.unsaid.append(f"a possessor «{keys.word_of(str(box.relation))}»: the table "
+                                     f"gives several possessive forms and none is preferred")
+                return ""
+            return form
+        clitic = self.the_form("genitive", kind="field", field="relation", was="structure")
+        if clitic is None:
+            rd.out.unsaid.append("a possessor: the genitive has no single form in the table")
+            return ""
+        return f"{keys.word_of(str(box.relation))}{clitic}"
+
+    def _determiner(self, box: Box, rd: _Reading, head: str,
+                    quantity: Quantity | None = None) -> str:
+        """«the» / «a» / «every» where the table names one form, and silence where it names several.
+
+        `determination` is lucky — English has ONE definite article — and `indefinite` is «a» or
+        «an», which is not a choice of word but a SPELLING of one, so the vowel rule is applied here
+        as orthography.
+        """
+        quantity = quantity if quantity is not None else box.quantity
+        if isinstance(quantity, Quantity):
+            form = self.the_form("quantificational", kind="quantifier", quantity=quantity.value)
+            if form is None:
+                rd.out.unsaid.append(f"a {quantity.value} quantity: the table names several forms "
+                                     f"and none is preferred")
                 return ""
             return form
         if isinstance(box.determination, Determination):
             if box.determination is Determination.GENERIC:
-                return ""                              # a generic is bare in English: «cats sleep»
+                # **A GENERIC IS BARE**, and that is measured rather than assumed: rendering it with
+                # the indefinite article instead («a mind thinks») cost the round trip a case and
+                # produced «some a foreign licence», because a generic can also carry a quantity.
+                return ""
             found = self.forms_for("determination", kind="determination",
                                    determination=box.determination.value, was="quantificational")
             if not found:
-                out.unsaid.append(f"a {box.determination.value} determination: no form in the table")
+                rd.out.unsaid.append(f"a {box.determination.value} determination: no form")
                 return ""
             if len(found) == 1:
                 return next(iter(found))

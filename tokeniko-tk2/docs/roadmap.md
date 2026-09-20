@@ -75,13 +75,24 @@
 - [x] **⚑ the placement floor — MEASURED AND REFUSED** *(09-19)* — 40 placements ruled; the
       verdicts interleave with the cosine in both halves, so no floor separates them. Record
       `202609191500_…`
+- [x] **the TENSE and the VOICE, which the station never wrote** *(09-20, reqs 25/26)* — theatre from
+      UD's finite `Tense`, topicality from `nsubj:pass`; `db/0024` past + participle, 862 rows
+- [x] **a zip came out a DAG where a sentence is a tree** *(09-20)* — coordination binds tighter, so
+      a `conj` replaces the clause it extends; an attitude's own clause dissolves into it
+- [x] **`look` → agent · `die` → patient** *(09-20, `db/0025`, req 22)* — exposed when the station
+      stopped compiling an unresolved pronoun as OPEN, which the gate had been abstaining on
 - [x] **⚑ the placement rule, in place of a number** *(09-19, dictionary req 22)* — a stated
       edge is trusted, the sibling fallback and D abstain; 19.4% coverage, 0 wrong trusts
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
-- [ ] **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — first
-      slice DONE: one content row to one clause; round trip 79/82 same thought, 3 changed.
-      `db/0021` the `spoken` flag · `db/0022` the inflection roster. Record `202609191700_…`
-- [ ] **the decompiler's next slices** — the prefix · quantifiers · joins · questions
+- [ ] **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — joins ·
+      quantifiers · prefix · questions · the person axis · tense · voice all built; **fixpoint
+      24 → 62 of 87** (52 of the 69 the compiler reads whole). Record `202609201100_…`
+- [x] **SCHEMA v4 — an OPEN slot says what is known about the unknown** *(the Captain, 09-20, req 27)*
+      — `sort`·`person`·`number`·`gender`; three kinds of unknown, no heuristic. `db/0026`. **And
+      tkzip req 73 rewritten: there are no frozen schemas in a blueprint**
+- [ ] **the fixpoint's 17 remaining** — the decompiler's own, on sentences the compiler read whole
+- [ ] **anaphora → E3b** *(the Captain, 09-20)* — «she» has its features since v4; what is missing is
+      that Marie is feminine, which is a named individual's ATTRIBUTE. Gate reds `q-6` · `t-dc-5`
 - [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
       trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
 - [ ] confidence scalar (coverage + repairs; round-trip escalation-only)

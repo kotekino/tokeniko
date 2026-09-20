@@ -225,12 +225,26 @@ def test_UNASSERTION_PROPAGATES_into_an_enclosed_clause(compiler):
 
     It was a TRUTH error and therefore the worst kind: the `ccomp` was joined by an AND that claimed
     its operand while the other half of the same conditional was explicitly not claimed.
+
+    **THE SHAPE MOVED ON 2026-09-20 AND THE PROPERTY DID NOT.** A bare `ccomp` is now an ATTITUDE
+    whatever its verb — `that` is optional and cannot change what is asserted — so «who did it» sits
+    under «you know» instead of beside it. Its truth is 1.0, and that is the 2026-09-17 ruling
+    working: under an attitude the truth slot says what the HOLDER does with the row, and the prefix
+    is what keeps it out of the world. What must still hold is the thing this test was written for —
+    **nothing reaches the world** — so the row that carries the attitude is unasserted, and every
+    content row outside one is too.
     """
     out = compiled(compiler, "if you know who did it , tell me")
     content = [r for r in out.zip.rows if r.kind == "content"]
+    under_attitude = {r.scopes for r in out.zip.rows if r.kind == "attitude"}
+    holders = {r.name for r in content if r.predicate in {"know.v"}}
 
-    assert all(r.truth is None for r in content), f"claimed: {[r.name for r in content if r.truth]}"
-    assert [r.truth for r in out.zip.rows if r.kind == "join"] == [1.0, 1.0], "the JOINS are claimed"
+    loose = [r for r in content if r.name not in under_attitude]
+    assert all(r.truth is None for r in loose), f"claimed: {[r.name for r in loose if r.truth]}"
+    assert holders and all(out_row.truth is None for out_row in content
+                           if out_row.name in holders), (
+        "the KNOWING is supposed, so nothing under it reaches the world either")
+    assert [r.truth for r in out.zip.rows if r.kind == "join"] == [1.0], "the JOIN is claimed"
 
 
 def test_a_compiled_form_does_not_ALSO_abstain(compiler):
@@ -474,15 +488,21 @@ def test_AND_is_the_third_and_all_three_are_distinguishable(compiler):
 
 def test_a_reporting_verb_opens_an_ATTITUDE_and_claims_only_the_saying(compiler):
     """«He says that you swim» — E2 made the attitude a prefix element with its own holder, not a
-    join. The saying is claimed; the swimming is not, and nothing in the zip says it is."""
+    join. The saying is claimed; the swimming is not, and nothing in the zip says it is.
+
+    **AND THE SAYING'S OWN CLAUSE DISSOLVES INTO THE ATTITUDE ROW** *(2026-09-20)*. The verb, its
+    holder and its addressee are all on the prefix row, so a content row beside it saying the same
+    thing is one thinking written down twice — which the decompiler duly spoke twice: «He says. He
+    says that you swim.» Found by the fixpoint, `tools/roundtrip.py --fixpoint`.
+    """
     out = compiler.compile(SAYS)
     attitude = rows_of(out, "attitude")[0]
-    saying = next(r for r in rows_of(out, "content") if r.predicate == "say.v")
     swimming = next(r for r in rows_of(out, "content") if r.predicate == "swim.v")
 
     assert attitude.verb == "say.v"
     assert attitude.scopes == swimming.name
-    assert saying.truth == 1.0
+    assert not [r for r in rows_of(out, "content") if r.predicate == "say.v"], (
+        "the saying is the attitude row, and it is not also a claim beside it")
     assert swimming.truth == 1.0, (
         "the HOLDER claims it; the attitude row is what keeps it out of the world (2026-09-17)")
     assert not rows_of(out, "join"), "an attitude is not a join"
@@ -943,10 +963,15 @@ def test_a_question_belongs_to_the_STATEMENT_it_closes(compiler):
 
 def test_a_QUOTED_question_asks_while_the_saying_stays_claimed(compiler):
     """«I asked: "Do you know the muffin man?"» — the asking happened; the knowing is what was
-    asked. A quote is a statement of its own (req 21)."""
+    asked. A quote is a statement of its own (req 21).
+
+    *The asking is the ATTITUDE ROW since 2026-09-20 — its clause dissolved into it — so what is
+    claimed is read off the attitude, and what is asked off the row it scopes.*
+    """
     out = compiler.compile(QUOTED_QUESTION)
-    assert _row(out, "r0").truth == 1.0
-    assert isinstance(_row(out, "r1").truth, Open)
+    attitude = rows_of(out, "attitude")[0]
+    assert attitude.verb == "ask.v"
+    assert isinstance(_row(out, attitude.scopes).truth, Open)
 
 
 def test_a_conditional_question_opens_the_JOIN_that_carries_the_claim(compiler):
@@ -1004,7 +1029,8 @@ def test_WHETHER_and_IF_on_a_complement_ASK(compiler, skeleton, verb):
     out = compiler.compile(skeleton)
     attitude = next(r for r in out.zip.rows if r.kind == "attitude")
     assert attitude.verb == verb and attitude.scopes == "r1"
-    assert _row(out, "r0").truth == 1.0, "the wondering, the asking, is claimed"
+    assert not [r for r in rows_of(out, "content") if r.predicate == verb], (
+        "the wondering IS the attitude row, and not also a claim beside it (2026-09-20)")
     assert isinstance(_row(out, "r1").truth, Open), "the hunger is what is asked"
     assert not [r for r in out.zip.rows if r.kind == "join"], "and it is not a conditional"
 

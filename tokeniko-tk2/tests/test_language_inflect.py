@@ -7,7 +7,14 @@ the rule as the code states it. A roster that drifts from its rule is two source
 
 import pytest
 
-from tk2.language.inflect import PRESENT, Inflections, present_tense_rule, standing_inflections
+from tk2.language.inflect import (
+    PARTICIPLE,
+    PAST,
+    PRESENT,
+    Inflections,
+    present_tense_rule,
+    standing_inflections,
+)
 
 
 @pytest.mark.parametrize("lemma, expected", [
@@ -50,11 +57,23 @@ def test_a_verb_nobody_listed_is_REGULAR_and_not_unknown():
     assert standing.of("defenestrate") == "defenestrates"
 
 
-def test_a_tag_the_roster_does_not_hold_yet_leaves_the_word_alone():
-    """`VBD` and `VBN` arrive when the theatre is read. Until then the decompiler renders the
-    present, and a past tense it cannot place is a tense it must not speak."""
+def test_the_PAST_and_the_PARTICIPLE_arrived_with_the_theatre():
+    """**A SENTENCE SPOKEN BACK IN THE WRONG TENSE IS NOT THE SAME SENTENCE.** `VBD` and `VBN` were
+    outside `db/0022` because the decompiler had no theatre to read; the compiler writes one now, so
+    both tags are rostered (`db/0024`) — and the regular ones are still a rule, not rows."""
     standing = standing_inflections()
-    assert standing.of("walk", "VBD") == "walk", "no past is invented"
+
+    assert standing.of("walk", PAST) == "walked"
+    assert standing.of("walk", PARTICIPLE) == "walked", "a regular verb has one form for both"
+    assert standing.of("write", PAST) == "wrote"
+    assert standing.of("write", PARTICIPLE) == "written", "and an irregular one has two"
+    assert standing.of("read", PAST) == "read", "the zero-change verbs are rows too"
+
+
+def test_a_tag_NOBODY_has_rostered_leaves_the_word_alone():
+    """There is no rule for the progressive and no roster for it, and inventing «walking» from a
+    pattern nobody measured is exactly what `db/0022` refused to do for the present."""
+    assert standing_inflections().of("walk", "VBG") == "walk", "no form is invented"
 
 
 def test_the_roster_is_read_from_the_newest_version_only():

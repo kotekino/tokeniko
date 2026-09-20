@@ -48,6 +48,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # The frozen shape. A change to anything in this module changes this number, and a zip carries the
 # number it was compiled against (req 22) — E9's translation night has to know what it is translating.
 #
+# **v4, 2026-09-20 — WHAT IS KNOWN ABOUT WHAT IS NOT KNOWN.** `Open` said «this slot is unbound»
+# and nothing else, so three different sentences compiled to one zip: «WHO ate the fish» and «WHAT
+# ate the fish», «HE thinks» and «SHE thinks», «ITS cubs» and «HIS cubs». That is not a rendering
+# problem — the restriction «a person» is CONTENT, and an evaluator that lost it would accept a rock
+# as an answer to «who ate the fish?». Four optional fields on one class, and no stored zip to
+# translate. **The Captain, ruling the field and the rule above it:** *«English says several
+# different things with an unknown, the zip should record several types of unknown … not sure why
+# you talk about "frozen" schemas: we are building from scratch … there are no frozen schemas.»*
+#
 # **v3, 2026-09-16 — THE ADDRESSEE. The first migration of a frozen schema, under the Captain's hand
 # (req 73), and it is one field on two classes.** An attitude had a HOLDER and no addressee, so
 # «John said TO MARIE: you are a clever girl» had nowhere to record who «you» is. The alternative
@@ -55,7 +64,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # adds nothing to the schema and asks the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL, i.e. a
 # closed set of verbs in code, which is what two days of this epic have been moving into rows.
 # Ruled by the Captain: the field. Record: `docs/parser-compiler/202609161349_the-person-axis.md`.
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 # --------------------------------------------------------------------------------------------------
@@ -90,11 +99,46 @@ class Open(BaseModel):
     `prior` is the one genuinely new scalar the drill bench found (req 50): «It's cold, isn't it?» is
     OPEN with a high expectation of *yes*; «Is it cold?» is OPEN with none. Not parse confidence —
     real semantic content.
+
+    **AND WHAT IS KNOWN ABOUT IT IS NOT NOTHING** *(v4, 2026-09-20)*. An unbound slot is one shape at
+    three depths (req 2), and the brain may bind it by asking, remembering or inferring (req 49) —
+    but the SENTENCE usually said something about the thing it did not name, and until v4 every word
+    of that was thrown away:
+
+        «WHO ate the fish?»      the answer must be a PERSON — a restriction, and restrictions are
+                                 content: without it a rock is an admissible answer
+        «SHE thinks X»           third person, feminine, singular. The speaker stated all three
+        «ITS cubs»               the same, in the possessor
+
+    Three pairs of different sentences that compiled to one zip each. The fields carry exactly what
+    the closed-class rows already record about the word that was used — same names, same values — so
+    the compiler copies what it matched and the decompiler matches back, which is the symmetry the
+    whole station is built on.
+
+    **They are strings and integers, not enums**, for `BaseKey`'s reason: the table owns this
+    vocabulary and this module only carries it. A new gender or a new sort is a migration, never a
+    schema change.
+
+    **EMPTY IS ALSO AN ANSWER.** A bare `Open` is an unknown nobody described — the unexpressed agent
+    of «the hammer is made of titanium» — and that is why the decompiler can tell it from an asked
+    slot without guessing from position.
     """
 
     model_config = ConfigDict(extra="forbid")
 
     prior: float | None = Field(default=None, ge=0.0, le=1.0)
+
+    #: v4. What the sentence said about the thing it did not name.
+    #: `sort` is the interrogative's own restriction — «who» asks for a person, «what» for a thing.
+    sort: str | None = None
+    person: int | None = None
+    number: str | None = None
+    gender: str | None = None
+
+    @property
+    def described(self) -> bool:
+        """Did the sentence say anything about it at all? A bare OPEN is an unknown nobody named."""
+        return any(v is not None for v in (self.sort, self.person, self.number, self.gender))
 
 
 class Var(BaseModel):
@@ -532,6 +576,14 @@ Row = Annotated[
 # --------------------------------------------------------------------------------------------------
 
 
+#: **THE VERSION OF THE STATION'S TIME-RESOLUTION LOGIC**, stamped on every theatre it derives.
+#: Requirement 63 is why it exists: recomputing «yesterday» years later needs the utterance timestamp
+#: AND the logic that read it, so a theatre that could not say which logic wrote it would be a cache
+#: nobody can invalidate. It starts at 1, which is what the drill hand-wrote for its one forecast,
+#: and it moves when the reading moves — never when the vocabulary does.
+THEATRE_EPOCH = 1
+
+
 class Theatre(BaseModel):
     """The clause's spacetime, as four axis pairs — `[t_from,t_to][x][y][z]` — the Captain's own
     column from the first draft, and the same width as v1's denormalization map.
@@ -547,6 +599,10 @@ class Theatre(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    #: `[t_from, t_to][x][y][z]`. **The time axis is relative to the utterance** — -1 before it, 0
+    #: at it, +1 after it — which is the convention the drill's own forecast used (`aw-22`) and the
+    #: one the station writes from the tense it hears. Space stays empty until a filler puts
+    #: something there: nothing in a tense says WHERE.
     interval: Annotated[list[float], Field(min_length=8, max_length=8)]
     epoch: int
 

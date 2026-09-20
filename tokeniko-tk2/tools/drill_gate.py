@@ -61,11 +61,18 @@ DRILL_CONTEXT = Context(speaker="me.n", addressee="you.n")
 
 
 def filler(box) -> str:
-    """A box's head as a comparable string — the key, the variable's name, or a marker for OPEN.
+    """A box's head as a comparable string — the key, the variable's name, or what is known about an
+    OPEN one.
 
     A VARIABLE is compared by NAME and that is deliberately weak: the station and the drill number
     their variables independently, so `x0` against `P` is not a disagreement about anything. Those
     pairs are reported as unmatched rather than as a conflict.
+
+    **AN OPEN IS COMPARED BY WHAT THE SENTENCE SAID ABOUT IT** *(schema v4, 2026-09-20)*. Every open
+    slot used to flatten to the word «open», so two boxes that disagreed about WHO — «he» against
+    «she» — compared equal, and a box the drill described compared equal to one the station left
+    blank. It is still weak where it should be: an undescribed OPEN on either side matches anything,
+    because «I do not know» is not a claim that can conflict with one.
     """
     head = getattr(box, "head", None)
     if head is None:
@@ -73,7 +80,12 @@ def filler(box) -> str:
     if isinstance(head, str):
         return head
     name = getattr(head, "name", None)
-    return f"var:{name}" if name else "open"
+    if name:
+        return f"var:{name}"
+    told = {field: getattr(head, field, None)
+            for field in ("sort", "person", "number", "gender")}
+    told = {k: v for k, v in told.items() if v is not None}
+    return "open " + " ".join(f"{k}={v}" for k, v in sorted(told.items())) if told else "open"
 
 
 def rows_of(zip_, kind="content"):
@@ -181,10 +193,18 @@ def about(row) -> str:
 
 
 def _comparable(mine: str, theirs: str) -> bool:
-    """The same abstention the box pass makes: an OPEN or a VARIABLE is nobody's disagreement."""
+    """The same abstention the box pass makes: a VARIABLE, or an OPEN nobody described, is nobody's
+    disagreement.
+
+    **A DESCRIBED OPEN IS COMPARABLE** *(schema v4)*: «he» against «she» is two different claims
+    about who, and a gate that called them equal was reporting agreement it had not measured. One
+    side undescribed still abstains — «I do not know» contradicts nothing.
+    """
     if not mine or not theirs:
         return False
-    return not any(v == "open" or v.startswith("var:") for v in (mine, theirs))
+    if any(v.startswith("var:") for v in (mine, theirs)):
+        return False
+    return not any(v == "open" for v in (mine, theirs))
 
 
 @dataclass
