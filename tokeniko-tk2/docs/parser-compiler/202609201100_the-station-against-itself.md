@@ -199,5 +199,32 @@ so it said nothing. They are not the same word: `one` is the IMPERSONAL pronoun,
 number and gender are the grammar it agrees by rather than what it points at. One feature on one
 row (`db/0026`, `generic: true`).
 
+## AND THE SECOND SCHEMA CHANGE OF THE DAY, RULED IN ONE LINE
+
+I named a limitation at the end of the commit report — *the theatre is one field on the zip, so «I
+went to Rome and I will go to Genoa» cannot record both tenses* — and said that under yesterday's
+freeze I would have called it a limitation, but by today's rule it is a question with a first
+solution. **The Captain: «let's do it right away: theatre must obviously be a field per row.»**
+
+**SCHEMA v5.** The field had been documented as *«the CLAUSE's spacetime»* from the day it was
+written, and had been sitting on the Zip the whole time. It now rides on:
+
+    ContentRow    a predication happens in spacetime
+    AttitudeRow   so does a saying — «John SAID that the sky IS green» is a past saying about a
+                  present sky, and the saying's own clause dissolves into this row
+    Pov           because req 45 makes it the same mechanism in a second spelling, and a field on
+                  one and not the other would make the shorthand say less
+
+and **nowhere else**. A JOIN is a logical relation between things that have a time, not a thing with
+one — req 37 reads its arrow by comparing its halves'. A quantifier, a negation, a modality and a
+domain have none, and a slot that can only ever be empty is a slot this schema does not add.
+
+*The compiler computes it per clause head instead of once for the root; `compile_utterance` needs no
+merge rule for it any more, because every clause of every sentence keeps its own. Every number held:
+gate 63·5, fixpoint 62 of 87.*
+
+    « I went to Rome and I will go to Genoa. »  ->  « I went to rome and I will go to genoa. »
+    « John said that the sky is green. »        ->  « John said that the sky is green. »
+
 *Also named and not fixed: a proper noun is spoken lower-case, because the zip holds `john.n` and
 nothing says it is a name — **E3b** again, and E3 closes with names unresolved by design.*

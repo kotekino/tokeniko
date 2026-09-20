@@ -48,6 +48,19 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # The frozen shape. A change to anything in this module changes this number, and a zip carries the
 # number it was compiled against (req 22) — E9's translation night has to know what it is translating.
 #
+# **v5, 2026-09-20 — THE THEATRE IS PER ROW.** It was one field on the ZIP, which made «I went to
+# Rome and I will go to Genoa» unrecordable: two clauses, two times, one slot. The docstring had
+# always called it *«the CLAUSE's spacetime»* and the field had always sat somewhere else. Ruled by
+# the Captain the hour it was named — *«theatre must obviously be a field per row»* — and it goes
+# exactly where the thing it describes lives, which is v3's own lesson about the addressee.
+#
+# **ON A CONTENT ROW AND ON AN ATTITUDE, AND NOWHERE ELSE.** A predication happens in spacetime and
+# so does a saying — «John SAID that the sky IS green» is a past saying about a present sky, and
+# since an attitude's own clause dissolves into the prefix row, that row is the only place its time
+# can go. A JOIN has no time of its own: it is a logical relation between things that do, and req 37
+# reads its arrow by comparing THEIR theatres. A quantifier, a negation, a modality and a domain
+# have none either, and a slot that can only ever be empty is a slot this schema does not add.
+#
 # **v4, 2026-09-20 — WHAT IS KNOWN ABOUT WHAT IS NOT KNOWN.** `Open` said «this slot is unbound»
 # and nothing else, so three different sentences compiled to one zip: «WHO ate the fish» and «WHAT
 # ate the fish», «HE thinks» and «SHE thinks», «ITS cubs» and «HIS cubs». That is not a rendering
@@ -64,7 +77,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # adds nothing to the schema and asks the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL, i.e. a
 # closed set of verbs in code, which is what two days of this epic have been moving into rows.
 # Ruled by the Captain: the field. Record: `docs/parser-compiler/202609161349_the-person-axis.md`.
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 # --------------------------------------------------------------------------------------------------
@@ -351,6 +364,11 @@ class Pov(BaseModel):
     addressee: Box | None = None
     strength: float | None = Field(default=None, ge=0.0, le=1.0)
 
+    #: v5. WHEN the attitude is held — «John SAID» is past whatever tense its content is in. It moves
+    #: with `AttitudeRow`'s for req 45's reason: the two are one mechanism in two spellings, and a
+    #: field on one and not the other would make the shorthand say less than the explicit form.
+    theatre: "Theatre | None" = None
+
 
 # --------------------------------------------------------------------------------------------------
 # the rows
@@ -397,6 +415,10 @@ class ContentRow(_Claimable):
     """
 
     kind: Literal["content"] = "content"
+
+    #: v5. WHEN this predication is set, relative to the utterance. EMPTY when nothing said — a
+    #: tenseless zip is one the brain built for itself, and 1.0 would claim a present nobody stated.
+    theatre: "Theatre | None" = None
 
     predicate: BaseKey | Var | Open | None = None
     predicate_sense: SenseKey | Open | None = None
@@ -527,6 +549,10 @@ class AttitudeRow(_PrefixRow):
     """
 
     kind: Literal["attitude"] = "attitude"
+
+    #: v5, and it moves with `Pov`'s. «John SAID that the sky IS green» is a past saying about a
+    #: present sky, and the saying's own clause is this row.
+    theatre: "Theatre | None" = None
 
     holder: Box
     verb: BaseKey
@@ -667,7 +693,8 @@ class Zip(BaseModel):
     # understanding of an utterance that never existed (req 58).
     parse_confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
-    theatre: Theatre | None = None
+    # **THE THEATRE LEFT THIS CLASS AT v5** and went to the rows, where the clause it describes
+    # lives. One slot for a whole thought could not say «I went to Rome and I WILL GO to Genoa».
     geometry_cache: GeometryCache | None = None
 
     # Material no box fits: recorded, never compared, never given a position (req 21). NOT a slot and

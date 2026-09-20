@@ -381,7 +381,6 @@ class Compiler:
                   if row.name not in dissolved or row.name in named),
                 *extra, *joins]
         return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced),
-                                theatre=self._theatre(skeleton, root),
                                 topicality=self._topicality(skeleton, root, covered)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
                         placement=covered.as_dict(),
@@ -389,8 +388,8 @@ class Compiler:
 
     # -- when it happened, and which role was foregrounded ----------------------------------------
 
-    def _theatre(self, skeleton: Skeleton, root: Word) -> Theatre | None:
-        """WHEN the thought is set, from the tense the sentence was heard in (tkzip req 25).
+    def _theatre(self, skeleton: Skeleton, head: Word) -> Theatre | None:
+        """WHEN THIS CLAUSE is set, from the tense it was heard in (tkzip req 25).
 
         **THE STATION WAS DROPPING THE TENSE ENTIRELY.** A `tense_aspect` word was marked covered and
         compiled to nothing, so «I walked to the station» and «I walk to the station» were the same
@@ -406,19 +405,23 @@ class Compiler:
         at it, +1 after it** — which is the convention the drill already used for its one forecast
         (`aw-22`, `[1.0, 1.0, …]`). The three remaining axes are space and stay empty: nothing in a
         tense says where.
+
+        **PER CLAUSE SINCE SCHEMA v5**, on the Captain's ruling. It was computed once for the root,
+        because the field it went in was one slot on the whole zip — so «I went to Rome and I WILL GO
+        to Genoa» had to lose one of its two times, and did.
         """
-        when = self._tense(skeleton, root)
+        when = self._tense(skeleton, head)
         if when is None:
             return None
         return Theatre(interval=[when, when, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=THEATRE_EPOCH)
 
-    def _tense(self, skeleton: Skeleton, root: Word) -> float | None:
-        """The root clause's tense as a point on the theatre's time axis, or None if nothing says.
+    def _tense(self, skeleton: Skeleton, head: Word) -> float | None:
+        """This clause's tense as a point on the theatre's time axis, or None if nothing says.
 
-        The ROOT's, and only the root's: the theatre is one field on the zip, so a zip whose clauses
-        disagree can record one of them, and the one the sentence is ABOUT is the root's.
+        The clause's own head and its auxiliaries, and nothing further: a subordinate clause has its
+        own tense and «I went to Rome to SEE the sea» is not two pasts.
         """
-        carriers = [root, *(word for word in skeleton.children(root.index)
+        carriers = [head, *(word for word in skeleton.children(head.index)
                             if word.bare_dep in ("aux", "cop"))]
 
         # **THE FUTURE IS A WORD, NOT AN INFLECTION** — so the ROW is what says so, and `will`,
@@ -628,7 +631,7 @@ class Compiler:
             if word.index not in covered:
                 abstained.append(f"{word.text}: nominal with no role")
 
-        return ContentRow(name=name, predicate=predicate,
+        return ContentRow(name=name, predicate=predicate, theatre=self._theatre(skeleton, head),
                           predicate_sense=Open() if predicate else None, boxes=boxes)
 
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
@@ -1283,6 +1286,10 @@ class Compiler:
         prefix_rows.append(AttitudeRow(
             name=f"p{len(prefix_rows)}", scopes=content[head.index].name,
             holder=holder, addressee=outer_row.boxes.get(Role.RECIPIENT),
+            # **AND THE SAYING'S OWN TIME COMES WITH IT** (schema v5): «John SAID that the sky IS
+            # green» is a past saying about a present sky. The clause below dissolves into this row,
+            # so this row is the only place its tense can go.
+            theatre=outer_row.theatre,
             verb=self._key(outer)))
 
         # **AND THE CLAUSE IT CAME FROM DISSOLVES INTO IT** *(2026-09-20)*. The attitude row carries

@@ -211,7 +211,7 @@ def _differences(first, second) -> list[str]:
         return ["stanza made nothing of the decompiled sentence"]
     out = []
     was, now = first.model_dump(exclude_none=True), second.model_dump(exclude_none=True)
-    for field in ("theatre", "topicality", "unplaced"):
+    for field in ("topicality", "unplaced"):
         if was.get(field) != now.get(field):
             out.append(f"{field}: was {was.get(field)!r}, came back {now.get(field)!r}")
     before = {row["name"]: row for row in was.get("rows", [])}

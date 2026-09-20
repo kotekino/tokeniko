@@ -95,9 +95,9 @@ def _box(v) -> Box:
     return v if isinstance(v, Box) else Box(head=v)
 
 
-def c(name, predicate=None, truth=1.0, pov=None, **boxes) -> ContentRow:
+def c(name, predicate=None, truth=1.0, pov=None, theatre=None, **boxes) -> ContentRow:
     return ContentRow(
-        name=name, predicate=predicate, truth=truth, pov=pov,
+        name=name, predicate=predicate, truth=truth, pov=pov, theatre=theatre,
         boxes={Role(k): _box(v) for k, v in boxes.items()},
     )
 
@@ -791,8 +791,8 @@ case("aw-21", "Close the door!", "awkward:imperative",
              "where «please» and «would you mind» live.")
 
 case("aw-22", "It will rain tomorrow.", "awkward:forecast",
-     Zip(rows=[c("r", "rain.v", truth=0.7)],
-         theatre=Theatre(interval=[1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=1)),
+     Zip(rows=[c("r", "rain.v", truth=0.7,
+                 theatre=Theatre(interval=[1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=1))]),
      "pass", "heart 17 verbatim — same zip shape, spacetime in the future, CONFIDENCE where truth "
              "will later sit. When tomorrow comes a NEW belief is minted; this one is never rewritten.")
 

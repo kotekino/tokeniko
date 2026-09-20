@@ -77,6 +77,8 @@
       `202609191500_…`
 - [x] **the TENSE and the VOICE, which the station never wrote** *(09-20, reqs 25/26)* — theatre from
       UD's finite `Tense`, topicality from `nsubj:pass`; `db/0024` past + participle, 862 rows
+- [x] **SCHEMA v5 — the theatre is a field PER ROW** *(the Captain, 09-20)* — one slot per zip could
+      not say «I went to Rome and I WILL GO to Genoa»; on a content row and on an attitude
 - [x] **a zip came out a DAG where a sentence is a tree** *(09-20)* — coordination binds tighter, so
       a `conj` replaces the clause it extends; an attitude's own clause dissolves into it
 - [x] **`look` → agent · `die` → patient** *(09-20, `db/0025`, req 22)* — exposed when the station

@@ -283,7 +283,7 @@ def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTE
         return CompiledUtterance(zip=Zip(rows=[ContentRow(name="r0")]), sentences=0, coverage=1.0)
 
     rows, unplaced, abstained, defaulted, covered, total = [], [], [], [], 0, 0
-    theatre = topicality = None
+    topicality = None
     quoting = None          # the attitude the PREVIOUS sentence set up, if it set one up
     for position, skeleton in enumerate(skeletons):
         # **A QUOTE ROTATES AGAINST THE SENTENCE THAT INTRODUCED IT.** «John said to Marie" You are
@@ -304,17 +304,15 @@ def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTE
         defaulted.extend(compiled.defaulted)
         covered += len(compiled.covered)
         total += len(compiled.covered) + len(compiled.unplaced)
-        # **THE FIRST SENTENCE'S THEATRE AND VOICE ARE THE UTTERANCE'S.** Both are one field on the
-        # zip rather than one per row, so a merge has to choose, and the first sentence is the one
-        # the utterance is about — a later sentence that disagrees is a tense shift this format
-        # cannot yet record, and it is not recorded silently: it is simply not taken.
-        if theatre is None:
-            theatre = compiled.zip.theatre
+        # **THE FIRST SENTENCE'S VOICE IS THE UTTERANCE'S.** `topicality` is one field on the zip
+        # rather than one per row, so a merge has to choose, and the first sentence is the one the
+        # utterance is about. *The THEATRE needed no such choice after schema v5: it rides on the
+        # rows, so every clause of every sentence keeps its own time.*
         if topicality is None:
             topicality = compiled.zip.topicality
 
     return CompiledUtterance(
-        zip=Zip(rows=rows, unplaced=list(unplaced), theatre=theatre, topicality=topicality),
+        zip=Zip(rows=rows, unplaced=list(unplaced), topicality=topicality),
         sentences=len(skeletons),
         unplaced=tuple(unplaced), abstained=tuple(abstained), defaulted=tuple(defaulted),
         coverage=1.0 if not total else covered / total,

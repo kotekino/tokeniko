@@ -387,6 +387,30 @@ def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
     assert knowing.boxes[Role.EXPERIENCER].head == "captain", "and «you» is still the outer listener"
 
 
+def test_the_TENSE_reaches_the_ZIP_and_it_reaches_it_PER_CLAUSE(compiler):
+    """**The station was compiling `tense_aspect` words to NOTHING** — marked covered, dropped — so
+    «I walked to the station» and «I walk to the station» were one zip (tkzip req 25). It is read
+    from UD's FINITE word, because a participle's `Tense=Past` is its own form and not when the
+    thing happened, and it is written PER ROW (schema v5, the Captain 2026-09-20): «I went to Rome
+    and I WILL GO to Genoa» is two clauses and two times, and one slot on the zip could hold one.
+
+    *It parses for real rather than reading a hand-written skeleton, because the thing under test is
+    a FEATURE the provider supplies and the conllu fixtures carry no features at all.*
+    """
+    from tk2.language.skeleton import StanzaSkeletons
+
+    provider = StanzaSkeletons()
+    out = compile_utterance(compiler, provider("I went to Rome and I will go to Genoa."))
+    times = sorted(r.theatre.interval[0] for r in out.zip.rows
+                   if r.kind == "content" and r.theatre)
+
+    assert times == [-1.0, 1.0], f"one past and one future, and got {times}"
+
+    now = compile_utterance(compiler, provider("The cat sleeps."))
+    present = [r.theatre.interval[0] for r in now.zip.rows if r.kind == "content" and r.theatre]
+    assert present == [0.0], "the present is written down too, and not left to be assumed"
+
+
 def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
     """«that» is OPTIONAL, and without it nothing raised the POV — so «I asked: "Do you know the
     muffin man?"» CLAIMED that you know him. **The UD gate found it**, on the very example this QM

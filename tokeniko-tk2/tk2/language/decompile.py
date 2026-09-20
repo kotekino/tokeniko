@@ -204,8 +204,9 @@ class _Reading:
     #: variables whose BINDER is negated — «not every glitterer is gold». The negation is spoken at
     #: the quantifier, so the phrase is where it has to be delivered.
     negated_binders: set = field(default_factory=set)
-    #: WHEN, off the theatre's time axis. Every clause of one zip is spoken in it: the theatre is one
-    #: field on the thought, so the thought has one tense.
+    #: WHEN the clause being rendered is set, off its own theatre's time axis (schema v5). Pushed
+    #: and popped per row, because «I went to Rome and I WILL GO to Genoa» is two times in one
+    #: thought and the tense belongs to the clause, not to the utterance.
     when: float = AT
     #: WHICH ROLE the speaker foregrounded (req 27) — the voice the sentence was heard in.
     topic: object = None
@@ -434,8 +435,6 @@ class Decompiler:
         """
         out = Decompiled()
         rd = self._read(zip_, out)
-        if zip_.theatre is not None:
-            rd.when = zip_.theatre.interval[0]
         rd.topic = zip_.topicality
         sentences = []
         for row in zip_.rows:
@@ -473,6 +472,23 @@ class Decompiler:
         row = rd.rows.get(name)
         if row is None:
             return None
+        # **THE TENSE IS THE CLAUSE'S** (schema v5). Pushed for the rows under this one and popped
+        # after, so a conjunction of two times says both: «I went to Rome and I will go to Genoa».
+        outer_when, rd.when = rd.when, self._when(row)
+        try:
+            return self._say(row, name, rd, embedded)
+        finally:
+            rd.when = outer_when
+
+    @staticmethod
+    def _when(row) -> float:
+        """The point on the theatre's time axis this row is set at — the present where none is
+        given, because a tenseless row is one the brain built for itself."""
+        theatre = getattr(row, "theatre", None)
+        return AT if theatre is None else theatre.interval[0]
+
+    def _say(self, row, name: str, rd: _Reading, embedded: bool) -> _Said | None:
+        """`_render`'s body, with this row's tense already in force."""
         prefix = list(rd.prefix.get(name, []))
 
         # **A NEGATION APPLIES TO WHAT FOLLOWS IT IN SCOPE ORDER**, and where it cannot be
@@ -659,6 +675,16 @@ class Decompiler:
         gives for a join that asserts only its matrix, which is precisely what an attitude does to
         the clause under it.
         """
+        # **THE SAYING HAS ITS OWN TIME** (schema v5): «John SAID that the sky IS green». Restored
+        # before the body is appended, so what is quoted keeps the tense it was quoted in.
+        inner_when, rd.when = rd.when, self._when(element)
+        try:
+            return self._attitude_said(element, body, negated, rd, inner_when)
+        finally:
+            rd.when = inner_when
+
+    def _attitude_said(self, element, body: _Said, negated: bool, rd: _Reading,
+                       inner_when: float) -> _Said | None:
         agreement = self._agreement(element.holder, rd)
         holder = self._phrase(element.holder, rd, case=NOMINATIVE)
         if not holder:
@@ -687,6 +713,7 @@ class Decompiler:
                 said.append(f"{to} {spoken}" if to else spoken)
         if element.strength is not None:
             rd.out.unsaid.append(f"{element.name}: a strength of {element.strength} is not spoken")
+        rd.when = inner_when
         complementizer = self._complementizer(body)
         said.append(f"{complementizer} {body.text}" if complementizer else body.text)
         return _Said(" ".join(said), "." if body.mark != "?" else "?")

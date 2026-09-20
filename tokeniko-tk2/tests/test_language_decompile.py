@@ -27,6 +27,7 @@ from tk2.tkzip.schema import (
     Quantity,
     QuantifierRow,
     Role,
+    Theatre,
     Var,
     Zip,
 )
@@ -271,6 +272,41 @@ def test_a_modifier_does_NOT_fold_out_of_an_implication(decompiler):
     ]))
 
     assert out.text == "Because every person lies, the person is wrong."
+
+
+def test_each_clause_is_spoken_in_ITS_OWN_TENSE(decompiler):
+    """**THE REASON THE THEATRE MOVED ONTO THE ROWS** (schema v5, the Captain 2026-09-20). One slot
+    for a whole thought could not say «I went to Rome and I WILL GO to Genoa»: two clauses, two
+    times. The field had always been documented as «the CLAUSE's spacetime» and had always sat
+    somewhere else."""
+    def when(at):
+        return Theatre(interval=[at, at, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=1)
+
+    out = decompiler.decompile(Zip(rows=[
+        ContentRow(name="a", truth=1.0, predicate="go.v", theatre=when(-1.0),
+                   boxes={Role.AGENT: Box(head="anna.n"),
+                          Role.DESTINATION: Box(head="rome.n", marker="to")}),
+        ContentRow(name="b", truth=1.0, predicate="go.v", theatre=when(1.0),
+                   boxes={Role.AGENT: Box(head="anna.n"),
+                          Role.DESTINATION: Box(head="genoa.n", marker="to")}),
+        JoinRow(name="j", truth=1.0, operator=Operator.AND, operands=["a", "b"]),
+    ]))
+
+    assert out.text == "Anna went to rome and anna will go to genoa.", (
+        "the past is an inflection and the future is a word, and each clause keeps its own")
+
+
+def test_an_ATTITUDE_carries_its_own_time_and_not_its_content_s(decompiler):
+    """«John SAID that the sky IS green» — a past saying about a present sky. The saying's own
+    clause dissolves into the attitude row, so that row is the only place its tense can go."""
+    out = decompiler.decompile(Zip(rows=[
+        AttitudeRow(name="p", scopes="r", holder=Box(head="john.n"), verb="say.v",
+                    theatre=Theatre(interval=[-1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=1)),
+        row("r", patient=Box(head="sky.n", determination=Determination.DEFINITE),
+            complement="green.a"),
+    ]))
+
+    assert out.text == "John said that the sky is green."
 
 
 # ------------------------------------------------------------------------------------------------
