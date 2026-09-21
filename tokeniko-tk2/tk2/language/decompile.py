@@ -1258,7 +1258,9 @@ class Decompiler:
         # and there is no separate word for the persons — the restriction says only what the phrase
         # said (`Open(sort='person')`, schema v4) and English fuses the two into one word. The rows
         # carry both halves already: every fused form has its `sort` beside its quantity.
-        if isinstance(restriction.head, Open) and restriction.head.sort:
+        if isinstance(restriction.head, Open) and restriction.head.sort and binder.quantity:
+            # **A BINDER WITHOUT A QUANTITY FUSES WITH NOTHING** (schema v8): «nobody» is a QUANTITY
+            # and a sort in one word, and a binder that quantifies nothing has only half of that.
             fused = self._fused(binder.quantity, restriction.head.sort)
             if fused is None:
                 rd.out.unsaid.append(f"a {binder.quantity.value} over "

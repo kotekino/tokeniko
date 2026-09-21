@@ -642,7 +642,12 @@ def test_a_relative_clause_on_a_QUANTIFIED_phrase_reuses_the_binders_variable(co
     assert sleeping.boxes[Role.AGENT].head == bound, "the binder's variable, not a second name"
     assert any(box.head == bound for box in happy.boxes.values()), "the same cat, twice"
     assert sleeping.truth is None and happy.truth == 1.0
-    assert compiler.compile(RELATIVE).zip.rows[0].truth == 1.0, (
+    # **BY KIND, NOT BY POSITION.** Schema v8 gave the referring phrase a binder of its own — «the
+    # cat that sleeps» is one cat described twice and the variable is how the zip says so — and a
+    # prefix row sorts ahead of the content, so `rows[0]` stopped being the clause this asks about.
+    # The claim it makes is unchanged, and it is the one the compiler pins deliberately.
+    referring = rows_of(compiler.compile(RELATIVE), "content")
+    assert all(row.truth == 1.0 for row in referring), (
         "a relative clause on a REFERRING phrase is presupposed content, and stays claimed")
 
 
@@ -1504,3 +1509,70 @@ def test_a_QUANTIFIED_phrase_carries_its_number_on_the_RESTRICTION(compiler):
 
     assert isinstance(box.head, Var) and box.number is None
     assert binder.restriction.head == "cat.n" and binder.restriction.number == "pl"
+
+
+def test_a_RELATIVE_clause_on_a_referring_phrase_BINDS_its_variable():
+    """«The cat that sleeps is happy» is ONE cat described twice, and req 36 says a shared variable
+    is how a zip says «the same one». There was no binder to share, so this branch minted a variable
+    and bound it with nothing — and **threw the noun away**, because a binder's `restriction` is the
+    only place a shared noun can live:
+
+        r0  sleep.v     agent       = Var(y2)
+        r1  happy.a     experiencer = {definite, sg, head: Var(y2)}      <- cat.n is GONE
+
+    The zip said «the definite singular thing that sleeps is happy». Schema v8 lets a binder
+    introduce a variable **without quantifying it**, which is what this phrase does: it quantified
+    nothing, and inventing a force from the determination would say more than the sentence did.
+    """
+    from tk2.language import StanzaSkeletons
+    from tk2.language.utterance import compile_utterance
+    from tk2.tkzip.schema import QuantifierRow
+    from tools.drill_gate import DRILL_CONTEXT
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    zip_ = compile_utterance(compiler, provider("The cat that sleeps is happy."),
+                             DRILL_CONTEXT).zip
+
+    binders = [row for row in zip_.rows if isinstance(row, QuantifierRow)]
+    assert len(binders) == 1, "the shared variable has no binder"
+    binder = binders[0]
+
+    assert binder.quantity is None, "the phrase quantified nothing and the zip must not say it did"
+    assert binder.restriction.head == "cat.n", "the noun must survive, in the restriction"
+    assert binder.restriction.determination is Determination.DEFINITE
+
+    used = {box.head.name for row in zip_.rows if getattr(row, "boxes", None)
+            for box in row.boxes.values() if isinstance(box.head, Var)}
+    assert used == {binder.binds}, f"{used - {binder.binds}} are bound by nothing"
+
+
+def test_no_drill_sentence_compiles_to_a_FREE_VARIABLE():
+    """A variable nothing binds is not a rendering problem — it is a MALFORMED ZIP, and the
+    decompiler is right to refuse it. This walks the whole corpus because the defect above reached
+    only one drill sentence (`t-dc-4`) while breaking a whole construction: «the cat that sleeps»,
+    «the man who ate the fish», «minds you trust».
+    """
+    from tests.fixtures.drill import CASES as DRILL
+    from tk2.language import StanzaSkeletons
+    from tk2.language.utterance import compile_utterance
+    from tk2.tkzip.schema import QuantifierRow
+    from tools.drill_gate import DRILL_CONTEXT
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    loose = []
+    for drill_case in DRILL:
+        skeletons = provider(drill_case.sentence)
+        if not skeletons:
+            continue
+        zip_ = compile_utterance(compiler, skeletons, DRILL_CONTEXT).zip
+        bound = {row.binds for row in zip_.rows if isinstance(row, QuantifierRow)}
+        used = {box.head.name for row in zip_.rows if getattr(row, "boxes", None)
+                for box in row.boxes.values() if isinstance(box.head, Var)}
+        used |= {row.restriction.head.name for row in zip_.rows
+                 if isinstance(row, QuantifierRow) and isinstance(row.restriction.head, Var)}
+        if used - bound:
+            loose.append((drill_case.id, sorted(used - bound)))
+
+    assert not loose, f"{loose} name variables no row binds"

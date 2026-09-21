@@ -195,3 +195,49 @@ def test_parse_confidence_may_be_empty():
     """Self-talk invokes no parser; 1.0 would claim perfect understanding of an utterance that never
     happened (req 58)."""
     assert _cat_sleeps().parse_confidence is None
+
+
+def test_a_NUMBER_is_sg_or_pl_or_either_and_the_format_refuses_the_rest():
+    """**ONE COLUMN MUST NOT CARRY TWO FACTS, AND THE FORMAT IS WHERE THAT IS ENFORCED.**
+
+    `both` · `neither` · `either` · `each other` carried `number: dual` in the closed-class rows,
+    meaning *this word is about exactly TWO* — a fact about the SET, not the grammatical number of
+    anything. `Compiler._unknown()` copies a row's `number` into the OPEN a described unknown
+    carries (schema v4), so «I saw both» and «They praised each other» compiled to
+    `Open(number='dual')`: a value the field's own docstring did not admit, sitting in a zip, with
+    nothing able to say it back. Both decompiled to the empty string.
+
+    `db/0030` moved the cardinality onto `count`, which is the column the table already uses for HOW
+    MANY. This is the other half: **the next such value raises where it is WRITTEN** instead of
+    travelling to where it cannot be read.
+
+    *`either` is admitted and is a real answer — English's «you» does not distinguish, and a zip
+    recording «the speaker used a word that does not tell us» is saying something different from a
+    zip that says nothing at all.*
+    """
+    for good in ("sg", "pl", "either"):
+        assert Open(number=good).number == good
+        assert Box(head="cat.n", number=good).number == good
+
+    for bad in ("dual", "plural", "SG", "2"):
+        with pytest.raises(ValidationError):
+            Open(number=bad)
+        with pytest.raises(ValidationError):
+            Box(head="cat.n", number=bad)
+
+
+def test_no_closed_class_row_carries_a_number_the_format_refuses():
+    """The guard above only helps if nothing is trying to write one. `_unknown()` copies `number`
+    off a row without looking, so a row and the schema disagreeing is a compile that cannot produce
+    a valid zip — which is exactly what «I saw both» was."""
+    from typing import get_args
+
+    from tk2.language import standing_closed_classes
+    from tk2.tkzip.schema import Number
+
+    legal = (None, *get_args(Number))
+    rows = standing_closed_classes()._rows                       # noqa: SLF001
+    illegal = [(row["form"], (row.get("features") or {}).get("number")) for row in rows
+               if (row.get("features") or {}).get("number") not in legal]
+
+    assert not illegal, f"{illegal} would be written into an `Open` the schema refuses"

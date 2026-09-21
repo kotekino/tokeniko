@@ -165,7 +165,10 @@ def says_what(row) -> dict[str, str]:
     if row.kind == "domain":
         return {"domain": filler(row.domain)}
     if row.kind == "quantifier":
-        return {"quantity": row.quantity.value, "restriction": filler(row.restriction)}
+        # schema v8: a binder may introduce a variable without quantifying it, and None is what it
+        # says — never a value this function invents so the comparison looks tidier.
+        return {"quantity": row.quantity.value if row.quantity else None,
+                "restriction": filler(row.restriction)}
     return {}                                     # a negation says only that it is there
 
 

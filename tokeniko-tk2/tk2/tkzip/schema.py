@@ -89,7 +89,40 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # adds nothing to the schema and asks the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL, i.e. a
 # closed set of verbs in code, which is what two days of this epic have been moving into rows.
 # Ruled by the Captain: the field. Record: `docs/parser-compiler/202609161349_the-person-axis.md`.
-SCHEMA_VERSION = 6
+# **v7, 2026-09-21 — A NUMBER IS `sg` OR `pl`, AND THE FORMAT NOW REFUSES ANYTHING ELSE.** The
+# column was `str | None`, and `both` · `neither` · `either` · `each other` carry `number: dual` in
+# the closed-class rows — meaning *this word is about exactly TWO*, which is a fact about the SET
+# and not the grammatical number of anything. `Compiler._unknown()` copies a row's `number` into the
+# OPEN a described unknown carries (v4), so «I saw both» and «They praised each other» were
+# compiling to `Open(number='dual')`: a value the field's own docstring does not admit, sitting in a
+# zip, with nothing able to say it back.
+#
+# **The fourth time in two days that one column carried two facts** — after the fused quantifier
+# (`db/0028`), the determiner's number (`db/0029`, where it was `takes_number` that had to be told
+# apart from `number`), and the described unknown itself. Every one of them was a value written by a
+# writer who meant something else, and every one was invisible until something downstream choked.
+#
+# A `Literal` is the cheap half of the answer: the format refuses what it cannot mean, so the next
+# such value raises where it is WRITTEN instead of travelling. `db/0030` is the other half, moving
+# the cardinality onto `count`, which is the column the table already uses for HOW MANY (`once` 1,
+# `twice` 2) and which nothing on the unknown's path reads.
+# **v8, 2026-09-21 — A BINDER MAY INTRODUCE A VARIABLE WITHOUT QUANTIFYING IT.** `quantity` was
+# required, and a relative clause on a REFERRING phrase has no quantifier to take it from: «the cat
+# that sleeps is happy» is one cat described twice, and req 36 says the variable is how a zip says
+# «the same one». With no binder available the compiler minted a variable and bound it with nothing
+# — so the clause referred to `y2`, the main clause referred to `y2`, **and `cat.n` was thrown away
+# entirely**, because the restriction is the only place a binder's noun can live.
+#
+# The alternative was to keep `quantity` required and give the phrase `EXISTENTIAL` beside its
+# `determination`. That fields exist for it is true (req 26 splits the two precisely so «the three
+# cats» can be definite AND counted), but it would make the COMPILER invent a logical force from a
+# determination — definite becomes existential, generic becomes universal? — for phrases whose
+# sentence stated none. Saying more than the zip does is the sin req 8 names, and it is no better
+# for being committed on the way in. **Ruled by the Captain.**
+#
+# So: a binder with no `quantity` introduces and restricts a variable and claims no force. The
+# `determination` the speaker DID state rides on the restriction, as it always has.
+SCHEMA_VERSION = 8
 
 
 # --------------------------------------------------------------------------------------------------
@@ -106,6 +139,16 @@ SenseKey = Annotated[str, Field(min_length=1)]
 # names never cross thoughts (req 64), so a cross-thought reference is a document id, not a name.
 RowName = Annotated[str, Field(min_length=1)]
 VarName = Annotated[str, Field(min_length=1)]
+
+# v7. Grammatical number: what the SPEAKER marked on a word. Never how many things are in a set —
+# that is `count`, and it is what `dual` meant on the rows that used to put it here.
+#
+# **`either` IS THE THIRD ANSWER AND IT IS A REAL ONE.** English's «you» does not distinguish, and
+# the table has said so since v1 with the same word its `case` column uses for the same idea; the
+# decompiler's `_agrees()` has always read it as *matches whatever is asked*. So a zip may record
+# that the speaker used a word that does not tell us — which is a different fact from the sentence
+# saying nothing at all, and the round trip needs to keep them apart.
+Number = Literal["sg", "pl", "either"]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -157,7 +200,7 @@ class Open(BaseModel):
     #: `sort` is the interrogative's own restriction — «who» asks for a person, «what» for a thing.
     sort: str | None = None
     person: int | None = None
-    number: str | None = None
+    number: Number | None = None
     gender: str | None = None
 
     @property
@@ -339,7 +382,8 @@ class Box(BaseModel):
     #: v6. The grammatical number the speaker used — `sg` or `pl`. EMPTY where nothing said it: a
     #: mass noun has none, and neither does a box the brain built for itself. Orthogonal to `count`
     #: (a numeral) and to `determination` (which ones), exactly as req 26 keeps those two apart.
-    number: str | None = None
+    #: **v7 made it a `Literal`**, after `dual` reached a zip through it.
+    number: Number | None = None
 
     # The preposition actually used, as a lemma (req 65). The marker words are already
     # `language_closed_classes` rows, so this records WHICH ROW WAS MATCHED, not new knowledge.
@@ -514,7 +558,11 @@ class QuantifierRow(_PrefixRow):
     kind: Literal["quantifier"] = "quantifier"
 
     binds: VarName
-    quantity: Quantity
+
+    #: v8. EMPTY where the phrase quantified nothing — «the cat that sleeps» needs a variable so the
+    #: relative clause and the main clause can be about one cat, and it states no logical force. A
+    #: reader that wants to know «how many» asks this and gets the honest answer, including None.
+    quantity: Quantity | None = None
     count: int | Open | None = None
     determination: Determination | None = None
 

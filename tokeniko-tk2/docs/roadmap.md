@@ -114,8 +114,22 @@
 - [x] **⚑ a quantifier's voice depends on the NUMBER of its noun** *(the Captain, 09-21, req 9)* —
       «every cat» · «all cats»: `db/0029`, measured on 547 tk1 journeys (every 7–0 sg, all 24–0 pl).
       `takes_number`, NOT `number` — that column is the unknown's own and the gate caught the clash
+- [x] **⚑ SCHEMA v7 — a number is `sg`·`pl`·`either`, and the format refuses the rest** *(the
+      Captain, 09-21, req 2)* — `both`·`neither`·`either`·`each other` said `number: dual` meaning
+      HOW MANY, and `_unknown` wrote it into zips. `db/0030` moves it to `count`. 4th same defect
+- [ ] **a quantifier's DOMAIN CARDINALITY is not in the zip** *(09-21, known loss)* — «Neither is
+      late» reads back as a bare negative: well-formed and silent where it was malformed and
+      silent. `Box.count` is where it goes, once the decompiler has a voice for it
+- [ ] **«one another» keeps `number: pl`** *(09-21)* — same column confusion as `dual` (it is the
+      GROUP's size) but `pl` is admissible and arguable, so it was left rather than judged
 - [ ] **⚑ «Every human being is an animal» → «An animal is.»** *(09-21, PRE-DATES `Box.number`)* —
       the subject vanishes from a universal with a predicate nominal; not diagnosed
+- [x] **⚑ SCHEMA v8 + the relative clause's COMPILER half** *(the Captain, 09-21, req 36)* — a
+      binder may introduce a variable without QUANTIFYING it; «the cat that sleeps» minted a free
+      variable and threw `cat.n` away. 0 of 87 zips now name a variable nothing binds
+- [ ] **⚑ the relative clause's DECOMPILER half** *(09-21)* — «The cat that sleeps is happy» says
+      back «The cat sleeps. The cat is happy.»: faithful to the zip, two sentences instead of one
+      phrase. `_share_variable`'s inverse; `aw-13`/`aw-14` and `t-dc-4` wait on it
 - [ ] **⚑ a binder the decompiler cannot say** *(09-21, exposed by `aw-13`/`aw-14`)* — «all» gives a
       bare OPEN and the narrowing lives in a row SHARING the variable, so the phrase comes out empty
       and the clause is refused: `_share_variable` needs its inverse. Both cases go SILENT

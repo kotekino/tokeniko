@@ -1415,13 +1415,26 @@ class Compiler:
         else:
             name = f"y{len(prefix_rows) + len(content)}"
             if box is not None and role is not None:
-                outer_row.boxes[role] = Box(
-                    head=Var(name=name), sense=Open(), determination=box.determination,
-                    quantity=box.quantity, marker=box.marker, relation=box.relation,
-                    # The NOUN leaves this box and its variable stays, but what the speaker said
-                    # ABOUT the phrase does not stop being true — «the CATS that sleep» is plural
-                    # whoever says it back. Carried for the same reason `determination` is.
-                    number=box.number)
+                # **A SHARED VARIABLE NEEDS A BINDER, AND THE BINDER IS WHERE THE NOUN LIVES**
+                # *(schema v8, 2026-09-21)*. This branch used to mint the variable and bind it with
+                # nothing: «the cat that sleeps is happy» left `y2` free in two rows **and threw
+                # `cat.n` away**, because a binder's restriction is the only place a shared noun can
+                # live and there was no binder. The zip said «the definite singular thing that
+                # sleeps is happy» and the decompiler, rightly, refused to say it.
+                #
+                # The binder claims **no quantity**: the phrase quantified nothing, and inventing a
+                # force from the determination would say more than the sentence did (req 8). What
+                # the speaker DID state — `determination`, `number`, a possessor — rides on the
+                # restriction, which is the box the noun was already in.
+                #
+                # The `marker` stays OUTSIDE: «You learn only FROM minds you trust» marks this
+                # phrase's role in ITS clause, not the range of the variable.
+                outer_row.boxes[role] = Box(head=Var(name=name), sense=Open(),
+                                            marker=box.marker)
+                if prefix_rows is not None:
+                    prefix_rows.append(QuantifierRow(
+                        name=f"q{len(prefix_rows)}", scopes=outer_row.name, binds=name,
+                        restriction=box.model_copy(update={"marker": None})))
 
         for filled, box in list(inner.boxes.items()):
             if isinstance(box.head, Open) or box.head is None:
@@ -1430,6 +1443,11 @@ class Compiler:
         else:
             inner.boxes[Role.AGENT] = Box(head=Var(name=name), sense=Open())
 
+        # **ONLY A QUANTIFIER'S BINDER MAKES THE CLAUSE A RESTRICTION.** `binder` is deliberately
+        # still None on the branch above, which mints one: «every cat that sleeps» does not say any
+        # cat sleeps, and «the cat that sleeps» DOES — a definite description commits the speaker to
+        # it, and the brain should get the fact. Keying this on «is there a binder» would have
+        # reversed that the moment schema v8 gave the second case a binder too.
         if binder is not None and unasserted is not None:
             unasserted.add(inner.name)
         # The relative pronoun IS the variable — «the cat THAT sleeps» has no third participant.

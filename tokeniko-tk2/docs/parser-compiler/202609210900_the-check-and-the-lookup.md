@@ -278,3 +278,129 @@ numberless box reached the slot no measured row occupies and came back **«Each 
 
     fixpoint    66 of 87 · 18 MOVED · 3 SILENT      56 of the 70 read whole
     drill gate  65 agreed · 5 DISAGREED · 17        the same pinned five
+
+---
+
+# AND A FOURTH: `dual` WAS NEVER A NUMBER
+
+*The Captain: «we should tackle it asap».*
+
+Found while reviewing `db/0029` — and it is the same defect a fourth time. Four closed-class rows
+carried `number: "dual"`:
+
+    both        the domain has exactly TWO        each other   the reciprocal group is two
+    neither     ... and neither of them           either       ... and one of them
+
+That is **how many things are in the set this word is about** — a fact about the SET, not the
+grammatical number of anything. And `Compiler._unknown()` copies a row's `number` into the OPEN a
+described unknown carries (schema v4), so it travelled:
+
+    « I saw both. »                 restriction: {head: {number: 'dual'}}   ->  «  »
+    « They praised each other. »    patient:     {head: {number: 'dual'}}   ->  «  »
+
+A value the field's own docstring did not admit, sitting in a zip, in two different roles, with
+nothing able to say it back.
+
+## THE FIX IS IN TWO HALVES AND ONLY ONE OF THEM IS THE MIGRATION
+
+**Schema v7** makes `number` a `Literal`, so the format refuses what it cannot mean and **the next
+such value raises where it is WRITTEN** rather than travelling to where it cannot be read. That is
+the half that stops this recurring; `db/0028` and `db/0029` both had to be caught downstream by an
+instrument, and this one need not be.
+
+**`db/0030`** moves the cardinality to `count` — the column the table *already* uses for how many
+(`once` 1, `twice` 2), which `_fused()` already reads to refuse a word that says more than a bare
+quantity, and which nothing on the unknown's path touches. The fact keeps its meaning and stops
+travelling.
+
+## THE MIGRATION'S OWN GUARD FOUND SOMETHING THE REVIEW HAD NOT
+
+Asserting that no row carries a `number` the schema refuses immediately failed on **`you` · `your` ·
+`yours`, which carry `number: "either"`** — and that one is *right*. English's «you» does not
+distinguish, the table has said so since v1, and `_agrees()` has always read `either` as *matches
+whatever is asked*. A zip recording «the speaker used a word that does not tell us» says something
+different from a zip that says nothing at all, and the round trip needs them apart.
+
+So v7 admits three values, not two. **`dual` is not a narrower `number`; it is not a number.**
+
+    fixpoint    66 of 87 · 18 MOVED · 3 SILENT      56 of the 70 read whole — unmoved
+    drill gate  65 agreed · 5 DISAGREED · 17        the pinned five — unmoved
+    tests       185 passed across the five affected files
+
+## A KNOWN LOSS, RECORDED RATHER THAN PAPERED OVER
+
+The zip still does not carry a quantifier's domain cardinality, so «Neither is late» reads back as a
+bare negative. It is now **well-formed and silent where it was malformed and silent** — an honest
+gap instead of a broken record. `Box.count` on the restriction is where it goes, and that wants the
+decompiler to have a voice for it first.
+
+*«one another» keeps `number: pl`. It is the same column confusion — the size of the GROUP — but
+`pl` is a value the schema admits and «one another is plural» is at least arguable, so changing it
+would be a judgement on no evidence, which is the thing this migration exists to undo.*
+
+---
+
+# SCHEMA v8 — A BINDER MAY INTRODUCE A VARIABLE WITHOUT QUANTIFYING IT
+
+*The relative clause, compiler half. The Captain: «Following your lean on C».*
+
+**The `else` branch of `_share_variable` minted a variable and bound it with nothing** — found by
+the 1st Officier while deciding an unrelated deviation, and undiagnosed until now. It is two
+defects with one cause:
+
+    « The cat that sleeps is happy. »
+       r0  sleep.v   agent       = Var(y2)
+       r1  happy.a   experiencer = {definite, sg, head: Var(y2)}      FREE: y2
+
+`y2` is bound by nothing — **and `cat.n` is gone**, because a binder's `restriction` is the only
+place a shared noun can live and there was no binder. The zip said *«the definite singular thing
+that sleeps is happy»*, and the decompiler was right to refuse it.
+
+**Reach: 1 of 87 drill sentences** (`t-dc-4` «You learn only from minds you trust» → «You learn
+only.») **and a whole construction class** — «the man who ate the fish» → «I know.» Small in the
+corpus, structural in the format, which is why it was worth a schema version.
+
+## WHY NOT REUSE `EXISTENTIAL`
+
+`QuantifierRow.quantity` was required, `Quantity`'s four values are all genuine logical forces, and
+none of them is «a definite description». The cheaper option was `quantity=EXISTENTIAL` beside
+`determination=DEFINITE` — the fields exist, req 26 splits them precisely so «the three cats» can be
+definite AND counted, and req 36 says the one binding mechanism serves «quantification, questions,
+equations and naming».
+
+**It was refused because it makes the COMPILER invent a logical force.** Definite becomes
+existential, generic becomes universal — judgements the sentence never stated, written into the zip
+on the way in. Saying more than the zip does is the sin req 8 names, and committing it in the
+compiler rather than the decompiler does not make it smaller. *A fifth `Quantity: DEFINITE` was
+rejected on sight: definiteness is what `Determination` is for, and putting it in both is
+one-column-two-facts a fifth time in two days.*
+
+So a binder may now claim **no quantity**. What the speaker did state rides on the restriction,
+which is the box the noun was already in.
+
+## THE RULE THAT HAD TO BE PINNED WHILE DOING IT
+
+The 1st Officier's §4.5 — *a relative clause sharing a BINDER's variable is unasserted, because a
+restriction is stated and not claimed* — keys on **«is there a binder»**. Giving the referring case
+a binder of its own would have silently flipped it, reversing a decision reviewed and recorded the
+same morning: «every cat that sleeps» does not say any cat sleeps, and «the cat that sleeps» DOES.
+The minted binder is deliberately kept out of that variable, and the reason is now a comment beside
+the line rather than an accident of control flow.
+
+    free variables   1 of 87 -> 0 of 87
+    fixpoint         66 of 87 · 18 MOVED · 3 SILENT — unmoved
+    drill gate       65 agreed · 5 DISAGREED · 17 — unmoved
+    tests            91 + 205 passed across the affected files
+
+*A test of the officer's asserted `rows[0]` and had to be re-pointed: a prefix row sorts ahead of
+the content, so the row it asked about moved. The claim it makes is unchanged — and it is now
+checked by kind rather than by position, which is what it always meant.*
+
+## WHAT THE DECOMPILER OWES
+
+    « The cat that sleeps is happy. »  ->  « The cat sleeps. The cat is happy. »
+    « You learn only from minds you trust. » -> « You learn only from minds. The minds trust. »
+
+Faithful to the zip and not yet English: two asserted rows sharing a variable, said as two
+sentences instead of one phrase with a relative clause. That is `_share_variable`'s inverse, and it
+is the next piece.
