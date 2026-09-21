@@ -86,19 +86,48 @@
 - [x] **⚑ the placement rule, in place of a number** *(09-19, dictionary req 22)* — a stated
       edge is trusted, the sibling fallback and D abstain; 19.4% coverage, 0 wrong trusts
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
-- [ ] **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — joins ·
+- [x] **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — joins ·
       quantifiers · prefix · questions · the person axis · tense · voice all built; **fixpoint
-      24 → 62 of 87** (52 of the 69 the compiler reads whole). Record `202609201100_…`
+      24 → 66 of 87** (56 of the 70 the compiler reads whole). Record `202609201100_…`
 - [x] **SCHEMA v4 — an OPEN slot says what is known about the unknown** *(the Captain, 09-20, req 27)*
       — `sort`·`person`·`number`·`gender`; three kinds of unknown, no heuristic. `db/0026`. **And
       tkzip req 73 rewritten: there are no frozen schemas in a blueprint**
-- [ ] **the fixpoint's 17 remaining** — the decompiler's own, on sentences the compiler read whole
+- [x] **⚑ `fused_quantifier` — «no» takes a noun and «nobody» IS one** *(09-21, req 9)* — `db/0028`
+      flagged five voices onto three occupied index slots in silence; the role now splits them and
+      the ratchet is a count. Record `202609210900_…`
+- [x] **SCHEMA v6's compiler half — `Box.number` from UD's `Number`** *(09-21, 1st Officier, req 26)*
+      — `t-md-1` «Software can be minds» round-trips at last; a PROPER noun takes none, because its
+      number is a fact about the REFERENT and names are E3b. `db/0027`'s plurals are live
+- [x] **⚑ the existential copula agrees with what it displaced** *(09-21, found by the 1st Officier)*
+      — «There is no cats», then «There be no cats»: `be` was on the regular-verb path, where a
+      non-third-singular is spoken as the bare lemma. An existential is not flagged copular (req 31)
+- [ ] **the fixpoint's 14 remaining** — 11 MOVED · 3 SILENT, all on sentences the compiler read whole
+- [x] **⚑ SILENT 1 → 3 and 69 → 67 whole were ONE fact, and the instrument's** *(09-21)* —
+      `aw-13`/`aw-14` went MOVED → SILENT; a silent case printed only under `--all` and was
+      SUBTRACTED from the read-whole population. The honest denominator is 70 and always was
+- [x] **⚑ `aw-13`/`aw-14` — «All that glitters is not gold» binds the quantifier to the PREDICATE
+      NOMINAL** and orphans the relative clause's row; the first 1st-Officier task — the COMPILER
+      half is fixed and both agree at the gate; ticked 09-21
+- [ ] **a DEFINITE's relative clause stays claimed, and it is a presupposition** *(09-21, QM review
+      of the 1st Officier's §4.5)* — «the cat that sleeps» survives its own denial, so it is not
+      asserted either; kept claimed deliberately so the brain gets the fact. Write it down
+- [x] **⚑ a quantifier's voice depends on the NUMBER of its noun** *(the Captain, 09-21, req 9)* —
+      «every cat» · «all cats»: `db/0029`, measured on 547 tk1 journeys (every 7–0 sg, all 24–0 pl).
+      `takes_number`, NOT `number` — that column is the unknown's own and the gate caught the clash
+- [ ] **⚑ «Every human being is an animal» → «An animal is.»** *(09-21, PRE-DATES `Box.number`)* —
+      the subject vanishes from a universal with a predicate nominal; not diagnosed
+- [ ] **⚑ a binder the decompiler cannot say** *(09-21, exposed by `aw-13`/`aw-14`)* — «all» gives a
+      bare OPEN and the narrowing lives in a row SHARING the variable, so the phrase comes out empty
+      and the clause is refused: `_share_variable` needs its inverse. Both cases go SILENT
 - [ ] **anaphora → E3b** *(the Captain, 09-20)* — «she» has its features since v4; what is missing is
       that Marie is feminine, which is a named individual's ATTRIBUTE. Gate reds `q-6` · `t-dc-5`
 - [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
       trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
-- [ ] confidence scalar (coverage + repairs; round-trip escalation-only)
-- [ ] drill automated = acceptance gate
+- [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
+      (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
+      DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 14 above**
+- [x] **drill automated = acceptance gate** *(ticked 09-20 — it was already met)* — `tests/test_drill.py`
+      scores the bar, keeps the forced-change ledger and prints the report on every suite run
 - [ ] **⚑ the frame/knowledge audit — E3's closing act.** Suspect already: `RELATION_FILLS_ROLE` ·
       `CLAUSE_DEPS` · `UD_DEP_TO_ROLE` · `UD_POS_TO_WORD_CLASS` · `CLAIMED = 1.0` · `SAYING_VERBS` ·
       `COORDINATE_DEPS` · `SUBJECT_DEPS` · `OBJECT_DEPS` · `COMPLEMENT_CLAUSE_DEPS` · `QUESTION_MARK` ·

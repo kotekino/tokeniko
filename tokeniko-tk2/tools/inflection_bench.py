@@ -30,13 +30,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tk2.language.inflect import (  # noqa: E402
-    PARTICIPLE, PAST, PRESENT, participle_rule, past_tense_rule, present_tense_rule,
+    PARTICIPLE, PAST, PLURAL, PRESENT, participle_rule, past_tense_rule, plural_rule,
+    present_tense_rule,
 )
 
-RULES = {PRESENT: present_tense_rule, PAST: past_tense_rule, PARTICIPLE: participle_rule}
+RULES = {PRESENT: present_tense_rule, PAST: past_tense_rule, PARTICIPLE: participle_rule,
+         PLURAL: plural_rule}
+#: Which part of speech each tag inflects, which decides both resources it is measured against.
+PART = {PRESENT: "v", PAST: "v", PARTICIPLE: "v", PLURAL: "n"}
 
 
-def wordnet_exceptions() -> dict[str, set[str]]:
+def wordnet_exceptions(part: str = "v") -> dict[str, set[str]]:
     """`lemma -> every irregular form Princeton records for it`. Read straight from the corpus zip.
 
     The file maps INFLECTED -> LEMMA and says nothing about which tag each form carries; that is
@@ -47,7 +51,8 @@ def wordnet_exceptions() -> dict[str, set[str]]:
 
     found: dict[str, set[str]] = {}
     with zipfile.ZipFile(str(nltk.data.find("corpora/wordnet.zip"))) as archive:
-        for line in archive.read("wordnet/verb.exc").decode().splitlines():
+        name = {"v": "verb", "n": "noun"}[part]
+        for line in archive.read(f"wordnet/{name}.exc").decode().splitlines():
             parts = line.split()
             if len(parts) < 2:
                 continue
@@ -56,11 +61,11 @@ def wordnet_exceptions() -> dict[str, set[str]]:
     return found
 
 
-def lemmas() -> list[str]:
+def lemmas(part: str = "v") -> list[str]:
     from nltk.corpus import wordnet as wn
 
     return sorted({lemma.name().lower().replace("_", " ")
-                   for synset in wn.all_synsets("v") for lemma in synset.lemmas()})
+                   for synset in wn.all_synsets(part) for lemma in synset.lemmas()})
 
 
 def run(argv=None) -> int:
@@ -71,16 +76,18 @@ def run(argv=None) -> int:
 
     from lemminflect import getInflection
 
-    exceptions = wordnet_exceptions()
-    words = [word for word in lemmas() if " " not in word and "-" not in word]
     print("=" * 96)
     print("THE INFLECTION BENCH — the rule, lemminflect, and WordNet's own exception list")
     print("=" * 96)
-    print(f"  lemmas            {len(words)} single-word verb lemmas in WordNet")
-    print(f"  exception list    {len(exceptions)} lemmas with an irregular form recorded\n")
 
-    for tag in ([args.tag] if args.tag else [PRESENT, PAST, PARTICIPLE]):
+    for tag in ([args.tag] if args.tag else [PRESENT, PAST, PARTICIPLE, PLURAL]):
         rule = RULES[tag]
+        # **THE RESOURCES ARE PER PART OF SPEECH**, both of them: WordNet keeps `verb.exc` and
+        # `noun.exc` apart, and a plural is asked of `NNS` and a past of `VBD`.
+        exceptions = wordnet_exceptions(PART[tag])
+        words = [word for word in lemmas(PART[tag]) if " " not in word and "-" not in word]
+        print(f"\n  lemmas            {len(words)} single-word {PART[tag]} lemmas in WordNet")
+        print(f"  exception list    {len(exceptions)} with an irregular form recorded")
         states = Counter()
         rows, disputed, lone = [], [], []
         for word in words:

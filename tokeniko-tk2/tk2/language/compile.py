@@ -74,6 +74,31 @@ RELATION_FILLS_ROLE: dict[str, Role] = {
 #: UD POS → the dictionary's POS letter. Only the content classes: a function word never earns a key.
 POS_LETTER = {"NOUN": "n", "PROPN": "n", "VERB": "v", "AUX": "v", "ADJ": "a", "ADV": "r"}
 
+#: UD's `Number` → the zip's spelling of it (schema v6). Two notations for one fact, so this is
+#: TRANSCRIPTION and not a set: it says nothing about English that UD has not already said, and a
+#: value UD does not use here — `Ptan`, `Coll` — reads as nothing rather than as a guess.
+UD_NUMBER = {"Sing": "sg", "Plur": "pl"}
+
+#: The classes whose number the SPEAKER states on the word itself. A pronoun's number is a column of
+#: its `language_closed_classes` row and the decompiler reads it from there, so writing it into the
+#: box as well would give one fact two homes — and a fact with two homes drifts.
+#:
+#: **AND A PROPER NOUN IS NOT ONE OF THEM** *(2026-09-21)*. «Marie» is singular because Marie is one
+#: person — a fact about the REFERENT — and «cats» is plural because the speaker chose that word, a
+#: fact about the UTTERANCE. `Box.number` records the second (schema v6: *«the grammatical number
+#: the speaker used»*), and UD tags `Number=Sing` on every proper noun by default morphology rather
+#: than on evidence, so taking it wrote a fact the sentence never stated.
+#:
+#: It was measured, not argued. The same referent reaches a box by two routes — «John told ME» and
+#: «John told MARIE» — and only the name carried a number, so `q-9` could never round-trip:
+#: dropping `PROPN` took the fixpoint **65 → 66 of 87** and moved nothing else.
+#:
+#: *«The Alps are beautiful» does lose its agreement, and that is the honest place for it to sit: UD
+#: marks that one `Plur` and recording it would make the decompiler spell the name «alpses», because
+#: nothing in the zip says a head is a NAME. Names are E3b and E3 closes first
+#: (`202609160959_the-name-question.md`), and a referent's number arrives when the referent does.*
+NUMBERED_UPOS = frozenset({"NOUN"})
+
 #: What can be the OTHER object of a double-object clause — a nominal, or a clause («I asked Anna
 #: WHAT SHE WANTED»). UD's `iobj` presupposes one of these beside it, which is how a lone `iobj` is
 #: known to be a mislabel (req 22's `q-2`).
@@ -460,13 +485,22 @@ class Compiler:
         """
         passive = next((w for w in skeleton.children(root.index)
                         if w.dep in ("nsubj:pass", "csubj:pass")), None)
-        if passive is None:
-            return None
-        went = covered.as_dict().get(passive.index, "")
-        if not went.startswith("box:"):
+        return None if passive is None else self._placed_role(covered, passive.index)
+
+    @staticmethod
+    def _placed_role(covered: Placements, index: int) -> Role | None:
+        """WHICH BOX a token became, read back out of the placement trace.
+
+        The trace is the only record that survives the box being REWRITTEN: a quantified phrase's
+        box holds a variable rather than the word, so «which box did this noun become» cannot be
+        answered by looking at what the boxes contain. Two readers — the passive's topicality, and
+        the relative clause looking for the phrase it describes.
+        """
+        label = covered.label(index)
+        if not label.startswith("box:"):
             return None
         try:
-            return Role(went.split(":", 1)[1])
+            return Role(label.split(":", 1)[1])
         except ValueError:
             return None
 
@@ -585,6 +619,14 @@ class Compiler:
                 continue
             word = skeleton[index]
             match = marks.get(index)
+            if match is not None and match.kind == "quantifier" \
+                    and word.bare_dep in NOMINAL_DEPS:
+                # **THE QUANTIFIER IS THE PHRASE** — «EVERYONE sleeps», «ALL that glitters». It
+                # hangs off the clause by a nominal relation rather than off a noun as a determiner,
+                # so nothing else will ever build its box.
+                self._bare_quantifier(word, match, skeleton, marks, boxes, prefix_rows, covered,
+                                      name, copular, defaulted, abstained)
+                continue
             if match is not None:
                 covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
                                                     abstained, copular, name,
@@ -661,8 +703,11 @@ class Compiler:
 
             if head.bare_dep == "acl":
                 # A RELATIVE CLAUSE SHARES A VARIABLE with the phrase it modifies, rather than
-                # joining it: «the cat that sleeps» is one cat, described twice (req 36).
-                self._share_variable(skeleton, head, content, outer, prefix_rows, covered, marks)
+                # joining it: «the cat that sleeps» is one cat, described twice (req 36). It may
+                # also leave the clause UNASSERTED — a quantifier's restriction is stated, never
+                # claimed — which is why the set is handed over rather than read back afterwards.
+                self._share_variable(skeleton, head, content, outer, prefix_rows, covered, marks,
+                                     unasserted)
                 continue
 
             if joiner is not None and (joiner.compiled.get("asserts") == ASSERTS_MATRIX
@@ -1330,24 +1375,63 @@ class Compiler:
                     break
         return current
 
-    def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks) -> None:
+    def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks,
+                        unasserted: set | None = None) -> None:
         """A relative clause describes the SAME thing as the phrase it modifies — one variable in
-        two rows, which is req 36's one binding mechanism doing the work a second box would fake."""
+        two rows, which is req 36's one binding mechanism doing the work a second box would fake.
+
+        **THE PHRASE IS FOUND BY WHERE ITS WORD WENT, NOT BY WHAT ITS BOX HOLDS** *(2026-09-20)*.
+        The box was matched against the modified noun's dictionary key, so a phrase that had already
+        BECOME A VARIABLE — every quantified one — was never found: «Every cat that sleeps is happy»
+        minted a second name for the cat, bound by nothing, and left the sleeping as a root that
+        says nothing about anybody. `Placements` already records which box each token became, and
+        that record survives the rewrite the key comparison could not see through.
+
+        **AND A RESTRICTION IS STATED, NOT CLAIMED.** «All that glitters is not gold» does not say
+        that anything glitters, and «every cat that sleeps» does not say that every cat sleeps — the
+        clause says WHICH ones are being spoken about. So a relative clause sharing a BINDER's
+        variable is unasserted, exactly as a conditional's halves are (req 38), while one describing
+        a referring phrase — «the cat that sleeps» — stays claimed. Reading the variable back into
+        the clause without this would have turned an unbound name nobody could evaluate into a bound
+        one saying something false, which is the worse of the two failures (req 8).
+        """
         inner = content[head.index]
-        name = f"y{len(prefix_rows) + len(content)}"
         target = skeleton[head.head]
-        for role, box in content[outer.index].boxes.items():
-            if box.head == self._key(target):
-                content[outer.index].boxes[role] = Box(
+        outer_row = content[outer.index]
+
+        role = self._placed_role(covered, target.index)
+        box = outer_row.boxes.get(role) if role is not None else None
+        if box is None:
+            role, box = next(((r, b) for r, b in outer_row.boxes.items()
+                              if b.head == self._key(target)), (None, None))
+
+        binder = None
+        if box is not None and isinstance(box.head, Var):
+            # ALREADY A VARIABLE, because a quantifier bound this phrase. A second name for one
+            # thing is not a second thing — and it is the binder, not this clause, that ranges it.
+            name = box.head.name
+            binder = next((row for row in prefix_rows
+                           if getattr(row, "binds", None) == name), None)
+        else:
+            name = f"y{len(prefix_rows) + len(content)}"
+            if box is not None and role is not None:
+                outer_row.boxes[role] = Box(
                     head=Var(name=name), sense=Open(), determination=box.determination,
-                    quantity=box.quantity, marker=box.marker, relation=box.relation)
-                break
-        for role, box in list(inner.boxes.items()):
+                    quantity=box.quantity, marker=box.marker, relation=box.relation,
+                    # The NOUN leaves this box and its variable stays, but what the speaker said
+                    # ABOUT the phrase does not stop being true — «the CATS that sleep» is plural
+                    # whoever says it back. Carried for the same reason `determination` is.
+                    number=box.number)
+
+        for filled, box in list(inner.boxes.items()):
             if isinstance(box.head, Open) or box.head is None:
-                inner.boxes[role] = Box(head=Var(name=name), sense=Open())
+                inner.boxes[filled] = Box(head=Var(name=name), sense=Open())
                 break
         else:
             inner.boxes[Role.AGENT] = Box(head=Var(name=name), sense=Open())
+
+        if binder is not None and unasserted is not None:
+            unasserted.add(inner.name)
         # The relative pronoun IS the variable — «the cat THAT sleeps» has no third participant.
         for child in skeleton.children(head.index):
             if child.bare_dep in ("nsubj", "obj") and marks.get(child.index) is not None:
@@ -1375,6 +1459,21 @@ class Compiler:
         """A content word's dictionary key — `eat.v`. The sense stays OPEN beside it."""
         letter = POS_LETTER.get(word.upos, "n")
         return keymod.key_of(word.lemma, letter)
+
+    def _number_of(self, word: Word) -> str | None:
+        """The grammatical number the speaker MARKED ON THIS NOUN — schema v6, and nothing else.
+
+        «Software can be MINDS» and «software can be A MIND» compiled to one box, so the decompiler
+        had to choose a rendering and both of its choices were wrong. The parse has said which all
+        along: UD puts `Number` on the noun, and the station had never read it.
+
+        **NOTHING SAID IS AN ANSWER, NOT A GAP** — a mass noun the parse leaves unmarked, an
+        adjective or an adverb heading its own box, a variable, an OPEN. None of them gets a number
+        invented for it, because a number nobody stated is a number the decompiler must not speak.
+        """
+        if word.upos not in NUMBERED_UPOS:
+            return None
+        return UD_NUMBER.get((word.feats or {}).get("Number"))
 
     def _marks_a_possessor(self, word: Word, skeleton: Skeleton, marks: dict) -> bool:
         """Is this `nmod` a POSSESSOR, or a modifier that merely happens to hang off a noun?
@@ -1545,7 +1644,14 @@ class Compiler:
             if kind == "determination":
                 determination = Determination(match.compiled["determination"])
                 covered.add(child.index, "determination")
-            elif kind == "quantifier" and match.compiled.get("quantity"):
+            elif kind == "quantifier" and match.compiled.get("quantity") \
+                    and child.bare_dep not in NOMINAL_DEPS:
+                # **A QUANTIFIER RESTRICTS THIS PHRASE ONLY WHEN IT IS THIS PHRASE'S DETERMINER**
+                # *(2026-09-20)*. «ALL cats are mammals» hangs `all` off `cats` as a determiner;
+                # «ALL that glitters is not gold» hangs it off `gold` as the SUBJECT — one word, two
+                # relations, and the relation was the only thing separating them. Without the test
+                # the binder took whatever noun it was hanging under as its restriction («for all
+                # GOLD»), and the phrase the quantifier actually HEADS got no box at all.
                 quantity = Quantity(match.compiled["quantity"])
                 covered.add(child.index, "quantifier")
             elif kind == "box":
@@ -1615,7 +1721,8 @@ class Compiler:
                                    else "field:relation" if found.kind in ("box", "field")
                                    else found.kind)
         box = Box(head=self._key(word), sense=Open(), determination=determination,
-                  quantity=quantity, count=count, marker=marker, relation=relation)
+                  quantity=quantity, count=count, marker=marker, relation=relation,
+                  number=self._number_of(word))
         # **AN ATTRIBUTIVE ADJECTIVE IS A SECOND ROW, AND A SECOND ROW NEEDS A VARIABLE** (tkzip
         # req 70): «a human body» is EXISTS B (body(B) AND human(B)). There is no other way to say
         # it — a row reading `patient=body.n, complement=human.a` would claim that BODIES are human,
@@ -1646,6 +1753,40 @@ class Compiler:
                 covered.add(adjective.index, "row")
             return Box(head=Var(name=name), sense=Open())
         return box
+
+    def _bare_quantifier(self, word: Word, match, skeleton: Skeleton, marks: dict, boxes: dict,
+                         prefix_rows: list, covered: Placements, scopes: str, copular: bool,
+                         defaulted: list | None, abstained: list | None) -> None:
+        """«EVERYONE sleeps» · «ALL that glitters is not gold» — the quantifier with no noun under it.
+
+        `_box_for` raises the binder when the noun a determiner hangs off is built, and that covers
+        «all CATS». It cannot cover a quantifier that IS the phrase, and English has two spellings of
+        one: lexical (`everyone` · `nothing` — the table's own `word_class: pronoun`) and a bare
+        determiner whose noun is left to a relative clause («all THAT GLITTERS»). Both were read as
+        determiners of whatever noun they happened to hang under and then thrown away — **so
+        «Nobody knows the answer» compiled to a CLAIM that the answer is known**, with nothing in
+        `unplaced` to say that a word had gone missing. Wrongly-understood is the sin (req 8), and
+        this one was silent.
+
+        **THE RESTRICTION IS WHAT THE ROW SAYS, AND USUALLY THAT IS A DESCRIBED UNKNOWN.**
+        `everyone` carries `sort: person` and `nothing` `sort: thing` — exactly schema v4's OPEN
+        (tkzip req 2) — while a bare `all` says nothing about its range and gets a bare one. A
+        relative clause narrows it the way req 36 narrows anything, **by sharing the variable**:
+        that is `_share_variable`'s job, not a second mechanism here, and it is what the station
+        already does for «the cat that sleeps».
+        """
+        role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
+        if role is None or role in boxes:
+            # No role, or the box is taken. The word stays UNPLACED, which is the honest answer and
+            # the one thing the old path could not give: it accounted for the token and dropped it.
+            return
+        name = f"x{len(prefix_rows)}"
+        prefix_rows.append(QuantifierRow(
+            name=f"q{len(prefix_rows)}", scopes=scopes, binds=name,
+            quantity=Quantity(match.compiled["quantity"]),
+            restriction=Box(head=self._unknown(match))))
+        boxes[role] = Box(head=Var(name=name), sense=Open())
+        covered.update(range(word.index, word.index + match.length), label=f"box:{role.value}")
 
     def _compile_closed(self, word: Word, match, skeleton: Skeleton, boxes: dict,
                         prefix_rows: list, abstained: list,
@@ -1678,7 +1819,8 @@ class Compiler:
             # says why: «All cats are mammals» becomes a binder for X restricted to cats, then a
             # content row saying X is a mammal. Emitting the binder here would have to invent a
             # restriction the sentence has not reached yet. `_box_for` raises it instead, when the
-            # noun this determiner hangs off is built.
+            # noun this determiner hangs off is built — and `_bare_quantifier` when there is no such
+            # noun because the quantifier IS the phrase, which `_clause` routes away before here.
             return taken
 
         if kind == "box":

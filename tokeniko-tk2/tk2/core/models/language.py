@@ -85,9 +85,11 @@ class ClosedClassDoc(LogicDocument, Timestamped):
     word_class: str = Field(min_length=1)
 
     #: THE JOB — what the compiler does with the form, which is the column the zip is built from:
-    #: `referential` (resolve to an entity from context) · `quantificational` (a quantifier, not a
-    #: referent) · `interrogative` / `relative` (an unbound variable, plus a question mood for the
-    #: first) · `role_marker` · `coordinator` / `subordinator` / `complementizer` · `demonstrative`
+    #: `referential` (resolve to an entity from context) · `quantificational` (a quantifier taking
+    #: a noun under it, not a referent) · `fused_quantifier` (a quantifier that IS the noun phrase —
+    #: «nobody» · «everywhere» · «nothing», `db/0028`) · `interrogative` / `relative` (an unbound
+    #: variable, plus a question mood for the first) ·
+    #: `role_marker` · `coordinator` / `subordinator` / `complementizer` · `demonstrative`
     #: · `possessive` · `reflexive` / `reciprocal` · `tense_aspect` · `modality` · `negation` ·
     #: `infinitive_marker` · `existential` · `expletive`.
     role: str = Field(min_length=1)

@@ -1138,7 +1138,12 @@ it).
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
 5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
-   fashion by tooling. *The drill is the FORMAT's gate and stays one — it proved tkzip can HOLD the
+   fashion by tooling. **TICKED 2026-09-20, and it was already met** — the honest finding when the
+   task was picked up. `tests/test_drill.py` scores the declared bar (≥90% no-abstention · 100%
+   no-silent-wrong), keeps the FORCED-CHANGE ledger that stops the instrument being satisfied by
+   moving its own target, checks the allocation and the seven traffic categories, and prints the
+   report — on every suite run, which is what «CI fashion» asked for. *What does not exist is a
+   standalone `tools/drill.py`, and a sixty-line printer is not what this task was about.* *The drill is the FORMAT's gate and stays one — it proved tkzip can HOLD the
    world. It is not the STATION's gate: it says nothing about whether stanza's skeleton was read
    correctly.*
 5b. **⚑ THE UD GATE — the station's real acceptance test** *(the Captain, 2026-09-15)*. Every one of

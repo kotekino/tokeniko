@@ -20,7 +20,9 @@ for r in body["language_closed_classes"].find({}, {"_id":0,"form":1,"role":1}):
     byrole[r["role"]].add(r["form"])
 ARTICLES = {"a","an","the"}
 SUB, COORD = byrole["subordinator"], byrole["coordinator"]
-QUANT = byrole["quantificational"] - ARTICLES
+# `db/0028` split the fused quantifiers («nobody» · «everywhere») out of the determiner role;
+# this bucket means «a quantifying word», which is both of them.
+QUANT = (byrole["quantificational"] | byrole["fused_quantifier"]) - ARTICLES
 MODAL, NEG, AUX = byrole["modality"], byrole["negation"], byrole["tense_aspect"]
 WH = byrole["interrogative"] | byrole["free_relative"]
 MARK = byrole["role_marker"] - {"as"}

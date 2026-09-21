@@ -48,6 +48,18 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # The frozen shape. A change to anything in this module changes this number, and a zip carries the
 # number it was compiled against (req 22) — E9's translation night has to know what it is translating.
 #
+# **v6, 2026-09-20 — A NOUN HAS A NUMBER, AND THE SPEAKER STATED IT.** «Software can be MINDS» and
+# «software can be A MIND» compiled to the same box — `{head: mind.n}` and nothing else — so the
+# decompiler had two renderings and both were wrong: «be mind» is not English, and «be a mind»
+# measured the round trip DOWN from 65 to 61 of 87, because an article the zip does not hold comes
+# back as a determination it did not have. **The third thing in two days found to be in the sentence
+# and not in the zip**, after the sort of an unknown (v4) and the tense of a clause (v5).
+#
+# It is not `count`, which is a NUMERAL and orthogonal by req 26 — «the three cats» is definite AND
+# counted AND plural, and v1's single field could say one of those at a time. It is not
+# `determination` either: a bare plural has none. It is the grammatical number, which English marks
+# on the noun and which the reader needs to say the noun at all.
+#
 # **v5, 2026-09-20 — THE THEATRE IS PER ROW.** It was one field on the ZIP, which made «I went to
 # Rome and I will go to Genoa» unrecordable: two clauses, two times, one slot. The docstring had
 # always called it *«the CLAUSE's spacetime»* and the field had always sat somewhere else. Ruled by
@@ -77,7 +89,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # adds nothing to the schema and asks the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL, i.e. a
 # closed set of verbs in code, which is what two days of this epic have been moving into rows.
 # Ruled by the Captain: the field. Record: `docs/parser-compiler/202609161349_the-person-axis.md`.
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 # --------------------------------------------------------------------------------------------------
@@ -323,6 +335,11 @@ class Box(BaseModel):
 
     head: BaseKey | Var | Ref | Open | None = None
     sense: SenseKey | Open | None = None
+
+    #: v6. The grammatical number the speaker used — `sg` or `pl`. EMPTY where nothing said it: a
+    #: mass noun has none, and neither does a box the brain built for itself. Orthogonal to `count`
+    #: (a numeral) and to `determination` (which ones), exactly as req 26 keeps those two apart.
+    number: str | None = None
 
     # The preposition actually used, as a lemma (req 65). The marker words are already
     # `language_closed_classes` rows, so this records WHICH ROW WAS MATCHED, not new knowledge.

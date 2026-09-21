@@ -380,7 +380,18 @@ def _prefix_pass(produced, expected, reading) -> None:
         label = f"{kind} {what} over {target}" if what else f"{kind} over {target}"
         for _ in waiting:
             instead = spare.get((kind, target))
-            if instead:
+            # **AN ABSTENTION IS NOT A SUBSTITUTION** *(2026-09-20, found by the 1st Officier)*. This
+            # was the one branch in the gate that did not ask `_comparable()` before calling a
+            # difference a conflict — so a station quantifier whose restriction is an undescribed
+            # OPEN, sitting over the same row as a drill quantifier over `glitterer.n`, was reported
+            # as «the station says something ELSE about that row». It did not: it said «I do not know
+            # what this ranges over», which the docstrings two functions above call nobody's
+            # disagreement. The defect was mine, introduced the same morning the box passes were
+            # widened to read a described OPEN, and it cost `aw-13` and `aw-14` two false reds.
+            #
+            # `not what` keeps today's behaviour for the kinds whose `about` is empty by construction
+            # — negation, modality — so no existing substitution guard is weakened.
+            if instead and (not what or _comparable(about(instead[0]), what)):
                 row = instead.pop(0)
                 reading.conflicts.append(
                     f"{kind} over {target}: the station says {about(row)}, the drill says {what}")

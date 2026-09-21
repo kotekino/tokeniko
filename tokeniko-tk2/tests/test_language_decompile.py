@@ -503,3 +503,106 @@ def test_an_operator_English_does_not_MARK_is_refused_rather_than_approximated(d
 
     assert out.text == ""
     assert any("nimply" in said for said in out.unsaid)
+
+
+def test_a_FUSED_quantifier_does_not_take_the_plain_one_s_slot(decompiler):
+    """«nobody» is a negative quantity over PERSONS and «no» is a negative quantity, full stop —
+    and until `db/0028` moved the role they compiled to the same thing and the spoken index held
+    one slot for both. **The flag that arrived last won, in silence**: «There are no cats» came
+    back «There is nobody cat», «I work every day» came back «I work everyone day», and the
+    fixpoint lost five sentences to it on 2026-09-20.
+
+    Both readings are asked here in one test because the defect is the PAIR, not either half.
+    """
+    determiner = decompiler.decompile(Zip(rows=[row(
+        predicate="sleep.v", agent=Box(head="cat.n", quantity=Quantity.UNIVERSAL))]))
+    assert determiner.text == "Every cat sleeps."
+
+    fused = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r0", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head=Open(sort="person"))),
+        row(predicate="sleep.v", agent=Box(head=Var(name="x0"))),
+    ]))
+    assert fused.text == "Everyone sleeps."
+
+
+def test_EVERY_form_curation_gave_a_voice_can_be_REACHED(decompiler):
+    """**THE ARITHMETIC THAT WAS NOT BEING READ.** The spoken index is a dict keyed on a meaning,
+    so two flagged rows that share a key do not raise — the second silently replaces the first, and
+    the form curation chose is never spoken again. That is exactly how `db/0028` cost five
+    sentences: seventeen rows carried the flag and the index held twelve keys.
+
+    A count is the whole test. If it ever drops below the flags again, curation has said something
+    the decompiler cannot hear, and the migration's own `_meaning()` has drifted from `_key()`.
+    """
+    flagged = [r for r in decompiler.table._rows if r.get("spoken")]        # noqa: SLF001
+
+    assert flagged, "the table carries no voices at all — `db/0021` did not land"
+    assert len(decompiler._spoken) == len(flagged), (                       # noqa: SLF001
+        "two flagged rows share a key and one of them will never be spoken")
+
+
+def test_the_EXISTENTIAL_copula_agrees_with_the_thing_said_to_exist(decompiler):
+    """«There IS a cat» · «There ARE cats» — the expletive holds the subject position and the verb
+    agrees with what was displaced, not with the word holding its place.
+
+    **TWO DEFECTS IN ONE LINE, and schema v6 uncovered both** *(found by the 1st Officier)*. The
+    agreement was hard-coded third-singular, so «There are no cats» came back «There is no cats»;
+    and `be` was reaching the REGULAR verb path, where a non-third-singular is spoken as the bare
+    lemma — «There be no cats». An existential row is not flagged copular because existential `be`
+    is content (req 31), so nothing routed it to the paradigm that has three cells.
+    """
+    plural = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r0", binds="x0", quantity=Quantity.NEGATIVE,
+                      restriction=Box(head="cat.n", number="pl", quantity=Quantity.NEGATIVE)),
+        row(predicate="be.v", patient=Box(head=Var(name="x0"))),
+    ]))
+    assert plural.text == "There are no cats."
+
+    single = decompiler.decompile(Zip(rows=[row(
+        predicate="be.v",
+        patient=Box(head="cat.n", number="sg", determination=Determination.INDEFINITE))]))
+    assert single.text == "There is a cat."
+
+
+def test_the_UNIVERSAL_has_two_voices_and_the_NOUN_picks(decompiler):
+    """«every cat» · «all cats» — one quantity, two words, and the number of the noun chooses.
+
+    `db/0021`'s flag answers «this meaning has several forms, which do we say?» with ONE form, and
+    English has two here, so every plural universal came out «Every human beings are animals». The
+    number is now part of the key on both sides (`db/0029`).
+
+    **A row that states no number answers for either**, which is why «no» is asked for last: it is
+    one word for «no cat» and «no cats» and says so by carrying nothing.
+    """
+    assert decompiler.the_form("quantificational", _number="sg",
+                               kind="quantifier", quantity="universal") == "every"
+    assert decompiler.the_form("quantificational", _number="pl",
+                               kind="quantifier", quantity="universal") == "all"
+    for number in ("sg", "pl", None):
+        assert decompiler.the_form("quantificational", _number=number,
+                                   kind="quantifier", quantity="negative") == "no"
+
+
+def test_a_determiner_s_number_is_the_NOUN_S_and_not_its_own():
+    """**ONE COLUMN MUST NOT CARRY TWO FACTS.** A pronoun's `number` is ITS OWN — «she» is singular
+    — and `Compiler._unknown()` copies it into the `Open` a described unknown carries (schema v4).
+    A determiner's is the number of the noun it TAKES, and `db/0029` puts that in `takes_number`.
+
+    Written into the same column, «All that glitters is not gold» compiled its bare «all» to
+    `Open(number='pl')` — a restriction the sentence never stated — and `aw-13`/`aw-14` went
+    DISAGREED at the drill gate **while the fixpoint stayed flat at 66**. That is the whole argument
+    for keeping both instruments, and the reason this test asks the migration and not the rendering.
+
+    *`both` · `neither` · `either` carry `number: dual` from an older migration and keep it: «neither
+    of the two» is a fact about the WORD, which is what that column has always been for.*
+    """
+    from tk2.migrations import discover
+
+    before = next(m for m in discover() if m.number == 28).load().CLOSED_CLASS_ROWS
+    after = next(m for m in discover() if m.number == 29).load().CLOSED_CLASS_ROWS
+
+    assert len(before) == len(after)
+    moved = [new["form"] for new, was in zip(after, before)
+             if (new.get("features") or {}).get("number") != (was.get("features") or {}).get("number")]
+    assert not moved, f"{moved} had their own `number` changed by the determiner migration"

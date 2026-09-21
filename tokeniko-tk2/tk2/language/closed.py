@@ -47,9 +47,18 @@ UD_POS_TO_WORD_CLASS: dict[str, tuple[str, ...]] = {
     "SCONJ_OR_ADP": ("conjunction", "preposition"),
 }
 
+#: The role of a quantifier that IS its own noun phrase — «nobody» · «everywhere» · «nothing» ·
+#: «none» — against the `quantificational` determiner that takes a noun under it. Written by
+#: `db/0028`, which moved every quantificational row whose word class is not `determiner`.
+#:
+#: **A NAME, NOT A ROSTER.** The roles live in the rows and this file holds no list of them; this
+#: one is spelled here because two readers need the same spelling — the map below, and the
+#: decompiler, which turns a quantity plus a sort back into the one word that fuses them.
+FUSED_QUANTIFIER = "fused_quantifier"
+
 #: UD dependency relation -> the `role` values it admits, BEST-FIRST. A relation absent from this map
 #: puts no constraint on the role, which is the honest default: UD has 37 relations and this table
-#: has 25 roles, and most pairs simply do not interact.
+#: has 27 roles, and most pairs simply do not interact.
 UD_DEP_TO_ROLE: dict[str, tuple[str, ...]] = {
     # the marker relations — where the role markers and their re-typed cousins live
     "case": ("role_marker", "causal_marker", "concessive_marker", "exceptive_marker", "genitive"),
@@ -69,15 +78,15 @@ UD_DEP_TO_ROLE: dict[str, tuple[str, ...]] = {
     # the pronoun relations — a pronoun is whatever its own row says; the dependency says only that
     # it is filling an argument slot rather than marking one
     "nsubj": ("referential", "relative", "interrogative", "free_relative", "reflexive",
-              "reciprocal", "demonstrative", "existential"),
+              "reciprocal", "demonstrative", "existential", FUSED_QUANTIFIER),
     "obj": ("referential", "relative", "interrogative", "free_relative", "reflexive", "reciprocal",
-            "demonstrative"),
+            "demonstrative", FUSED_QUANTIFIER),
     "iobj": ("referential", "reflexive", "reciprocal", "demonstrative"),
-    "obl": ("referential", "reflexive", "demonstrative"),
+    "obl": ("referential", "reflexive", "demonstrative", FUSED_QUANTIFIER),
     "expl": ("expletive", "existential"),
     # the rest
-    "advmod": ("quantificational", "negation", "interrogative", "free_relative", "referential",
-               "affirmation"),
+    "advmod": (FUSED_QUANTIFIER, "quantificational", "negation", "interrogative",
+               "free_relative", "referential", "affirmation"),
     "compound:prt": ("verb_particle",),
     "fixed": ("role_marker", "subordinator"),
 }

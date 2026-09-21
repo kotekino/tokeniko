@@ -27,6 +27,9 @@ from dataclasses import dataclass
 PRESENT = "VBZ"
 PAST = "VBD"
 PARTICIPLE = "VBN"
+#: The plural noun. It arrived with schema v6, which gave a box the NUMBER the speaker stated —
+#: «software can be MINDS» and «software can be A MIND» had been the same zip.
+PLURAL = "NNS"
 
 SIBILANTS = ("s", "x", "z", "ch", "sh")
 VOWELS = "aeiou"
@@ -115,6 +118,34 @@ def participle_rule(lemma: str) -> str:
     return past_tense_rule(lemma)
 
 
+def plural_rule(lemma: str) -> str:
+    """The regular plural — the same three spellings the third singular takes, for the same reason.
+
+    English marks a plural noun and a third-singular verb with one suffix and one set of rules, which
+    is why this function is two lines: `-ies` after a consonant and `y`, `-es` after a sibilant, `-s`
+    otherwise. Where they part company is the ROSTER — «goes» against «foxes», «mice» against
+    «mixes» — and that is what `db/0027` is for.
+
+    **The `-o` split falls the SAME way as the verb's, and that is measured rather than assumed**:
+    of WordNet's 829 nouns ending in a consonant plus `-o`, **668 take `-s` and 89 take `-es`**. The
+    first draft of this rule had it backwards on the strength of «heroes» and «potatoes», and would
+    have written «photoes».
+
+    **And `-sis` takes `-ses`** — «analysis» → «analyses», a Greek plural English kept — which is
+    right for 514 of the 546 nouns that end in it.
+    """
+    word = (lemma or "").strip().lower()
+    if not word:
+        return ""
+    if word.endswith("sis") and len(word) > 4:
+        return word[:-2] + "es"
+    if word.endswith("y") and word[-2:-1] not in VOWELS:
+        return word[:-1] + "ies"
+    if word.endswith(SIBILANTS):
+        return word + "es"
+    return word + "s"
+
+
 @dataclass(frozen=True, slots=True)
 class Inflections:
     """The roster as it stands: `(lemma, tag) -> the form`, and the rule for everything else."""
@@ -143,7 +174,7 @@ class Inflections:
         if found is not None:
             return found
         rule = {PRESENT: present_tense_rule, PAST: past_tense_rule,
-                PARTICIPLE: participle_rule}.get(tag)
+                PARTICIPLE: participle_rule, PLURAL: plural_rule}.get(tag)
         return rule(word) if rule is not None else word
 
 

@@ -75,7 +75,7 @@ def fixpoint(argv, args) -> int:
     print(f"  the corpus        {len(CASES)} sentences\n")
 
     same = changed = silent = 0
-    whole_same = whole_changed = 0
+    whole_same = whole_changed = whole_silent = 0
     for case in CASES:
         # The drill annotates a few of its sentences — «… [de dicto]» — and the bracket is a note to
         # the reader, not words anybody said. Compiling it makes a second sentence out of nothing.
@@ -92,11 +92,16 @@ def fixpoint(argv, args) -> int:
         covered = not first.unplaced
         out = decompiler.decompile(first)
         if not out.text.strip():
+            # **SILENCE IS THE WORST OUTCOME AND IT USED TO BE THE QUIETEST.** A MOVED case says
+            # something and gets something wrong; a SILENT one cannot open its mouth. It was printed
+            # only under `--all` and dropped from the read-whole population before it was counted,
+            # so `aw-13`/`aw-14` going MOVED → SILENT on 2026-09-21 read as *two fewer failures and
+            # a smaller denominator* — which is how a regression looks like an improvement.
             silent += 1
-            if args.all:
-                print(f"  {case.id:8} SILENT   « {sentence[:60]} »")
-                for why in (out.refused + out.unsaid)[:3]:
-                    print(f"      ⚑ {why}")
+            whole_silent += 1 if covered else 0
+            print(f"  {case.id:8} SILENT {'' if covered else '*'}  « {sentence[:62]} »")
+            for why in (out.refused + out.unsaid)[:3]:
+                print(f"      ⚑ {why}")
             continue
         again = provider(out.text)
         second = compile_utterance(compiler, again, DRILL_CONTEXT).zip if again else None
@@ -117,11 +122,14 @@ def fixpoint(argv, args) -> int:
     print(f"  MOVED           {changed} — the decompiler dropped or changed something the zip held")
     print(f"  SILENT          {silent} — the decompiler said nothing at all")
     print(f"\n  OF THE SENTENCES THE COMPILER READ WHOLE — no word left unplaced:")
-    print(f"  FIXED           {whole_same} of {whole_same + whole_changed}")
+    print(f"  FIXED           {whole_same} of {whole_same + whole_changed + whole_silent}")
     print(f"  MOVED           {whole_changed} — and these are the decompiler's own, because the "
           f"zip held everything the sentence said")
-    print(f"  *               a MOVED line marked `*` is one the COMPILER did not read whole")
-    return 1 if changed else 0
+    print(f"  SILENT          {whole_silent} — the same population, and the decompiler said nothing")
+    print(f"  *               a MOVED or SILENT line marked `*` is one the COMPILER did not read "
+          f"whole")
+    # Silence is a failure too — it was not, and that is half of why it stayed invisible.
+    return 1 if (changed or silent) else 0
 
 
 #: The operators that are ASSOCIATIVE and COMMUTATIVE, so that `and(and(a,b),c)` and `and(a,and(b,c))`

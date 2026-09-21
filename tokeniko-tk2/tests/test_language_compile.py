@@ -445,6 +445,39 @@ RELATIVE = skeleton_from_conllu("The cat that sleeps is mine.", [
     ("7", ".", ".", "PUNCT", "6", "punct"),
 ])
 
+#: «All that glitters is not gold.» — the quantifier IS the phrase, and the noun it ranges over is a
+#: whole CLAUSE. Note where stanza hangs `All`: off `gold`, as the subject, not off anything as a
+#: determiner.
+GLITTERS = skeleton_from_conllu("All that glitters is not gold.", [
+    ("1", "All", "all", "DET", "6", "nsubj"),
+    ("2", "that", "that", "PRON", "3", "nsubj"),
+    ("3", "glitters", "glitter", "VERB", "1", "acl:relcl"),
+    ("4", "is", "be", "AUX", "6", "cop"),
+    ("5", "not", "not", "PART", "6", "advmod"),
+    ("6", "gold", "gold", "NOUN", "0", "root"),
+    ("7", ".", ".", "PUNCT", "6", "punct"),
+])
+
+#: «Nobody knows the answer.» — a quantifier that is its own phrase LEXICALLY.
+NOBODY = skeleton_from_conllu("Nobody knows the answer.", [
+    ("1", "Nobody", "nobody", "PRON", "2", "nsubj"),
+    ("2", "knows", "know", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "answer", "answer", "NOUN", "2", "obj"),
+    ("5", ".", ".", "PUNCT", "2", "punct"),
+])
+
+#: «Every cat that sleeps is happy.» — a QUANTIFIED phrase described twice.
+EVERY_CAT = skeleton_from_conllu("Every cat that sleeps is happy.", [
+    ("1", "Every", "every", "DET", "2", "det"),
+    ("2", "cat", "cat", "NOUN", "6", "nsubj"),
+    ("3", "that", "that", "PRON", "4", "nsubj"),
+    ("4", "sleeps", "sleep", "VERB", "2", "acl:relcl"),
+    ("5", "is", "be", "AUX", "6", "cop"),
+    ("6", "happy", "happy", "ADJ", "0", "root"),
+    ("7", ".", ".", "PUNCT", "6", "punct"),
+])
+
 
 def rows_of(out, kind):
     return [r for r in out.zip.rows if r.kind == kind]
@@ -519,6 +552,98 @@ def test_a_relative_clause_SHARES_A_VARIABLE_rather_than_joining(compiler):
     assert isinstance(shared, Var)
     assert any(box.head == shared for box in main.boxes.values()), "the same variable, both rows"
     assert out.coverage == 1.0, "the relative pronoun IS the variable, not a third participant"
+
+
+def test_a_bare_quantifier_binds_ITSELF_and_the_relative_clause_restricts_it(compiler):
+    """«All that glitters is not gold» — THREE wrong things that were one cause *(2026-09-20)*.
+
+    A quantifier reached the zip only as a DETERMINER, by being scooped up from the children of the
+    noun whose box was being built — and stanza hangs this `All` off `gold`, as the SUBJECT. So the
+    binder came out ranging over **gold**, the complement box held the variable instead of the
+    metal, and the phrase the sentence is actually about reached no box at all. The relative clause
+    then looked for a box holding `all.n`, found none, and minted a second variable nobody bound: a
+    row that says nothing, about nobody.
+
+    **The relation is what separates the two readings of one word**, and nothing else can: «ALL
+    cats are mammals» is a `det`, «ALL that glitters» is an `nsubj`.
+
+    What is pinned here is the STRUCTURE, not the drill's `glitterer.n` — this station has no
+    nominaliser and needs none. The universal binds the glitterer, the negation and the binder both
+    scope the predication, and the clause that says what the variable ranges over SHARES that
+    variable (req 36) rather than joining it or being dropped.
+    """
+    out = compiler.compile(GLITTERS)
+    binder = rows_of(out, "quantifier")[0]
+    negation = rows_of(out, "negation")[0]
+    glittering = next(r for r in rows_of(out, "content") if r.predicate == "glitter.v")
+    gold = next(r for r in rows_of(out, "content") if r.predicate is None)
+    bound = Var(name=binder.binds)
+
+    assert binder.quantity is Quantity.UNIVERSAL
+    assert binder.restriction.head != "gold.n", "the metal is what is DENIED, never what is ranged"
+    assert gold.boxes[Role.COMPLEMENT].head == "gold.n", "and it stays in the complement"
+    assert gold.boxes[Role.PATIENT].head == bound, "the universal binds the SUBJECT of the claim"
+    assert glittering.boxes[Role.AGENT].head == bound, "one variable in two rows — no orphan"
+    assert binder.scopes == gold.name and negation.scopes == gold.name, (
+        "both prefix elements scope the predication; their ORDER is the two readings (req 35)")
+    assert glittering.truth is None, (
+        "a restriction is STATED, not claimed — the sentence does not say that anything glitters")
+    assert gold.truth == 1.0
+    assert out.coverage == 1.0
+
+
+def test_a_quantifier_PRONOUN_fills_its_own_box_rather_than_vanishing(compiler):
+    """«Nobody knows the answer» compiled to «the answer is known» *(2026-09-20)*.
+
+    `nobody` · `everyone` · `nothing` are quantifiers that are their own phrase — the table's own
+    `word_class: pronoun` — and the compile core had one path for a quantifier: be a determiner, and
+    move the noun under you into a binder's restriction. With no noun under it the word was
+    accounted for as covered and then dropped, so `unplaced` stayed EMPTY and the zip claimed, in
+    confidence, the opposite of what was said. Wrongly-understood is the sin (req 8), and this one
+    made no sound at all.
+
+    The restriction is the row's own `sort`, as a described OPEN (schema v4, tkzip req 2): «nobody»
+    states that what it ranges over is a PERSON, and a restriction is content.
+    """
+    out = compiler.compile(NOBODY)
+    binder = rows_of(out, "quantifier")[0]
+    row = main_row(out)
+
+    assert binder.quantity is Quantity.NEGATIVE
+    assert isinstance(binder.restriction.head, Open)
+    assert binder.restriction.head.sort == "person", "«nobody» ranges over PEOPLE"
+    assert binder.scopes == row.name
+    assert [role for role, box in row.boxes.items() if box.head == Var(name=binder.binds)], \
+        "the quantifier reached a box of its own"
+    assert row.boxes[Role.PATIENT].head == "answer.n"
+    assert out.coverage == 1.0
+
+
+def test_a_relative_clause_on_a_QUANTIFIED_phrase_reuses_the_binders_variable(compiler):
+    """«Every cat that sleeps is happy» — one cat, one variable, and the sleeping not claimed.
+
+    The clause found the phrase it describes by looking for the box holding `cat.n`, and a
+    quantified phrase's box holds a VARIABLE — so the search failed on every quantified phrase
+    there is, and the sleeping got a fresh name nobody bound. The placement trace answers what the
+    boxes' contents cannot: which box that noun BECAME, which is a record that survives the box
+    being rewritten.
+
+    **And reading the variable back in is what makes the truth slot load-bearing here.** Bound to
+    the universal, a CLAIMED row says that every cat sleeps. A restriction says which cats are
+    meant and claims nothing — while «the cat that sleeps», which binds nothing, stays claimed.
+    """
+    out = compiler.compile(EVERY_CAT)
+    binder = rows_of(out, "quantifier")[0]
+    sleeping = next(r for r in rows_of(out, "content") if r.predicate == "sleep.v")
+    happy = next(r for r in rows_of(out, "content") if r.predicate is None)
+    bound = Var(name=binder.binds)
+
+    assert binder.restriction.head == "cat.n"
+    assert sleeping.boxes[Role.AGENT].head == bound, "the binder's variable, not a second name"
+    assert any(box.head == bound for box in happy.boxes.values()), "the same cat, twice"
+    assert sleeping.truth is None and happy.truth == 1.0
+    assert compiler.compile(RELATIVE).zip.rows[0].truth == 1.0, (
+        "a relative clause on a REFERRING phrase is presupposed content, and stays claimed")
 
 
 def test_an_xcomp_stays_inside_its_clause(compiler):
@@ -1268,3 +1393,114 @@ def test_a_copular_ADJECTIVE_is_read_through_its_noun(compiler, adjective, role)
         ("5", ".", ".", "PUNCT", "4", "punct"),
     ]))
     assert main_row(out).boxes[role].head == "cat.n"
+
+
+# ------------------------------------------------------------------------------------------------
+# the number the speaker stated — schema v6. The CoNLL-U here carries no FEATS, so a test ABOUT the
+# feature states it by hand, exactly as the imperative block does for `Mood`.
+# ------------------------------------------------------------------------------------------------
+
+def _with_number(skeleton, marked: dict):
+    """`{index: "Plur"}` — stanza puts UD's `Number` on the token and these fixtures do not."""
+    from dataclasses import replace as _replace
+    words = tuple(_replace(w, feats={**w.feats, "Number": marked[w.index]})
+                  if w.index in marked else w
+                  for w in skeleton.words)
+    return _replace(skeleton, words=words)
+
+
+def _eats(marked: dict):
+    return _with_number(skeleton_from_conllu("Cats eat fish .", [
+        ("1", "Cats", "cat", "NOUN", "2", "nsubj"),
+        ("2", "eat", "eat", "VERB", "0", "root"),
+        ("3", "fish", "fish", "NOUN", "2", "obj"),
+        ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]), marked)
+
+
+def test_the_NUMBER_the_noun_carries_reaches_the_box(compiler):
+    """«Software can be MINDS» and «software can be A MIND» compiled to ONE box until 2026-09-20,
+    so the decompiler had two renderings of it and both were wrong. UD had said which all along."""
+    out = compiler.compile(_eats({0: "Plur", 2: "Sing"}))
+    boxes = main_row(out).boxes
+
+    assert boxes[Role.AGENT].number == "pl"
+    assert boxes[Role.PATIENT].number == "sg", "and the singular is STATED, not the absence of pl"
+
+
+def test_a_noun_the_parse_does_not_MARK_gets_no_number(compiler):
+    """**NOTHING SAID IS AN ANSWER, NOT A GAP** — a mass noun, and a box the brain builds for
+    itself. A number nobody stated is a number the decompiler must not speak, so the field stays
+    empty rather than defaulting to the singular that happens to render."""
+    box = main_row(compiler.compile(_eats({0: "Plur"}))).boxes[Role.PATIENT]
+
+    assert box.number is None, "`fish` was left unmarked and the station invented nothing"
+
+
+def test_a_value_UD_does_not_use_here_reads_as_NOTHING(compiler):
+    """`Ptan`, `Coll`, `Dual` — the transcription answers for the two English marks and abstains on
+    the rest, because a value it cannot spell is not a value it may guess at (req 8)."""
+    box = main_row(compiler.compile(_eats({0: "Ptan"}))).boxes[Role.AGENT]
+
+    assert box.number is None
+
+
+def test_a_PRONOUN_keeps_its_number_in_its_ROW_and_not_in_the_box(compiler):
+    """**ONE FACT, ONE HOME.** A pronoun's number is a column of its `language_closed_classes` row
+    and the decompiler reads it from there — writing it into the box as well would give one fact two
+    homes, and a fact with two homes drifts."""
+    out = compiler.compile(_with_number(skeleton_from_conllu("They eat fish .", [
+        ("1", "They", "they", "PRON", "2", "nsubj"),
+        ("2", "eat", "eat", "VERB", "0", "root"),
+        ("3", "fish", "fish", "NOUN", "2", "obj"),
+        ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]), {0: "Plur", 2: "Sing"}))
+
+    assert main_row(out).boxes[Role.AGENT].number is None
+
+
+def test_an_ADJECTIVE_heading_a_box_is_not_a_noun_and_takes_no_number(compiler):
+    """«The cat is cute» — the complement's head is `cute.a`. Only an OPEN-CLASS NOUN carries the
+    mark, so the gate is on the part of speech and not on the presence of the feature."""
+    out = compiler.compile(_with_number(skeleton_from_conllu("The cats are cute .", [
+        ("1", "The", "the", "DET", "2", "det"),
+        ("2", "cats", "cat", "NOUN", "4", "nsubj"),
+        ("3", "are", "be", "AUX", "4", "cop"),
+        ("4", "cute", "cute", "ADJ", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ]), {1: "Plur", 3: "Plur"}))
+    boxes = main_row(out).boxes
+
+    assert boxes[Role.COMPLEMENT].number is None, "an adjective has no grammatical number"
+    assert boxes[Role.PATIENT].number == "pl", "and the noun beside it still has its own"
+
+
+def test_NUMBER_is_orthogonal_to_COUNT_and_to_DETERMINATION(compiler):
+    """Req 26 keeps the three apart and this is the sentence that needs all of them: «the three
+    cats» is DEFINITE and COUNTED and PLURAL, and v1's single field could say one at a time."""
+    out = compiler.compile(_with_number(skeleton_from_conllu("The three cats eat .", [
+        ("1", "The", "the", "DET", "3", "det"),
+        ("2", "three", "three", "NUM", "3", "nummod"),
+        ("3", "cats", "cat", "NOUN", "4", "nsubj"),
+        ("4", "eat", "eat", "VERB", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ]), {2: "Plur"}))
+    box = main_row(out).boxes[Role.AGENT]
+
+    assert (box.determination, box.count, box.number) == (Determination.DEFINITE, 3, "pl")
+
+
+def test_a_QUANTIFIED_phrase_carries_its_number_on_the_RESTRICTION(compiler):
+    """The binder takes the noun and the box keeps only the variable (req 36), so the number goes
+    where the noun went. A variable has no grammatical number — it is not a word anybody said."""
+    out = compiler.compile(_with_number(skeleton_from_conllu("All cats eat .", [
+        ("1", "All", "all", "DET", "2", "det"),
+        ("2", "cats", "cat", "NOUN", "3", "nsubj"),
+        ("3", "eat", "eat", "VERB", "0", "root"),
+        ("4", ".", ".", "PUNCT", "3", "punct"),
+    ]), {1: "Plur"}))
+    box = main_row(out).boxes[Role.AGENT]
+    binder = next(r for r in out.zip.rows if r.kind == "quantifier")
+
+    assert isinstance(box.head, Var) and box.number is None
+    assert binder.restriction.head == "cat.n" and binder.restriction.number == "pl"

@@ -80,9 +80,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
-from tk2.language.closed import ClosedClasses, standing_closed_classes
+from tk2.language.closed import FUSED_QUANTIFIER, ClosedClasses, standing_closed_classes
 from tk2.language.inflect import (
-    PARTICIPLE, PAST, PRESENT, Inflections, standing_inflections,
+    PARTICIPLE, PAST, PLURAL, PRESENT, Inflections, standing_inflections,
 )
 from tk2.language.utterance import NO_CONTEXT, Context
 from tk2.tkzip.schema import (
@@ -195,6 +195,14 @@ class _Reading:
     binders: dict[str, object] = field(default_factory=dict)
     #: variable name -> the claimed copular rows that are really modifiers of its noun phrase.
     modifiers: dict[str, list] = field(default_factory=dict)
+    #: content row -> the row an attitude built FROM it scopes. «Suppose the cat is hungry» keeps
+    #: both, because the imperative's want must scope a matrix and a prefix row may not scope
+    #: another prefix row — so the supposing is a content row AND an attitude, and the content row
+    #: is the one that gets spoken.
+    complements: dict = field(default_factory=dict)
+    #: the attitude rows that link one — already spoken as their content row's verb, so they must
+    #: not also wrap the clause they point at.
+    linking: set = field(default_factory=set)
     #: rows spoken somewhere other than as a sentence of their own.
     consumed: set = field(default_factory=set)
     #: rows that became part of a noun phrase and must not be said again as clauses.
@@ -235,8 +243,19 @@ class Decompiler:
     # -- the rows, read backwards -----------------------------------------------------------------
 
     @staticmethod
-    def _key(role, compiled: dict) -> tuple:
-        return (role, tuple(sorted((k, str(v)) for k, v in compiled.items())))
+    def _key(role, compiled: dict, sort: str | None = None, number: str | None = None) -> tuple:
+        """A row's VOICE — its meaning, the SORT it ranges over, and the NUMBER of noun it takes.
+
+        **`db/0028`'s AND `db/0029`'s `_meaning()` KEY ON THIS AND IT MUST STAY THAT WAY.** Twice in
+        two days the key was coarser than the meaning and the loser was silent both times:
+
+            no · nobody      the same `compiled`, and one takes a noun while the other IS one
+            every · all      the same quantity, and English picks by the noun's NUMBER
+
+        A dict does not raise when two rows want one slot — it keeps whichever it met last — so a
+        check keyed on anything but this is checking a table that does not exist.
+        """
+        return (role, tuple(sorted((k, str(v)) for k, v in compiled.items())), sort, number)
 
     @classmethod
     def _invert(cls, table: ClosedClasses) -> dict[tuple, set[str]]:
@@ -246,7 +265,10 @@ class Decompiler:
             compiled = row.get("compiled") or {}
             if not compiled:
                 continue
-            found.setdefault(cls._key(row.get("role"), compiled), set()).add(row["form"])
+            features = row.get("features") or {}
+            found.setdefault(cls._key(row.get("role"), compiled,
+                                      features.get("sort"), features.get("takes_number")),
+                             set()).add(row["form"])
         return found
 
     @classmethod
@@ -260,7 +282,9 @@ class Decompiler:
         for row in table._rows:                       # noqa: SLF001 — the table's own inverse index
             if not row.get("spoken"):
                 continue
-            found[cls._key(row.get("role"), row.get("compiled") or {})] = row["form"]
+            features = row.get("features") or {}
+            found[cls._key(row.get("role"), row.get("compiled") or {},
+                           features.get("sort"), features.get("takes_number"))] = row["form"]
         return found
 
     @staticmethod
@@ -278,27 +302,39 @@ class Decompiler:
                 and not (row.get("features") or {}).get("archaic")
                 and not (row.get("features") or {}).get("generic")]
 
-    def forms_for(self, _role: str, **compiled) -> set[str]:
+    def forms_for(self, _role: str, _number: str | None = None, **compiled) -> set[str]:
         """Every form the table gives this meaning — empty when it gives none.
 
         The leading underscore is not decoration: `role` is itself a COLUMN of some meanings —
         an interrogative names the role it opens — so the parameter that carries the row's role
-        must not collide with a compiled field of the same name.
+        must not collide with a compiled field of the same name. `_number` is underscored for the
+        same reason and is the NOUN's, not the word's.
         """
-        return set(self._by_meaning.get(self._key(_role, compiled), ()))
+        return set(self._by_meaning.get(self._key(_role, compiled, number=_number), ()))
 
-    def the_form(self, _role: str, **compiled) -> str | None:
+    def the_form(self, _role: str, _number: str | None = None, **compiled) -> str | None:
         """The form, when the table names exactly ONE. None when it names several or none.
 
         This is the whole of the module's vocabulary discipline: a meaning with one spelling is a
         lookup, and a meaning with several is a CHOICE — which is curation, does not live in code,
         and is not made here. The caller records the silence.
+
+        **`_number` IS THE NOUN'S, AND A ROW THAT STATES NONE ANSWERS FOR EITHER** (`db/0029`).
+        «every cat» against «all cats» is one quantity and two words that the noun chooses between;
+        «no cat» and «no cats» are one word, and its row says so by carrying no number at all. So
+        the restricted slot is asked first and the unrestricted one answers only when that slot is
+        EMPTY — an ambiguous restricted slot is still an abstention, never a fall-through to a
+        different set of words. It is the same «does not distinguish» the pronouns' `either` has
+        always meant.
         """
-        spoken = self._spoken.get(self._key(_role, compiled))
-        if spoken is not None:
-            return spoken
-        found = self.forms_for(_role, **compiled)
-        return next(iter(found)) if len(found) == 1 else None
+        for wanted in ((_number, None) if _number is not None else (None,)):
+            spoken = self._spoken.get(self._key(_role, compiled, number=wanted))
+            if spoken is not None:
+                return spoken
+            found = self.forms_for(_role, _number=wanted, **compiled)
+            if found:
+                return next(iter(found)) if len(found) == 1 else None
+        return None
 
     # -- the person axis, read backwards -----------------------------------------------------------
 
@@ -376,6 +412,21 @@ class Decompiler:
                 rd.binders[row.binds] = row
             if row.kind == "join":
                 rd.consumed.update(row.operands)
+        # **AN ATTITUDE WHOSE OWN CLAUSE SURVIVED IS THAT CLAUSE'S COMPLEMENT.** The compiler
+        # dissolves a clause into the attitude it became — unless something else names it, which is
+        # exactly the imperative's shape: «Suppose the cat is hungry» is a WANT over a supposing,
+        # and the supposing must stay a content row for the want to scope. Both rows are one clause,
+        # and the sentence says the verb once with its content after it.
+        for row in zip_.rows:
+            if row.kind != "attitude":
+                continue
+            source = next((other for other in zip_.rows
+                           if other.kind == "content" and other.predicate == row.verb
+                           and other.name != row.scopes), None)
+            if source is not None:
+                rd.complements[source.name] = row.scopes
+                rd.consumed.add(row.scopes)
+                rd.linking.add(row.name)
         self._fold(zip_, rd)
         return rd
 
@@ -489,7 +540,10 @@ class Decompiler:
 
     def _say(self, row, name: str, rd: _Reading, embedded: bool) -> _Said | None:
         """`_render`'s body, with this row's tense already in force."""
-        prefix = list(rd.prefix.get(name, []))
+        # An attitude that only links a clause to its complement is spoken as that clause's VERB,
+        # so it must not wrap the complement as well — «Suppose that (somebody) supposes the cat…».
+        prefix = [element for element in rd.prefix.get(name, [])
+                  if element.name not in rd.linking]
 
         # **A NEGATION APPLIES TO WHAT FOLLOWS IT IN SCOPE ORDER**, and where it cannot be
         # delivered the ROW IS REFUSED. Dropping it would not lose half a sentence: it would produce
@@ -817,6 +871,15 @@ class Decompiler:
             # An agent nobody described and nobody asked about is what the PASSIVE leaves out.
             # One the sentence described — «who», «what» — is a question, wherever it stands.
             wh, wh_role = None, None
+        # **A CONJUNCT WITH NOTHING BUT A COMPLEMENT HAS AN ELIDED SUBJECT.** «The cat is dead and
+        # alive» — English says the shared subject once, and the second half is the complement
+        # alone. Said with a subject of its own it becomes «and alive is», which makes the adjective
+        # the thing that is. Only inside a join: standing alone, «is alive» is not a sentence.
+        if (embedded and not imperative and row.predicate is None and row.truth == CLAIMED
+                and set(boxes) == {Role.COMPLEMENT} and not rd.prefix.get(row.name)):
+            said = self._phrase(boxes[Role.COMPLEMENT], rd)
+            return _Said(said) if said else None
+
         # **AN IMPERATIVE HAS NO SUBJECT** — the compiler put the addressee in the box a subject
         # would have taken, and this is the same step backwards: the box is already gone.
         subject_role = None if imperative else next(
@@ -866,6 +929,12 @@ class Decompiler:
 
         subject, agreement = "", {"person": 3, "number": "sg"}
         if there:
+            # **THE EXPLETIVE IS NOT WHAT THE VERB AGREES WITH** *(2026-09-21, the 1st Officier)*.
+            # «There IS a cat» · «There ARE cats» — English agrees the existential copula with the
+            # thing said to exist, and the expletive is only holding the subject position for it.
+            # The default third-singular was invisible until schema v6 let the zip carry the plural
+            # at all, and then it said «There is no cats».
+            agreement = self._agreement(boxes[subject_role], rd)
             subject, subject_role = there, None
         elif wh_is_subject:
             subject, subject_role = wh, None
@@ -876,9 +945,17 @@ class Decompiler:
                 rd.out.refused.append(f"{row.name}: the foregrounded role could not be said")
                 return None
             if not subject:
-                # **THE UNEXPRESSED AGENT IS A PASSIVE WITH NOBODY IN THE `by` PHRASE** — «the
-                # hammer is made of titanium». The zip says the making happened and does not say who
-                # did it, and English's way of saying exactly that is to leave the agent out.
+                # **THE PASSIVE IS FOR AN AGENT NOBODY NAMED, AND FOR NOTHING ELSE.** «The hammer is
+                # made of titanium» leaves out an agent the zip never had. A subject that is a BOUND
+                # VARIABLE is a different thing entirely: the zip has it, this module failed to say
+                # it, and passivising there turns «Nobody knows the answer» into «The answer is
+                # known» — the truth inverted, which is the sin (req 8) and not a word dropped.
+                # *Found by the 1st Officier's `aw-13` work, which made the station produce binders
+                # whose restriction this module could not yet speak.*
+                if isinstance(row.boxes[subject_role].head, Var):
+                    rd.out.refused.append(
+                        f"{row.name}: its subject is a variable whose binder cannot be said")
+                    return None
                 if row.predicate is not None:
                     passive, agent_role = True, subject_role
                     subject_role = next((role for role in SUBJECT_ORDER if role in boxes), None)
@@ -919,7 +996,9 @@ class Decompiler:
             for role in (*OBJECT_ORDER, *CIRCUMSTANCE_ORDER):
                 if role not in boxes or bool(boxes[role].marker) is not marked:
                     continue
-                said = self._phrase(boxes.pop(role), rd)
+                said = self._phrase(boxes.pop(role), rd,
+                                    predicative=(role is Role.COMPLEMENT
+                                                 and row.predicate is None))
                 if said:
                     after.append(said)
         for role in list(boxes):
@@ -936,6 +1015,15 @@ class Decompiler:
         parts = self._verb_phrase(lemma, subject, negated, modal, negation or "", invert,
                                   imperative, row, agreement, rd, passive)
         after = ([after_agent] if after_agent else []) + after
+        complement = rd.complements.get(row.name)
+        if complement is not None:
+            inner = self._render(complement, rd, embedded=True)
+            if inner is None or not inner.text.strip():
+                rd.out.unsaid.append(f"{row.name}: what is {lemma}d could not be said")
+            else:
+                that = self._complementizer(inner)
+                after.append(f"{that} {inner.text}" if that else inner.text)
+
         said = " ".join(part for part in (fronted, *parts, *after) if part)
         if not said.strip():
             return None
@@ -1021,7 +1109,11 @@ class Decompiler:
         features = self._features_of(head)
         if features is not None:
             return {"person": features.get("person"), "number": features.get("number")}
-        plural = isinstance(box.count, int) and box.count > 1
+        if isinstance(head, Open) and head.person is not None:
+            return {"person": head.person, "number": head.number}
+        # **THE BOX'S OWN NUMBER FIRST** (schema v6), then a numeral that implies one: «the three
+        # cats sleep» agrees plural whether or not anybody wrote `number` down.
+        plural = box.number == "pl" or (isinstance(box.count, int) and box.count > 1)
         return {"person": 3, "number": "pl" if plural else "sg"}
 
     def _agreeing(self, lemma: str, agreement: dict, rd: _Reading) -> str:
@@ -1031,7 +1123,15 @@ class Decompiler:
         once. The present inflects in exactly one cell, which is why `db/0022` only ever had to
         answer for `VBZ`: everywhere else the form IS the lemma, and that is a fact about the
         language rather than a gap in the data.
+
+        **EXCEPT FOR `be`, WHICH IS NOT A REGULAR VERB AND WHOSE PARADIGM THIS IS NOT.** It has its
+        own reader because its present has three cells, and a row can reach here holding it without
+        being *copular*: an EXISTENTIAL has a predicate, because existential `be` is content (req
+        31). Falling through to the bare lemma said «There be no cats» the moment schema v6 let the
+        zip carry a plural at all — the rule above is true of every verb English has but this one.
         """
+        if lemma == COPULA:
+            return self._copula(agreement, rd)
         if rd.when == BEFORE:
             return self.inflections.of(lemma, PAST)
         third_singular = (agreement.get("person") in (3, None)
@@ -1109,25 +1209,27 @@ class Decompiler:
 
     # -- the noun phrase ---------------------------------------------------------------------------
 
-    def _phrase(self, box: Box, rd: _Reading, case: str = ACCUSATIVE) -> str:
+    def _phrase(self, box: Box, rd: _Reading, case: str = ACCUSATIVE,
+                predicative: bool = False) -> str:
         """A box as a phrase: its marker, its determiner, its head — in that order, which is frame."""
         if isinstance(box.head, Var):
             return self._variable(box, rd, case)
         head = self._head(box, rd, case)
         if not head:
             return ""
-        return self._dress(box, rd, head, pronoun=self._features_of(box.head) is not None)
+        return self._dress(box, rd, head, pronoun=self._features_of(box.head) is not None,
+                           predicative=predicative)
 
     def _dress(self, box: Box, rd: _Reading, head: str, pronoun: bool = False,
                quantity: Quantity | None = None, adjectives: tuple = (), tails: tuple = (),
-               negation: str = "") -> str:
+               negation: str = "", predicative: bool = False) -> str:
         """Marker · determiner · count · adjectives · head · marked phrases. English's own order."""
         words = []
         if box.marker:
             words.append(box.marker)                  # req 65: the preposition actually used
         possessor = self._possessive(box, rd)
         if not pronoun:
-            determiner = possessor or self._determiner(box, rd, head, quantity)
+            determiner = possessor or self._determiner(box, rd, head, quantity, predicative)
             if determiner:
                 # «NOT every glitterer» — a negation that outscopes a quantifier is spoken in front
                 # of it, which is the only place English puts it.
@@ -1152,6 +1254,18 @@ class Decompiler:
             rd.out.unsaid.append(f"the variable {name}: nothing in the zip binds it")
             return ""
         restriction = binder.restriction
+        # **A QUANTIFIER CAN BE ITS OWN NOUN.** «nobody» is a negative quantity ranging over persons
+        # and there is no separate word for the persons — the restriction says only what the phrase
+        # said (`Open(sort='person')`, schema v4) and English fuses the two into one word. The rows
+        # carry both halves already: every fused form has its `sort` beside its quantity.
+        if isinstance(restriction.head, Open) and restriction.head.sort:
+            fused = self._fused(binder.quantity, restriction.head.sort)
+            if fused is None:
+                rd.out.unsaid.append(f"a {binder.quantity.value} over "
+                                     f"{restriction.head.sort}s: no single word fuses them")
+                return ""
+            rd.said.add(name)
+            return fused
         head = self._head(restriction, rd, case)
         if not head:
             return ""
@@ -1184,6 +1298,28 @@ class Decompiler:
         return self._dress(merged, rd, head, quantity=binder.quantity,
                            adjectives=tuple(adjectives), tails=tuple(tails), negation=negation)
 
+    def _fused(self, quantity: Quantity, sort: str) -> str | None:
+        """The one word that is a quantity AND the thing it ranges over — «nobody», «everywhere».
+
+        Chosen by the rows and never here: the `spoken` flag settles «nobody» against «no one» and
+        «everyone» against «everybody», and a form whose polarity binds it to a negative context
+        («anyone») is not a candidate for a plain statement.
+        """
+        found = [row for row in self.table._rows                     # noqa: SLF001
+                 if row.get("role") == FUSED_QUANTIFIER
+                 and (row.get("compiled") or {}).get("quantity") == quantity.value
+                 and (row.get("features") or {}).get("sort") == sort
+                 # **THE FORCE MUST BE THE PLAIN ONE.** «often» and «seldom» range over times and
+                 # say HOW MANY as well — `force: many`, `force: few` — which is more than a bare
+                 # quantity states; «once» and «twice» carry a count. A word that says more than
+                 # the zip does is the sin in this direction too (req 8).
+                 and (row.get("features") or {}).get("force") == quantity.value
+                 and (row.get("features") or {}).get("count") is None
+                 and not (row.get("features") or {}).get("polarity")]
+        if len(found) > 1:
+            found = [row for row in found if row.get("spoken")] or found
+        return found[0]["form"] if len(found) == 1 else None
+
     def _head(self, box: Box, rd: _Reading, case: str = ACCUSATIVE) -> str:
         """The word in the box — a key becomes its word, and an abstention stays an abstention."""
         if isinstance(box.head, Open):
@@ -1208,7 +1344,16 @@ class Decompiler:
         if box.head is None:
             return ""
         pronoun = self._pronoun(box.head, case, rd)
-        return pronoun if pronoun is not None else keys.word_of(str(box.head))
+        if pronoun is not None:
+            return pronoun
+        word = keys.word_of(str(box.head))
+        # **THE NUMBER THE SPEAKER STATED** (schema v6). A noun with none is spoken singular, which
+        # is what a mass noun and a box the brain built for itself both want; `db/0027` holds the
+        # 276 plurals the spelling rule gets wrong.
+        if box.number == "pl" and keys.is_base_key(str(box.head)) \
+                and keys.pos_of(str(box.head)) == "n":
+            return self.inflections.of(word, PLURAL)
+        return word
 
     def _possessive(self, box: Box, rd: _Reading) -> str:
         """«my cat» · «Liguria's sea» — the possessor, in the form English gives a possessor.
@@ -1249,7 +1394,7 @@ class Decompiler:
         return f"{keys.word_of(str(box.relation))}{clitic}"
 
     def _determiner(self, box: Box, rd: _Reading, head: str,
-                    quantity: Quantity | None = None) -> str:
+                    quantity: Quantity | None = None, predicative: bool = False) -> str:
         """«the» / «a» / «every» where the table names one form, and silence where it names several.
 
         `determination` is lucky — English has ONE definite article — and `indefinite` is «a» or
@@ -1257,11 +1402,28 @@ class Decompiler:
         as orthography.
         """
         quantity = quantity if quantity is not None else box.quantity
+        # **THE DETERMINATION IS THE FINER READING AND IT WINS.** They are orthogonal (req 26), so a
+        # phrase can carry both — «a clever girl» is EXISTENTIAL and INDEFINITE, because the
+        # attributive adjective raised a binder (req 70) over a phrase that already had an article.
+        # English says «a» there and keeps «some» for an existential nobody made indefinite.
+        if isinstance(quantity, Quantity) and isinstance(box.determination, Determination) \
+                and quantity is Quantity.EXISTENTIAL:
+            quantity = None
         if isinstance(quantity, Quantity):
-            form = self.the_form("quantificational", kind="quantifier", quantity=quantity.value)
+            # **THE NOUN PICKS THE WORD** (`db/0029`) — «every cat» against «all cats» is one
+            # quantity and two forms, and the box has just been told which noun it is. Asking
+            # without the number made every plural universal come out «every human beings».
+            # **THE DETERMINER AGREES WITH THE WORD THIS MODULE IS ABOUT TO WRITE**, which is the
+            # singular unless the box says `pl` — the same rule `_dress` spells the head by. A box
+            # with no number at all is not a third case to choose in: English writes «cat», so the
+            # determiner that goes in front of it is the one that takes «cat».
+            form = self.the_form("quantificational",
+                                 _number="pl" if box.number == "pl" else "sg",
+                                 kind="quantifier", quantity=quantity.value)
             if form is None:
-                rd.out.unsaid.append(f"a {quantity.value} quantity: the table names several forms "
-                                     f"and none is preferred")
+                rd.out.unsaid.append(f"a {quantity.value} quantity over a "
+                                     f"{box.number or 'numberless'} noun: the table names several "
+                                     f"forms and none is preferred")
                 return ""
             return form
         if isinstance(box.determination, Determination):
@@ -1279,6 +1441,23 @@ class Decompiler:
                 return next(iter(found))
             # «a» and «an» are one word in two spellings, and which one is settled by the sound that
             # follows — orthography, and therefore frame. Nothing else in this module chooses.
-            vowel = head[:1].lower() in "aeiou"
-            return next((f for f in sorted(found) if (f.endswith("n") == vowel)), sorted(found)[0])
+            return self._indefinite(found, head)
+
+        # **A PREDICATE NOMINAL NEEDS AN ARTICLE AND THIS MODULE MUST NOT INVENT ONE.** «Software
+        # can be mind» is not a sentence, and «a mind» was tried: it MEASURED WORSE — the fixpoint
+        # fell 65 to 61 of 87, because an article the zip does not hold comes back as a
+        # determination the zip did not have. The prose improved and the thought changed, which is
+        # the wrong trade in this direction as in the other (req 8).
+        #
+        # **The defect is upstream**: «minds» and «mind» compile to the same box, because the format
+        # records no NUMBER — the third thing in two days found to be in the sentence and not in the
+        # zip, after the sort of an unknown and the tense of a clause. `predicative` is kept so the
+        # caller's knowledge of WHERE the phrase stands is not thrown away a second time.
         return ""
+
+    @staticmethod
+    def _indefinite(found: set, head: str) -> str:
+        """«a» or «an» — one word in two spellings, settled by the sound that follows. Orthography,
+        and the one form this module picks for itself, because it is not picking a WORD."""
+        vowel = head[:1].lower() in "aeiou"
+        return next((f for f in sorted(found) if (f.endswith("n") == vowel)), sorted(found)[0])
