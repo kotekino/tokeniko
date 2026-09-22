@@ -161,8 +161,10 @@
       matched the copula's participle, read as structure, and took the subject with it. **221 of
       331 forms are single-row and ≥17 are ordinary words** — «the BACK of the house», «a CAN of
       soup», «the WILL of the people» each lost a noun. Read-whole 72 → 73. Record `202609221200_…`
-- [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
-      trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
+- [x] **⚑ `as far as` — a curation row AND a reader defect** *(09-22)* — `db/0033` supplies the
+      marker `db/0015` named and the table never had. But the row alone made it WORSE: stanza reads
+      the phrase two ways and in the past tense the nominal hangs off a token INSIDE the marker,
+      with no `case` child. Reading the marker's SPAN holds under both. Read-whole 73 → 74
 - [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read
       whole. The SILENT one is `t-md-2` «So a calculator does not necessarily think»: **a negation
       OUTSIDE a necessity has no form in the table**, which is a vocabulary gap, not a logic one

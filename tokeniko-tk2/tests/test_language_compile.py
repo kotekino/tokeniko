@@ -1685,3 +1685,52 @@ def test_a_fronted_phrase_whose_box_NOBODY_CONTESTS_is_not_a_domain(compiler):
     assert not [r for r in out.zip.rows if r.kind == "domain"]
     clause = next(r for r in out.zip.rows if r.kind == "content")
     assert clause.boxes[Role.TIME].head == "morning.n"
+
+
+AS_FAR_AS_PAST = skeleton_from_conllu("I walked as far as the bridge.", [
+    ("1", "I", "i", "PRON", "2", "nsubj"),
+    ("2", "walked", "walk", "VERB", "0", "root"),
+    ("3", "as", "as", "ADV", "4", "advmod"),
+    ("4", "far", "far", "ADV", "2", "advmod"),
+    ("5", "as", "as", "ADP", "3", "fixed"),      # stanza's PAST-tense reading: a fixed expression
+    ("6", "the", "the", "DET", "7", "det"),
+    ("7", "bridge", "bridge", "NOUN", "4", "obl"),
+])
+
+AS_FAR_AS_PRESENT = skeleton_from_conllu("I walk as far as the station.", [
+    ("1", "I", "i", "PRON", "2", "nsubj"),
+    ("2", "walk", "walk", "VERB", "0", "root"),
+    ("3", "as", "as", "ADV", "4", "advmod"),
+    ("4", "far", "far", "ADV", "2", "advmod"),
+    ("5", "as", "as", "ADP", "7", "case"),       # the SAME phrase, read as a case marker
+    ("6", "the", "the", "DET", "7", "det"),
+    ("7", "station", "station", "NOUN", "4", "obl"),
+])
+
+
+@pytest.mark.parametrize("skeleton,noun", [(AS_FAR_AS_PAST, "bridge.n"),
+                                           (AS_FAR_AS_PRESENT, "station.n")])
+def test_a_MULTI_WORD_marker_that_swallowed_the_nominals_head_is_still_its_marker(
+        compiler, skeleton, noun):
+    """«I walked AS FAR AS the bridge» came back «I walked.» — the bridge simply gone.
+
+    **AND BOTH INSTRUMENTS CALLED IT FINE.** The fixpoint reported `dir-3` FIXED, because a
+    truncated sentence recompiles to the same truncated zip; the drill gate reported «no common
+    ground», because a row that is MISSING is not a row that CONFLICTS.
+
+    Two defects, one sentence. `db/0033` supplies the marker the table never had — `db/0015` named
+    it in the ruling that created `destination`, and the family `to` · `toward` · `up to` was
+    otherwise complete. And the nominal could not SEE it: stanza reads this phrase two ways, and in
+    the past tense the second `as` is `fixed` to the first, so the bridge hangs off `far` — a token
+    INSIDE the marker — with no `case` child at all.
+
+    Reading the marker's SPAN holds under either analysis, which is what makes it a rule about the
+    tree's shape rather than a patch for one tense.
+    """
+    out = compiler.compile(skeleton)
+    clause = next(r for r in out.zip.rows if r.kind == "content")
+
+    assert not out.zip.unplaced, f"{out.zip.unplaced} was dropped"
+    assert clause.boxes[Role.DESTINATION].head == noun
+    assert clause.boxes[Role.DESTINATION].marker == "as far as", (
+        "req 65 puts «no arrival entailed» in the MARKER, so the box must carry which one it was")

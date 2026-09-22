@@ -1704,6 +1704,27 @@ class Compiler:
             return Role.AGENT
         return role
 
+    @staticmethod
+    def _swallowing_marker(word: Word, marks: dict) -> int | None:
+        """The index of a MULTI-WORD marker whose span contains this nominal's own head, if any.
+
+        **stanza ANALYSES ONE PHRASE TWO WAYS AND THE STATION MUST SURVIVE BOTH** *(2026-09-22)*.
+        «I walk AS FAR AS the station» makes the second `as` a `case` on the station — an ordinary
+        child, found the ordinary way. «I walkED as far as the bridge» makes it `fixed` to the
+        first `as`, so the bridge hangs off `far`, a token INSIDE the marker, and has no `case`
+        child at all. Same phrase, same meaning, different tree; the bridge went `unplaced` and the
+        sentence came back «I walked.»
+
+        Reading the SPAN is the tree's own shape and it holds under either analysis. It is narrow on
+        purpose: only a multi-word marker can swallow a head, and only the head — a nominal that
+        merely sits near a marker is not marked by it.
+        """
+        for index, match in marks.items():
+            if match.kind == "box" and getattr(match, "length", 1) > 1 \
+                    and index <= word.head < index + match.length:
+                return index
+        return None
+
     def _marker_role(self, word: Word, skeleton: Skeleton, marks: dict,
                      defaulted: list | None = None) -> Role | None:
         """The role this nominal's own CASE MARKER gives it, or None if it has none that decides.
@@ -1714,7 +1735,11 @@ class Compiler:
         spelling kept and its meaning discarded.
         """
         head = skeleton[word.head]
-        for child in skeleton.children(word.index):
+        candidates = list(skeleton.children(word.index))
+        swallowed = self._swallowing_marker(word, marks)
+        if swallowed is not None:
+            candidates = [skeleton[swallowed], *candidates]
+        for child in candidates:
             match = marks.get(child.index)
             if match is None or match.kind != "box":
                 continue
@@ -1756,7 +1781,13 @@ class Compiler:
         count = None
         marker = None
         relation = None
-        for child in skeleton.children(word.index):
+        # The same swallowed marker `_marker_role` looks for — read here so that the marker is
+        # RECORDED on the box, which is where req 65 puts «no arrival entailed».
+        swallowed = self._swallowing_marker(word, marks)
+        children = list(skeleton.children(word.index))
+        if swallowed is not None:
+            children = [skeleton[swallowed], *children]
+        for child in children:
             match = marks.get(child.index)
             if match is None:
                 continue
