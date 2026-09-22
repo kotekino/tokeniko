@@ -156,8 +156,11 @@
       «Legally, in Italy, he is still married» (DOMAIN) and «In France, I ate well» (LOCATION) are
       identical on every fact the parse gives. `aw-17` stays red honestly rather than green on a
       rule that would invent domains elsewhere
-- [ ] **⚑ «Every human being is an animal» → «An animal is.»** *(09-21, PRE-DATES `Box.number`)* —
-      the subject vanishes from a universal with a predicate nominal; not diagnosed
+- [x] **⚑ «An animal is.» was the MATCHER eating a noun** *(09-22)* — not a quantifier defect at
+      all: `select` returned a single-row form without ever consulting the POS, so the NOUN «being»
+      matched the copula's participle, read as structure, and took the subject with it. **221 of
+      331 forms are single-row and ≥17 are ordinary words** — «the BACK of the house», «a CAN of
+      soup», «the WILL of the people» each lost a noun. Read-whole 72 → 73. Record `202609221200_…`
 - [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
       trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
 - [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read

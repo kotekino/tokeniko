@@ -169,3 +169,39 @@ def test_a_tiny_table_behaves_like_the_real_one():
     assert t.match(["up", "to", "here"], 0) == "up to"
     assert t.select("up", "ADP", "case")["role"] == "role_marker"
     assert t.select("up", "PART", "compound:prt")["role"] == "verb_particle"
+
+
+def test_a_CONTENT_word_is_not_a_function_word_spelled_the_same(table):
+    """**«Every human BEING is an animal» compiled to «An animal is.»** The noun matched the row for
+    `being` — the copula's participle — was read as STRUCTURE, compiled to nothing, and took the
+    whole subject with it; its adjective «human» went `unplaced`.
+
+    **221 of the 331 forms here have exactly ONE row**, and the shortcut for those returned it
+    without ever consulting the POS. At least seventeen are ordinary English words — `back` · `can`
+    · `will` · `need` · `like` · `one` · `past` · `round` — so «the BACK of the house», «a CAN of
+    soup» and «the WILL of the people» each silently lost a noun.
+
+    This table holds pronouns, determiners, adpositions, conjunctions, auxiliaries, modals,
+    particles, clitics and adverbs. **Not one noun, adjective or proper noun** — so a token UD tags
+    as one of those is not in here at all.
+    """
+    assert table.select("being", "NOUN", "nsubj") is None
+    assert table.select("back", "NOUN", "nsubj") is None
+    assert table.select("will", "NOUN", "nsubj") is None
+
+    # and the same spellings still answer where they ARE function words
+    assert table.select("being", "AUX", "cop") is not None
+    assert table.select("will", "AUX", "aux")["role"] == "tense_aspect"
+
+
+def test_the_refusal_does_NOT_extend_to_an_INCREDIBLE_tag(table):
+    """The other half, and the reason `VERB` is not on the list: the difference is whether the tag
+    is CREDIBLE. English has a noun «being», so UD tagging it `NOUN` is right. There is no verb
+    «through», so UD tagging it `VERB` is a parse error — and deleting the preposition over it
+    would lose a form the station can see perfectly well.
+
+    That is the disagreement `select`'s own note forgives, and it is why the refusal names the
+    three classes whose tag can be trusted rather than every open class UD has.
+    """
+    assert table.select("through", "VERB", "root") is not None
+    assert table.select("no", "INTJ", "discourse") is not None

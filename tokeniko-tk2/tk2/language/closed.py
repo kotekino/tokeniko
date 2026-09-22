@@ -47,6 +47,22 @@ UD_POS_TO_WORD_CLASS: dict[str, tuple[str, ...]] = {
     "SCONJ_OR_ADP": ("conjunction", "preposition"),
 }
 
+#: **THE TAGS THAT SAY «THIS IS A CONTENT WORD», AND THEREFORE NOT IN THIS TABLE** *(2026-09-22)*.
+#: UD designates its open classes, and `UD_POS_TO_WORD_CLASS` above has no entry for these four —
+#: the table holds pronouns, determiners, adpositions, conjunctions, auxiliaries, modals, particles,
+#: clitics and adverbs, and not one noun, adjective or lexical verb. **That absence is evidence.**
+#:
+#: **`VERB` IS DELIBERATELY NOT HERE, AND THE DIFFERENCE IS WHETHER THE TAG IS CREDIBLE.** `being`
+#: tagged `NOUN` is right — English has that noun, and the table's `being` is the copula's
+#: participle. `through` tagged `VERB` is a parse error: there is no such verb, and deleting the
+#: preposition over it would lose a form the station can see perfectly well. That is the
+#: disagreement the note on `select` forgives, and `tests/test_language_closed.py` pins it.
+#:
+#: `ADV` and `INTJ` are UD open classes too and are also NOT here: the table DOES hold adverbs
+#: (`always` · `never` · `somewhere`), and «no» as an `INTJ` answering a question is the same kind
+#: of genuine label disagreement.
+CONTENT_POS = frozenset({"NOUN", "PROPN", "ADJ"})
+
 #: The role of a quantifier that IS its own noun phrase — «nobody» · «everywhere» · «nothing» ·
 #: «none» — against the `quantificational` determiner that takes a noun under it. Written by
 #: `db/0028`, which moved every quantificational row whose word class is not `determiner`.
@@ -229,6 +245,21 @@ class ClosedClasses:
         """
         rows = self._by_form.get(form.lower())
         if not rows:
+            return None
+        if upos and upos.upper() in CONTENT_POS:
+            # **A CONTENT WORD IS NOT A FUNCTION WORD THAT HAPPENS TO BE SPELLED THE SAME**
+            # *(2026-09-22)*. «Every human BEING is an animal» was compiling to «An animal is»: the
+            # noun matched the row for `being`, the participle of the copula, was read as STRUCTURE
+            # and compiled to nothing — so the subject vanished and its adjective went `unplaced`.
+            #
+            # 221 of the 331 forms here have exactly ONE row, and the shortcut below returned it
+            # without ever consulting the POS. At least seventeen of those are ordinary English
+            # words — `back` · `can` · `will` · `need` · `like` · `one` · `past` · `round` — and
+            # «the BACK of the house», «a CAN of soup», «the WILL of the people» each lost a noun.
+            #
+            # *This is NOT the disagreement the note above forgives. A token UD calls `ADP` that
+            # this table holds as a particle is two names for one function word; a token UD calls
+            # `NOUN` is a word this table does not contain at all.*
             return None
         if len(rows) == 1:
             return rows[0]
