@@ -404,3 +404,77 @@ checked by kind rather than by position, which is what it always meant.*
 Faithful to the zip and not yet English: two asserted rows sharing a variable, said as two
 sentences instead of one phrase with a relative clause. That is `_share_variable`'s inverse, and it
 is the next piece.
+
+---
+
+# THE RELATIVE CLAUSE, DECOMPILER HALF — AND THE RULE WAS ALREADY WRITTEN
+
+*2026-09-22. The 1st Officier's §4.5 read backwards.*
+
+    fixpoint     66 -> 68 of 87 identical        58 of the 70 read whole (was 56)
+    SILENT        3 -> 1                          only `t-md-2`, a table gap of its own
+    drill gate   65 agreed · 5 DISAGREED · 17     the pinned five, unmoved
+
+**`aw-13` and `aw-14` are fixed.** Both were SILENT since the officer's compiler work exposed them.
+
+    « Every cat that sleeps is happy. »  ->  « Every cat that sleeps is happy. »
+    « All that glitters is not gold. »   ->  « All that glitters is not gold. »
+
+## THE RULE
+
+**A content row with an empty truth slot that shares a binder's variable is not a sentence — it is
+that binder's relative clause.** That is exactly the officer's rule from the other direction: he
+made the compiler leave the truth slot empty *because a restriction is stated and never claimed*,
+and this reads the same slot back.
+
+**And dropping it is not brevity — it is a wider claim than the zip holds.** «Every cat is happy»
+asserts something «every cat that sleeps is happy» does not. A decompiler that silently widens a
+quantifier's restriction is committing req 8's sin in the shape of a shorter sentence, which is the
+hardest shape to notice.
+
+## THREE THINGS THAT FELL OUT OF THE DESIGN RATHER THAN NEEDING ONE
+
+**The gap is the question's gap.** A relative pronoun stands exactly where a `wh` word does, so the
+clause takes the path questions already take — and a subject relative does not invert while an
+object relative fronts its pronoun, for free, because that logic was written once.
+
+**A join consumes its operands before this runs**, and that ordering is what keeps «If it rains, I
+stay home» out of the noun phrase: both halves claim nothing and both may share one variable, so
+without it «Smoking causes cancer» would have had its own halves eaten into its subject. It now has
+a test that says so.
+
+**A bare quantifier takes its clause as its NOUN.** «all» says nothing about what it ranges over, so
+the restricting row is not a tail hanging off a head — it IS the head. That is the same hole the
+fused quantifiers fill from the table («nobody» is a quantity and a sort in one word), filled here
+by the sentence instead.
+
+## `db/0031` — `that`, AND ONLY `that`
+
+All nine `relative` rows carry the identical `compiled`, so the inverse index found nine forms for
+one meaning and abstained, correctly. They differ by `features.sort` — the axis `db/0028` put in
+the key — and **choosing `who` over `which` needs the antecedent's ANIMACY, which the zip does not
+record.** That is the same hole as the pinned gate failure `q-6`, and it is E3b's.
+
+`that` is the relative English uses when it does not commit, it is the one row whose sort is empty,
+and **it compiles identically to `who`** — so «the man who ate the fish» coming back as «the man
+that ate the fish» is a different word and the same zip. A decompiler is faithful to the zip, not to
+the original sentence (req 9). The sorted rows stay unflagged on purpose: the day animacy reaches
+the format, `who` and `which` are one migration away and the key already holds the axis.
+
+## ONE JUDGEMENT, FLAGGED RATHER THAN BURIED
+
+A clause-headed phrase takes the **plural** universal — «all that glitters», never «every that
+glitters» — because `db/0029` picks the universal by the noun's number and «every» is the form that
+wants a singular count noun, which a clause is not. **This is not measured**; it is on the roadmap
+as the place a `takes_clause` feature would go if evidence ever appears. *The verb still agrees
+singular, which is English's own mismatch and not this module's.*
+
+## WHAT STAYS UNSAID, AND HONESTLY
+
+    « The cat that sleeps is happy. »  ->  « The cat sleeps. The cat is happy. »
+
+A referring phrase's relative clause is **claimed** — a definite description commits the speaker to
+it, which is the trade recorded on 09-21 so the brain gets the fact — so the zip holds two asserted
+rows and two sentences is a faithful reading of it. Whether English would rather say it as one
+non-restrictive clause is a question about the RENDERING, not about the zip, and it is not this
+piece of work.

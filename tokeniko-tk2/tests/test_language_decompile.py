@@ -606,3 +606,66 @@ def test_a_determiner_s_number_is_the_NOUN_S_and_not_its_own():
     moved = [new["form"] for new, was in zip(after, before)
              if (new.get("features") or {}).get("number") != (was.get("features") or {}).get("number")]
     assert not moved, f"{moved} had their own `number` changed by the determiner migration"
+
+
+def test_a_RESTRICTION_is_spoken_inside_the_phrase_it_restricts(decompiler):
+    """«Every cat THAT SLEEPS is happy» — the clause says WHICH cats, and the compiler marks it by
+    leaving the truth slot empty (a restriction is stated, never claimed).
+
+    **DROPPING IT IS NOT BREVITY, IT IS A WIDER CLAIM THAN THE ZIP HOLDS.** «Every cat is happy»
+    asserts something «every cat that sleeps is happy» does not, so the row cannot simply be left
+    out — and it cannot be said as a sentence either, because a clause that claims nothing is not
+    one. It goes where English puts it: after the noun.
+    """
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r1", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head="cat.n", number="sg")),
+        ContentRow(name="r0", truth=None, predicate="sleep.v",
+                   boxes={Role.AGENT: Box(head=Var(name="x0"))}),
+        row("r1", predicate=None, experiencer=Box(head=Var(name="x0")),
+            complement=Box(head="happy.a")),
+    ]))
+
+    assert out.text == "Every cat that sleeps is happy."
+
+
+def test_a_bare_quantifier_takes_its_CLAUSE_as_its_noun(decompiler):
+    """«All that glitters is not gold» — «all» says nothing about what it ranges over, so the
+    restricting row is not a clause hanging off a noun: it IS the noun.
+
+    Both `aw-13` and `aw-14` were SILENT on exactly this, and the phrase takes the PLURAL universal
+    because «every» is the form that wants a singular count noun and a clause is not one.
+    """
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r1", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head=Open())),
+        NegationRow(name="p1", scopes="r1"),
+        ContentRow(name="r0", truth=None, predicate="glitter.v",
+                   boxes={Role.AGENT: Box(head=Var(name="x0"))}),
+        row("r1", predicate=None, patient=Box(head=Var(name="x0")),
+            complement=Box(head="gold.n", number="sg")),
+    ]))
+
+    assert out.text == "All that glitters is not gold."
+
+
+def test_a_join_s_unasserted_halves_are_NOT_restrictions(decompiler):
+    """«If it rains, I stay home» — both halves claim nothing and a conditional over one variable
+    would put them both in reach of the rule above. A join consumes its operands first, and that is
+    what keeps the antecedent of a conditional out of the noun phrase it shares a variable with.
+
+    Without the ordering, «Smoking causes cancer» — a universal over a person, with two unasserted
+    halves sharing that person — would have had its own halves eaten into the subject.
+    """
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="jn", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head="person.n", number="sg")),
+        ContentRow(name="s", truth=None, predicate="smoke.v",
+                   boxes={Role.AGENT: Box(head=Var(name="x0"))}),
+        ContentRow(name="k", truth=None, predicate="develop.v",
+                   boxes={Role.EXPERIENCER: Box(head=Var(name="x0")),
+                          Role.PATIENT: Box(head="cancer.n", number="sg")}),
+        JoinRow(name="jn", truth=1.0, operator=Operator.IMPLY, operands=["s", "k"]),
+    ]))
+
+    assert "smokes" in out.text and "develops" in out.text, out.text

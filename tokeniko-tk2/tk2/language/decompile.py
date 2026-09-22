@@ -207,6 +207,11 @@ class _Reading:
     consumed: set = field(default_factory=set)
     #: rows that became part of a noun phrase and must not be said again as clauses.
     folded: set = field(default_factory=set)
+    #: variable name -> the rows that RESTRICT it, spoken as relative clauses inside its phrase.
+    restrictions: dict[str, list] = field(default_factory=dict)
+    #: the variable whose box is the ANTECEDENT of the clause being rendered right now, and is
+    #: therefore a gap rather than a phrase. Pushed and popped around one clause, like `when`.
+    gap: str | None = None
     #: variables already introduced; a second mention is definite, not a second thing.
     said: set = field(default_factory=set)
     #: variables whose BINDER is negated — «not every glitterer is gold». The negation is spoken at
@@ -412,6 +417,26 @@ class Decompiler:
                 rd.binders[row.binds] = row
             if row.kind == "join":
                 rd.consumed.update(row.operands)
+        # **A ROW THAT CLAIMS NOTHING AND SHARES A BINDER'S VARIABLE IS THAT BINDER'S RELATIVE
+        # CLAUSE**, not a sentence of its own. «Every cat THAT SLEEPS is happy» — the clause says
+        # WHICH cats are meant, and the compiler marks it by leaving the truth slot empty (the 1st
+        # Officier's rule: a restriction is stated, never claimed).
+        #
+        # **DROPPING IT IS NOT BREVITY, IT IS A WIDER CLAIM THAN THE ZIP HOLDS** — «Every cat is
+        # happy» says something «every cat that sleeps is happy» does not, which is req 8's sin
+        # wearing the appearance of a shorter sentence. So the row is consumed here and spoken
+        # inside the phrase, where English puts it.
+        #
+        # *A join's operands are already consumed above, which is what keeps the halves of «if it
+        # rains I stay home» — both unasserted, both over the same variable — out of this.*
+        for row in zip_.rows:
+            if row.kind != "content" or row.truth is not None or row.name in rd.consumed:
+                continue
+            shared = {box.head.name for box in row.boxes.values()
+                      if isinstance(box.head, Var) and box.head.name in rd.binders}
+            if len(shared) == 1:
+                rd.restrictions.setdefault(shared.pop(), []).append(row)
+                rd.consumed.add(row.name)
         # **AN ATTITUDE WHOSE OWN CLAUSE SURVIVED IS THAT CLAUSE'S COMPLEMENT.** The compiler
         # dissolves a clause into the attitude it became — unless something else names it, which is
         # exactly the imperative's shape: «Suppose the cat is hungry» is a WANT over a supposing,
@@ -866,6 +891,20 @@ class Decompiler:
         # asked at all: a clause under an attitude is an embedded question, a clause standing alone
         # and claiming something is not.
         wh, wh_role = self._question_word(boxes, rd)
+        if rd.gap is not None:
+            # **THE ANTECEDENT IS NOT SAID TWICE.** Inside a relative clause the shared variable IS
+            # the noun the phrase already named, and English leaves a gap with a relative pronoun in
+            # it: «the cat THAT sleeps», «the fish THAT the cat ate». That is the same shape a
+            # question leaves behind, so it takes the same path — which is what makes a subject
+            # relative not invert and an object relative front its pronoun, for free.
+            antecedent = next((role for role, box in boxes.items()
+                               if isinstance(box.head, Var) and box.head.name == rd.gap), None)
+            if antecedent is not None:
+                relative = self.the_form("relative", kind="open", binds="antecedent")
+                if relative is None:
+                    rd.out.unsaid.append(f"{row.name}: the table names no single relative pronoun")
+                    return None
+                wh, wh_role = relative, antecedent
         if wh_role is Role.AGENT and not (asked or asks) and row.predicate is not None \
                 and len(boxes) > 1 and not boxes[wh_role].head.described:
             # An agent nobody described and nobody asked about is what the PASSIVE leaves out.
@@ -1269,9 +1308,10 @@ class Decompiler:
             rd.said.add(name)
             return fused
         head = self._head(restriction, rd, case)
-        if not head:
+        if not head and not rd.restrictions.get(name):
+            # No noun, and no clause to stand in for one. «all» alone names nothing.
             return ""
-        if name in rd.said:
+        if head and name in rd.said:
             again = box.model_copy(update={"determination": Determination.DEFINITE,
                                            "head": restriction.head})
             return self._dress(again, rd, head)
@@ -1286,6 +1326,38 @@ class Decompiler:
             if not said:
                 continue
             (tails if other.marker else adjectives).append(said)
+
+        # **AND THE RESTRICTION THE ZIP PUT IN A ROW OF ITS OWN**, which English puts after the
+        # noun. Popped rather than read, so a phrase said twice does not say its clause twice and a
+        # clause that mentions its own antecedent cannot recurse into this.
+        for restricting in rd.restrictions.pop(name, ()):
+            outer_gap, rd.gap = rd.gap, name
+            try:
+                clause = self._render(restricting.name, rd, embedded=True)
+            finally:
+                rd.gap = outer_gap
+            if clause is None or not clause.text.strip():
+                rd.out.unsaid.append(f"the clause restricting {name}: it could not be said, and "
+                                     f"the phrase without it would claim more than the zip")
+                return ""
+            tails.append(clause.text.strip())
+
+        if not head:
+            # **«ALL THAT GLITTERS» — THE QUANTIFIER IS THE PHRASE AND THE CLAUSE IS ITS NOUN.**
+            # A bare `all` says nothing about what it ranges over, so the restriction row is not a
+            # clause hanging off a noun: it IS the noun, and English puts it exactly where one
+            # goes. The fused forms take the other road — «nobody» is a quantity and a sort in one
+            # word — and this is the same hole filled by the sentence instead of by the table.
+            if not tails:
+                return ""
+            head, tails = tails[0], tails[1:]
+            # **AND «EVERY» IS NOT THE WORD FOR IT.** `db/0029` picks the universal by the number of
+            # the noun, and «every» is the one that takes a SINGULAR COUNT noun — which a clause is
+            # not. «All that glitters», never «every that glitters». Asked with no number at all the
+            # lookup reaches the slot no measured row occupies, so the clause is read as the plural
+            # it patterns with. *The verb still agrees singular, which is English's own mismatch and
+            # not this module's: «all that glitters IS not gold».*
+            restriction = restriction.model_copy(update={"number": "pl"})
 
         merged = restriction.model_copy(update={
             "marker": box.marker or restriction.marker,
