@@ -138,7 +138,7 @@
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [x] **⚑ THE DOMAIN — the fifth prefix element, built at last** *(09-22, req 6, rules reqs 6-7)*
+- [x] **⚑ task 9 — THE DOMAIN, the fifth prefix element, built at last** *(09-22, rules reqs 6-7)*
       — the station had NEVER raised a `DomainRow`; the schema, the decompiler and three drill
       cases were all waiting. Two signals, measured clean in both directions on
       `tools/domain_bench.py`: a fronted `as` (a capacity) and a fronted phrase whose BOX IS

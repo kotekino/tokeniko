@@ -1254,6 +1254,13 @@ it).
    **Record: `docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`** — all 52 constants,
    the ones cleared argued rather than waved through.
 
+   **Done when:** ✅ **MET 2026-09-22.** Every constant this epic put in a `.py` file re-asked the
+   frame test and answered in the open. **Four move**; three are `db/0032` and the fourth
+   (`SAYING_VERBS`) waits for E4's geometry, because rows now would move a closed set rather
+   than remove one. **Two of this table's own suspects were cleared as STALE**, which is the
+   result worth keeping: a candidate list is a thing that rots, and `db/0018` had answered one
+   of them weeks ago without anybody striking it off.
+
    **Done when** every row of that table has a ruling and a home, and the ones that moved are a
    migration.
 
@@ -1266,6 +1273,35 @@ orders the drill's failures sensibly, **a placement is judged by a floor fitted 
 opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which is req 8 working.*
 
 ---
+
+9. **⚑ THE DOMAIN — the fifth prefix element** *(found 2026-09-22, while «fixing `aw-15`»)*. **It was
+   never built.** The schema had held it since E2 — *«the context a claim holds in: legally · in
+   chess · as a doctor · in Italy»* — the decompiler could already SAY one, the drill hand-compiles
+   three cases, and rules reqs 6-7 depend on it: «as a doctor I disagree; as a father I understand»
+   must be two positions honestly held rather than a KB contradiction. `grep DomainRow tk2/language/`
+   was empty. One side of the format was built and the other never was.
+
+   **It is a real sibling and not a defect inside task 2**, because a domain is precisely NOT one of
+   the eighteen roles — req 12's dichotomy needed a third category.
+
+   **THE BENCH CAME FIRST AND KILLED THE OBVIOUS RULE.** «A marked nominal before the subject is a
+   domain» fits all three drill cases and scores **five false positives out of six**
+   (`tools/domain_bench.py`): it swallows «In the morning, I go to work», «With a knife, he cut the
+   bread», «At home, I relax». A false positive is worse than usual here — a domain nobody stated
+   indexes a claim to a context it was never held in, and the evaluator would then never contradict
+   it — so both signals were chosen for ZERO false positives at the cost of three of the six domains.
+
+   **Done when:** ✅ **MET 2026-09-22** for the two signals the evidence covers — a fronted `as`, and
+   a fronted phrase whose BOX IS CONTESTED. `aw-15` green and **France stopped being `unplaced`**;
+   gate 65·5 → 66·4, read-whole 70 → 72.
+
+   **OPEN, AND EACH FOR A STATED REASON**: a fronted ADVERB («Legally,») needs `legally` → `law.n`, a
+   derivation the compiler has no reader for and which the decompiler already refuses to say; a
+   NON-fronted `as` («I work as a teacher») was never benched and may be the job rather than the
+   frame. **And one pair is IRREDUCIBLE**: «Legally, in Italy, he is still married» (DOMAIN) and «In
+   France, I ate well» (LOCATION) are identical on every fact the parse gives, so the station
+   abstains and `aw-17` stays red honestly rather than green on a rule that would invent domains
+   everywhere else. Record `202609221100_the-domain.md`.
 
 ## E3b — The name *(named individuals: recognition, identification, and the first micro-nn)*
 
