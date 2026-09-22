@@ -148,10 +148,14 @@
       DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 14 above**
 - [x] **drill automated = acceptance gate** *(ticked 09-20 — it was already met)* — `tests/test_drill.py`
       scores the bar, keeps the forced-change ledger and prints the report on every suite run
-- [ ] **⚑ the frame/knowledge audit — E3's closing act.** Suspect already: `RELATION_FILLS_ROLE` ·
-      `CLAUSE_DEPS` · `UD_DEP_TO_ROLE` · `UD_POS_TO_WORD_CLASS` · `CLAIMED = 1.0` · `SAYING_VERBS` ·
-      `COORDINATE_DEPS` · `SUBJECT_DEPS` · `OBJECT_DEPS` · `COMPLEMENT_CLAUSE_DEPS` · `QUESTION_MARK` ·
-      `IMPERATIVE_VERB` *(that an imperative is a WANT — the other half of `db/0020`'s fact)*
+- [x] **⚑ the frame/knowledge audit — E3's closing act** *(09-22)* — 52 constants walked, four move,
+      two of the plan's own suspects cleared as STALE. The flagged family was two: reading the tree's
+      shape is frame, ruling what a shape MEANS is not. Record `202609220930_…`
+- [x] **the audit's migration — `db/0032`, three arguments out of code** *(09-22)* — `vocative`
+      compiles to nothing · `xcomp` opens no row · only a NOUN states a number. `CLAUSE_DEPS` got
+      BIGGER and is now pure transcription. Measurements unmoved. `SAYING_VERBS` waits for E4
+- [ ] **⚑ `UD_DEP_TO_ROLE` is welded** *(09-22, wants the Captain)* — WHICH roles a relation admits is
+      frame; the BEST-FIRST ORDER is a claim about English and is knowledge. One tuple carries both
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence

@@ -79,6 +79,7 @@ def test_the_named_collections_are_all_present():
         "language_subject_roles",
         "language_attitude_strengths",
         "language_inflections",
+        "language_ud_readings",
         "dictionary_curated_edges",
     }
 
@@ -98,6 +99,11 @@ def test_the_architecture_is_rows_not_code():
         "language_subject_roles",
         "language_attitude_strengths",
         "language_inflections",
+        # Where a UD label does not mean for us what it NAMES — `db/0032`, and E3's frame/knowledge
+        # audit is what put it here. Three frozensets in the compiler each encoded an argument, and
+        # an argument is knowledge: «a vocative is addressing, not content», «nobody asserts that
+        # you swim», «a proper noun's number is not evidence». **A one-member set is never a set.**
+        "language_ud_readings",
         # An INPUT to a build, not an output of one — the E1d T4 repair. Two approved edges were
         # lost in the E1b rebuild because they lived only as cells in a regenerated matrix.
         "dictionary_curated_edges",

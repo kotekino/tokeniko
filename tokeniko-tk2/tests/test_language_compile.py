@@ -651,13 +651,46 @@ def test_a_relative_clause_on_a_QUANTIFIED_phrase_reuses_the_binders_variable(co
         "a relative clause on a REFERRING phrase is presupposed content, and stays claimed")
 
 
+LIKE_TO_SWIM = skeleton_from_conllu("You like to swim.", [
+    ("1", "You", "you", "PRON", "2", "nsubj"),
+    ("2", "like", "like", "VERB", "0", "root"),
+    ("3", "to", "to", "PART", "4", "mark"),
+    ("4", "swim", "swim", "VERB", "2", "xcomp"),
+    ("5", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
 def test_an_xcomp_stays_inside_its_clause(compiler):
     """«you like TO SWIM» is one predication with a controlled subject, not two claims: nobody
     asserts that you swim. A second row would put an unasserted proposition in the zip with nothing
-    marking it unasserted — the one thing the truth slot exists to prevent."""
-    from tk2.language.compile import CLAUSE_DEPS
+    marking it unasserted — the one thing the truth slot exists to prevent.
 
-    assert "xcomp" not in CLAUSE_DEPS
+    **THIS ASKS THE BEHAVIOUR, NOT THE SET** *(rewritten 2026-09-22)*. It used to assert
+    `"xcomp" not in CLAUSE_DEPS`, and E3's frame/knowledge audit moved that judgement to `db/0032`:
+    `CLAUSE_DEPS` now holds every relation UD NAMES as a clause, `xcomp` among them, and the table
+    says which of them earns a row. A test that pins the implementation cannot survive the
+    implementation moving — and the thing worth protecting was never the set, it was the zip.
+    """
+    rows = [r for r in compiler.compile(LIKE_TO_SWIM).zip.rows if r.kind == "content"]
+
+    assert len(rows) == 1, f"the xcomp earned a row of its own: {[r.name for r in rows]}"
+    assert rows[0].predicate == "like.v"
+
+
+def test_the_TABLE_is_what_keeps_an_xcomp_out_and_it_can_be_asked():
+    """The other half of the move: the ruling is now readable, which is the whole point of a row.
+
+    `xcomp` is IN the set UD's own definitions give — UD calls it an «open clausal complement» and
+    is right to — so nothing in code says it is not a clause. What says it earns no row is a row.
+    """
+    from tk2.language.compile import CLAUSE_DEPS
+    from tk2.language.ud_readings import standing_ud_readings
+
+    readings = standing_ud_readings()
+
+    assert "xcomp" in CLAUSE_DEPS, "the set is UD's, and UD calls an xcomp a clause"
+    assert readings.opens_clause("xcomp") is False
+    assert readings.opens_clause("ccomp") is True, "a miss is the ordinary reading"
 
 
 

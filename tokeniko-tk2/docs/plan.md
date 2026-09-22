@@ -1229,16 +1229,30 @@ it).
 
    | in code today | why it is suspect |
    |---|---|
-   | `RELATION_FILLS_ROLE` (`compile.py`) | its own comment says `nsubj → agent` and not «agent or experiencer» is a JUDGEMENT the station declines to make. A judgement is knowledge |
-   | `CLAUSE_DEPS` (`compile.py`) | **`xcomp` is deliberately absent**, argued at length — «nobody asserts that you swim». An argued exclusion is a ruling, and a ruling is a row |
-   | `UD_DEP_TO_ROLE` (`closed.py`) | the roles are BEST-FIRST, and an ordering is a claim about which reading is commoner in English |
-   | `UD_POS_TO_WORD_CLASS` (`closed.py`) | «UD's `AUX` covers our auxiliaries AND our modals» is a statement about English, not about UD |
-   | `CLAIMED = 1.0` (`compile.py`) | a threshold in code is the shape `db/0002` and `db/0007` exist to refuse |
+   | ~~`RELATION_FILLS_ROLE`~~ **CLEARED 09-22** | the judgement it was flagged for ALREADY MOVED: `db/0018`'s rows settle which role a subject takes and `_subject_role` reads them (req 22). What is left is req 12's relational half. *This entry was stale from the day `db/0018` landed* |
+   | `CLAUSE_DEPS` (`compile.py`) | **MOVES, in part (09-22).** The MEMBERSHIP is shape-reading and stays frame; the argued ABSENCE of `xcomp` — «nobody asserts that you swim» — is a semantic judgement about English complementation, and becomes a row |
+   | `UD_DEP_TO_ROLE` (`closed.py`) | **SPLIT, and it wants the Captain (09-22).** WHICH roles a relation admits is shape-reading — frame. The ORDER, which is BEST-FIRST, is a claim about which reading is commoner in English — knowledge, revisable by counting. They are welded because the dict value is one tuple |
+   | ~~`UD_POS_TO_WORD_CLASS`~~ **CLEARED 09-22, with the tension recorded** | it is a statement about how two PUBLISHED tag sets align — revisable by re-reading either standard, never by evidence about the world. Frame, and the doubt is written down rather than dissolved |
+   | ~~`CLAIMED = 1.0`~~ **CLEARED 09-22 — the premise was false** | **it is not a threshold.** Every use is an assignment (`truth=CLAIMED`) or an equality; there is no `>=` anywhere. It NAMES the top of a scale the schema defines as `[0,1]`, as `DENIED = 0.0` names the bottom. The placement floor was a tuned cut-off and earned its refusal; a coordinate is not one |
    | `UD_DEP_SETTLES_ROLE` (`closed.py`) | *defensible as frame* — every entry is a relation whose UD definition NAMES the role. But the READING is ours, so it is argued, not assumed |
-   | `DEPS_THAT_COMPILE_TO_NOTHING` (`compile.py`) | added 2026-09-16 and put on this list in the same commit. `{"vocative"}` — and «a vocative is addressing, not content» is an E2 RULING, which is a row |
-   | `ADVERB_DEPS` (`compile.py`) | added 2026-09-16, same day, same list. `{"advmod", "discourse"}` — weaker than the two above (it selects WHERE to look rather than ruling what a thing means) and the same shape |
+   | `DEPS_THAT_COMPILE_TO_NOTHING` (`compile.py`) | **MOVES (09-22).** «A vocative is addressing, not content» is an E2 ruling and a ruling is a row. **One element, which is the tell**: a one-member set is never a set, it is a decision with brackets round it |
+   | ~~`ADVERB_DEPS`~~ **CLEARED 09-22** | with `SUBJECT_DEPS` · `OBJECT_DEPS` · `NOMINAL_DEPS` · `COORDINATE_DEPS` · `EMBEDDING_DEPS` · `RELATIVE_CLAUSE_DEPS` · `COMPLEMENT_CLAUSE_DEPS`: each member is a relation whose UD definition already NAMES the structural kind, so the reading is transcription. **Frame by the 2026-09-18 ruling** — «reading the tree's SHAPE, its relations, is frame» — which had never been applied to this list |
    | **`SAYING_VERBS`** (`utterance.py`) | added 2026-09-16 and listed here in the SAME COMMIT. Nine verb keys in a frozenset, and **req 55 already rules the replacement**: *«attitude verbs are open, so the classification is nearest-anchor geometry over a small anchor set and never misses the verb nobody thought of»* — E4 owns that geometry. Reached only ACROSS a sentence boundary; the in-sentence path asks the joiner's own `asserts: matrix` row, which is curation doing it properly |
    | `POS_LETTER`, `UD_POS_TO_WORDNET`, `NOUN/VERB_SUPERSENSES` | *defensible as frame* — correspondences between two published closed vocabularies, and the supersense inventory is checked against the corpus every run |
+
+   **NEW ENTRANTS, 2026-09-20 → 22** — the two days that added a role, three features and two schema
+   versions:
+
+   | in code today | verdict |
+   |---|---|
+   | `NUMBERED_UPOS` (`compile.py`) | **MOVES.** Its whole argument for excluding `PROPN` was that UD tags every proper noun `Number=Sing` by DEFAULT MORPHOLOGY rather than on evidence — a claim about a resource's behaviour, which is the definition of knowledge. *The audit's own catch: written 09-21, flagged 09-22* |
+   | `UD_NUMBER` (`compile.py`) | **CLEARED** — `{"Sing": "sg", "Plur": "pl"}` is two notations for one fact, the same family as `POS_LETTER` |
+   | `FUSED_QUANTIFIER` (`closed.py`) | **CLEARED** — a NAME, not a roster. The roles live in rows; this is one spelling shared by two readers, and `ClosedClassDoc.role`'s own note says a role that needed a code change to exist would put the table back in code |
+   | `takes_number` · `count`-as-cardinality (`db/0029`, `db/0030`) | **already rows.** Named here so the audit shows what went the right way without being asked |
+   | the clause-headed PLURAL universal (`decompile.py`) | **open, and not measured** — «all that glitters», never «every that glitters». A `takes_clause` feature is where it would go if evidence appears |
+
+   **Record: `docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`** — all 52 constants,
+   the ones cleared argued rather than waved through.
 
    **Done when** every row of that table has a ruling and a home, and the ones that moved are a
    migration.

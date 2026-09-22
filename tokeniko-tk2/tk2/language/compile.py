@@ -32,6 +32,7 @@ from tk2.language.closed import ClosedClasses
 from tk2.language.markers import MarkerSelector
 from tk2.language.strength import IMPERATIVE, AttitudeStrengths, standing_attitude_strengths
 from tk2.language.subjects import SubjectRoles, standing_subject_roles
+from tk2.language.ud_readings import UdReadings, standing_ud_readings
 from tk2.language.skeleton import UD_POS, Skeleton, Word
 from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
 from tk2.tkzip.schema import (
@@ -79,6 +80,10 @@ POS_LETTER = {"NOUN": "n", "PROPN": "n", "VERB": "v", "AUX": "v", "ADJ": "a", "A
 #: value UD does not use here — `Ptan`, `Coll` — reads as nothing rather than as a guess.
 UD_NUMBER = {"Sing": "sg", "Plur": "pl"}
 
+#: *`NUMBERED_UPOS` was here and is now `db/0032`.* Ask `self.readings.states_number(upos)`. The
+#: argument below is kept because it is the row's justification and it was measured; the ROSTER is
+#: gone, which is what the audit asked for.
+#:
 #: The classes whose number the SPEAKER states on the word itself. A pronoun's number is a column of
 #: its `language_closed_classes` row and the decompiler reads it from there, so writing it into the
 #: box as well would give one fact two homes — and a fact with two homes drifts.
@@ -97,7 +102,6 @@ UD_NUMBER = {"Sing": "sg", "Plur": "pl"}
 #: marks that one `Plur` and recording it would make the decompiler spell the name «alpses», because
 #: nothing in the zip says a head is a NAME. Names are E3b and E3 closes first
 #: (`202609160959_the-name-question.md`), and a referent's number arrives when the referent does.*
-NUMBERED_UPOS = frozenset({"NOUN"})
 
 #: What can be the OTHER object of a double-object clause — a nominal, or a clause («I asked Anna
 #: WHAT SHE WANTED»). UD's `iobj` presupposes one of these beside it, which is how a lone `iobj` is
@@ -107,14 +111,16 @@ OBJECT_DEPS = frozenset({"obj", "ccomp", "xcomp"})
 #: The relations that hang a NOMINAL off a head — the candidates for a box.
 NOMINAL_DEPS = frozenset({"nsubj", "obj", "iobj", "obl", "nmod"})
 
-#: THE RELATIONS THAT OPEN A CLAUSE OF THEIR OWN — each one becomes its own content row, related to
-#: the row above it by a join, an attitude, or a shared variable.
+#: **THE RELATIONS UD NAMES AS CLAUSES** — transcription, and therefore frame: every one of these
+#: is a relation whose own UD definition says «clause», and no evidence about English revises that.
 #:
-#: `xcomp` is deliberately ABSENT. «you like TO SWIM» is one predication with a controlled subject,
-#: not two claims: nobody asserts that you swim. Treating it as a second row would put an unasserted
-#: proposition in the zip with nothing marking it unasserted — the one thing the truth slot exists to
-#: prevent. It stays inside its matrix clause until there is a reason it cannot.
-CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis"})
+#: **`xcomp` IS IN THE SET AND THAT IS THE POINT** *(E3's frame/knowledge audit, 2026-09-22)*. It
+#: used to be silently absent, carrying the argument «you like TO SWIM is one predication with a
+#: controlled subject, not two claims: nobody asserts that you swim». That argument is a semantic
+#: judgement about English complementation — knowledge — and it is now `db/0032`'s row. The set
+#: says what UD says; the TABLE says which of them earns a row of its own, and `_opens_clause`
+#: asks it. A set whose membership encodes an argument is an argument with brackets round it.
+CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis", "xcomp"})
 
 #: What a joining word claims about its halves (closed classes v4, `db/0010`).
 ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
@@ -198,17 +204,14 @@ def numeral_value(lemma: str, text: str = "") -> int | None:
 #: The relations that hang an ADVERB off its head. `advmod` is the ordinary one; `discourse` is UD's
 #: own name for a connective, and it is the only dependency that names an adverb's KIND outright.
 #:
-#: **ON THE FRAME/KNOWLEDGE AUDIT LIST** with `CLAUSE_DEPS` and `DEPS_THAT_COMPILE_TO_NOTHING`: it
-#: is a set of UD relations in code. Weaker than those two — it selects WHERE to look rather than
-#: ruling what a thing means — but it is the same shape and the audit should see it.
+#: **CLEARED BY THE AUDIT** *(2026-09-22)*: it selects WHERE to look rather than ruling what a
+#: thing means, and both members are relations whose UD definition names the structural kind.
+#: Reading the tree's shape is frame.
 ADVERB_DEPS = frozenset({"advmod", "discourse"})
 
-#: UD relations whose dependent COMPILES TO NOTHING — it is addressing or framing, not content.
-#: `vocative` is E2's own ruling, made in the drill: *«the vocative is addressing, not content»* —
-#: «Guys, take it easy» is an instruction to a room, and the room is not a participant in it.
-#: **ON THE FRAME/KNOWLEDGE AUDIT LIST** (E3 task 8): this is a set of UD relations living in code,
-#: the same family as `CLAUSE_DEPS`, and the reading «a vocative is not content» is a ruling.
-DEPS_THAT_COMPILE_TO_NOTHING = frozenset({"vocative"})
+#: *`DEPS_THAT_COMPILE_TO_NOTHING` was here and is now `db/0032`.* «A vocative is addressing, not
+#: content» is an E2 ruling, and a ruling is a row — the audit's point being that a one-member set
+#: is never a set. Ask `self.readings.compiles_to_content(dep)`.
 
 #: A claim the station makes with no fuzziness of its own: the speaker said it, so it is stated at
 #: full strength. What the claim is WORTH is the evaluator's question, not the parser's.
@@ -314,8 +317,13 @@ class Compiler:
 
     def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None,
                  adverbs: AdverbKinds | None = None, subjects: SubjectRoles | None = None,
-                 strengths: AttitudeStrengths | None = None) -> None:
+                 strengths: AttitudeStrengths | None = None,
+                 readings: UdReadings | None = None) -> None:
         self.table = table
+        #: Where a UD label does not mean for us what it names, as rows (`db/0032`). A vocative is
+        #: not content, an `xcomp` opens no row, and only a `NOUN` states a number the speaker
+        #: chose. **A miss is an ANSWER**: everything else is read at face value, which is frame.
+        self.readings = readings if readings is not None else standing_ud_readings()
         #: Requirement 23 — how strongly a shape of wanting wants, as rows (`db/0020`).
         self.strengths = strengths if strengths is not None else standing_attitude_strengths()
         #: Requirement 22 — the subject's role, as rows (`db/0018`), run by the marker selector.
@@ -548,10 +556,14 @@ class Compiler:
         Sentence order rather than tree order because row order carries SCOPE (req 35), and the
         order the speaker used is the only scope information the surface gives.
         """
+        # **UD NAMES THE CLAUSES AND THE TABLE SAYS WHICH EARN A ROW** *(`db/0032`)*. `CLAUSE_DEPS`
+        # is UD's own clausal set, `xcomp` included, because UD is right to call it a clause; that
+        # it does not become a row of its own is OUR judgement and it lives in rows now.
         found = [w for w in skeleton
                  if self._readable(w)
-                 and (w.is_root or (w.bare_dep in CLAUSE_DEPS and w.upos in ("VERB", "AUX", "ADJ",
-                                                                            "NOUN", "PROPN", "PRON")))]
+                 and (w.is_root or (w.bare_dep in CLAUSE_DEPS
+                                    and self.readings.opens_clause(w.bare_dep)
+                                    and w.upos in ("VERB", "AUX", "ADJ", "NOUN", "PROPN", "PRON")))]
         return sorted(found, key=lambda w: w.index)
 
     def _owners(self, skeleton: Skeleton, heads: list[Word]) -> dict[int, int]:
@@ -640,7 +652,7 @@ class Compiler:
                 # but it is placed AFTER this loop, not here. See `adverbs_here` below.
                 adverbs_here.append(word)
                 continue
-            if word.bare_dep in DEPS_THAT_COMPILE_TO_NOTHING:
+            if not self.readings.compiles_to_content(word.bare_dep):
                 # Addressing, not content. Dropped ON PURPOSE and recorded as such — a word that is
                 # merely LEFT OUT and a word that compiles to nothing are different answers, and
                 # `Zip.unplaced` is for the first (req 21).
@@ -1489,7 +1501,7 @@ class Compiler:
         adjective or an adverb heading its own box, a variable, an OPEN. None of them gets a number
         invented for it, because a number nobody stated is a number the decompiler must not speak.
         """
-        if word.upos not in NUMBERED_UPOS:
+        if not self.readings.states_number(word.upos):
             return None
         return UD_NUMBER.get((word.feats or {}).get("Number"))
 
