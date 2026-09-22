@@ -47,6 +47,7 @@ pythonpath = ["."]
 markers = [
     "mongo: needs a live local MongoDB (runs against the sandbox test db, dropped afterwards)",
     "wordnet: needs nltk and the local WordNet corpus (the pure engine is tested without either)",
+    "spine: the BROAD-SHORT test — one minute, a spine through every module, run at every commit as half of the gate (the other half is the full tests of the section being committed). Nothing marked here may touch the body, stanza or WordNet",
     "skeleton: needs stanza and its English models (~400 MB and seconds to load; the station is tested against hand-written skeletons, and this marks the few that call the real provider)",
 ]
 

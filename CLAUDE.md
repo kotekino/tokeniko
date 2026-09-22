@@ -166,13 +166,44 @@ discussed there *and* have a status entry elsewhere.
   shared working tree.
 - **Never `git add -A`.** Stage explicit paths and read `git status` for foreign files.
 - **Tests run at the commit gate, not between edits** *(2026-09-17)*. While developing, run only the
-  subset that STEERS the next decision; the full suite runs once, before proposing the commit, and
-  its result is reported there. Foundational work must stay fast-paced, and much of the suite talks
-  to a remote body.
+  subset that STEERS the next decision. **What runs AT the gate is ruled below — and it is not the
+  full suite.**
 - **His rulings are current-best, not law.** Surface a stale decision with an argument rather than
   quietly obeying — safety rules excepted.
 - **`tokeniko-tk1/docs/ref/captain-hunches.md`** is his private future strategy: awareness only,
   never propagated into roadmaps or docs.
+
+## THE TEST GATE — THREE CLAUSES, AND THE FULL SUITE IS NOT ONE OF THEM *(the Captain, 2026-09-22)*
+
+> *«Coding should be thorough and no shortcuts, BUT tests must be minimal for the portion of code
+> the coding is doing. Regressions in other parts of the app will be caught time by time when the
+> full suite will run.»*
+
+**The ruling it replaced was costing hours a day.** The full suite had grown to two hours on the
+workshop machine, most of it irrelevant to the change in hand, and it was being run before every
+commit. Worse than the clock: *«during a test I obviously lose the concentration, so I start another
+task, then I forget to check when I close the lid of the laptop»* — a gate nobody watches is a gate
+that reports nothing, and one of those runs sat for nine hours behind a sleeping laptop and had to
+be thrown away as evidence.
+
+**A — THE GATE PER COMMIT is the broad-short test PLUS the full tests of the section being
+committed.** Nothing else. The broad-short test is a deliberate artefact with a budget: **one
+minute, total**, a spine through every module so an obvious regression somewhere else cannot pass
+unseen. The section's own tests are exhaustive, because that is the code the work actually touched.
+
+**B — THE FULL SUITE RUNS ONLY ON DEPLOY, AND ONLY ON THE BODY** — never on the workshop machine,
+exactly as tk1 does it. Pull, deploy, run; green stays, red rolls back. **The machinery for this
+does not exist yet** — tk2 has no deploy path, so this clause is written ahead of the thing that
+will enforce it, deliberately: better a rule waiting for its mechanism than months of habit to
+undo later. *Its effect in the present is immediate and total: **we do not run the full suite.***
+
+**C — A SPECIFIC TEST TO DISCOVER SOMETHING IS ALWAYS WELCOME** — a bench, a probe, a sweep that
+answers a question about direction or options. Those are conditional on a specific problem, they are
+not a gate, and they are never skipped for costing time.
+
+**The full suite may still be run on the workshop machine — but only as a DECISION**, taken after a
+specific point has been discussed and for a stated reason. Never as routine, never as reflex, never
+as the answer to «is this safe to commit».
 
 ## WHERE TO GO NEXT
 

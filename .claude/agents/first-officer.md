@@ -27,10 +27,14 @@ order (inline or a file under `.claude/briefs/`) — execute it faithfully, prec
   of the QM's in-flight files — it popped cleanly, and it must not be possible in the first place).
   To measure a previous state, read the old code from `git show <rev>:<path>` into a scratch copy
   under `/tmp` and run there, or write the comparison as a parameter of the run.
-- **Gates (Captain's ruling, 2026-08-23): PARTIAL gates only from the workshop machine.** The FULL
-  gate is a deploy-condition instrument — it runs only for (and as a condition of) a deploy, never
-  as routine validation; with the db on the remote body it is slow and touches what the workshop
-  shouldn't. Scope your test runs to what your task changed.
+- **Gates (Captain's ruling, 2026-08-23, sharpened 2026-09-22): the gate is the BROAD-SHORT test
+  plus the full tests of the SECTION you touched.** The FULL suite is a deploy-condition instrument
+  — it runs only on the body, as a condition of a deploy, never as routine validation from this
+  machine. *«Tests must be minimal for the portion of code the coding is doing. Regressions in other
+  parts of the app will be caught when the full suite runs.»* Scope your runs to what you changed,
+  and let the broad-short test cover the rest.
+- **A test that answers a QUESTION is always welcome** — a bench, a probe, a sweep. It is conditional
+  on a specific problem, it is not a gate, and it is never skipped for costing time.
 
 ## Craft
 
@@ -49,12 +53,19 @@ order (inline or a file under `.claude/briefs/`) — execute it faithfully, prec
 
 ## The gate
 
-- Targeted first: `PYTHONPATH=. ../.venv/bin/python -m pytest tests/<touched files> -q`
-  (run from the `tokeniko/` package dir). **This — the PARTIAL gate scoped to your change — is your
-  normal finish line** (the 2026-08-23 gates ruling above).
-- The FULL gate `PYTHONPATH=. ../.venv/bin/python -m pytest tests/ -q` is a DEPLOY-condition
-  instrument: run it only when the brief explicitly orders it. Its current reality (measured
-  2026-08-23, db on the remote body): **~26 min, standing bar all passed / 5 xfailed.**
+- **Your finish line is two runs, both from the `tokeniko-tk2/` package dir:**
+
+      PYTHONPATH=. ../.venv/bin/python -m pytest tests/<the files your section owns> -q
+      PYTHONPATH=. ../.venv/bin/python -m pytest -m spine -q          # the broad-short test
+
+  The first is exhaustive over the code you touched. The second is a spine through every module,
+  budgeted at **one minute**, so an obvious regression somewhere you were not looking cannot pass
+  unseen. `tokeniko-tk2/CLAUDE.md` maps each section to the test files that own it — look it up
+  rather than guessing.
+- The FULL suite `pytest tests/ -q` is a DEPLOY-condition instrument and **is not yours to run**.
+  It belongs on the body, after a pull, as the condition of a deploy. On this machine it has grown
+  past two hours, most of it irrelevant to any one change. If a brief seems to ask for it, that is a
+  brief to question, not to obey.
 - **Run pytest in the FOREGROUND — and NOTHING in the background, ever** (lessons 2026-07-21 and
   2026-07-23: a background gate AND a background waiter each stalled a whole run — completion
   wake-ups are not reliable for you). A synchronous 13-minute wait costs you nothing; set the
@@ -74,7 +85,7 @@ Announce nothing, but expect it: the QM stages by explicit filename and knows yo
 
 1. **Outcome first**: done / partially done / blocked, one line.
 2. **What changed**: file list with a one-line why each.
-3. **The gate**: verbatim result counts (targeted + full).
+3. **The gate**: verbatim result counts — the section's own tests, and the broad-short test.
 4. **Deviations**: anything you did differently from the brief, and why.
 5. **Findings**: bugs, surprises, or design questions surfaced en route (do NOT fix unbriefed
    findings — report them).

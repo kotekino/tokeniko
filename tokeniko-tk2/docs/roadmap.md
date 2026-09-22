@@ -88,7 +88,7 @@
 - [x] **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [x] **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — joins ·
       quantifiers · prefix · questions · the person axis · tense · voice all built; **fixpoint
-      24 → 66 of 87** (56 of the 70 the compiler reads whole). Record `202609201100_…`
+      24 → 68 of 87** (58 of the 70 the compiler reads whole). Record `202609201100_…`
 - [x] **SCHEMA v4 — an OPEN slot says what is known about the unknown** *(the Captain, 09-20, req 27)*
       — `sort`·`person`·`number`·`gender`; three kinds of unknown, no heuristic. `db/0026`. **And
       tkzip req 73 rewritten: there are no frozen schemas in a blueprint**
@@ -101,7 +101,7 @@
 - [x] **⚑ the existential copula agrees with what it displaced** *(09-21, found by the 1st Officier)*
       — «There is no cats», then «There be no cats»: `be` was on the regular-verb path, where a
       non-third-singular is spoken as the bare lemma. An existential is not flagged copular (req 31)
-- [ ] **the fixpoint's 14 remaining** — 11 MOVED · 3 SILENT, all on sentences the compiler read whole
+- [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read whole
 - [x] **⚑ SILENT 1 → 3 and 69 → 67 whole were ONE fact, and the instrument's** *(09-21)* —
       `aw-13`/`aw-14` went MOVED → SILENT; a silent case printed only under `--all` and was
       SUBTRACTED from the read-whole population. The honest denominator is 70 and always was
@@ -127,9 +127,15 @@
 - [x] **⚑ SCHEMA v8 + the relative clause's COMPILER half** *(the Captain, 09-21, req 36)* — a
       binder may introduce a variable without QUANTIFYING it; «the cat that sleeps» minted a free
       variable and threw `cat.n` away. 0 of 87 zips now name a variable nothing binds
-- [ ] **⚑ the relative clause's DECOMPILER half** *(09-21)* — «The cat that sleeps is happy» says
-      back «The cat sleeps. The cat is happy.»: faithful to the zip, two sentences instead of one
-      phrase. `_share_variable`'s inverse; `aw-13`/`aw-14` and `t-dc-4` wait on it
+- [x] **⚑ the relative clause's DECOMPILER half** *(09-22, req 36)* — an unasserted row sharing a
+      binder's variable IS that binder's relative clause; dropping it claims MORE than the zip.
+      `db/0031` speaks it with «that». **`aw-13`/`aw-14` fixed — SILENT 3 → 1**
+- [x] **⚑ THE GATE IS THE SPINE + THE SECTION, and `Migration.load` is memoised** *(the Captain,
+      09-22)* — the closed-class chain re-executed everything beneath each level: 186s → 0.2s, the
+      suite ~2h → ~34 min. `pytest -m spine` is the broad-short gate. Record `202609220900_…`
+- [ ] **a clause-headed phrase takes the PLURAL universal** *(09-22, QM's judgement, not measured)*
+      — «all that glitters», never «every that glitters», because «every» wants a singular count
+      noun. A `takes_clause` feature is where it would go if evidence ever appears
 - [ ] **⚑ a binder the decompiler cannot say** *(09-21, exposed by `aw-13`/`aw-14`)* — «all» gives a
       bare OPEN and the narrowing lives in a row SHARING the variable, so the phrase comes out empty
       and the clause is refused: `_share_variable` needs its inverse. Both cases go SILENT

@@ -54,7 +54,26 @@ class Migration:
         return hashlib.sha256(self.path.read_bytes()).hexdigest()
 
     def load(self) -> ModuleType:
-        """Import the file by path, under a private name so it can never collide with a package."""
+        """Import the file by path, under a private name so it can never collide with a package.
+
+        **MEMOISED, AND THAT IS NOT AN OPTIMISATION — IT IS THE DIFFERENCE BETWEEN A GATE AND AN
+        AFTERNOON** *(2026-09-22)*. A migration that extends another reads it by loading it:
+        `db/0031`'s `_previous_rows()` loads `db/0030`, whose loads `db/0029`, down to `db/0008`.
+        With no cache each level re-executes everything beneath it — and every one of those
+        executions runs that file's module-level `_check()` over 385 rows. Reading the closed-class
+        table from files cost **186 seconds**, and every migration added made it worse: the five
+        written on 2026-09-21 slowed every test that touches the station.
+
+        A migration file is IMMUTABLE by policy — the ledger fingerprints it and `test_archive`
+        holds it to that — so a loaded module is a fact about the file, not a snapshot of it. The
+        key carries mtime and size anyway, so a file edited mid-process (which only happens while
+        one is being written) is re-read rather than remembered wrong.
+        """
+        stamp = self.path.stat()
+        key = (str(self.path), stamp.st_mtime_ns, stamp.st_size)
+        cached = _LOADED.get(key)
+        if cached is not None:
+            return cached
         spec = importlib.util.spec_from_file_location(f"tk2_migration_{self.label}", self.path)
         if spec is None or spec.loader is None:
             raise MigrationError(f"{self.path} cannot be loaded as a python module.")
@@ -65,7 +84,12 @@ class Migration:
                 f"{self.label} defines no up(writer, db): a migration is a function that changes "
                 f"the world, and a file that changes nothing should not be numbered."
             )
+        _LOADED[key] = module
         return module
+
+
+#: path + mtime + size -> the module already executed for it. See `Migration.load`.
+_LOADED: dict[tuple, ModuleType] = {}
 
 
 def discover(directory: Path | None = None) -> list[Migration]:
