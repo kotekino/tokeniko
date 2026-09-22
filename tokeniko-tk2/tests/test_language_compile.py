@@ -1609,3 +1609,79 @@ def test_no_drill_sentence_compiles_to_a_FREE_VARIABLE():
             loose.append((drill_case.id, sorted(used - bound)))
 
     assert not loose, f"{loose} name variables no row binds"
+
+
+IN_ITALY = skeleton_from_conllu("In Italy, you may drive in France.", [
+    ("1", "In", "in", "ADP", "2", "case"),
+    ("2", "Italy", "italy", "PROPN", "6", "obl"),
+    ("3", ",", ",", "PUNCT", "6", "punct"),
+    ("4", "you", "you", "PRON", "6", "nsubj"),
+    ("5", "may", "may", "AUX", "6", "aux"),
+    ("6", "drive", "drive", "VERB", "0", "root"),
+    ("7", "in", "in", "ADP", "8", "case"),
+    ("8", "France", "france", "PROPN", "6", "obl"),
+])
+
+AS_A_DOCTOR = skeleton_from_conllu("As a doctor I disagree.", [
+    ("1", "As", "as", "ADP", "3", "case"),
+    ("2", "a", "a", "DET", "3", "det"),
+    ("3", "doctor", "doctor", "NOUN", "5", "obl"),
+    ("4", "I", "i", "PRON", "5", "nsubj"),
+    ("5", "disagree", "disagree", "VERB", "0", "root"),
+])
+
+IN_THE_MORNING = skeleton_from_conllu("In the morning, I go to work.", [
+    ("1", "In", "in", "ADP", "3", "case"),
+    ("2", "the", "the", "DET", "3", "det"),
+    ("3", "morning", "morning", "NOUN", "6", "obl"),
+    ("4", ",", ",", "PUNCT", "6", "punct"),
+    ("5", "I", "i", "PRON", "6", "nsubj"),
+    ("6", "go", "go", "VERB", "0", "root"),
+    ("7", "to", "to", "ADP", "8", "case"),
+    ("8", "work", "work", "NOUN", "6", "obl"),
+])
+
+
+def test_a_CONTESTED_fronted_phrase_is_the_DOMAIN_and_the_other_keeps_its_box(compiler):
+    """«In Italy, you may drive IN FRANCE» — the drill calls this «the sentence that proved `domain`
+    is not `location`», and the station used to lose it: Italy took the one `location` box and
+    **France went to `unplaced`**. A word dropped, not merely misfiled.
+
+    Two phrases wanting one box is the only evidence in the tree that one of them is not about the
+    event at all, and the fronted one is the frame (req 6, rules reqs 6-7).
+    """
+    out = compiler.compile(IN_ITALY)
+
+    domains = [r for r in out.zip.rows if r.kind == "domain"]
+    assert len(domains) == 1 and domains[0].domain.head == "italy.n"
+    assert not out.zip.unplaced, f"{out.zip.unplaced} was dropped"
+
+    clause = next(r for r in out.zip.rows if r.kind == "content")
+    assert clause.boxes[Role.LOCATION].head == "france.n", "France must keep the box it earned"
+
+
+def test_a_fronted_AS_phrase_is_a_capacity_and_therefore_a_DOMAIN(compiler):
+    """«AS A DOCTOR I disagree; as a father I understand» must be two positions honestly held, not
+    a KB contradiction — which is the whole of rules reqs 6-7 and why the fifth prefix element
+    exists. `as` is the one marker English keeps for the frame itself."""
+    out = compiler.compile(AS_A_DOCTOR)
+
+    domains = [r for r in out.zip.rows if r.kind == "domain"]
+    assert len(domains) == 1 and domains[0].domain.head == "doctor.n"
+    assert domains[0].domain.marker == "as"
+
+
+def test_a_fronted_phrase_whose_box_NOBODY_CONTESTS_is_not_a_domain(compiler):
+    """**THE HALF THAT MATTERS.** «A marked nominal before the subject is a domain» fits every
+    drill case and swallows this one too — `tools/domain_bench.py` measured it at FIVE false
+    positives out of six. «In the morning» is a TIME and «to work» a destination: two `obl`s, two
+    different boxes, no contest, no frame.
+
+    A domain nobody stated indexes a claim to a context it was never held in, and the evaluator
+    would then never contradict it. A miss only leaves the station where it was.
+    """
+    out = compiler.compile(IN_THE_MORNING)
+
+    assert not [r for r in out.zip.rows if r.kind == "domain"]
+    clause = next(r for r in out.zip.rows if r.kind == "content")
+    assert clause.boxes[Role.TIME].head == "morning.n"

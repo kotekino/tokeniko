@@ -20,7 +20,9 @@
 - [ ] `dictionary_bar` out of the body; only `bar_version` + `bar_fingerprint` stay, as provenance
 - [ ] bar words become `extra_seeds` on a measuring run — **cost: moves the config fingerprint**
 - [ ] the doctrine line in `core/models/__init__.py` calls three things one thing
-- [ ] **the pacing rule** — subset while developing, full suite once at the commit gate
+- [x] **the pacing rule** *(answered 09-22, and the answer REVERSED it)* — the gate is the
+      broad-short test plus the section; the full suite is a DEPLOY condition, on the body. Root
+      `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
 
 ## E2 — the format (tkzip v2) ✅ 2026-09-14 — see `landed.md`
 
@@ -101,29 +103,18 @@
 - [x] **⚑ the existential copula agrees with what it displaced** *(09-21, found by the 1st Officier)*
       — «There is no cats», then «There be no cats»: `be` was on the regular-verb path, where a
       non-third-singular is spoken as the bare lemma. An existential is not flagged copular (req 31)
-- [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read whole
 - [x] **⚑ SILENT 1 → 3 and 69 → 67 whole were ONE fact, and the instrument's** *(09-21)* —
       `aw-13`/`aw-14` went MOVED → SILENT; a silent case printed only under `--all` and was
       SUBTRACTED from the read-whole population. The honest denominator is 70 and always was
 - [x] **⚑ `aw-13`/`aw-14` — «All that glitters is not gold» binds the quantifier to the PREDICATE
       NOMINAL** and orphans the relative clause's row; the first 1st-Officier task — the COMPILER
       half is fixed and both agree at the gate; ticked 09-21
-- [ ] **a DEFINITE's relative clause stays claimed, and it is a presupposition** *(09-21, QM review
-      of the 1st Officier's §4.5)* — «the cat that sleeps» survives its own denial, so it is not
-      asserted either; kept claimed deliberately so the brain gets the fact. Write it down
 - [x] **⚑ a quantifier's voice depends on the NUMBER of its noun** *(the Captain, 09-21, req 9)* —
       «every cat» · «all cats»: `db/0029`, measured on 547 tk1 journeys (every 7–0 sg, all 24–0 pl).
       `takes_number`, NOT `number` — that column is the unknown's own and the gate caught the clash
 - [x] **⚑ SCHEMA v7 — a number is `sg`·`pl`·`either`, and the format refuses the rest** *(the
       Captain, 09-21, req 2)* — `both`·`neither`·`either`·`each other` said `number: dual` meaning
       HOW MANY, and `_unknown` wrote it into zips. `db/0030` moves it to `count`. 4th same defect
-- [ ] **a quantifier's DOMAIN CARDINALITY is not in the zip** *(09-21, known loss)* — «Neither is
-      late» reads back as a bare negative: well-formed and silent where it was malformed and
-      silent. `Box.count` is where it goes, once the decompiler has a voice for it
-- [ ] **«one another» keeps `number: pl`** *(09-21)* — same column confusion as `dual` (it is the
-      GROUP's size) but `pl` is admissible and arguable, so it was left rather than judged
-- [ ] **⚑ «Every human being is an animal» → «An animal is.»** *(09-21, PRE-DATES `Box.number`)* —
-      the subject vanishes from a universal with a predicate nominal; not diagnosed
 - [x] **⚑ SCHEMA v8 + the relative clause's COMPILER half** *(the Captain, 09-21, req 36)* — a
       binder may introduce a variable without QUANTIFYING it; «the cat that sleeps» minted a free
       variable and threw `cat.n` away. 0 of 87 zips now name a variable nothing binds
@@ -133,19 +124,9 @@
 - [x] **⚑ THE GATE IS THE SPINE + THE SECTION, and `Migration.load` is memoised** *(the Captain,
       09-22)* — the closed-class chain re-executed everything beneath each level: 186s → 0.2s, the
       suite ~2h → ~34 min. `pytest -m spine` is the broad-short gate. Record `202609220900_…`
-- [ ] **a clause-headed phrase takes the PLURAL universal** *(09-22, QM's judgement, not measured)*
-      — «all that glitters», never «every that glitters», because «every» wants a singular count
-      noun. A `takes_clause` feature is where it would go if evidence ever appears
-- [ ] **⚑ a binder the decompiler cannot say** *(09-21, exposed by `aw-13`/`aw-14`)* — «all» gives a
-      bare OPEN and the narrowing lives in a row SHARING the variable, so the phrase comes out empty
-      and the clause is refused: `_share_variable` needs its inverse. Both cases go SILENT
-- [ ] **anaphora → E3b** *(the Captain, 09-20)* — «she» has its features since v4; what is missing is
-      that Marie is feminine, which is a named individual's ATTRIBUTE. Gate reds `q-6` · `t-dc-5`
-- [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
-      trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
-- [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
-      (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
-      DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 14 above**
+- [x] **⚑ a binder the decompiler cannot say** *(09-21 → closed 09-22)* — `_share_variable`'s
+      inverse, and it IS the decompiler half above: **`aw-13`/`aw-14` both FIXED**, «All that
+      glitters is not gold» round-trips. *This line outlived the work by a day*
 - [x] **drill automated = acceptance gate** *(ticked 09-20 — it was already met)* — `tests/test_drill.py`
       scores the bar, keeps the forced-change ledger and prints the report on every suite run
 - [x] **⚑ the frame/knowledge audit — E3's closing act** *(09-22)* — 52 constants walked, four move,
@@ -154,8 +135,47 @@
 - [x] **the audit's migration — `db/0032`, three arguments out of code** *(09-22)* — `vocative`
       compiles to nothing · `xcomp` opens no row · only a NOUN states a number. `CLAUSE_DEPS` got
       BIGGER and is now pure transcription. Measurements unmoved. `SAYING_VERBS` waits for E4
+
+### still open — in the order they are to be done, and nothing waits on anything below it
+
+- [x] **⚑ THE DOMAIN — the fifth prefix element, built at last** *(09-22, req 6, rules reqs 6-7)*
+      — the station had NEVER raised a `DomainRow`; the schema, the decompiler and three drill
+      cases were all waiting. Two signals, measured clean in both directions on
+      `tools/domain_bench.py`: a fronted `as` (a capacity) and a fronted phrase whose BOX IS
+      CONTESTED. **`aw-15` green, and France stopped being `unplaced`** — a word lost, not misfiled
+- [ ] **THE GATE'S FOUR, EACH WITH ITS CAUSE AND ITS OWNER** — the pinned set, and the only place
+      they are all named. *`q-6` · `t-dc-5` are ANAPHORA (a described OPEN where the drill has the
+      name) → E3b, below · `aw-19` «I ate with Anna» is comitative because Anna is a PERSON → E3b's
+      markers' third reading · `t-ws-7` is a stanza misparse and the station abstains, ticked 09-18.*
+      **None of the four is E3's own any more**
+- [ ] **the domain's two open halves** *(09-22, both measured or reasoned, neither guessed)* — a
+      fronted ADVERB («Legally,») needs `legally` → `law.n`, a derivation the compiler has no reader
+      for and which the decompiler already refuses to say · a NON-fronted `as` («I work as a
+      teacher») was never benched, and may be the job rather than the frame
+- [ ] **a bare fronted locative is IRREDUCIBLE and the station abstains** *(09-22, a RESULT)* —
+      «Legally, in Italy, he is still married» (DOMAIN) and «In France, I ate well» (LOCATION) are
+      identical on every fact the parse gives. `aw-17` stays red honestly rather than green on a
+      rule that would invent domains elsewhere
+- [ ] **⚑ «Every human being is an animal» → «An animal is.»** *(09-21, PRE-DATES `Box.number`)* —
+      the subject vanishes from a universal with a predicate nominal; not diagnosed
+- [ ] **`as far as` reads `measure`, and in the past tense reads NOTHING** *(found 09-19 by the round
+      trip)* — a marked phrase with an endpoint is a destination (`db/0015`); a curation row
+- [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read
+      whole. The SILENT one is `t-md-2` «So a calculator does not necessarily think»: **a negation
+      OUTSIDE a necessity has no form in the table**, which is a vocabulary gap, not a logic one
+- [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
+      (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
+      DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 12 above**
 - [ ] **⚑ `UD_DEP_TO_ROLE` is welded** *(09-22, wants the Captain)* — WHICH roles a relation admits is
       frame; the BEST-FIRST ORDER is a claim about English and is knowledge. One tuple carries both
+- [ ] **FOUR SMALL THINGS RECORDED RATHER THAN FIXED** *(09-21/22)* — none load-bearing, each named
+      where it was found: a DEFINITE's relative clause is a presupposition and is kept claimed so
+      the brain gets the fact · a quantifier's DOMAIN CARDINALITY is not in the zip, so «Neither is
+      late» reads back a bare negative (`Box.count` is where it goes) · «one another» keeps
+      `number: pl`, the same column confusion as `dual` but admissible · a clause-headed phrase
+      takes the PLURAL universal on the QM's grammar, not on evidence
+- [ ] **anaphora → E3b** *(the Captain, 09-20)* — «she» has its features since v4; what is missing is
+      that Marie is feminine, which is a named individual's ATTRIBUTE
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence

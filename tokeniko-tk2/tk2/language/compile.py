@@ -36,6 +36,7 @@ from tk2.language.ud_readings import UdReadings, standing_ud_readings
 from tk2.language.skeleton import UD_POS, Skeleton, Word
 from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
 from tk2.tkzip.schema import (
+    DomainRow,
     THEATRE_EPOCH,
     Theatre,
     AttitudeRow,
@@ -200,6 +201,15 @@ def numeral_value(lemma: str, text: str = "") -> int | None:
         return None
     return value
 
+
+#: **THE ONE MARKER ENGLISH KEEPS FOR THE FRAME ITSELF** — «AS A DOCTOR I disagree; as a father
+#: I understand» is two positions honestly held, indexed to their domains (rules reqs 6-7), not a
+#: contradiction. Measured clean in both directions on `tools/domain_bench.py`.
+#:
+#: *A single word and not a roster: the bench tested `as` because the drill's own domain cases use
+#: it, and found no second marker that separates a frame from a participant. A second one arrives
+#: with its own evidence or not at all.*
+DOMAIN_MARKER = "as"
 
 #: The relations that hang an ADVERB off its head. `advmod` is the ordinary one; `discourse` is UD's
 #: own name for a connective, and it is the only dependency that names an adverb's KIND outright.
@@ -588,6 +598,70 @@ class Compiler:
                 owner[word.index] = skeleton.root.index
         return owner
 
+    def _domains(self, skeleton: Skeleton, mine: set[int], marks: dict, copular: bool,
+                 defaulted: list | None, abstained: list | None) -> set[int]:
+        """Which tokens of this clause FRAME the claim rather than taking part in it (req 6).
+
+        **THE OBVIOUS RULE IS WRONG AND THE BENCH SAYS SO** (`tools/domain_bench.py`). «A marked
+        nominal before the subject is a domain» fits all three drill cases and also swallows «In the
+        morning, I go to work» (a TIME) and «With a knife, he cut the bread» (an INSTRUMENT) — five
+        false positives out of six. Fronting is necessary and nowhere near sufficient.
+
+        **TWO SIGNALS, EACH MEASURED CLEAN IN BOTH DIRECTIONS:**
+
+            marker `as`              «AS A DOCTOR I disagree» — a capacity, never a participant.
+                                     The one marker English keeps for the frame itself
+            its box is CONTESTED     «In Italy, you may drive IN FRANCE» — two phrases want one
+                                     box, so the fronted one yields it and becomes the frame. That
+                                     is the drill's own reading: Italy is the jurisdiction, France
+                                     is where the driving happens
+
+        **A FALSE POSITIVE IS THE SIN HERE** (req 8): a domain nobody stated indexes a claim to a
+        context it was never held in, and the evaluator would then never contradict it. A miss only
+        leaves the station where it already was — so both signals are chosen for zero false
+        positives on the bench, at the cost of three of the six domains it holds.
+
+        **AND THE BARE FRONTED LOCATIVE IS NOT ONE OF THEM, BY MEASUREMENT.** «Legally, in Italy, he
+        is still married» (Italy is a DOMAIN) and «In France, I ate well» (France is a LOCATION) are
+        *identical on every fact the parse gives* — same relation, marker, fronting, comma, and
+        neither contested. Nothing in the tree separates them, so the station abstains. That is a
+        result, like the placement floor's, and not a gap to be filled with a guess.
+        """
+        subject = next((i for i in mine
+                        if skeleton[i].bare_dep in SUBJECT_DEPS), None)
+        wanted: dict[Role, list[int]] = {}
+        for index in sorted(mine):
+            word = skeleton[index]
+            if word.bare_dep not in NOMINAL_DEPS or index in marks:
+                continue
+            role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
+            if role is not None:
+                wanted.setdefault(role, []).append(index)
+
+        found = set()
+        for index in sorted(mine):
+            word = skeleton[index]
+            if word.bare_dep not in NOMINAL_DEPS or index in marks:
+                continue
+            # **FRONTED, FOR BOTH SIGNALS, BECAUSE THAT IS WHAT WAS MEASURED.** The bench's `as`
+            # cases are «AS A DOCTOR I disagree» and «AS A FATHER I understand», both fronted, and
+            # nothing in it speaks for «I work AS A TEACHER» — where `as` may well be the job
+            # rather than the frame. Reading that one as a domain would be a claim on no evidence,
+            # so it is left where it was and named on the roadmap instead.
+            fronted = subject is not None and index < subject
+            if not fronted:
+                continue
+            marker = next((w for w in skeleton.children(index) if w.bare_dep == "case"), None)
+            if marker is not None and marker.text.lower() == DOMAIN_MARKER:
+                found.add(index)
+                continue
+            # **CONTESTED, AND THE FRONTED ONE YIELDS.** Two phrases wanting one box is the only
+            # evidence in the tree that one of them is not about the event at all.
+            role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
+            if fronted and role is not None and len(wanted.get(role, ())) > 1:
+                found.add(index)
+        return found
+
     def _clause(self, skeleton: Skeleton, head: Word, mine: set[int], marks: dict,
                 covered: Placements, prefix_rows: list, abstained: list, name: str,
                 open_truth: set, wants_antecedent: set,
@@ -626,8 +700,24 @@ class Compiler:
             covered.add(head.index, f"box:{role.value}")
             copular = True
 
+        # **THE FRAME IS READ BEFORE THE PARTICIPANTS**, because one of the two signals is that a
+        # box is CONTESTED — and by the time the loop reaches the second claimant the first has
+        # already taken it. `_domains` looks at the whole clause at once, which is the only way to
+        # see a contest at all.
+        domains = self._domains(skeleton, mine, marks, copular, defaulted, abstained)
+
         for index in sorted(mine):
             if index in covered:
+                continue
+            if index in domains:
+                # **REQUIREMENT 6 WITH NO NEW MACHINERY** — a domain is the fifth prefix element,
+                # and it is what lets «as a doctor I disagree; as a father I understand» be two
+                # positions honestly held rather than a KB contradiction (rules reqs 6-7).
+                prefix_rows.append(DomainRow(
+                    name=f"p{len(prefix_rows)}", scopes=name,
+                    domain=self._box_for(skeleton[index], skeleton, marks, covered, prefix_rows,
+                                         name, modifiers, abstained, context)))
+                covered.add(index, "domain")
                 continue
             word = skeleton[index]
             match = marks.get(index)

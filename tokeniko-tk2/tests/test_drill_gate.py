@@ -277,9 +277,10 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
     """**THE RATCHET.** Three disagreements on 2026-09-18, in three families — and the point of the
     list is that every entry is named, dated and attributable. The count may only go DOWN.
 
-      one    the station builds no `DomainRow` yet — `aw-15`, where «In Italy» lands in `location`
-             and displaces the France that belongs there. E3 unfinished, showing as a conflict
-             rather than as a missing row because the wrong filler reached a real box.
+      one    ~~the station builds no `DomainRow`~~ — **`aw-15` CLOSED 2026-09-22**: the fifth
+             prefix element is built, «In Italy» is the jurisdiction and France has its `location`
+             box back. It had been displacing France into `unplaced` — a word LOST, not merely
+             misfiled, which is why it showed as a conflict rather than a missing row.
       one    the named-individual hole — `aw-19`, «I ate with Anna» (E3b).
       one    A PROVIDER DEFECT — `t-ws-7`, «a mind CAN be an animal or a mind CAN be a software».
              Its halves are claimed ON PURPOSE (free choice, the Captain's ruling (b)), and the
@@ -340,5 +341,5 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
         if reading.verdict == DISAGREED:
             disagreed.append(case.id)
 
-    assert sorted(disagreed) == ["aw-15", "aw-19", "q-6", "t-dc-5", "t-ws-7"], (
+    assert sorted(disagreed) == ["aw-19", "q-6", "t-dc-5", "t-ws-7"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")
