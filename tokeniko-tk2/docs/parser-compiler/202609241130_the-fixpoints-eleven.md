@@ -162,3 +162,53 @@ Refused rather than half-said: ¬□¬ · a negated modality beside a second mod
    only as a word left over. **A per-word fact is knowledge**: rows, for the Captain to rule
 3. **«So» with no row before it is lost in silence** — the join is never built and nothing enters
    `unplaced` or `abstained`; the loss G4 closed for relative clauses, in the compiler
+
+## Modal scope — both compiler errors fixed, and a third found *(1st Officier, 09-24)*
+
+**A — frame:** an adverb's scope is its surface order against «not» (`_scope` in `compile.py`; only
+negation and modality rows move, anything between them keeps its slot). **B — knowledge
+(`db/0036`, closed classes v19):** each modality row carries `features.following_negation` —
+where a «not» after it scopes. In `features`, not `compiled`: `compiled` is the decompiler's MEANING
+key, and «must» and «need» are one meaning (□) with one voice; how a form combines with a following
+«not» is a property of the FORM. A row without the field WITHHOLDS its clause — no default in code.
+
+| form | value | reason |
+|---|---|---|
+| can · could | outside | «cannot swim», «could not be true» — ¬◇; the ◇¬ reading needs contrastive stress, which text does not carry |
+| may | **ambiguous** | permission «you may not smoke» ¬◇ · epistemic «it may not rain» ◇¬ — same words, same order |
+| might | inside | «it might not rain» ◇¬; permission «might» is archaic |
+| must · should · ought | inside | the obligation is NOT to — □¬ |
+| need · dare | outside | «need not go» ¬□ · «dare not go» denies the daring |
+| 'd | inside | «I'd not go» / «I'd not gone» both put «not» on the verb |
+| **cannot** *(new row)* | inside | stanza keeps it ONE token (AUX); it compiles to ◇ + negation outside, `spoken` as ¬◇'s voice. A second «not» sits under it: «cannot not think» |
+
+**The bench — seven wrong claims before, none after:** «need not» □¬ → ¬□ · «cannot» bare `think` →
+¬◇ · **«can not» ◇¬ → ¬◇ (the third error)** · «could not» ◇¬ → ¬◇ · «necessarily does not» ¬□ → □¬
+· «possibly does not» ¬◇ → ◇¬ · «may not» a coin toss → **the clause withheld**. Every sentence said
+back re-compiles to the same prefix order. Withholding the whole clause is the only truthful answer
+for «may not»: dropping the negation leaves ◇ (which permission denies), dropping the modal leaves ¬,
+and leaving it unclaimed leaked — «If you may not go, I stay» became «If you go, I stay».
+
+Voices: □¬ «must not» · ◇¬ «might not» · ¬◇ «cannot» · ¬□ stays «does not necessarily» (a split
+auxiliary never voices an outside negation, so «need not» cannot take it over).
+
+Drill, fixpoint and UD gate byte-identical but for the table's version line.
+
+**The exclusion set moves by exactly `{cannot}`, and the move is INERT for D** — D's vocabulary is
+the base's dimension words or WordNet's lemmas (`distribution.vocabulary_of`), and `cannot` is
+neither; the migration's check refuses any other movement. `test_the_closed_classes_read_back_as_
+the_exclusion_set` pinned the set to `db/0001`'s where its own docstring says «the forms it would
+have read off the migration file» — the newest one.
+
+**Found, not fixed:**
+1. **⚑ THE FIXPOINT IS BLIND TO SCOPE** — `tools/roundtrip.canonical` sorts the rows, so □¬ and ¬□
+   compare EQUAL. Every scope claim the fixpoint has ever passed is unverified by it; the `t-md-2`
+   test and the new ones assert the prefix order separately. An INSTRUMENT defect
+2. `policy_source.closed_forms(db)` reads the forms of EVERY version, so a form once added stays in
+   the live exclusion set for ever, even after a later version removes it
+3. «can't» → «ca» + «n't»; «ca» is not a row, so it compiles to a bare ¬ — weaker than the claim,
+   and entailed by it; a «ca» row is NOT inert (WordNet has `ca`: calcium, California). «won't» likely
+   the same
+4. «could» loses its past — the compiler takes no theatre from a modal
+5. `_withhold` leaves some words counted as placed («He thinks» when the attitude row is withheld)
+6. an inverted fused question comes back archaic: «Cannot a calculator think?»

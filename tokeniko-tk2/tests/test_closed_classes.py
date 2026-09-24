@@ -246,3 +246,66 @@ def test_the_newest_version_changes_only_compiled_role_and_note(rows, v1):
     moved = [r["form"] for r in rows
              if r["role"] != old[(r["form"], r["word_class"], r["position"])]["role"]]
     assert len(moved) == 41, f"41 rows were re-typed, not {len(moved)}"
+
+
+# ------------------------------------------------------------------------------------------------
+# `db/0036` — where a «not» after a modal scopes, on every modal row
+# ------------------------------------------------------------------------------------------------
+
+
+def test_EVERY_modality_row_says_where_a_following_not_scopes():
+    """The compiler reads it and never defaults it, so a modal row without it — or with a value
+    outside the three — must be the migration's failure, not the station's guess."""
+    module = migration(36)
+    modal = [r for r in module.CLOSED_CLASS_ROWS if r["role"] == "modality"]
+    v18 = {r["form"] for r in migration(33).CLOSED_CLASS_ROWS if r["role"] == "modality"}
+
+    assert {r["form"] for r in modal} == v18 | {"cannot"}
+    assert all(r["features"].get(module.FOLLOWING_NEGATION) in module.VALUES for r in modal)
+    assert {r["form"]: r["features"][module.FOLLOWING_NEGATION] for r in modal
+            if r["form"] in ("must", "need", "can", "may")} == \
+        {"must": "inside", "need": "outside", "can": "outside", "may": "ambiguous"}
+
+
+def test_the_check_REFUSES_a_modal_row_that_lost_its_scope(monkeypatch):
+    """«A row with the field missing is a migration check failure, not a fallback» — shown, not
+    trusted: the check is run against a table with one answer taken away."""
+    module = migration(36)
+    rows = [dict(r, features=dict(r["features"])) for r in module.CLOSED_CLASS_ROWS]
+    next(r for r in rows if r["form"] == "need")["features"].pop(module.FOLLOWING_NEGATION)
+    monkeypatch.setattr(module, "CLOSED_CLASS_ROWS", rows)
+
+    with pytest.raises(ValueError, match="need"):
+        module._check()                                                     # noqa: SLF001
+
+
+def test_cannot_is_the_one_row_added_and_the_exclusion_set_moves_by_it_alone():
+    """«cannot» is one token to stanza and was no row at all. It is single-word, so D's exclusion set
+    moves — by a form WordNet has no lemma for, which neither vocabulary reading of D can hold."""
+    module = migration(36)
+    before = migration(33)
+    cannot = module.CLOSED_CLASS_ROWS[-1]
+
+    assert set(module.CLOSED_CLASS_FORMS) ^ set(before.CLOSED_CLASS_FORMS) == {"cannot"}
+    assert cannot["form"] == "cannot" and cannot["spoken"] is True
+    assert cannot["compiled"] == {"kind": "prefix", "element": "modality",
+                                  "modality": Modality.POSSIBILITY.value, "negation": "outside"}
+
+
+def test_the_0036_check_asks_the_question_the_LOOKUP_asks():
+    """`db/0029`'s lesson: the migration's `_meaning()` is the decompiler's key, on every row, and
+    the voice it proves exists for «X not» is the one the decompiler finds."""
+    from tk2.language.closed import ClosedClasses
+    from tk2.language.decompile import Decompiler
+
+    module = migration(36)
+    for row in module.CLOSED_CLASS_ROWS:
+        features = row.get("features") or {}
+        assert module._meaning(row) == Decompiler._key(                     # noqa: SLF001
+            row["role"], row.get("compiled") or {}, features.get("sort"),
+            features.get("takes_number")), row["form"]
+
+    reader = Decompiler(ClosedClasses(module.CLOSED_CLASS_ROWS, "db/0036 (test)"))
+    modality = {"kind": "prefix", "element": "modality"}
+    assert reader.the_modal("inside", **modality, modality="necessity") == "must"
+    assert reader.the_modal("inside", **modality, modality="possibility") == "might"

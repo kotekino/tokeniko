@@ -1667,6 +1667,113 @@ def test_an_ASKED_free_choice_claims_neither_half(compiler):
 
 
 # ------------------------------------------------------------------------------------------------
+# where «not» scopes over a modal — word order for an adverb (frame), the row for an auxiliary
+# (`db/0036`). Skeletons are stanza's parses, measured 2026-09-24.
+# ------------------------------------------------------------------------------------------------
+
+def _thinks(*words):
+    """«A calculator <words> think .» — every word before the verb hangs off it, as stanza hangs
+    an auxiliary (`aux`), a «not» (`advmod`, PART) and an epistemic adverb (`advmod`, ADV)."""
+    tags = {"not": ("PART", "advmod"), "does": ("AUX", "aux")}
+    rows = [("1", "A", "a", "DET", "2", "det"),
+            ("2", "calculator", "calculator", "NOUN", str(len(words) + 3), "nsubj")]
+    for at, word in enumerate(words, start=3):
+        upos, dep = tags.get(word, ("ADV", "advmod") if word.endswith("ly") else ("AUX", "aux"))
+        rows.append((str(at), word, "do" if word == "does" else word, upos,
+                     str(len(words) + 3), dep))
+    rows += [(str(len(words) + 3), "think", "think", "VERB", "0", "root"),
+             (str(len(words) + 4), ".", ".", "PUNCT", str(len(words) + 3), "punct")]
+    return skeleton_from_conllu(" ".join(("A calculator", *words, "think.")), rows)
+
+
+def _scope_of(out) -> list[str]:
+    return [r.modality.value if r.kind == "modality" else r.kind
+            for r in out.zip.rows if r.kind in ("negation", "modality")]
+
+
+@pytest.mark.parametrize("words, scope", [
+    (("must", "not"), ["necessity", "negation"]),             # □¬ — a prohibition
+    (("need", "not"), ["negation", "necessity"]),             # ¬□ — an exemption
+    (("can", "not"), ["negation", "possibility"]),            # ¬◇ — it read ◇¬ until `db/0036`
+    (("cannot",), ["negation", "possibility"]),               # ¬◇ — it read a bare `think`
+    (("might", "not"), ["possibility", "negation"]),          # ◇¬
+    (("necessarily", "does", "not"), ["necessity", "negation"]),   # □¬ — it read ¬□
+    (("does", "not", "necessarily"), ["negation", "necessity"]),   # ¬□ — `t-md-2`'s order
+    (("possibly", "does", "not"), ["possibility", "negation"]),    # ◇¬ — it read ¬◇
+])
+def test_the_SCOPE_of_a_negation_and_a_modality_is_the_one_the_sentence_says(compiler, words,
+                                                                             scope):
+    """An ADVERB scopes by WORD ORDER — the one before the other outscopes it (the tree's shape,
+    frame). An AUXILIARY always stands before its «not», so position cannot say it: the row does,
+    `following_negation` (`db/0036`, knowledge). Every word is placed and nothing abstains."""
+    out = compiler.compile(_thinks(*words))
+
+    assert _scope_of(out) == scope
+    assert out.unplaced == () and out.abstained == ()
+    assert main_row(out).truth == 1.0
+
+
+def test_an_AMBIGUOUS_may_not_withholds_the_clause_rather_than_toss_a_coin(compiler):
+    """«may not» is ¬◇ as permission and ◇¬ as a guess, and neither half is true under both: «may»
+    alone claims what the permission denies, «not» alone what the guess only allows. The clause is
+    withheld — its words back in `unplaced`, the reason in `abstained`, and nothing claimed."""
+    out = compiler.compile(_thinks("may", "not"))
+
+    assert _scope_of(out) == []
+    assert {"may", "not", "think"} <= set(out.unplaced)
+    assert any("«may not»" in why and "withheld" in why for why in out.abstained)
+    assert not any(getattr(r, "truth", None) == 1.0 for r in out.zip.rows)
+
+
+def test_a_withheld_ANTECEDENT_takes_its_conditional_with_it(compiler):
+    """Why withheld and not merely unclaimed: «if you may not go, I stay» with the clause kept and
+    its modal dropped would still claim IMPLY(go, stay) — a conditional the speaker never said."""
+    out = compiler.compile(skeleton_from_conllu("If you may not go , I stay .", [
+        ("1", "If", "if", "SCONJ", "5", "mark"),
+        ("2", "you", "you", "PRON", "5", "nsubj"),
+        ("3", "may", "may", "AUX", "5", "aux"),
+        ("4", "not", "not", "PART", "5", "advmod"),
+        ("5", "go", "go", "VERB", "8", "advcl"),
+        ("6", ",", ",", "PUNCT", "8", "punct"),
+        ("7", "I", "I", "PRON", "8", "nsubj"),
+        ("8", "stay", "stay", "VERB", "0", "root"),
+        ("9", ".", ".", "PUNCT", "8", "punct"),
+    ]))
+
+    assert not [r for r in out.zip.rows if r.kind == "join"]
+    assert [r.predicate for r in out.zip.rows if r.kind == "content"] == ["stay.v"]
+    assert main_row(out).truth is None, "«I stay» was only ever supposed"
+
+
+def test_a_modal_row_with_NO_scope_withholds_rather_than_defaults(compiler):
+    """No default hidden in code: a table from before `db/0036` says nothing about «must», and the
+    station withholds the clause instead of assuming the negation sits inside."""
+    from tk2.language.closed import ClosedClasses
+    from tk2.migrations import discover
+
+    v18 = next(m for m in discover() if m.number == 33).load().CLOSED_CLASS_ROWS
+    out = Compiler(ClosedClasses(v18, "db/0033 (test)")).compile(_thinks("must", "not"))
+
+    assert _scope_of(out) == []
+    assert any("following_negation" in why for why in out.abstained)
+
+
+def test_a_disjunction_of_CANNOTs_is_not_free_choice(compiler):
+    """«you cannot have tea or you cannot have coffee» — ¬◇ twice, and free choice is a fact about
+    ◇: the disjunction claims only itself (`db/0017`), not both halves."""
+    rows = [("1", "You", "you", "PRON", "3", "nsubj"), ("2", "cannot", "cannot", "AUX", "3", "aux"),
+            ("3", "have", "have", "VERB", "0", "root"), ("4", "tea", "tea", "NOUN", "3", "obj"),
+            ("5", "or", "or", "CCONJ", "8", "cc"), ("6", "you", "you", "PRON", "8", "nsubj"),
+            ("7", "cannot", "cannot", "AUX", "8", "aux"), ("8", "have", "have", "VERB", "3", "conj"),
+            ("9", "coffee", "coffee", "NOUN", "8", "obj"), ("10", ".", ".", "PUNCT", "3", "punct")]
+    out = compiler.compile(skeleton_from_conllu("You cannot have tea or you cannot have coffee .",
+                                                rows))
+
+    assert _row(out, "r0").truth is None and _row(out, "r1").truth is None
+    assert next(r for r in out.zip.rows if r.kind == "join").truth == 1.0
+
+
+# ------------------------------------------------------------------------------------------------
 # the subject's role — req 22, `db/0018`. Skeletons are stanza's parses, measured 2026-09-18.
 # ------------------------------------------------------------------------------------------------
 

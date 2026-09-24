@@ -161,12 +161,14 @@
       `unsaid`. Read-whole FIXED 62 → 63 of 71. Record `202609241130_…`
 - [x] **⚑ G10 — «not necessarily», said at last** *(09-24)* — the decompiler reads the adverb table
       backwards (`db/0035` flags `necessarily`); SILENT 1 → 0, read-whole FIXED 63 → 64 of 71
+- [x] **⚑ MODAL SCOPE — seven wrong claims, none left** *(09-24)* — an adverb scopes by its order
+      against «not» (frame); where «not» falls after an auxiliary is per word (`db/0036`); «may
+      not» withholds its clause. Record `202609241130_…`
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] **⚑ MODAL SCOPE — two compiler errors G10 found** *(09-24)* — «necessarily does not» compiles
-      as ¬□, the opposite claim (word order is frame: a fix) · where «not» scopes over an auxiliary
-      is per word («need not» ¬□, «cannot» ¬◇): knowledge, wants the Captain. Record `202609241130_…`
+- [ ] **⚑ THE FIXPOINT IS BLIND TO SCOPE** *(09-24)* — `canonical` sorts the rows, so □¬ and ¬□
+      compare equal; an instrument defect. Record `202609241130_…`
 - [ ] **the fixpoint's 7 remaining — G1 · G6–G9 and `t-ws-1`'s bracketing** — five want the Captain
       (G1 · G6 · G7 · G9 · the zero relative's valency), plus `t-dc-5`'s double join (a design ruling) and
       two bookkeeping defects and «So» lost in silence. Record `202609241130_…`

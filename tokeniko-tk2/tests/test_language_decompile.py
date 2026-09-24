@@ -424,14 +424,21 @@ def test_a_negation_OUTSIDE_a_necessity_is_said_with_the_adverb_after_it(decompi
     assert copular.text == "A calculator is not necessarily a mind."
 
 
-def test_a_negation_OUTSIDE_a_possibility_is_still_REFUSED(decompiler):
-    """¬◇ has no spoken adverb — «does not possibly think» is not how English says it, and «cannot»
-    is a closed-class form with its own scope question. Refused, and the reason named: saying «can
-    not» would move the negation inside, ◇¬, which is a different claim."""
+def test_a_negation_OUTSIDE_a_possibility_is_said_CANNOT(decompiler):
+    """¬◇ — «does not possibly think» is not how English says it, and until `db/0036` it was
+    refused. «cannot» fuses the negation outside the possibility in one word, so ¬◇ is a MEANING of
+    the closed classes, and they answer before the adverbs do. The voice is the row's `spoken`."""
     out = decompiler.decompile(_modal_zip("neg", "pos"))
 
-    assert out.text == ""
-    assert any("negation outside a possibility" in said for said in out.refused)
+    assert out.whole
+    assert out.text == "Calculator cannot think."
+
+
+def test_a_negation_INSIDE_a_possibility_is_not_can_not(decompiler):
+    """◇¬ — «can» is the voice of ◇, and its «not» scopes OUTSIDE (`db/0036`): «can not think» is
+    ¬◇, the opposite claim. The auxiliary has to be one whose «not» stays inside — «might»."""
+    assert decompiler.decompile(_modal_zip("pos", "neg")).text == "Calculator might not think."
+    assert decompiler.decompile(_modal_zip("nec", "neg")).text == "Calculator must not think."
 
 
 def test_a_negation_on_BOTH_sides_of_a_necessity_is_refused_rather_than_halved(decompiler):
@@ -478,6 +485,35 @@ def test_the_fixpoint_s_t_md_2_comes_back_as_the_zip_it_went_out_as():
     assert out.text == "A calculator does not necessarily think."
 
     second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+    assert canonical(second) == canonical(first)
+
+
+@pytest.mark.parametrize("text, scope, back", [
+    ("A calculator cannot think.", ["negation", "modality"], "A calculator cannot think."),
+    ("A calculator need not think.", ["negation", "modality"],
+     "A calculator does not necessarily think."),
+])
+def test_a_negated_modal_comes_back_as_the_scope_it_went_out_as(text, scope, back):
+    """The round trip for the two meanings `db/0036` taught the compiler. ¬◇ from «cannot» is said
+    «cannot»; ¬□ from «need not» keeps the voice it already had — «does not necessarily», the flagged
+    adverb — and «need not» does not take it over. **The prefix ORDER is asserted apart**:
+    `canonical` sorts the rows, so it cannot tell □¬ from ¬□."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    assert [r.kind for r in first.rows][:2] == scope
+
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    assert out.text == back
+
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+    assert [r.kind for r in second.rows][:2] == scope
     assert canonical(second) == canonical(first)
 
 

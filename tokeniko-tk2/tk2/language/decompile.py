@@ -81,7 +81,14 @@ from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
-from tk2.language.closed import FUSED_QUANTIFIER, ClosedClasses, standing_closed_classes
+from tk2.language.closed import (
+    FOLLOWING_NEGATION,
+    FUSED_QUANTIFIER,
+    INSIDE,
+    OUTSIDE,
+    ClosedClasses,
+    standing_closed_classes,
+)
 from tk2.language.inflect import (
     PARTICIPLE, PAST, PLURAL, PRESENT, Inflections, standing_inflections,
 )
@@ -252,6 +259,7 @@ class Decompiler:
         self.context = context
         self._by_meaning = self._invert(self.table)
         self._spoken = self._voices(self.table)
+        self._by_following = self._modals_by_following(self.table)
         self._adverb_forms, self._adverb_spoken = self._adverbs_by_meaning(self.adverbs)
         self._pronouns = self._persons(self.table)
         #: The marker a possessor is said with after its noun — «the result OF perception». The
@@ -304,6 +312,38 @@ class Decompiler:
             found[cls._key(row.get("role"), row.get("compiled") or {},
                            features.get("sort"), features.get("takes_number"))] = row["form"]
         return found
+
+    @classmethod
+    def _modals_by_following(cls, table: ClosedClasses) -> dict[tuple, set[str]]:
+        """(MEANING, where a following «not» scopes) → the forms (`db/0036`). `_invert`, narrowed by
+        the one feature that decides which auxiliary can carry a negation inside its modality."""
+        found: dict[tuple, set[str]] = {}
+        for row in table._rows:                       # noqa: SLF001 — the table's own inverse index
+            features = row.get("features") or {}
+            where = features.get(FOLLOWING_NEGATION)
+            if where is None or not row.get("compiled"):
+                continue
+            key = cls._key(row.get("role"), row["compiled"], features.get("sort"),
+                           features.get("takes_number"))
+            found.setdefault((key, where), set()).add(row["form"])
+        return found
+
+    def the_modal(self, following: str, **compiled) -> str | None:
+        """The auxiliary that says this modality with a «not» after it scoping `following` — the
+        flagged voice if it qualifies, else the only form that does, else nothing (`db/0036`'s
+        check asks exactly this). «can» is the voice of ◇ and its «not» scopes OUTSIDE, so ◇¬ is
+        not «can not»: it is the one possibility whose «not» stays inside, «might»."""
+        key = self._key("modality", compiled)
+        fits = self._by_following.get((key, following), set())
+        spoken = self._spoken.get(key)
+        if spoken in fits:
+            return spoken
+        return next(iter(fits)) if len(fits) == 1 else None
+
+    def _follows_inside(self, form: str) -> bool:
+        """Does a «not» after this form stay inside it — «cannot NOT think»?"""
+        return any(form in forms for (_key, where), forms in self._by_following.items()
+                   if where == INSIDE)
 
     @classmethod
     def _adverbs_by_meaning(cls, adverbs: AdverbKinds) -> tuple[dict, dict]:
@@ -673,11 +713,26 @@ class Decompiler:
                 rd.out.refused.append(f"{name}: a negation over a {following.kind} cannot be said")
                 return None
 
+        # **A «NOT» INSIDE THE MODALITY IS SAID AFTER ITS AUXILIARY** — and only an auxiliary whose
+        # row says its «not» scopes inside can carry it (`db/0036`): «can not» is ¬◇, not ◇¬.
+        inside = negate_clause or getattr(row, "truth", None) == DENIED
         modal = adverb = ""
+        fused = False
         for element in prefix:
             if element.kind != "modality":
                 continue
             if id(element) in negated_by:
+                # **A FORM THAT FUSES THE NEGATION OUTSIDE ITS MODALITY SAYS IT FIRST** — «cannot»
+                # is ¬◇ in one word (`db/0036`), and the closed classes answer before the adverbs.
+                form = self.the_form("modality", kind="prefix", element="modality",
+                                     modality=element.modality.value, negation=OUTSIDE)
+                if form is not None:
+                    if modal or adverb or (inside and not self._follows_inside(form)):
+                        rd.out.refused.append(f"{name}: a negated {element.modality.value} beside "
+                                              f"another modality or negation cannot be ordered")
+                        return None
+                    modal, fused = form, True
+                    continue
                 # **«must not» is not «not must».** An auxiliary stands BEFORE the negation, so it
                 # can only put the negation inside: saying the modal here would claim the opposite.
                 # An adverb stands AFTER it — «does NOT NECESSARILY think» — and that is the one
@@ -697,11 +752,23 @@ class Decompiler:
                     return None
                 adverb = form
                 continue
-            form = self.the_form("modality", kind="prefix", element="modality",
-                                 modality=element.modality.value)
+            if inside:
+                form = self.the_modal(INSIDE, kind="prefix", element="modality",
+                                      modality=element.modality.value)
+                if form is None:
+                    rd.out.refused.append(f"{name}: no auxiliary says a negation inside a "
+                                          f"{element.modality.value}")
+                    return None
+            else:
+                form = self.the_form("modality", kind="prefix", element="modality",
+                                     modality=element.modality.value)
             if form is None:
                 rd.out.refused.append(f"{name}: the table names several forms for "
                                       f"{element.modality.value} and none is preferred")
+                return None
+            if fused:
+                rd.out.refused.append(f"{name}: a negated modality beside another modality cannot "
+                                      f"be ordered in one clause")
                 return None
             modal = form
         if adverb and modal:

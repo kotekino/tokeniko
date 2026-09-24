@@ -21,7 +21,6 @@ from tests.seed import (
     all_poles,
     bar_rows,
     bar_rows_v2,
-    closed_class_forms,
     closed_class_rows,
     param_rows,
     policy_rows,
@@ -432,8 +431,12 @@ def test_the_closed_classes_read_back_as_the_exclusion_set(created):
     """What `tools/propose_seeds.py` reads when a body is reachable: the same forms it would have
     read off the migration file, so a proposal measured before the apply and one measured after are
     the same measurement."""
+    from tk2.datatier.policy_source import closed_forms
+
     stored = list(created["language_closed_classes"].find({}))
-    assert {r["form"] for r in stored if " " not in r["form"]} == set(closed_class_forms())
+    # the NEWEST migration's forms, as the docstring says — `db/0036` added `cannot`, the first
+    # single-word form since `db/0001`, and pinning v1's set was asking the wrong question
+    assert {r["form"] for r in stored if " " not in r["form"]} == set(closed_forms(None)[0])
 
 
 @live

@@ -82,6 +82,14 @@ CONTENT_POS = frozenset({"NOUN", "PROPN", "ADJ"})
 #: one word that fuses them. Which relations admit it is the UD readings' business (`db/0034`).
 FUSED_QUANTIFIER = "fused_quantifier"
 
+#: **WHERE A «NOT» AFTER A MODAL SCOPES** — the feature `db/0036` writes on every `modality` row, and
+#: the three answers it may give. A name and its vocabulary, not a roster: WHICH modal takes which
+#: value is the rows' («must not» □¬ · «need not» ¬□ · «may not» either). A fused form — «cannot» —
+#: says where its OWN negation sits in `compiled.negation`, with the same three words, because that
+#: one is part of its meaning.
+FOLLOWING_NEGATION = "following_negation"
+INSIDE, OUTSIDE, AMBIGUOUS = "inside", "outside", "ambiguous"
+
 #: The dependencies of a clause that MODIFIES A NOUN — which is what separates a relative clause
 #: from an embedded question, and the only evidence there is for it. FRAME: `acl` is UD's own
 #: «clausal modifier of a noun», and `acl:relcl` its relative-clause subtype.

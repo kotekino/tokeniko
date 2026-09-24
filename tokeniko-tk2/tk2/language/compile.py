@@ -28,7 +28,7 @@ from dataclasses import dataclass, field, replace
 
 from tk2.dictionary import keys as keymod
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
-from tk2.language.closed import ClosedClasses
+from tk2.language.closed import AMBIGUOUS, FOLLOWING_NEGATION, INSIDE, OUTSIDE, ClosedClasses
 from tk2.language.markers import MarkerSelector
 from tk2.language.strength import IMPERATIVE, AttitudeStrengths, standing_attitude_strengths
 from tk2.language.subjects import SubjectRoles, standing_subject_roles
@@ -300,6 +300,25 @@ class Placements:
 
 
 @dataclass
+class _Scoped:
+    """One word that raised negation or modality rows over a clause — kept with WHERE it stood,
+    because where it stood is what `Compiler._scope` orders by.
+
+    `following` is the row's `following_negation` for an AUXILIARY (`db/0036`) and None for an
+    adverb, whose scope is its word order. `own` is a fused form's own negation — «cannot».
+    """
+
+    form: str
+    index: int
+    length: int
+    rows: list
+    negation: bool = False
+    auxiliary: bool = False
+    following: str | None = None
+    own: str | None = None
+
+
+@dataclass
 class Compiled:
     """A zip and the bookkeeping the confidence scalar will need (req 4).
 
@@ -388,6 +407,7 @@ class Compiler:
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
         asked: set[str] = set()               # rows a wh-word already made ask — the `?` adds nothing
+        unscoped: list[int] = []              # clauses whose modal scope no row decides
 
         # **THE ROTATION IS DECIDED BEFORE THE CLAUSES ARE COMPILED, AND IT HAS TO BE.** A pronoun
         # is resolved where it is met, and the attitude that governs it is built later, in
@@ -401,7 +421,7 @@ class Compiler:
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
                 open_truth, wants_antecedent, defaulted, modifiers, adverb_joins,
-                inner.get(head.index, context), asked)
+                inner.get(head.index, context), asked, unscoped)
 
         dissolved: set[str] = set()
         withheld: list[int] = []      # relative clauses whose gap no machinery could place
@@ -412,9 +432,10 @@ class Compiler:
         self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
         extra += self._modify(modifiers, joins)
         self._connect(adverb_joins, content, joins, abstained)
-        if withheld:
+        if withheld or unscoped:
             prefix_rows, content, extra, joins = self._withhold(
-                skeleton, heads, withheld, content, prefix_rows, extra, joins, covered)
+                skeleton, heads, withheld, content, prefix_rows, extra, joins, covered,
+                {h: {i for i, o in owner.items() if o == h} for h in unscoped})
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
@@ -432,6 +453,10 @@ class Compiler:
                 *(row for row in content.values()
                   if row.name not in dissolved or row.name in named),
                 *extra, *joins]
+        if not rows:
+            # Everything was withheld: the zip of a sentence nothing was understood of, which is the
+            # shape a sentence with no root has always had.
+            rows = [ContentRow(name="r0")]
         return Compiled(zip=Zip(rows=rows, unplaced=list(unplaced),
                                 topicality=self._topicality(skeleton, root, covered)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
@@ -676,11 +701,13 @@ class Compiler:
                 open_truth: set, wants_antecedent: set,
                 defaulted: list | None = None, modifiers: list | None = None,
                 adverb_joins: list | None = None,
-                context: Context = NO_CONTEXT, asked: set | None = None) -> ContentRow:
+                context: Context = NO_CONTEXT, asked: set | None = None,
+                unscoped: list | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
         adverbs_here: list[Word] = []
+        scoped: list[_Scoped] = []    # the words that raised a negation or a modality, in `_scope`
         predicate = None
         copular = False
 
@@ -739,12 +766,21 @@ class Compiler:
                                       name, copular, defaulted, abstained)
                 continue
             if match is not None:
+                raised = len(prefix_rows)
                 covered.update(self._compile_closed(word, match, skeleton, boxes, prefix_rows,
                                                     abstained, copular, name,
                                                     open_truth, wants_antecedent, context,
                                                     asked),
                                label=CLOSED_KIND_PLACES[match.kind] if match.kind in
                                CLOSED_KIND_PLACES else (match.kind or "structure"))
+                element = match.compiled.get("element") if match.kind == "prefix" else None
+                if element in ("negation", "modality") and len(prefix_rows) > raised:
+                    scoped.append(_Scoped(
+                        form=match.form, index=index, length=match.length,
+                        rows=prefix_rows[raised:], negation=element == "negation",
+                        auxiliary=element == "modality",
+                        following=(match.features or {}).get(FOLLOWING_NEGATION),
+                        own=match.compiled.get("negation")))
                 continue
             if word.bare_dep in ADVERB_DEPS and word.upos == "ADV" and match is None:
                 # **AN ADVERB TAKES ONE OF REQUIREMENT 23's FOUR SCOPES**, and the rows say which —
@@ -775,10 +811,17 @@ class Compiler:
             reading = self.adverbs.read(word.lemma, word.dep)
             if reading.is_default and defaulted is not None:
                 defaulted.append(f"{word.text}: manner (no row; the default)")
+            raised = len(prefix_rows)
             covered.update(
                 self._compile_adverb(word, reading, skeleton, boxes, prefix_rows, name,
                                      adverb_joins if adverb_joins is not None else [], abstained),
                 label=f"adverb:{reading.kind}")
+            if len(prefix_rows) > raised and isinstance(prefix_rows[-1], ModalityRow):
+                scoped.append(_Scoped(form=word.text, index=word.index, length=1,
+                                      rows=prefix_rows[raised:]))
+
+        if not self._scope(scoped, prefix_rows, abstained) and unscoped is not None:
+            unscoped.append(head.index)
 
         for word, _box in unresolved:
             if word.index not in covered:
@@ -786,6 +829,75 @@ class Compiler:
 
         return ContentRow(name=name, predicate=predicate, theatre=self._theatre(skeleton, head),
                           predicate_sense=Open() if predicate else None, boxes=boxes)
+
+    def _scope(self, scoped: list[_Scoped], prefix_rows: list, abstained: list) -> bool:
+        """**WHICH OF A CLAUSE'S NEGATIONS AND MODALITIES SCOPES OVER WHICH** — the prefix order is
+        the scope order, and the order the rows were RAISED in is not it.
+
+        The walk raises the closed classes in token order and the adverbs after them, so «a
+        calculator NECESSARILY does NOT think» came out ¬□ — the opposite claim, silently. Two facts
+        decide it instead, and they are of two kingdoms:
+
+          an ADVERB and a negation    WORD ORDER: the one before scopes over the one after
+                                      («necessarily not» □¬ · «not necessarily» ¬□). The tree's
+                                      shape, so frame (the Captain, 2026-09-18)
+          an AUXILIARY and the «not»  THE WORD: every auxiliary stands before its «not», and
+          after it                    «must not» is □¬ where «need not» is ¬□. A fact about each
+                                      modal, so the row's (`db/0036`, the Captain, 2026-09-24)
+
+        **AN AMBIGUOUS ROW IS NOT A COIN TOSS, AND NEITHER HALF OF IT IS TRUE ALONE.** «may not» is
+        ¬◇ as permission and ◇¬ as a guess: «may» without its «not» claims what the permission
+        denies, and «not» without its «may» claims what the guess only allows. Nor is the clause
+        safe merely UNCLAIMED — «if you may not go, I stay» would still claim a conditional about
+        going. So this answers False and the clause is WITHHELD, whole, by `_withhold`: its words
+        return to `unplaced`, and every row that used it goes with it. A modal carrying no answer at
+        all is withheld the same way — a scope nobody wrote down is not one this station may assume.
+
+        Nothing moves in a clause with no negation, and only these rows move: a quantifier or a
+        domain raised between them keeps its place.
+        """
+        if not any(item.negation or item.own for item in scoped):
+            return True
+
+        placed: list[_Scoped] = []
+        order = sorted(scoped, key=lambda item: item.index)
+        at = 0
+        while at < len(order):
+            item = order[at]
+            after = order[at + 1] if at + 1 < len(order) else None
+            if item.own is not None and item.own not in (INSIDE, OUTSIDE):
+                abstained.append(f"«{item.form}»: its own negation is {item.own!r} — the clause is "
+                                 f"withheld")
+                return False
+            if item.auxiliary and after is not None and after.negation:
+                if item.following == INSIDE:
+                    placed += [item, after]
+                elif item.following == OUTSIDE:
+                    placed += [after, item]
+                elif item.following == AMBIGUOUS:
+                    abstained.append(f"«{item.form} {after.form}» scopes the negation both inside "
+                                     f"the modality and outside it, and nothing here says which — "
+                                     f"the clause is withheld")
+                    return False
+                else:
+                    abstained.append(f"«{item.form}» carries no `{FOLLOWING_NEGATION}` — a scope "
+                                     f"the table does not state is not assumed, and the clause is "
+                                     f"withheld")
+                    return False
+                at += 2
+                continue
+            placed.append(item)
+            at += 1
+
+        # Into the SLOTS these rows already held, and under the names those slots had: a row's name
+        # is a label, and the order of the labels is what `p0 · p1` has always been read as.
+        rows = [row for item in scoped for row in item.rows]
+        slots = sorted(next(i for i, held in enumerate(prefix_rows) if held is row) for row in rows)
+        names = [prefix_rows[slot].name for slot in slots]
+        for slot, row, label in zip(slots, [row for item in placed for row in item.rows], names):
+            prefix_rows[slot] = row
+            row.name = label
+        return True
 
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
                 marks: dict, covered: Placements, prefix_rows: list, abstained: list,
@@ -930,10 +1042,16 @@ class Compiler:
     @staticmethod
     def _possible(prefix_rows: list, row) -> bool:
         """Is this row under a POSSIBILITY modal — «can», «may»? The modality is the format's own
-        enum, read off the prefix row `_compile_closed` already raised for the auxiliary."""
-        return any(getattr(p, "scopes", None) == row.name
-                   and getattr(getattr(p, "modality", None), "value", None) == "possibility"
-                   for p in prefix_rows)
+        enum, read off the prefix row `_compile_closed` already raised for the auxiliary.
+
+        **NOT UNDER A NEGATION THAT OUTSCOPES IT.** «you CANNOT have tea or you cannot have coffee»
+        is ¬◇ twice, and free choice is a fact about ◇: nothing makes both halves true there, so the
+        disjunction claims only itself (`db/0017`) — as it did before «cannot» compiled at all."""
+        mine = [p for p in prefix_rows if getattr(p, "scopes", None) == row.name]
+        for at, p in enumerate(mine):
+            if getattr(getattr(p, "modality", None), "value", None) == "possibility":
+                return not any(isinstance(q, NegationRow) for q in mine[:at])
+        return False
 
     def _ask(self, content: dict, joins: list, open_truth: set, wants_antecedent: set) -> list:
         """The two questions that are not boxes: an OPEN truth, and an unknown antecedent.
@@ -1672,9 +1790,11 @@ class Compiler:
 
     def _withhold(self, skeleton: Skeleton, heads: list[Word], withheld: list[int],
                   content: dict, prefix_rows: list, extra: list, joins: list,
-                  covered: Placements):
+                  covered: Placements, own: dict[int, set[int]] | None = None):
         """Take a relative clause whose gap could not be placed OUT of the zip, and give its words
-        back to `unplaced`.
+        back to `unplaced` — and a clause whose modal scope no row decides (`_scope`), which goes
+        with its OWN words only: `own` maps its head to them, and a clause inside it that was joined
+        to it stands on its own truth once the join is gone.
 
         **A TRUTHFUL PARTIAL ZIP, NEVER A WRONG COMPLETE ONE** (req 8). Kept unbound, the clause
         would be a free claim — and under a quantifier it is a restriction, so «every fish the cat
@@ -1695,9 +1815,10 @@ class Compiler:
                     if node.is_root:
                         break
                     node = skeleton[node.head]
-        for index in subtree:
+        own = own or {}
+        for index in subtree | {i for words in own.values() for i in words}:
             covered.discard(index)
-        names = {content[h.index].name for h in heads if h.index in subtree}
+        names = {content[h.index].name for h in heads if h.index in subtree or h.index in own}
         gone_vars: set[str] = set()
 
         def uses(row) -> bool:
@@ -2129,10 +2250,19 @@ class Compiler:
             if element == "negation":
                 prefix_rows.append(NegationRow(name=f"p{len(prefix_rows)}", scopes=scopes))
             elif element == "modality":
-                from tk2.tkzip.schema import Modality, ModalityRow
-
-                prefix_rows.append(ModalityRow(name=f"p{len(prefix_rows)}", scopes=scopes,
-                                              modality=Modality(match.compiled["modality"])))
+                modality = ModalityRow(name=f"p{len(prefix_rows)}", scopes=scopes,
+                                       modality=Modality(match.compiled["modality"]))
+                prefix_rows.append(modality)
+                if match.compiled.get("negation") is not None:
+                    # **A FUSED FORM CARRIES ITS OWN «NOT»** — «cannot» is ¬◇ in one word
+                    # (`db/0036`). The negation is raised here beside the modality and put where
+                    # the row says; an ambiguous one is `_scope`'s to withdraw with the rest.
+                    negation = NegationRow(name=f"p{len(prefix_rows)}", scopes=scopes)
+                    if match.compiled["negation"] == OUTSIDE:
+                        prefix_rows.insert(len(prefix_rows) - 1, negation)
+                        negation.name, modality.name = modality.name, negation.name
+                    else:
+                        prefix_rows.append(negation)
             return taken
 
         if kind == "quantifier":
