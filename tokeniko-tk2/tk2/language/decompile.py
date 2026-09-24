@@ -891,6 +891,7 @@ class Decompiler:
         # asked at all: a clause under an attitude is an embedded question, a clause standing alone
         # and claiming something is not.
         wh, wh_role = self._question_word(boxes, rd)
+        gap_marker = None
         if rd.gap is not None:
             # **THE ANTECEDENT IS NOT SAID TWICE.** Inside a relative clause the shared variable IS
             # the noun the phrase already named, and English leaves a gap with a relative pronoun in
@@ -905,10 +906,21 @@ class Decompiler:
                     rd.out.unsaid.append(f"{row.name}: the table names no single relative pronoun")
                     return None
                 wh, wh_role = relative, antecedent
+                # **A MARKED GAP STRANDS ITS MARKER** — «the minds that you learn FROM». Popping the
+                # box with the relative pronoun in it would drop the marker with it, and the
+                # antecedent would come back in the wrong role: «the house that I live» is not a
+                # place. `that` cannot be pied-piped («in that I live»), so English strands.
+                gap_marker = boxes[antecedent].marker
         if wh_role is Role.AGENT and not (asked or asks) and row.predicate is not None \
-                and len(boxes) > 1 and not boxes[wh_role].head.described:
+                and len(boxes) > 1 and isinstance(boxes[wh_role].head, Open) \
+                and not boxes[wh_role].head.described:
             # An agent nobody described and nobody asked about is what the PASSIVE leaves out.
             # One the sentence described — «who», «what» — is a question, wherever it stands.
+            #
+            # **AND A RELATIVE GAP IS NEITHER** *(2026-09-24)*: its head is the antecedent's
+            # VARIABLE, which is not an unknown agent but a known one — «every mind that TRUSTS
+            # you». Reading `.described` off it raised, and passivising it would have said the
+            # clause without its subject; only an OPEN head can be the agent nobody named.
             wh, wh_role = None, None
         # **A CONJUNCT WITH NOTHING BUT A COMPLEMENT HAS AN ELIDED SUBJECT.** «The cat is dead and
         # alive» — English says the shared subject once, and the second half is the complement
@@ -1063,6 +1075,8 @@ class Decompiler:
                 that = self._complementizer(inner)
                 after.append(f"{that} {inner.text}" if that else inner.text)
 
+        if gap_marker and wh is not None:
+            after.append(gap_marker)
         said = " ".join(part for part in (fronted, *parts, *after) if part)
         if not said.strip():
             return None

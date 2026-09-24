@@ -642,7 +642,16 @@ def test_a_bare_quantifier_binds_ITSELF_and_the_relative_clause_restricts_it(com
     assert binder.restriction.head != "gold.n", "the metal is what is DENIED, never what is ranged"
     assert gold.boxes[Role.COMPLEMENT].head == "gold.n", "and it stays in the complement"
     assert gold.boxes[Role.PATIENT].head == bound, "the universal binds the SUBJECT of the claim"
-    assert glittering.boxes[Role.AGENT].head == bound, "one variable in two rows — no orphan"
+    # **THE GAP IS WHAT A SUBJECT OF «glitter» IS** *(G5, 2026-09-24)*. This read `AGENT` while the
+    # gap took «the first open box, else the agent» — a default no subject anywhere else obeys. It
+    # is now `db/0018`'s answer, the one «gold glitters» gets, whatever that row says.
+    alone = compiler.compile(skeleton_from_conllu("Gold glitters.", [
+        ("1", "Gold", "gold", "NOUN", "2", "nsubj"),
+        ("2", "glitters", "glitter", "VERB", "0", "root"),
+        ("3", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    gap = next(role for role, box in main_row(alone).boxes.items() if box.head == "gold.n")
+    assert glittering.boxes[gap].head == bound, "one variable in two rows — no orphan"
     assert binder.scopes == gold.name and negation.scopes == gold.name, (
         "both prefix elements scope the predication; their ORDER is the two readings (req 35)")
     assert glittering.truth is None, (
@@ -708,6 +717,187 @@ def test_a_relative_clause_on_a_QUANTIFIED_phrase_reuses_the_binders_variable(co
     referring = rows_of(compiler.compile(RELATIVE), "content")
     assert all(row.truth == 1.0 for row in referring), (
         "a relative clause on a REFERRING phrase is presupposed content, and stays claimed")
+
+
+# ------------------------------------------------------------------------------------------------
+# the relative gap takes the role its POSITION gives it (G5, 2026-09-24)
+# ------------------------------------------------------------------------------------------------
+
+#: stanza's own parse of each, transcribed so the test needs no model.
+FISH_THAT = skeleton_from_conllu("I like the fish that the cat ate.", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "like", "like", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "fish", "fish", "NOUN", "2", "obj"),
+    ("5", "that", "that", "PRON", "8", "obj"),
+    ("6", "the", "the", "DET", "7", "det"),
+    ("7", "cat", "cat", "NOUN", "8", "nsubj"),
+    ("8", "ate", "eat", "VERB", "4", "acl:relcl"),
+    ("9", ".", ".", "PUNCT", "2", "punct"),
+])
+
+FISH_ZERO = skeleton_from_conllu("I like the fish the cat ate.", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "like", "like", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "fish", "fish", "NOUN", "2", "obj"),
+    ("5", "the", "the", "DET", "6", "det"),
+    ("6", "cat", "cat", "NOUN", "7", "nsubj"),
+    ("7", "ate", "eat", "VERB", "4", "acl:relcl"),
+    ("8", ".", ".", "PUNCT", "2", "punct"),
+])
+
+MIND_TRUST = skeleton_from_conllu("You learn from every mind that you trust.", [
+    ("1", "You", "you", "PRON", "2", "nsubj"),
+    ("2", "learn", "learn", "VERB", "0", "root"),
+    ("3", "from", "from", "ADP", "5", "case"),
+    ("4", "every", "every", "DET", "5", "det"),
+    ("5", "mind", "mind", "NOUN", "2", "obl"),
+    ("6", "that", "that", "PRON", "8", "obj"),
+    ("7", "you", "you", "PRON", "8", "nsubj"),
+    ("8", "trust", "trust", "VERB", "5", "acl:relcl"),
+    ("9", ".", ".", "PUNCT", "2", "punct"),
+])
+
+HOUSE_IN_WHICH = skeleton_from_conllu("I like the house in which I live.", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "like", "like", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "house", "house", "NOUN", "2", "obj"),
+    ("5", "in", "in", "ADP", "6", "case"),
+    ("6", "which", "which", "PRON", "8", "obl"),
+    ("7", "I", "I", "PRON", "8", "nsubj"),
+    ("8", "live", "live", "VERB", "4", "acl:relcl"),
+    ("9", ".", ".", "PUNCT", "2", "punct"),
+])
+
+HOUSE_STRANDED = skeleton_from_conllu("I like the house I live in.", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "like", "like", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "house", "house", "NOUN", "2", "obj"),
+    ("5", "I", "I", "PRON", "6", "nsubj"),
+    ("6", "live", "live", "VERB", "4", "acl:relcl"),
+    ("7", "in", "in", "ADP", "6", "obl"),
+    ("8", ".", ".", "PUNCT", "2", "punct"),
+])
+
+#: Not English — a tree whose gap is ALREADY FILLED: the pronoun is the object and so is the mouse.
+#: A provider can hand the station this, and the question is only what it does with it.
+FISH_FILLED = skeleton_from_conllu("I like the fish that the cat ate the mouse.", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "like", "like", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "fish", "fish", "NOUN", "2", "obj"),
+    ("5", "that", "that", "PRON", "8", "obj"),
+    ("6", "the", "the", "DET", "7", "det"),
+    ("7", "cat", "cat", "NOUN", "8", "nsubj"),
+    ("8", "ate", "eat", "VERB", "4", "acl:relcl"),
+    ("9", "the", "the", "DET", "10", "det"),
+    ("10", "mouse", "mouse", "NOUN", "8", "obj"),
+    ("11", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
+def _bound(out, row):
+    """The variable `row` shares with a binder — and that binder, so a test can say which noun."""
+    binders = {b.binds: b for b in rows_of(out, "quantifier")}
+    shared = [(role, box) for role, box in row.boxes.items()
+              if isinstance(box.head, Var) and box.head.name in binders]
+    assert len(shared) == 1, f"{row.name} shares {len(shared)} variables with a binder"
+    role, box = shared[0]
+    return role, box, binders[box.head.name]
+
+
+def test_an_OBJECT_relative_puts_the_antecedent_in_the_OBJECT_box(compiler):
+    """«I like the fish that the cat ate» compiled to `eat(agent = the fish)`, **the cat gone and
+    `unplaced` empty** (G5). The gap took the first OPEN box, else the agent; there was no open box,
+    so the fish was written OVER the cat's agent box — and the cat had been placed, so nothing said
+    it was lost. A box replaced in silence is req 8's worst case.
+
+    `that` is `obj`, and `obj` is the patient in every sentence: the pronoun's own relation decides,
+    exactly as if the fish stood there.
+    """
+    out = compiler.compile(FISH_THAT)
+    eating = next(r for r in rows_of(out, "content") if r.predicate == "eat.v")
+    role, _box, binder = _bound(out, eating)
+
+    assert role is Role.PATIENT and binder.restriction.head == "fish.n", "the fish is what was eaten"
+    assert eating.boxes[Role.AGENT].head == "cat.n", "and the cat, which ate it, is still there"
+    assert out.coverage == 1.0 and out.zip.unplaced == []
+
+
+def test_a_ZERO_relative_with_its_subject_said_is_WITHHELD_not_guessed(compiler):
+    """«I like the fish the cat ate» — no pronoun, so no relation names the gap, and the TREE is the
+    same as «I remember the day I slept»: a subject, a verb, no object. The first gap is the object
+    and the second an adverbial; only the verb's VALENCY separates them, and valency is knowledge
+    the station does not hold. Reading «no object» as «the object gap» would make the day the thing
+    slept.
+
+    So the clause is withheld and its words go back to `unplaced` — a truthful partial zip, never a
+    wrong complete one. *The QM's brief expected the overt zip here; this is the frame-or-knowledge
+    stop it asked for, and the day the valency is a row, this test changes.*
+    """
+    out = compiler.compile(FISH_ZERO)
+
+    assert not [r for r in rows_of(out, "content") if r.predicate == "eat.v"], "no guessed row"
+    assert main_row(out).boxes[Role.PATIENT].head == "fish.n", "no binder minted for nothing"
+    assert not rows_of(out, "quantifier")
+    assert set(out.zip.unplaced) == {"the", "cat", "ate"}, "and the zip SAYS what it did not read"
+    assert any("valency" in why for why in out.abstained)
+
+
+def test_a_relative_on_a_QUANTIFIED_phrase_puts_the_variable_where_the_pronoun_stands(compiler):
+    """«You learn from every mind that you trust» compiled `trust(experiencer = you, AGENT = mind)` —
+    the minds doing the trusting. `that` is the object, so the mind is what is trusted."""
+    out = compiler.compile(MIND_TRUST)
+    trusting = next(r for r in rows_of(out, "content") if r.predicate == "trust.v")
+    role, box, binder = _bound(out, trusting)
+
+    assert role is Role.PATIENT and binder.restriction.head == "mind.n"
+    assert Role.AGENT not in trusting.boxes
+    assert box.marker is None, "«from» marks the mind in the LEARNING, not in the trusting"
+    assert trusting.truth is None, "a quantifier's restriction is stated, not claimed"
+    assert out.coverage == 1.0
+
+
+def test_an_OBLIQUE_relative_takes_its_marker_s_role_and_keeps_the_marker(compiler):
+    """«the house IN WHICH I live» — `which` is `obl` with «in», and the marker's rule settles the
+    role with the HOUSE as its nominal: «which» has no supersense and «house» does. The marker rides
+    on the gap's box, as every marker rides on the box it marks (req 65)."""
+    out = compiler.compile(HOUSE_IN_WHICH)
+    living = next(r for r in rows_of(out, "content") if r.predicate == "live.v")
+    role, box, binder = _bound(out, living)
+
+    assert role is Role.LOCATION and box.marker == "in"
+    assert binder.restriction.head == "house.n"
+    assert out.coverage == 1.0
+
+
+def test_a_STRANDED_marker_is_the_gap_s_marker(compiler):
+    """«the house I live IN» — a zero relative, and the tree DOES say where the gap is: a marker with
+    no nominal of its own. It is settled by the same rule, with the antecedent where its nominal
+    would be, and the two spellings compile to one zip."""
+    stranded = compiler.compile(HOUSE_STRANDED)
+    living = next(r for r in rows_of(stranded, "content") if r.predicate == "live.v")
+    role, box, _binder = _bound(stranded, living)
+
+    assert role is Role.LOCATION and box.marker == "in"
+    assert stranded.coverage == 1.0
+    overt = compiler.compile(HOUSE_IN_WHICH)
+    assert [r.model_dump() for r in stranded.zip.rows] == [r.model_dump() for r in overt.zip.rows]
+
+
+def test_a_gap_whose_box_is_already_FILLED_withholds_the_clause(compiler):
+    """Never overwrite. The pronoun says `obj` and the clause already has an object; the fish cannot
+    take the mouse's box, and neither can the station pick one of them. The clause goes to
+    `unplaced` whole, and nothing is bound."""
+    out = compiler.compile(FISH_FILLED)
+
+    assert not [r for r in rows_of(out, "content") if r.predicate == "eat.v"]
+    assert not rows_of(out, "quantifier")
+    assert {"cat", "mouse", "ate", "that"} <= set(out.zip.unplaced)
+    assert any("already filled" in why for why in out.abstained)
 
 
 LIKE_TO_SWIM = skeleton_from_conllu("You like to swim.", [

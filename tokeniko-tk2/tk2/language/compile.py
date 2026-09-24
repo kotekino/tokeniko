@@ -278,6 +278,11 @@ class Placements:
         for index in indices:
             self.add(index, label)
 
+    def discard(self, index: int) -> None:
+        """Take a placement BACK — only for a clause the station withholds after reading it
+        (`Compiler._withhold`), whose words were placed into a row that will not reach the zip."""
+        self._where.pop(index, None)
+
     def label(self, index: int) -> str:
         return self._where.get(index, "")
 
@@ -399,13 +404,17 @@ class Compiler:
                 inner.get(head.index, context), asked)
 
         dissolved: set[str] = set()
+        withheld: list[int] = []      # relative clauses whose gap no machinery could place
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained,
-                             dissolved)
+                             dissolved, withheld)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
         self._question(skeleton, heads, owner, content, joins, asked)
         self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
         extra += self._modify(modifiers, joins)
         self._connect(adverb_joins, content, joins, abstained)
+        if withheld:
+            prefix_rows, content, extra, joins = self._withhold(
+                skeleton, heads, withheld, content, prefix_rows, extra, joins, covered)
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
@@ -780,7 +789,7 @@ class Compiler:
 
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
                 marks: dict, covered: Placements, prefix_rows: list, abstained: list,
-                dissolved: set) -> list[JoinRow]:
+                dissolved: set, withheld: list | None = None) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -809,7 +818,7 @@ class Compiler:
                 # also leave the clause UNASSERTED — a quantifier's restriction is stated, never
                 # claimed — which is why the set is handed over rather than read back afterwards.
                 self._share_variable(skeleton, head, content, outer, prefix_rows, covered, marks,
-                                     unasserted)
+                                     unasserted, withheld, abstained)
                 continue
 
             if joiner is not None and (joiner.compiled.get("asserts") == ASSERTS_MATRIX
@@ -1478,7 +1487,8 @@ class Compiler:
         return current
 
     def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks,
-                        unasserted: set | None = None) -> None:
+                        unasserted: set | None = None, withheld: list | None = None,
+                        abstained: list | None = None) -> None:
         """A relative clause describes the SAME thing as the phrase it modifies — one variable in
         two rows, which is req 36's one binding mechanism doing the work a second box would fake.
 
@@ -1496,10 +1506,30 @@ class Compiler:
         a referring phrase — «the cat that sleeps» — stays claimed. Reading the variable back into
         the clause without this would have turned an unbound name nobody could evaluate into a bound
         one saying something false, which is the worse of the two failures (req 8).
+
+        **THE GAP'S ROLE IS READ BEFORE ANYTHING IS BOUND** *(2026-09-24, G5)* — by `_gap`, and a
+        gap it cannot place WITHHOLDS the clause instead of guessing, so nothing here is minted for
+        a binding that is never made.
         """
         inner = content[head.index]
         target = skeleton[head.head]
         outer_row = content[outer.index]
+
+        gap, marker, pronoun, why = self._gap(skeleton, head, target, marks)
+        if gap is not None and gap in inner.boxes:
+            # **A FILLED BOX IS NEVER TAKEN.** This is the loss G5 was: «the fish that the cat ate»
+            # read the gap as the first open box, found none, and wrote the fish OVER the cat's
+            # agent box — the cat gone, and `unplaced` empty because the cat HAD been placed, into a
+            # box that no longer held it. A box replaced in silence is req 8's worst case.
+            why = f"its {gap.value} box is already filled by the clause itself"
+            gap = None
+        if gap is None:
+            if abstained is not None:
+                abstained.append(f"{target.text} ← «{head.text}»: {why} — the relative clause "
+                                 f"is withheld")
+            if withheld is not None:
+                withheld.append(head.index)
+            return
 
         role = self._placed_role(covered, target.index)
         box = outer_row.boxes.get(role) if role is not None else None
@@ -1538,12 +1568,9 @@ class Compiler:
                         name=f"q{len(prefix_rows)}", scopes=outer_row.name, binds=name,
                         restriction=box.model_copy(update={"marker": None})))
 
-        for filled, box in list(inner.boxes.items()):
-            if isinstance(box.head, Open) or box.head is None:
-                inner.boxes[filled] = Box(head=Var(name=name), sense=Open())
-                break
-        else:
-            inner.boxes[Role.AGENT] = Box(head=Var(name=name), sense=Open())
+        # The marker is the RELATIVE CLAUSE's — «the house IN which I live» marks the house's role in
+        # the living — so it rides on this box, as every marker rides on the box it marks (req 65).
+        inner.boxes[gap] = Box(head=Var(name=name), sense=Open(), marker=marker)
 
         # **ONLY A QUANTIFIER'S BINDER MAKES THE CLAUSE A RESTRICTION.** `binder` is deliberately
         # still None on the branch above, which mints one: «every cat that sleeps» does not say any
@@ -1553,9 +1580,132 @@ class Compiler:
         if binder is not None and unasserted is not None:
             unasserted.add(inner.name)
         # The relative pronoun IS the variable — «the cat THAT sleeps» has no third participant.
-        for child in skeleton.children(head.index):
-            if child.bare_dep in ("nsubj", "obj") and marks.get(child.index) is not None:
-                covered.add(child.index, "var")
+        if pronoun is not None:
+            covered.add(pronoun.index, "var")
+
+    def _gap(self, skeleton: Skeleton, head: Word, target: Word, marks: dict):
+        """Which box of the relative clause the antecedent stands in — `(role, marker, pronoun,
+        why)`, and `role` is None when the tree does not say.
+
+        **THE GAP GETS ITS ROLE THE WAY ANY ARGUMENT DOES** *(2026-09-24, G5)*. It used to take the
+        first open box, else the agent, which is right for «the cat that sleeps» and nothing else:
+        «the fish that the cat ate» made the fish the eater. There is no rule of its own here —
+
+            an overt relative pronoun     its own relation decides, through `_role_of`, EXACTLY as
+                                          if the antecedent stood there: `nsubj` → the subject's
+                                          row (`db/0018`), `obj` → patient, `obl` + «in» → the
+                                          marker's rule — with the ANTECEDENT's lemma read for the
+                                          selector, since «which» has no supersense and «house» does
+            no pronoun, no subject        the gap IS the subject — «the cat sleeping on the mat»
+            a stranded marker             «the house I live IN» — the marker's own rule, read as if
+                                          the antecedent were its nominal
+
+        **WHAT IT DOES NOT DECIDE, AND WHY NOT.** A zero relative with its subject said and no
+        object — «the fish the cat ate», «minds you trust» — has the object gap only if the verb
+        TAKES an object: «the day I slept» has the same tree and an adverbial gap. The tree cannot
+        tell them apart; the verb's valency can, and valency is knowledge the station does not hold.
+        So it abstains rather than make the day the thing slept. With both subject and object said
+        the gap is an adverbial, and nothing in the tree says which one.
+        """
+        copular = self._is_copular_root(head, skeleton, marks) or head.upos not in ("VERB", "AUX")
+        relatives = [w for w in skeleton
+                     if w.index != head.index and marks.get(w.index) is not None
+                     and marks[w.index].compiled.get("binds") == "antecedent"
+                     and self._clause_of(skeleton, w.index) == head.index]
+        if relatives:
+            pronoun = relatives[0]
+            if pronoun.head != head.index:
+                # «the man WHOSE cat sleeps», «the father OF WHOM I know» — the pronoun is inside a
+                # phrase, and the antecedent's place is a field of that phrase, not a box.
+                return None, None, pronoun, (f"«{pronoun.text}» is inside a phrase, not an "
+                                             f"argument of the clause")
+            proxy = replace(pronoun, lemma=target.lemma, upos=target.upos)
+            role = self._role_of(proxy, skeleton, marks, copular)
+            if role is None:
+                return None, None, pronoun, f"«{pronoun.text}» as `{pronoun.dep}` names no role"
+            marker = next((marks[c.index].form for c in skeleton.children(pronoun.index)
+                           if marks.get(c.index) is not None and marks[c.index].kind == "box"),
+                          None)
+            return role, marker, pronoun, ""
+
+        children = list(skeleton.children(head.index))
+        if not any(c.bare_dep in SUBJECT_DEPS for c in children):
+            return self._subject_role(head, copular, skeleton), None, None, ""
+        stranded = [c for c in children
+                    if c.upos == "ADP" and c.bare_dep in NOMINAL_DEPS
+                    and marks.get(c.index) is not None and marks[c.index].kind == "box"]
+        if len(stranded) == 1:
+            match = marks[stranded[0].index]
+            role = self._settled_marker_role(match, target, head)
+            if role is None:
+                return None, None, None, f"the stranded «{match.form}» settles no role"
+            return role, match.form, None, ""
+        if not any(c.bare_dep == "obj" for c in children):
+            return None, None, None, ("a zero relative with its subject said: the gap is the "
+                                      "object or an adverbial, and only the verb's valency tells")
+        return None, None, None, "a zero relative with subject and object said: an adverbial gap"
+
+    def _clause_of(self, skeleton: Skeleton, index: int) -> int:
+        """The head of the clause a token sits in — its nearest ancestor that opens one, by the same
+        test `_clause_heads` uses. Bounded, like every walk here."""
+        node = skeleton[skeleton[index].head]
+        for _ in range(len(skeleton)):
+            if node.is_root or (node.bare_dep in CLAUSE_DEPS
+                                and self.readings.opens_clause(node.bare_dep)):
+                return node.index
+            node = skeleton[node.head]
+        return skeleton.root.index
+
+    def _withhold(self, skeleton: Skeleton, heads: list[Word], withheld: list[int],
+                  content: dict, prefix_rows: list, extra: list, joins: list,
+                  covered: Placements):
+        """Take a relative clause whose gap could not be placed OUT of the zip, and give its words
+        back to `unplaced`.
+
+        **A TRUTHFUL PARTIAL ZIP, NEVER A WRONG COMPLETE ONE** (req 8). Kept unbound, the clause
+        would be a free claim — and under a quantifier it is a restriction, so «every fish the cat
+        ate» would lose its range while `unplaced` said the sentence was read whole: a wider claim,
+        in silence. Withheld, the claim is still wider, but the zip SAYS it was not read whole.
+
+        Everything the clause owns goes with it: the clauses inside it, the prefix rows scoping any
+        of them, the joins naming them, and whatever a dropped binder's variable appears in.
+        """
+        subtree = set()
+        for top in withheld:
+            for word in skeleton:
+                node = word
+                for _ in range(len(skeleton)):
+                    if node.index == top:
+                        subtree.add(word.index)
+                        break
+                    if node.is_root:
+                        break
+                    node = skeleton[node.head]
+        for index in subtree:
+            covered.discard(index)
+        names = {content[h.index].name for h in heads if h.index in subtree}
+        gone_vars: set[str] = set()
+
+        def uses(row) -> bool:
+            if getattr(row, "scopes", None) in names:
+                return True
+            if any(o in names for o in (getattr(row, "operands", None) or ())):
+                return True
+            return any(isinstance(b.head, Var) and b.head.name in gone_vars
+                       for b in (getattr(row, "boxes", None) or {}).values())
+
+        changed = True
+        while changed:
+            changed = False
+            for row in [*prefix_rows, *content.values(), *extra, *joins]:
+                if row.name not in names and uses(row):
+                    names.add(row.name)
+                    changed = True
+                    if getattr(row, "binds", None):
+                        gone_vars.add(row.binds)
+        keep = (lambda rows: [r for r in rows if r.name not in names])
+        return (keep(prefix_rows), {i: r for i, r in content.items() if r.name not in names},
+                keep(extra), keep(joins))
 
     # -- the pieces -------------------------------------------------------------------------------
 
@@ -1743,29 +1893,36 @@ class Compiler:
             match = marks.get(child.index)
             if match is None or match.kind != "box":
                 continue
-            if match.settled_role:
-                return Role(match.settled_role)
-            if len(match.roles) == 1:
-                return Role(match.roles[0])
-            # **ONE OF THE THIRTEEN**, and `db/0012` says what settles it: the head's POS for «of»,
-            # the marked nominal's SUPERSENSE for «at noon» against «at the door», the head verb's
-            # for «walk to the station» against «talk to my friend». A rule that fires is evidence
-            # from the sentence; a rule that does not leaves the curation's best-first default —
-            # and the two are kept apart rather than averaged, because req 8 forbids the SILENTLY
-            # complete nearest fit and a default that is counted is not silent.
-            settled = self.selector.settle(
-                match.compiled, word.lemma, word.upos, head.lemma, head.upos)
-            if settled is None:
-                return None
-            if settled.role not in {role.value for role in Role}:
-                # The selector named a FIELD, not a box — «the office OF the Chair» is a possessor
-                # and req 26 keeps it INSIDE the record. `_box_for` takes it when the head phrase is
-                # built, so there is no role to fill here and no abstention to report.
-                return None
-            if settled.is_default and defaulted is not None:
-                defaulted.append(f"{match.form} {word.text}: {settled.role} (nothing chose)")
-            return Role(settled.role)
+            return self._settled_marker_role(match, word, head, defaulted)
         return None
+
+    def _settled_marker_role(self, match, word: Word, head: Word,
+                             defaulted: list | None = None) -> Role | None:
+        """The role ONE box marker gives the nominal `word` under `head` — split out of
+        `_marker_role` so a relative clause's stranded marker («the house I live IN») is settled by
+        the same rule, with the antecedent standing where the nominal would."""
+        if match.settled_role:
+            return Role(match.settled_role)
+        if len(match.roles) == 1:
+            return Role(match.roles[0])
+        # **ONE OF THE THIRTEEN**, and `db/0012` says what settles it: the head's POS for «of»,
+        # the marked nominal's SUPERSENSE for «at noon» against «at the door», the head verb's
+        # for «walk to the station» against «talk to my friend». A rule that fires is evidence
+        # from the sentence; a rule that does not leaves the curation's best-first default —
+        # and the two are kept apart rather than averaged, because req 8 forbids the SILENTLY
+        # complete nearest fit and a default that is counted is not silent.
+        settled = self.selector.settle(
+            match.compiled, word.lemma, word.upos, head.lemma, head.upos)
+        if settled is None:
+            return None
+        if settled.role not in {role.value for role in Role}:
+            # The selector named a FIELD, not a box — «the office OF the Chair» is a possessor
+            # and req 26 keeps it INSIDE the record. `_box_for` takes it when the head phrase is
+            # built, so there is no role to fill here and no abstention to report.
+            return None
+        if settled.is_default and defaulted is not None:
+            defaulted.append(f"{match.form} {word.text}: {settled.role} (nothing chose)")
+        return Role(settled.role)
 
     def _box_for(self, word: Word, skeleton: Skeleton, marks: dict, covered: Placements,
                  prefix_rows: list | None = None, scopes: str = "r0",

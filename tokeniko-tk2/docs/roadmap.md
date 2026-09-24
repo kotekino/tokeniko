@@ -153,11 +153,15 @@
       *(the Captain, 09-24)* — benched: reversing every tuple moved nothing. The sets are rows
       (`db/0034`), the ranking is deleted, a tie nobody settles abstains. `t-ng-4`'s «No» stops being
       a quantifier: drill 66 → 67, read-whole 74 → 73. Record `202609240900_…`
+- [x] **⚑ G5 — the relative gap OVERWROTE the clause's subject, and a crash** *(09-24)* — «the fish
+      that the cat ate» claimed the fish ate. The gap now takes its position's role; a gap nobody can
+      place WITHHOLDS the clause. Read-whole population 73 → 71, honestly. Record `202609241130_…`
+
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] **the fixpoint's 11 remaining** — 10 MOVED · 1 SILENT, all on sentences the compiler read
-      whole. The SILENT one is `t-md-2` «So a calculator does not necessarily think»: **a negation
-      OUTSIDE a necessity has no form in the table**, which is a vocabulary gap, not a logic one
+- [ ] **the fixpoint's 9 remaining — READ 09-24: ten mechanisms, G1–G10, G5 done** — not three
+      causes. Four want the Captain (G1 · G6 · G7 · G9), plus the ZERO RELATIVE: «the fish the cat
+      ate» vs «the day I slept» — only valency tells, and the station has none. Record `202609241130_…`
 - [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
       (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
       DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 11 above**

@@ -629,6 +629,44 @@ def test_a_RESTRICTION_is_spoken_inside_the_phrase_it_restricts(decompiler):
     assert out.text == "Every cat that sleeps is happy."
 
 
+def test_a_relative_gap_in_the_AGENT_box_is_the_antecedent_not_a_passive(decompiler):
+    """«You learn from every mind that TRUSTS YOU» — the gap is the agent and the row has a second
+    box, which is exactly where the passive test stands: an agent nobody described is what the
+    passive leaves out. The gap's head is the antecedent's VARIABLE, not an OPEN, and reading
+    `.described` off it raised `AttributeError` (the fixpoint's eleven, «found outside the brief» 1).
+
+    A known agent is not an unknown one: the clause keeps its subject, and the relative pronoun is it.
+    """
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r0", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head="mind.n", number="sg")),
+        row("r0", predicate="learn.v", experiencer="you.n",
+            source=Box(head=Var(name="x0"), marker="from")),
+        ContentRow(name="r1", truth=None, predicate="trust.v",
+                   boxes={Role.AGENT: Box(head=Var(name="x0")),
+                          Role.PATIENT: Box(head="you.n")}),
+    ]))
+
+    assert out.text == "You learn from every mind that trusts you."
+
+
+def test_a_MARKED_relative_gap_strands_its_marker(decompiler):
+    """«every mind that you learn FROM» — the gap's box carries a marker (req 65), and popping the box
+    for the relative pronoun used to drop it with the box: the antecedent came back unmarked, which
+    is a different role. `that` cannot be pied-piped, so English strands the marker at the end.
+    """
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r0", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head="mind.n", number="sg")),
+        row("r0", predicate="trust.v", experiencer="you.n", patient=Box(head=Var(name="x0"))),
+        ContentRow(name="r1", truth=None, predicate="learn.v",
+                   boxes={Role.EXPERIENCER: Box(head="you.n"),
+                          Role.SOURCE: Box(head=Var(name="x0"), marker="from")}),
+    ]))
+
+    assert out.text == "You trust every mind that you learn from."
+
+
 def test_a_bare_quantifier_takes_its_CLAUSE_as_its_noun(decompiler):
     """«All that glitters is not gold» — «all» says nothing about what it ranges over, so the
     restricting row is not a clause hanging off a noun: it IS the noun.
