@@ -343,3 +343,47 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
 
     assert sorted(disagreed) == ["aw-19", "q-6", "t-dc-5", "t-ws-7"], (
         f"the drill gate's disagreements moved: {sorted(disagreed)}")
+
+
+def test_every_compiled_drill_zip_is_a_TREE():
+    """**THE SECOND RATCHET — A SENTENCE IS A TREE** (the compiler's own 09-20 rule, G2 2026-09-24).
+    Over every zip the station compiles from the drill corpus, no row may be an operand of more than
+    one join. A row with two parents is logic the evaluator can read and a SENTENCE nobody can: the
+    decompiler takes the second parent as a second sentence («… Cognition is the result.»), and
+    de-duplicating it there would only hide a zip that is not a tree.
+
+    A prefix row is not a parent: it is the row's own scope chain, and several stacked on one row
+    («not every cat…») is the format's normal shape (req 35).
+
+    **One named entry, and the list may only go DOWN:**
+
+      `t-dc-5`   «Osaka is where you live and it is ALSO the name…» — the discourse adverb's join
+                 (`_connect`) names two rows the coordination has already joined. Not fixed with
+                 G2 because it is a design question, not a slip: «A and THEREFORE B» asserts the
+                 implication as well as the conjunction, so declining the second join would lose a
+                 meaning, and keeping both is A twice. For the QM and the Captain.
+    """
+    from collections import Counter
+
+    from tk2.language import standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.skeleton import StanzaSkeletons
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+
+    compiler = Compiler(standing_closed_classes())
+    provider = StanzaSkeletons()
+
+    dags = {}
+    for case in CASES:
+        skeletons = provider(case.sentence)
+        if not skeletons:
+            continue
+        produced = compile_utterance(compiler, skeletons, DRILL_CONTEXT).zip
+        parents = Counter(operand for row in produced.rows if row.kind == "join"
+                          for operand in row.operands)
+        shared = sorted(name for name, count in parents.items() if count > 1)
+        if shared:
+            dags[case.id] = shared
+
+    assert sorted(dags) == ["t-dc-5"], f"compiled zips that are not trees: {dags}"

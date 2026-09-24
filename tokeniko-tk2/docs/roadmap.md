@@ -156,12 +156,15 @@
 - [x] **⚑ G5 — the relative gap OVERWROTE the clause's subject, and a crash** *(09-24)* — «the fish
       that the cat ate» claimed the fish ate. The gap now takes its position's role; a gap nobody can
       place WITHHOLDS the clause. Read-whole population 73 → 71, honestly. Record `202609241130_…`
+- [x] **⚑ G2 · G3 · G4 — a sentence is a tree, «the result OF perception», and no relative clause
+      lost in silence** *(09-24)* — a tree ratchet over the drill; a consumed row is said or named in
+      `unsaid`. Read-whole FIXED 62 → 63 of 71. Record `202609241130_…`
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] **the fixpoint's 9 remaining — READ 09-24: ten mechanisms, G1–G10, G5 done** — not three
-      causes. Four want the Captain (G1 · G6 · G7 · G9), plus the ZERO RELATIVE: «the fish the cat
-      ate» vs «the day I slept» — only valency tells, and the station has none. Record `202609241130_…`
+- [ ] **the fixpoint's 8 remaining — G1 · G6–G10 and `t-ws-1`'s bracketing** — five want the Captain
+      (G1 · G6 · G7 · G9 · the zero relative's valency), plus `t-dc-5`'s double join (a design ruling) and
+      two bookkeeping defects found on the way. Record `202609241130_…`
 - [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
       (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
       DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 11 above**

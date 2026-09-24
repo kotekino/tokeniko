@@ -88,3 +88,43 @@ none.** «No object ⇒ object gap» needs no list but writes `sleep(agent=me, p
 complete zip. Withheld until ruled. Candidate knowledge: WordNet's verb frames · the antecedent's
 supersense (`noun.time`). Same question, unbuilt: infinitival relatives («a book to read») and
 bare passive participles («the fish eaten»).
+
+## G2 · G3 · G4 — fixed the same day *(1st Officier)*
+
+- **G2 (compiler)** — the outermost fold join takes the owner row's place in every clause join that
+  named it; the binders already scope it, so they move with it. **A ratchet**
+  (`test_every_compiled_drill_zip_is_a_TREE`): no row is an operand of two joins over every compiled
+  drill zip. It caught five on the old code (`t-ws-6` `t-dc-1` `t-dc-3` `t-dc-5` `aw-6`); one stays
+  named, below
+- **G3 (decompiler)** — a box carrying `relation` AND a determination says «the N of X»; the marker
+  is READ FROM THE TABLE (rows whose selector yields `relation`, `db/0012` — today `{of}`). None or
+  several → the clitic stays and the loss enters `unsaid`. A pronoun possessor never takes «of»
+- **G4b (decompiler)** — a content row sharing the variable of exactly one binder that does not
+  scope it, and named by no join, is that binder's relative clause WHATEVER its truth. Truth decides
+  how: a quantity-less binder with a claimed row → a relative (it compiles back claimed); with an
+  UNCLAIMED row → **refused**, because said as a relative it would come back a claim — *a truth
+  error the old code had and nothing measured*; a quantifier's restriction claimed → said, and the
+  lost claim recorded
+- **G4a (decompiler)** — «something that you do not know» keeps its clause. **The invariant is
+  structural**: the reading records which rows reached the text, rolled back when a render fails,
+  and every consumed row that never did is named in `unsaid` — a loss cannot hide behind an
+  unrelated mention
+
+| | before | after |
+|---|---|---|
+| drill | 67 · 4 · 16 | byte-identical |
+| fixpoint | 71 · 15 · 1 · of 71 whole 62 · 8 · 1 | **73 · 13 · 1 · of 71 whole 63 · 7 · 1** |
+| UD gate | 34 · 0 · 11 | identical |
+
+`t-dc-3` FIXED; `t-dc-1` FIXED (a `*` case); `aw-6` loses «The sea sees.» and waits on G1 + G6. The
+witnesses — «The cat that sleeps is happy», «I like the fish that the cat ate», «…something that you
+do not know…», «…only from minds that you trust» — all come back as said; none did before.
+
+**Found, not fixed:**
+1. **`t-dc-5`, a tree violation that wants a design ruling** — `_connect` (discourse adverbs:
+   «also», «therefore») joins two rows the coordination already joined. Declining the second join
+   loses «A and THEREFORE B»'s implication; keeping both names A twice. The ratchet's one named
+   exception, and the list may only shrink
+2. **every UNCLAIMED row reports a false loss** — `_clause` logs «held at None and a hedge is not
+   built yet» because `None not in (CLAIMED, DENIED)`, so every conditional calls itself not whole
+3. **an empty object phrase is dropped quietly** — the reason is recorded, the clause said without it

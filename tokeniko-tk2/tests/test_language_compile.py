@@ -1165,6 +1165,45 @@ def test_two_adjectives_CHAIN_their_joins(compiler):
     assert all(len(j.operands) == 2 for j in joins)
 
 
+#: «Cognition is the psychological result of perception and I love learning.» as stanza reads it —
+#: an attributive adjective inside a clause that a `conj` has already joined.
+FOLD_IN_A_JOIN = skeleton_from_conllu(
+    "Cognition is the psychological result of perception and I love learning.", [
+        ("1", "Cognition", "cognition", "NOUN", "5", "nsubj"),
+        ("2", "is", "be", "AUX", "5", "cop"),
+        ("3", "the", "the", "DET", "5", "det"),
+        ("4", "psychological", "psychological", "ADJ", "5", "amod"),
+        ("5", "result", "result", "NOUN", "0", "root"),
+        ("6", "of", "of", "ADP", "7", "case"),
+        ("7", "perception", "perception", "NOUN", "5", "nmod"),
+        ("8", "and", "and", "CCONJ", "10", "cc"),
+        ("9", "I", "i", "PRON", "10", "nsubj"),
+        ("10", "love", "love", "VERB", "5", "conj"),
+        ("11", "learning", "learning", "NOUN", "10", "obj"),
+        ("12", ".", ".", "PUNCT", "5", "punct"),
+    ])
+
+
+def test_the_adjective_conjunction_TAKES_THE_ROW_S_PLACE_in_the_clause_join(compiler):
+    """**A SENTENCE IS A TREE** (G2, 2026-09-24). The clause join named the copular row, and req 70's
+    fold join named it again — two parents, and the decompiler said the second one as a sentence of
+    its own: «Cognition is the result.» The fold join replaces the row where the clause join named
+    it, as a `conj` replaces the clause it extends, and the binder scoping it goes with it.
+    """
+    out = compiler.compile(FOLD_IN_A_JOIN)
+    joins = {r.name: r for r in out.zip.rows if r.kind == "join"}
+    copular = next(r for r in out.zip.rows if r.kind == "content"
+                   and Role.COMPLEMENT in r.boxes and isinstance(r.boxes[Role.COMPLEMENT].head, Var))
+    fold = next(j for j in joins.values() if copular.name in j.operands)
+    binder = next(r for r in out.zip.rows if r.kind == "quantifier")
+
+    named = [operand for join in joins.values() for operand in join.operands]
+    assert named.count(copular.name) == 1, f"the copular row has two parents: {joins}"
+    assert any(fold.name in j.operands for j in joins.values()), "the fold sits INSIDE the clause"
+    assert binder.scopes == fold.name, "the binder scopes the fold, which carries every use of it"
+    assert len(named) == len(set(named)), "no row is an operand twice"
+
+
 # ------------------------------------------------------------------------------------------------
 # adverbs — requirement 23's four scopes
 # ------------------------------------------------------------------------------------------------

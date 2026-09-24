@@ -207,6 +207,9 @@ class _Reading:
     consumed: set = field(default_factory=set)
     #: rows that became part of a noun phrase and must not be said again as clauses.
     folded: set = field(default_factory=set)
+    #: rows whose words REACHED the text — rolled back when what they were said inside fails, so a
+    #: row counts as spoken only if the sentence carrying it survived. Read once, by `_account`.
+    spoken: set = field(default_factory=set)
     #: variable name -> the rows that RESTRICT it, spoken as relative clauses inside its phrase.
     restrictions: dict[str, list] = field(default_factory=dict)
     #: the variable whose box is the ANTECEDENT of the clause being rendered right now, and is
@@ -244,6 +247,9 @@ class Decompiler:
         self._by_meaning = self._invert(self.table)
         self._spoken = self._voices(self.table)
         self._pronouns = self._persons(self.table)
+        #: The marker a possessor is said with after its noun — «the result OF perception». The
+        #: name is the Box's own FIELD, as `_possessive`'s clitic is looked up by it.
+        self._relation_markers = self._markers_yielding(self.table, "relation")
 
     # -- the rows, read backwards -----------------------------------------------------------------
 
@@ -429,11 +435,20 @@ class Decompiler:
         #
         # *A join's operands are already consumed above, which is what keeps the halves of «if it
         # rains I stay home» — both unasserted, both over the same variable — out of this.*
+        #
+        # **WHATEVER ITS TRUTH** *(2026-09-24, G4b)*. Keyed on an empty truth slot, the rule missed
+        # the relative clauses that ARE claimed: a definite description's («the cat that sleeps» —
+        # a presupposition, so the brain gets the fact) and schema v8's quantity-less binder's.
+        # Both came back as two sentences, «The cat sleeps. The cat is happy.» What makes a row a
+        # relative clause is its SHAPE — it shares the variable of a binder that does not scope it,
+        # and no join names it — and the truth decides only whether it can be said as one
+        # (`_restricting`).
         for row in zip_.rows:
-            if row.kind != "content" or row.truth is not None or row.name in rd.consumed:
+            if row.kind != "content" or row.name in rd.consumed:
                 continue
             shared = {box.head.name for box in row.boxes.values()
-                      if isinstance(box.head, Var) and box.head.name in rd.binders}
+                      if isinstance(box.head, Var) and box.head.name in rd.binders
+                      and rd.binders[box.head.name].scopes != row.name}
             if len(shared) == 1:
                 rd.restrictions.setdefault(shared.pop(), []).append(row)
                 rd.consumed.add(row.name)
@@ -524,7 +539,30 @@ class Decompiler:
                 continue
             sentences.append(said)
         out.text = " ".join(self._finish(s) for s in sentences)
+        self._account(zip_, rd)
         return out
+
+    @staticmethod
+    def _account(zip_: Zip, rd: _Reading) -> None:
+        """**EVERY ROW `_read` CONSUMED IS SPOKEN OR NAMED** *(2026-09-24, G4a)*.
+
+        Consuming a row is a promise: it will be said inside something else, so it is not said as a
+        sentence. A promise the phrase then fails to keep — a fused «something» that returned before
+        its relative clause, a modifier whose phrase came back empty — used to leave no trace at
+        all, and a phrase without its restriction claims MORE than the zip (req 8). So the promise
+        is checked where it can no longer be forgotten: after the last sentence, against what
+        actually reached the text.
+
+        *Named even when another entry already mentions it*: a row can be mentioned for one reason
+        («held at None») and lost for another, and matching on the mention would let the second
+        hide behind the first. A duplicate costs a line; a masked loss costs the invariant.
+        """
+        for row in zip_.rows:
+            name = row.name
+            if name not in rd.consumed or name in rd.spoken:
+                continue
+            rd.out.unsaid.append(f"{row.kind} row {name}: read as part of another row, and it "
+                                 f"never reached the text")
 
     @staticmethod
     def _finish(said: _Said) -> str:
@@ -551,10 +589,16 @@ class Decompiler:
         # **THE TENSE IS THE CLAUSE'S** (schema v5). Pushed for the rows under this one and popped
         # after, so a conjunction of two times says both: «I went to Rome and I will go to Genoa».
         outer_when, rd.when = rd.when, self._when(row)
+        before = set(rd.spoken)
         try:
-            return self._say(row, name, rd, embedded)
+            said = self._say(row, name, rd, embedded)
         finally:
             rd.when = outer_when
+        if said is None or not said.text.strip():
+            rd.spoken = before                         # what was said under it never arrived
+            return said
+        rd.spoken.add(name)
+        return said
 
     @staticmethod
     def _when(row) -> float:
@@ -1280,7 +1324,14 @@ class Decompiler:
         words = []
         if box.marker:
             words.append(box.marker)                  # req 65: the preposition actually used
-        possessor = self._possessive(box, rd)
+        # **A POSSESSOR AND AN ARTICLE CANNOT SHARE THE DETERMINER SLOT** *(2026-09-24, G3)*. «the
+        # result of perception» carries both — `relation` AND `definite` — and the clitic spoke the
+        # possessor where the article goes: «perception's result», which compiles back without the
+        # `definite`. English moves the possessor after the noun instead, so that is where it goes.
+        of = self._post_possessor(box, rd) if not pronoun else None
+        possessor = "" if of else self._possessive(box, rd)
+        if of:
+            tails = (of, *tails)
         if not pronoun:
             determiner = possessor or self._determiner(box, rd, head, quantity, predicative)
             if determiner:
@@ -1301,6 +1352,14 @@ class Decompiler:
         woman once; saying «a woman» twice would be two women, which is a different thought. A later
         mention is DEFINITE, which is what English does and what the compiler will read back.
         """
+        before = set(rd.spoken)
+        said = self._variable_said(box, rd, case)
+        if not said:
+            rd.spoken = before                         # the phrase carrying them never arrived
+        return said
+
+    def _variable_said(self, box: Box, rd: _Reading, case: str) -> str:
+        """`_variable`'s body, with the bookkeeping of what reached the text kept outside it."""
         name = box.head.name
         binder = rd.binders.get(name)
         if binder is None:
@@ -1320,7 +1379,21 @@ class Decompiler:
                                      f"{restriction.head.sort}s: no single word fuses them")
                 return ""
             rd.said.add(name)
-            return fused
+            # **AND THE FUSED WORD STILL TAKES ITS CLAUSE** *(2026-09-24, G4a)*. «something THAT YOU
+            # DO NOT KNOW» — this branch returned before the restriction, and the row `_read` had
+            # consumed vanished without a word in `unsaid`: «If I tell you something, you learn it»,
+            # a wider claim than the zip (req 8). English puts everything after a fused word —
+            # «something good», «nobody in the room», «something that you do not know».
+            trailing = self._trailing(name, binder, rd)
+            if trailing is None:
+                return ""
+            adjectives, tails = trailing
+            negation = self._negation_owed(name, rd)
+            if negation is None:
+                return ""                              # the caller refuses; it is owed this word
+            marker = box.marker or restriction.marker
+            return " ".join(word for word in (marker, negation, fused, *adjectives, *tails)
+                            if word)
         head = self._head(restriction, rd, case)
         if not head and not rd.restrictions.get(name):
             # No noun, and no clause to stand in for one. «all» alone names nothing.
@@ -1331,30 +1404,10 @@ class Decompiler:
             return self._dress(again, rd, head)
         rd.said.add(name)
 
-        adjectives, tails = [], []
-        for row in rd.modifiers.get(name, ()):
-            carrier = next(role for role, other in row.boxes.items()
-                           if isinstance(other.head, Var) and other.head.name == name)
-            other = next(other for role, other in row.boxes.items() if role != carrier)
-            said = self._phrase(other, rd)
-            if not said:
-                continue
-            (tails if other.marker else adjectives).append(said)
-
-        # **AND THE RESTRICTION THE ZIP PUT IN A ROW OF ITS OWN**, which English puts after the
-        # noun. Popped rather than read, so a phrase said twice does not say its clause twice and a
-        # clause that mentions its own antecedent cannot recurse into this.
-        for restricting in rd.restrictions.pop(name, ()):
-            outer_gap, rd.gap = rd.gap, name
-            try:
-                clause = self._render(restricting.name, rd, embedded=True)
-            finally:
-                rd.gap = outer_gap
-            if clause is None or not clause.text.strip():
-                rd.out.unsaid.append(f"the clause restricting {name}: it could not be said, and "
-                                     f"the phrase without it would claim more than the zip")
-                return ""
-            tails.append(clause.text.strip())
+        trailing = self._trailing(name, binder, rd)
+        if trailing is None:
+            return ""
+        adjectives, tails = trailing
 
         if not head:
             # **«ALL THAT GLITTERS» — THE QUANTIFIER IS THE PHRASE AND THE CLAUSE IS ITS NOUN.**
@@ -1377,14 +1430,88 @@ class Decompiler:
             "marker": box.marker or restriction.marker,
             "count": box.count if box.count is not None else restriction.count,
         })
-        negation = ""
-        if name in rd.negated_binders:
-            negation = self.the_form("negation", kind="prefix", element="negation") or ""
-            if not negation:
-                return ""                              # the caller refuses; it is owed this word
-            rd.negated_binders.discard(name)
+        negation = self._negation_owed(name, rd)
+        if negation is None:
+            return ""                                  # the caller refuses; it is owed this word
         return self._dress(merged, rd, head, quantity=binder.quantity,
                            adjectives=tuple(adjectives), tails=tuple(tails), negation=negation)
+
+    def _negation_owed(self, name: str, rd: _Reading) -> str | None:
+        """The «not» a negated binder is owed at its quantifier — "" when none is owed, None when one
+        is and the table has no single form for it."""
+        if name not in rd.negated_binders:
+            return ""
+        negation = self.the_form("negation", kind="prefix", element="negation")
+        if not negation:
+            return None
+        rd.negated_binders.discard(name)
+        return negation
+
+    def _trailing(self, name: str, binder, rd: _Reading) -> tuple[list, list] | None:
+        """What the zip put in rows of their own and English puts around the noun: the folded
+        modifiers — adjectives, marked phrases — and the relative clauses, in that order.
+
+        None when a restriction cannot be said: the phrase without it would claim more than the
+        zip, so the caller must not say the phrase at all.
+        """
+        adjectives, tails = [], []
+        for row in rd.modifiers.get(name, ()):
+            carrier = next(role for role, other in row.boxes.items()
+                           if isinstance(other.head, Var) and other.head.name == name)
+            other = next(other for role, other in row.boxes.items() if role != carrier)
+            said = self._phrase(other, rd)
+            if not said:
+                # Folded out of a conjunction, so the phrase without it says less and not more —
+                # but the zip holds it, and a silent drop is what the account at the end forbids.
+                rd.out.unsaid.append(f"{row.name}: a modifier of {name} could not be said")
+                continue
+            rd.spoken.add(row.name)
+            (tails if other.marker else adjectives).append(said)
+
+        # **AND THE RESTRICTION THE ZIP PUT IN A ROW OF ITS OWN**, which English puts after the
+        # noun. Popped rather than read, so a phrase said twice does not say its clause twice and a
+        # clause that mentions its own antecedent cannot recurse into this.
+        for restricting in rd.restrictions.pop(name, ()):
+            if not self._restricting(binder, restricting, rd):
+                return None
+            outer_gap, rd.gap = rd.gap, name
+            try:
+                clause = self._render(restricting.name, rd, embedded=True)
+            finally:
+                rd.gap = outer_gap
+            if clause is None or not clause.text.strip():
+                rd.out.unsaid.append(f"the clause restricting {name}: it could not be said, and "
+                                     f"the phrase without it would claim more than the zip")
+                return None
+            tails.append(clause.text.strip())
+        return adjectives, tails
+
+    @staticmethod
+    def _restricting(binder, row, rd: _Reading) -> bool:
+        """Can this row be said as its binder's relative clause and come back with the same truth?
+
+        **THE COMPILER DECIDES THE TRUTH OF A RELATIVE CLAUSE BY ITS BINDER, SO THIS READS IT THE
+        SAME WAY** (`Compiler._share_variable`). A binder that quantifies — «every cat that sleeps»
+        — makes its clause a restriction, stated and not claimed; the quantity-less binder schema v8
+        mints for a referring phrase — «the cat that sleeps» — leaves it claimed, a presupposition
+        the brain should get. So:
+
+            quantity-less binder, row claimed or denied    said — it comes back claimed
+            quantity-less binder, row unclaimed            REFUSED — said, it would come back a claim
+            quantifying binder, row unclaimed              said — it comes back a restriction
+            quantifying binder, row claimed                said, and the claim is recorded unsaid:
+                                                           it comes back a restriction, claiming less
+        """
+        claims = row.truth in (CLAIMED, DENIED)
+        if binder.quantity is None:
+            if claims:
+                return True
+            rd.out.refused.append(f"{row.name}: an unclaimed clause about a phrase that quantifies "
+                                  f"nothing would be read back as a claim")
+            return False
+        if claims:
+            rd.out.unsaid.append(f"{row.name}: said as a restriction, so its claim is not spoken")
+        return True
 
     def _fused(self, quantity: Quantity, sort: str) -> str | None:
         """The one word that is a quantity AND the thing it ranges over — «nobody», «everywhere».
@@ -1480,6 +1607,42 @@ class Decompiler:
             rd.out.unsaid.append("a possessor: the genitive has no single form in the table")
             return ""
         return f"{keys.word_of(str(box.relation))}{clitic}"
+
+    def _post_possessor(self, box: Box, rd: _Reading) -> str | None:
+        """«of perception» — the possessor said AFTER the noun, when the box also has an article.
+
+        **THE WORD IS THE MARKER WHOSE RULE YIELDS THE FIELD**, read backwards from `db/0012`: the
+        selector that settles a marked phrase hanging off a noun to `relation` is the one row the
+        compiler reads «the office OF the Chair» by, so it is the one row to say it with. The forms
+        are the table's, never this module's; where the table names none or several, the clitic
+        stays and what it loses is recorded.
+        """
+        if box.relation is None or not isinstance(box.determination, Determination):
+            return None
+        if isinstance(box.relation, (Var, Ref)):
+            return None                                # `_possessive` records it as not built
+        if isinstance(box.relation, Open) or self._features_of(box.relation) is not None:
+            # «my cat», never «the cat of me»: a possessive PRONOUN is a determiner of its own, and
+            # English has no article beside it. The compiler writes none for «my», so a box
+            # carrying one was built elsewhere — the article is what goes unsaid.
+            rd.out.unsaid.append(f"a {box.determination.value} noun with a pronoun possessor: "
+                                 f"the article is not spoken")
+            return None
+        if len(self._relation_markers) != 1:
+            rd.out.unsaid.append(f"a {box.determination.value} possessed noun: the table names "
+                                 f"{len(self._relation_markers)} markers for a possessor, not one")
+            return None
+        said = self._phrase(Box(head=box.relation), rd, case=ACCUSATIVE)
+        if not said:
+            return None
+        return f"{next(iter(self._relation_markers))} {said}"
+
+    @staticmethod
+    def _markers_yielding(table: ClosedClasses, field_name: str) -> set[str]:
+        """The forms whose selector can settle a marked phrase to this box FIELD (`db/0012`)."""
+        return {row["form"] for row in table._rows                   # noqa: SLF001
+                if any(rule.get("then") == field_name
+                       for rule in ((row.get("compiled") or {}).get("selector") or ()))}
 
     def _determiner(self, box: Box, rd: _Reading, head: str,
                     quantity: Quantity | None = None, predicative: bool = False) -> str:

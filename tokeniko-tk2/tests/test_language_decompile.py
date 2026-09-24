@@ -186,12 +186,54 @@ def test_a_pronoun_POSSESSOR_is_the_same_person_in_the_determiner_slot(spoken):
 
 def test_a_possessor_that_is_not_a_pronoun_takes_the_GENITIVE(decompiler):
     """«Liguria's sea». The clitic is a row too (`genitive`, one form), so nothing is chosen here but
-    the position — and a possessor precedes its head, which is word order."""
+    the position — and a possessor precedes its head, which is word order.
+
+    *The box carries no article, which is what the compiler writes for «Liguria's sea»: a possessor
+    and an article cannot share the determiner slot, and a box that has both is the next test's.*"""
     out = decompiler.decompile(Zip(rows=[row(
+        predicate="see.v", agent=Box(head="anna.n"),
+        patient=Box(head="sea.n", relation="liguria.n"))]))
+
+    assert out.text == "Anna sees liguria's sea."
+
+
+def test_a_possessor_BESIDE_an_article_is_said_after_the_noun_with_the_table_s_marker(decompiler):
+    """«the result OF perception» (G3, 2026-09-24). The clitic spoke the possessor in the article's
+    slot — «perception's result» — and the `definite` did not come back. English moves the possessor
+    after the noun, and the WORD is the one `db/0012`'s selector settles to `relation`: read
+    backwards from the table, never written here."""
+    out = decompiler.decompile(Zip(rows=[row(
+        predicate=None, patient=Box(head="cognition.n"),
+        complement=Box(head="result.n", determination=Determination.DEFINITE,
+                       relation="perception.n"))]))
+
+    assert out.text == "Cognition is the result of perception."
+    assert out.whole, out.unsaid
+
+
+def test_the_post_nominal_marker_is_READ_FROM_THE_TABLE(decompiler):
+    """Whatever row settles a marked phrase to the `relation` field is the word — and a table naming
+    none leaves the clitic in place and SAYS what it lost, rather than choosing a preposition."""
+    from tk2.language.closed import ClosedClasses
+
+    other = ClosedClasses([
+        {"version": 1, "form": "de", "word_class": "preposition", "role": "marker", "position": 0,
+         "source": "a table in another language",
+         "compiled": {"kind": "box", "roles": ["complement"],
+                      "selector": [{"reads": "head_pos", "is": ["NOUN"], "then": "relation"},
+                                   {"reads": "default", "then": "complement"}]}},
+    ], "one marker for a possessor")
+    assert Decompiler._markers_yielding(decompiler.table, "relation") == {"of"}
+    assert Decompiler._markers_yielding(other, "relation") == {"de"}
+
+    unmarked = Decompiler()
+    unmarked._relation_markers = set()
+    out = unmarked.decompile(Zip(rows=[row(
         predicate="see.v", agent=Box(head="anna.n"),
         patient=Box(head="sea.n", determination=Determination.DEFINITE, relation="liguria.n"))]))
 
     assert out.text == "Anna sees liguria's sea."
+    assert any("possessed noun" in why for why in out.unsaid), out.unsaid
 
 
 # ------------------------------------------------------------------------------------------------
@@ -707,3 +749,129 @@ def test_a_join_s_unasserted_halves_are_NOT_restrictions(decompiler):
     ]))
 
     assert "smokes" in out.text and "develops" in out.text, out.text
+
+
+# ------------------------------------------------------------------------------------------------
+# G4 — a relative clause is its SHAPE, whatever its truth; and a consumed row is always accounted
+# ------------------------------------------------------------------------------------------------
+
+
+def _definite(noun, scopes, number="sg"):
+    """Schema v8's quantity-less binder — what the compiler mints for «the cat THAT …»."""
+    return QuantifierRow(name="q0", scopes=scopes, binds="y0",
+                         restriction=Box(head=noun, determination=Determination.DEFINITE,
+                                         number=number))
+
+
+def test_a_CLAIMED_relative_clause_is_still_a_relative_clause(decompiler):
+    """«The cat that sleeps is happy» — a definite description's clause is CLAIMED on purpose (a
+    presupposition: the brain gets the fact), and `_read` knew only unclaimed restrictions, so it
+    came back as two sentences, «The cat sleeps. The cat is happy.» The row shares the variable of a
+    binder that does not scope it, and that shape is what makes it a relative clause."""
+    out = decompiler.decompile(Zip(rows=[
+        _definite("cat.n", scopes="r1"),
+        row("r0", predicate="sleep.v", agent=Box(head=Var(name="y0"))),
+        row("r1", experiencer=Box(head=Var(name="y0")), complement=Box(head="happy.a")),
+    ]))
+
+    assert out.text == "The cat that sleeps is happy."
+    assert out.whole, (out.unsaid, out.refused)
+
+
+def test_a_claimed_OBJECT_relative_fronts_its_pronoun(spoken):
+    """«I like the fish that the cat eats» — the binder scopes the liking, the eating shares its
+    variable in the patient box, and the gap is the object the pronoun fronts."""
+    out = spoken.decompile(Zip(rows=[
+        _definite("fish.n", scopes="r0"),
+        row("r0", predicate="like.v", experiencer="me.n", patient=Box(head=Var(name="y0"))),
+        row("r1", predicate="eat.v",
+            agent=Box(head="cat.n", determination=Determination.DEFINITE, number="sg"),
+            patient=Box(head=Var(name="y0"))),
+    ]))
+
+    assert out.text == "I like the fish that the cat eats."
+
+
+def test_an_UNCLAIMED_clause_about_a_referring_phrase_is_REFUSED(decompiler):
+    """The truth decides whether the shape can be SAID. The compiler reads a relative clause on a
+    quantity-less binder back as claimed, so an unclaimed one said that way would come back a claim
+    — more than the zip, the sin (req 8). Nothing is said, and the refusal names the row."""
+    out = decompiler.decompile(Zip(rows=[
+        _definite("cat.n", scopes="r1"),
+        ContentRow(name="r0", truth=None, predicate="sleep.v",
+                   boxes={Role.AGENT: Box(head=Var(name="y0"))}),
+        row("r1", experiencer=Box(head=Var(name="y0")), complement=Box(head="happy.a")),
+    ]))
+
+    assert "sleeps" not in out.text
+    assert any(why.startswith("r0:") for why in out.refused), out.refused
+
+
+def test_a_CLAIMED_restriction_of_a_quantifier_is_said_and_its_claim_RECORDED(decompiler):
+    """«every cat that sleeps» comes back a restriction — stated, not claimed. Said that way, a
+    claimed row loses its claim: half-said, which is legal, and recorded so it is never silent."""
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r1", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head="cat.n", number="sg")),
+        row("r0", predicate="sleep.v", agent=Box(head=Var(name="x0"))),
+        row("r1", experiencer=Box(head=Var(name="x0")), complement=Box(head="happy.a")),
+    ]))
+
+    assert out.text == "Every cat that sleeps is happy."
+    assert any(why.startswith("r0:") and "claim" in why for why in out.unsaid), out.unsaid
+
+
+def _something_you_do_not_know():
+    """«If I tell you something that you do not know, you learn it.» as the station compiles it."""
+    return Zip(rows=[
+        QuantifierRow(name="q0", scopes="r0", binds="x0", quantity=Quantity.EXISTENTIAL,
+                      restriction=Box(head=Open(sort="thing"))),
+        NegationRow(name="p1", scopes="r1"),
+        ContentRow(name="r0", truth=None, predicate="tell.v",
+                   boxes={Role.AGENT: Box(head="me.n"), Role.RECIPIENT: Box(head="you.n"),
+                          Role.PATIENT: Box(head=Var(name="x0"))}),
+        ContentRow(name="r1", truth=None, predicate="know.v",
+                   boxes={Role.EXPERIENCER: Box(head="you.n"),
+                          Role.PATIENT: Box(head=Var(name="x0"))}),
+        ContentRow(name="r2", truth=None, predicate="learn.v",
+                   boxes={Role.EXPERIENCER: Box(head="you.n"),
+                          Role.PATIENT: Box(head=Open(person=3, number="sg", gender="n"))}),
+        JoinRow(name="j0", truth=1.0, operator=Operator.IMPLY, operands=["r0", "r2"]),
+    ])
+
+
+def test_a_FUSED_quantifier_still_takes_its_relative_clause(spoken):
+    """«something THAT YOU DO NOT KNOW» (G4a). The fused branch returned before the restriction, and
+    the row `_read` had consumed vanished with no word in `unsaid`: «If I tell you something, you
+    learn it» — a wider claim than the zip. English puts the clause after the fused word."""
+    out = spoken.decompile(_something_you_do_not_know())
+
+    assert out.text == "If I tell you something that you do not know, you learn it."
+
+
+def test_a_CONSUMED_row_that_never_reaches_the_text_is_NAMED(monkeypatch):
+    """**THE INVARIANT, NOT THE BRANCH.** Whatever path forgets a consumed row, the account at the end
+    of `decompile` names it — here the phrase is made to forget its clauses, which is exactly the
+    shape of the bug G4a was, and the row still cannot vanish in silence."""
+    forgetful = Decompiler(context=Context(speaker="me.n", addressee="you.n"))
+    monkeypatch.setattr(forgetful, "_trailing", lambda name, binder, rd: ([], []))
+
+    out = forgetful.decompile(_something_you_do_not_know())
+
+    assert "know" not in out.text
+    assert any("r1" in why and "never reached the text" in why for why in out.unsaid), out.unsaid
+
+
+def test_a_restriction_whose_phrase_is_NEVER_SAID_is_named(decompiler):
+    """The same account without any patching: a binder that reaches no box never speaks its
+    phrase, so the clause consumed as its restriction is named rather than lost."""
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="q0", scopes="r1", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head="cat.n", number="sg")),
+        ContentRow(name="r0", truth=None, predicate="sleep.v",
+                   boxes={Role.AGENT: Box(head=Var(name="x0"))}),
+        row("r1", predicate="sleep.v", agent=Box(head="anna.n")),
+    ]))
+
+    assert out.text == "Anna sleeps."
+    assert any(why.startswith("content row r0:") for why in out.unsaid), out.unsaid

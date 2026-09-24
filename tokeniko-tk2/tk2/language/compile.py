@@ -1216,6 +1216,7 @@ class Compiler:
         raised = []
         attached: dict[str, str] = {}      # owner row -> the conjunction built over it so far
         binders: dict[str, list] = {}      # owner row -> every binder whose scope must follow it
+        clause_joins = list(joins)         # the joins `_relate` and its neighbours already built
         for position, (var, key, binder, owner) in enumerate(modifiers):
             row = ContentRow(
                 name=f"m{position}", truth=CLAIMED,
@@ -1240,6 +1241,19 @@ class Compiler:
         for owner, raised_binders in binders.items():
             for binder in raised_binders:
                 binder.scopes = attached[owner]
+
+        # **AND THE CONJUNCTION TAKES THE ROW'S PLACE** *(2026-09-24, G2)* — the 09-20 rule in
+        # `_relate`, «a sentence is a tree», applied to the one join built after it. «Cognition is
+        # the psychological result of perception and learning» had `and(r0, r2)` from the clause
+        # AND `and(m0, r0)` from the adjective: `r0` with two parents, and the decompiler duly said
+        # the second one as a sentence of its own — «Cognition is the result.» The adjective
+        # conjunction IS the row now, everywhere the row was an operand, exactly as a `conj`
+        # replaces the clause it extends. The binders already scope it, so they move with it.
+        for owner, outermost in attached.items():
+            for join in clause_joins:
+                if owner in join.operands:
+                    join.operands = [outermost if name == owner else name
+                                     for name in join.operands]
         return raised
 
     def _enclosing(self, skeleton: Skeleton, head: Word, content: dict) -> Word | None:
