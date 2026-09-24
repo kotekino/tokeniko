@@ -15,8 +15,9 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 #: The ordinary reading of a label nobody wrote a row about. **These are not a roster** — they are
-#: the three questions the station asks, and their answers where UD's own definition is taken at
-#: face value. A fourth question means a fourth default and a migration to go with it.
+#: the questions the station asks, and their answers where UD's own definition is taken at face
+#: value. A new question means a new default and a migration to go with it — `admits_roles` was the
+#: fourth, and `db/0034` is its migration.
 DEFAULTS: dict[str, Any] = {
     #: Does this relation's dependent become content at all? A vocative does not (`db/0032`).
     "compiles_to_content": True,
@@ -24,6 +25,10 @@ DEFAULTS: dict[str, Any] = {
     "opens_clause": True,
     #: Does this part of speech state a number the SPEAKER chose? Only `NOUN` does (`db/0032`).
     "states_number": False,
+    #: Which closed-class roles can this relation's dependent be? `None` is NO CONSTRAINT — UD has
+    #: 37 relations and the closed classes 27 roles, and most pairs never meet (`db/0034`). A SET,
+    #: stored sorted: nothing in its order is a preference, and nothing reads one.
+    "admits_roles": None,
 }
 
 
@@ -65,6 +70,21 @@ class UdReadings:
     def opens_clause(self, dep: str) -> bool:
         """Does this relation earn a content row of its own? «you like TO SWIM» does not."""
         return bool(self.reads("relation", dep, "opens_clause"))
+
+    def admits_roles(self, dep: str) -> frozenset[str] | None:
+        """Which closed-class roles a dependent under this relation can be — None if any can.
+
+        The FULL label first, then the bare one: `compound:prt` admits only the verb's particle and
+        must never be read as `compound`, while `nsubj:pass`, which nobody wrote a row about, is an
+        `nsubj`. Asked per QUESTION, not per row — a subtype row that answers something else is
+        silent on this, and silence falls through to the bare label.
+        """
+        for label in (dep, dep.split(":")[0]):
+            row = self._by_label.get(("relation", label))
+            admits = (row.get("reads") or {}).get("admits_roles") if row else None
+            if admits is not None:
+                return frozenset(admits)
+        return DEFAULTS["admits_roles"]
 
     def states_number(self, upos: str) -> bool:
         """Did the speaker CHOOSE this word's number? «cats» yes; «Marie» no (schema v6)."""

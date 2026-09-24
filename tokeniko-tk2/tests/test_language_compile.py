@@ -219,6 +219,65 @@ def test_the_three_readings_of_a_wh_word_stay_apart(compiler):
     assert all(c == 1.0 for c in (asking.coverage, describing.coverage, embedded.coverage))
 
 
+#: dere-4 as stanza parses it: `who` is `nsubj` of a `ccomp` — an EMBEDDED question.
+I_DO_NOT_KNOW_WHO = skeleton_from_conllu("I do n't know who ate the fish .", [
+    ("1", "I", "i", "PRON", "4", "nsubj"),
+    ("2", "do", "do", "AUX", "4", "aux"),
+    ("3", "n't", "not", "PART", "4", "advmod"),
+    ("4", "know", "know", "VERB", "0", "root"),
+    ("5", "who", "who", "PRON", "6", "nsubj"),
+    ("6", "ate", "eat", "VERB", "4", "ccomp"),
+    ("7", "the", "the", "DET", "8", "det"),
+    ("8", "fish", "fish", "NOUN", "6", "obj"),
+    ("9", ".", ".", "PUNCT", "4", "punct"),
+])
+
+#: t-ng-4 as stanza parses it: the answering «No» is `INTJ` under `discourse`.
+NO_SOME_SOFTWARE = skeleton_from_conllu("No , some software is a mind and some is not .", [
+    ("1", "No", "no", "INTJ", "7", "discourse"),
+    ("2", ",", ",", "PUNCT", "7", "punct"),
+    ("3", "some", "some", "DET", "4", "det"),
+    ("4", "software", "software", "NOUN", "7", "nsubj"),
+    ("5", "is", "be", "AUX", "7", "cop"),
+    ("6", "a", "a", "DET", "7", "det"),
+    ("7", "mind", "mind", "NOUN", "0", "root"),
+    ("8", "and", "and", "CCONJ", "10", "cc"),
+    ("9", "some", "some", "DET", "10", "nsubj"),
+    ("10", "is", "be", "AUX", "7", "conj"),
+    ("11", "not", "not", "PART", "10", "advmod"),
+    ("12", ".", ".", "PUNCT", "7", "punct"),
+])
+
+
+def test_an_embedded_WHO_is_settled_by_its_clause_when_the_relation_cannot(compiler):
+    """dere-4, «I do not know WHO ate the fishes». `nsubj` admits the interrogative AND the relative,
+    and since 2026-09-24 nothing picks between them by order — the CLAUSE does, and a complement
+    clause asks. Refusing the tie without letting the clause choose left `who` unplaced and the
+    decompiler wrote «…know that who ate…»."""
+    from tk2.language.decompile import Decompiler
+
+    out = compiler.compile(I_DO_NOT_KNOW_WHO)
+    ate = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "eat.v")
+
+    assert isinstance(ate.boxes[Role.AGENT].head, Open), "`who` opens the agent slot"
+    assert out.coverage == 1.0 and out.unplaced == ()
+    text = Decompiler(compiler.table).decompile(out.zip).text
+    assert "know who" in text and "that who" not in text, text
+
+
+def test_a_discourse_NO_is_unplaced_and_not_compiled_as_a_quantifier(compiler):
+    """t-ng-4, «NO, some software is a mind and some is not». `discourse` admits no closed-class
+    role and `INTJ` names no word class, so both filters empty — and the fallback used to take the
+    table's FIRST row, the negative quantifier. Nothing settles which `no` this is, so it is
+    unplaced: the honest answer (the Captain, 2026-09-24)."""
+    out = compiler.compile(NO_SOME_SOFTWARE)
+
+    assert "No" in out.unplaced
+    quantities = [getattr(r, "quantity", None) for r in out.zip.rows
+                  if type(r).__name__ == "QuantifierRow"]
+    assert Quantity.NEGATIVE not in quantities, "«no» is not «no software»"
+
+
 def test_UNASSERTION_PROPAGATES_into_an_enclosed_clause(compiler):
     """**«if you know WHO DID IT, tell me» does not assert that anybody did it.** The whole antecedent
     is supposed, and a clause inside it is inside the supposition.

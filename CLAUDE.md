@@ -128,6 +128,21 @@ classes, the marker rules, the adverb table — is knowledge, and stays in the d
 **At the end of every epic, audit what was built** and ask which things called frame belong in the
 knowledge kingdom.
 
+**FRAME IS NOT «WHAT GOES IN CODE» — IT IS «WHAT CHANGES ONLY BY A FIX»** *(the Captain,
+2026-09-24)*.
+
+> *«Frame can also be db, nothing forbids it. The difference between frame and knowledge is: frame
+> will change ONLY if we discover a bug or malfunction or a wrong assumption, so we have to FIX it.
+> Knowledge changes over time based on learning, experience and how tk2 changes his mind. So you
+> need to make me understand why code would be better than db, even if we assume that it's frame.»*
+
+The kingdom says **how a fact changes**; it does not decide **where the fact lives**. A frame fact
+may sit in the db beside the knowledge it is read with — and must, when it names things that are db
+rows, or a migration ends up needing a release to take effect. **Code must earn its place with an
+argument**, and «it is frame» is not one. The failure this was written for: `UD_DEP_TO_ROLE` kept
+UD's admissible roles in code while the roles themselves, and every other fact about a UD relation,
+were rows — so `db/0028`'s new role needed a code edit before the station would admit it.
+
 ## AND A THIRD KINGDOM: EVIDENCE *(the Captain, 2026-09-17)*
 
 Frame and knowledge govern the **application's business logic**. Tests are neither:

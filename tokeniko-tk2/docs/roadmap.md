@@ -149,27 +149,29 @@
       marker `db/0015` named and the table never had. But the row alone made it WORSE: stanza reads
       the phrase two ways and in the past tense the nominal hangs off a token INSIDE the marker,
       with no `case` child. Reading the marker's SPAN holds under both. Read-whole 73 → 74
-
+- [x] **⚑ `UD_DEP_TO_ROLE` unwelded — the order never decided, and frame is not «what goes in code»**
+      *(the Captain, 09-24)* — benched: reversing every tuple moved nothing. The sets are rows
+      (`db/0034`), the ranking is deleted, a tie nobody settles abstains. `t-ng-4`'s «No» stops being
+      a quantifier: drill 66 → 67, read-whole 74 → 73. Record `202609240900_…`
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] **⚑ `UD_DEP_TO_ROLE` is welded** *(09-22, wants the Captain)* — WHICH roles a relation admits is
-      frame; the BEST-FIRST ORDER is a claim about English and is knowledge. One tuple carries both
-- [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read
+- [ ] **the fixpoint's 11 remaining** — 10 MOVED · 1 SILENT, all on sentences the compiler read
       whole. The SILENT one is `t-md-2` «So a calculator does not necessarily think»: **a negation
       OUTSIDE a necessity has no form in the table**, which is a vocabulary gap, not a logic one
 - [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
       (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
-      DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 12 above**
+      DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 11 above**
 - [ ] **the domain's two open halves** *(09-22, both measured or reasoned, neither guessed)* — a
       fronted ADVERB («Legally,») needs `legally` → `law.n`, a derivation the compiler has no reader
       for and which the decompiler already refuses to say · a NON-fronted `as` («I work as a
       teacher») was never benched, and may be the job rather than the frame
-- [ ] **FOUR SMALL THINGS RECORDED RATHER THAN FIXED** *(09-21/22)* — none load-bearing, each named
+- [ ] **FIVE SMALL THINGS RECORDED RATHER THAN FIXED** *(09-21/24)* — none load-bearing, each named
       where it was found: a DEFINITE's relative clause is a presupposition and is kept claimed so
       the brain gets the fact · a quantifier's DOMAIN CARDINALITY is not in the zip, so «Neither is
       late» reads back a bare negative (`Box.count` is where it goes) · «one another» keeps
       `number: pl`, the same column confusion as `dual` but admissible · a clause-headed phrase
-      takes the PLURAL universal on the QM's grammar, not on evidence
+      takes the PLURAL universal on the QM's grammar, not on evidence · discourse «No» (an answer
+      particle) has no reading and now goes unplaced — `t-ng-4`, 09-24
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence

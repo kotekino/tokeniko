@@ -17,6 +17,10 @@ what differs, a miss is an ANSWER rather than an absence, and the ordinary readi
                                            plural. UD tags every `PROPN` `Number=Sing` by default
                                            morphology rather than on evidence, so a name states
                                            nothing and the zip must not record that it did
+    admits_roles          default NONE   — no constraint. `case` admits the role markers, `det` the
+                                           determiner jobs, `compound:prt` only the verb particle
+                                           (`db/0034`). A SET: the ranking it once carried in code
+                                           was deleted, and a tie nobody settles abstains
 
 **WHY EACH OF THESE IS A ROW AND NOT A SET IN CODE** — E3's frame/knowledge audit, 2026-09-22
 (`docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`). Each was a frozenset whose

@@ -18,19 +18,29 @@ The row cannot say which, because which one it is depends on the sentence. **UD 
 why stanza is the skeleton provider and why it is chosen for targeting a standard: the dependency
 label IS the selector, and a parser that invented its own labels could not drive this table.
 
-**WHAT IS FRAME HERE AND WHAT IS NOT.** The two maps below are frame — they relate two published,
-closed vocabularies (UD's tags and this table's own columns), and no evidence revises what UD's
-`DET` corresponds to. The MAPPING from a form to its compiled meaning is knowledge and lives in the
-rows, written by `db/0008`. Keep the seam: a new marker is a migration, a new UD relation is a code
-change, and neither is ever the other.
+**WHAT IS FRAME HERE AND WHAT IS NOT.** `UD_POS_TO_WORD_CLASS` below is frame — it relates two
+published, closed vocabularies (UD's tags and this table's own word classes), and no evidence
+revises what UD's `DET` corresponds to. The MAPPING from a form to its compiled meaning is
+knowledge and lives in the rows, written by `db/0008`. **Which roles a UD relation admits is
+knowledge too, and lives in the UD readings** (`db/0034`): the roles it names are this table's own
+rows, and a code map of db vocabulary goes stale against its rows — `db/0028`'s `fused_quantifier`
+needed a code edit before the station would admit one. *Frame changes only by a fix, knowledge by
+learning* (the Captain, 2026-09-24).
+
+**AND A TIE NOBODY SETTLES ABSTAINS.** The map this replaced was ranked «best-first» and broke ties
+by its order; nothing measured supported the ranking (`tools/dep_order_bench.py`), so it was deleted
+rather than moved. Where the relation, the tag and the clause leave more than one reading standing,
+no reading is chosen and the token is unplaced — the honest answer.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Sequence
 
 from tk2.language.skeleton import bare
+from tk2.language.ud_readings import UdReadings, standing_ud_readings
 
 #: UD universal POS -> the `word_class` values this table uses. Several-to-several on purpose:
 #: UD's `AUX` covers our auxiliaries AND our modals, and our prepositions and postpositions are both
@@ -68,45 +78,9 @@ CONTENT_POS = frozenset({"NOUN", "PROPN", "ADJ"})
 #: `db/0028`, which moved every quantificational row whose word class is not `determiner`.
 #:
 #: **A NAME, NOT A ROSTER.** The roles live in the rows and this file holds no list of them; this
-#: one is spelled here because two readers need the same spelling — the map below, and the
-#: decompiler, which turns a quantity plus a sort back into the one word that fuses them.
+#: one is spelled here because the decompiler needs it, to turn a quantity plus a sort back into the
+#: one word that fuses them. Which relations admit it is the UD readings' business (`db/0034`).
 FUSED_QUANTIFIER = "fused_quantifier"
-
-#: UD dependency relation -> the `role` values it admits, BEST-FIRST. A relation absent from this map
-#: puts no constraint on the role, which is the honest default: UD has 37 relations and this table
-#: has 27 roles, and most pairs simply do not interact.
-UD_DEP_TO_ROLE: dict[str, tuple[str, ...]] = {
-    # the marker relations — where the role markers and their re-typed cousins live
-    "case": ("role_marker", "causal_marker", "concessive_marker", "exceptive_marker", "genitive"),
-    "mark": ("subordinator", "infinitive_marker", "complementizer", "causal_marker",
-             "concessive_marker"),
-    "cc": ("coordinator",),
-    "cc:preconj": ("coordinator",),
-    # the determiner relations
-    "det": ("determination", "demonstrative", "quantificational", "possessive", "interrogative"),
-    "det:poss": ("possessive",),
-    "det:predet": ("quantificational",),
-    "nmod:poss": ("possessive",),
-    # the auxiliary relations
-    "aux": ("tense_aspect", "modality"),
-    "aux:pass": ("tense_aspect",),
-    "cop": ("tense_aspect",),
-    # the pronoun relations — a pronoun is whatever its own row says; the dependency says only that
-    # it is filling an argument slot rather than marking one
-    "nsubj": ("referential", "relative", "interrogative", "free_relative", "reflexive",
-              "reciprocal", "demonstrative", "existential", FUSED_QUANTIFIER),
-    "obj": ("referential", "relative", "interrogative", "free_relative", "reflexive", "reciprocal",
-            "demonstrative", FUSED_QUANTIFIER),
-    "iobj": ("referential", "reflexive", "reciprocal", "demonstrative"),
-    "obl": ("referential", "reflexive", "demonstrative", FUSED_QUANTIFIER),
-    "expl": ("expletive", "existential"),
-    # the rest
-    "advmod": (FUSED_QUANTIFIER, "quantificational", "negation", "interrogative",
-               "free_relative", "referential", "affirmation"),
-    "compound:prt": ("verb_particle",),
-    "fixed": ("role_marker", "subordinator"),
-}
-
 
 #: The dependencies of a clause that MODIFIES A NOUN — which is what separates a relative clause
 #: from an embedded question, and the only evidence there is for it. FRAME: `acl` is UD's own
@@ -147,9 +121,10 @@ class Match:
     """One closed-class form found in a token stream, with the job it is doing.
 
     `length` is in TOKENS, so the caller advances past a multi-word form without re-deriving it.
-    `certain` is False when the table offers several jobs and UD narrowed it to none of them — the
-    match still stands (the form IS a closed-class form) but the job is a guess, and the confidence
-    scalar is entitled to know that.
+    `certain` is False when the table offers several rows and UD said nothing about the token. Since
+    2026-09-24 that can only be several rows of ONE reading — «his» the determiner and «his» the
+    pronoun — because several readings with nothing to settle them are no match at all. The meaning
+    stands; which row carried it is a guess, and the confidence scalar is entitled to know that.
     """
 
     form: str
@@ -190,8 +165,15 @@ class ClosedClasses:
     cost paid for nothing.
     """
 
-    def __init__(self, rows: Iterable[dict], source: str = "(unnamed)") -> None:
+    def __init__(self, rows: Iterable[dict], source: str = "(unnamed)",
+                 readings: UdReadings | None = None) -> None:
         self.source = source
+        #: Which roles each UD relation admits — the UD readings' fourth question (`db/0034`). Held
+        #: here, resolved ONCE, because `select` runs per token and must never reach for the db. A
+        #: caller holding a live table hands in the same database's readings — as
+        #: `standing_closed_classes` does — and anyone else gets the newest migration's, exactly as
+        #: the compiler does for its own.
+        self.readings = readings if readings is not None else standing_ud_readings()
         self._rows = [dict(r) for r in rows]
         if self._rows:
             newest = max(r.get("version", 1) for r in self._rows)
@@ -233,19 +215,23 @@ class ClosedClasses:
 
     # -- the job ----------------------------------------------------------------------------------
 
-    def select(self, form: str, upos: str | None = None, dep: str | None = None) -> dict | None:
-        """WHICH job, given what UD says about this token.
+    def candidates(self, form: str, upos: str | None = None,
+                   dep: str | None = None) -> tuple[dict, ...]:
+        """Every job UD LEAVES STANDING for this token — the rows `select` settles, or does not.
 
-        Narrow by POS, then by dependency, and take the first survivor in the table's own order.
+        Narrow by dependency, then by POS, and stop: the survivors come back in the table's own
+        order, and **that order is not evidence** — no reader may take the first of several
+        readings as the answer. Empty for a form the table lacks and for a content word.
+
         **A filter that would empty the set is not applied** — UD and this table were built by
         different people for different purposes, and a token UD calls `ADV` that this table only
         holds as a particle is a disagreement about labels, not evidence that the form is absent.
-        Dropping the match there would lose a form the station can see perfectly well; keeping it
-        and marking it uncertain is what `Match.certain` is for.
+        What the tolerance keeps is every row the failed filter could not choose between; whether
+        they are ONE reading is `select`'s question, not this one's.
         """
         rows = self._by_form.get(form.lower())
         if not rows:
-            return None
+            return ()
         if upos and upos.upper() in CONTENT_POS:
             # **A CONTENT WORD IS NOT A FUNCTION WORD THAT HAPPENS TO BE SPELLED THE SAME**
             # *(2026-09-22)*. «Every human BEING is an animal» was compiling to «An animal is»: the
@@ -260,9 +246,9 @@ class ClosedClasses:
             # *This is NOT the disagreement the note above forgives. A token UD calls `ADP` that
             # this table holds as a particle is two names for one function word; a token UD calls
             # `NOUN` is a word this table does not contain at all.*
-            return None
+            return ()
         if len(rows) == 1:
-            return rows[0]
+            return (rows[0],)
 
         # **THE DEPENDENCY GOES FIRST, AND IT OUTRANKS THE POS.** Found on a live parse, 2026-09-15:
         # stanza reads «He looked UP» as `upos=ADP, dep=compound:prt` — the tag says «adposition»
@@ -273,24 +259,56 @@ class ClosedClasses:
         # its RELATION to the rest of the sentence, and the job this table records is a relational
         # fact. Where the two disagree the relation is the better witness — which is also why
         # `compound:prt` must be matched as the full label, not bared to `compound`.
-        narrowed = rows
+        narrowed = list(rows)
         if dep:
-            allowed = UD_DEP_TO_ROLE.get(dep) or UD_DEP_TO_ROLE.get(dep.split(":")[0])
-            if allowed:
-                kept = [r for r in narrowed if r["role"] in allowed]
-                if kept:
-                    # the table's own order is the tie-break, and `allowed` is best-first
-                    narrowed = sorted(kept, key=lambda r: allowed.index(r["role"]))
+            admitted = self.readings.admits_roles(dep)
+            if admitted is not None:
+                narrowed = [r for r in narrowed if r["role"] in admitted] or narrowed
         if upos and len(narrowed) > 1:
             classes = UD_POS_TO_WORD_CLASS.get(upos.upper(), ())
-            kept = [r for r in narrowed if r["word_class"] in classes]
-            narrowed = kept or narrowed
-        return narrowed[0]
+            narrowed = [r for r in narrowed if r["word_class"] in classes] or narrowed
+        return tuple(narrowed)
+
+    def select(self, form: str, upos: str | None = None, dep: str | None = None) -> dict | None:
+        """WHICH job, given what UD says about this token — or None, if UD does not say.
+
+        **A TIE NOBODY SETTLES ABSTAINS** (the Captain, 2026-09-24). When the survivors of
+        `candidates` carry more than one READING, nothing here picks: the map this replaced ranked
+        its roles «best-first», nothing measured supported the ranking, and a pick the evidence did
+        not make is a guess the zip would carry as a fact. That includes the tolerance's fallback —
+        a filter that emptied chose nothing, so a fallback with two readings is still a tie. The
+        clause can still settle it; that is `read`'s business, and it reads `candidates` directly.
+
+        Where the survivors are ONE reading in several rows — `his` the determiner and `his` the
+        pronoun, `through` before its noun and after it — the first row is returned: the meaning is
+        settled, and what differs is the word class and the features, not what the token says.
+        """
+        survivors = self.candidates(form, upos, dep)
+        return self._settled(survivors)
+
+    @staticmethod
+    def _reading(row: dict) -> tuple[str, str]:
+        """What a row SAYS: its role and its compiled meaning. Two rows that agree on both are one
+        reading told twice; rows that differ on either are two things the token could be."""
+        return row["role"], json.dumps(row.get("compiled") or {}, sort_keys=True, default=str)
+
+    def _settled(self, survivors: Sequence[dict]) -> dict | None:
+        """The one reading these rows carry, as its first row — or None when they carry several."""
+        if not survivors:
+            return None
+        if len({self._reading(r) for r in survivors}) > 1:
+            return None
+        return survivors[0]
 
     def read(self, tokens: Sequence[str], at: int = 0, upos: str | None = None,
              dep: str | None = None, head_dep: str | None = None,
              in_root_clause: bool | None = None) -> Match | None:
-        """`match` and `select` together — what a compiler calls once per token position.
+        """`match` and the job together — what a compiler calls once per token position.
+
+        None when no form matches AND when a form matches but nothing settles its job: the token is
+        then left for the compiler to account as unplaced, which is the honest answer — «NO, some
+        software is no mind» asks the station whether that `no` quantifies or answers, and neither
+        the relation (`discourse`) nor the tag (`INTJ`) nor the clause says.
 
         `in_root_clause` is tk1's R5 test, and it is what tells an INTERROGATIVE `who` from a
         RELATIVE one. Both are `nsubj` of their own clause and no label separates them: «WHO sleeps»
@@ -307,58 +325,16 @@ class ClosedClasses:
         form = self.match(tokens, at)
         if form is None:
             return None
-        row = self.select(form, upos, dep)
+        survivors = self.candidates(form, upos, dep)
+        if not survivors:
+            return None
+        # The clause first, then the survivors' own agreement — and the complement clause last,
+        # because a `mark` on a complement asks whatever the rest would have said.
+        row = (self._by_clause(form, survivors, head_dep, in_root_clause)
+               or self._settled(survivors))
+        row = self._by_complement(form, dep, head_dep) or row
         if row is None:
             return None
-        # **A WH-WORD HAS THREE READINGS, NOT TWO, AND R5's BINARY TEST CONFLATED THE LAST PAIR.**
-        #
-        #   «WHO sleeps?»                 root clause          -> INTERROGATIVE: opens a slot, and
-        #                                                         the utterance is a question
-        #   «the cat WHO sleeps»          an `acl:relcl`       -> RELATIVE: binds an antecedent and
-        #                                                         opens nothing — one cat, described
-        #   «I know WHO did it»           a complement clause  -> FREE RELATIVE: opens a slot, and
-        #                                                         the utterance is NOT a question
-        #
-        # R5 asks «is this the root clause» and answers the MOOD question correctly — «I am happy
-        # WHEN I talk» is not an interrogative. It was then read as «therefore relative», which is
-        # the conflation: an embedded question opens its slot exactly as a root one does, and only
-        # the utterance's mood differs. That is why «if you know WHO did it» left `who` unplaced.
-        #
-        # **UD MARKS THE DIFFERENCE AND NOTHING ELSE DOES**: a relative clause modifies a NOUN and is
-        # `acl:relcl`; an embedded question is a clausal COMPLEMENT — `ccomp`, `csubj`, `xcomp` — or
-        # an argument in its own right. So the clause's own dependency chooses, and `head_dep` is
-        # already that: the wh-word is `nsubj`/`obj` of its clause's verb, so its head IS the clause.
-        if row["role"] in ("interrogative", "relative", "free_relative"):
-            if in_root_clause:
-                wanted = "interrogative"
-            elif bare(head_dep or "") in RELATIVE_CLAUSE_DEPS:
-                wanted = "relative"
-            elif in_root_clause is None:
-                wanted = None          # the caller holds no tree; the table's own order stands
-            else:
-                wanted = "free_relative"
-            if wanted is not None:
-                better = next((r for r in self._by_form[form] if r["role"] == wanted), None)
-                # **FALL BACK TO THE INTERROGATIVE READING, NOT TO WHATEVER WAS FIRST.** Not every
-                # wh-word has a free-relative row — `why` has none — and an embedded «why» still
-                # ASKS. The interrogative reading is the one that opens a slot, which is what an
-                # embedded question needs; the mood is the compiler's business and it knows the
-                # clause is not the root.
-                if better is None and wanted == "free_relative":
-                    better = next((r for r in self._by_form[form]
-                                   if r["role"] == "interrogative"), None)
-                if better is not None:
-                    row = better
-        # **A SUBORDINATOR ON A COMPLEMENT CLAUSE ASKS, ON AN ADVERBIAL ONE IT SUPPOSES** (req 21).
-        # «I wonder WHETHER the cat is hungry» and «I asked IF it rains» are embedded polar
-        # questions; «IF it rains, I stay» is a condition. The rows hold both readings — the
-        # knowledge — and the clause's own dependency picks one, exactly as it picks a wh-word's.
-        # Until 2026-09-18 `mark` filtered to the subordinator, so `whether` never opened a truth.
-        if bare(dep or "") == "mark" and bare(head_dep or "") in COMPLEMENT_CLAUSE_DEPS:
-            asking = next((r for r in self._by_form[form]
-                           if (r.get("compiled") or {}).get("opens") == "truth"), None)
-            if asking is not None:
-                row = asking
         candidates = self._by_form[form]
         certain = len(candidates) == 1 or bool(upos or dep)
         compiled = dict(row.get("compiled") or {})
@@ -380,6 +356,74 @@ class ClosedClasses:
             certain=certain,
             settled_role=settled,
         )
+
+    def _by_complement(self, form: str, dep: str | None, head_dep: str | None) -> dict | None:
+        """The asking reading of a subordinator on a COMPLEMENT clause — else None.
+
+        **A SUBORDINATOR ON A COMPLEMENT CLAUSE ASKS, ON AN ADVERBIAL ONE IT SUPPOSES** (req 21).
+        «I wonder WHETHER the cat is hungry» and «I asked IF it rains» are embedded polar
+        questions; «IF it rains, I stay» is a condition. The rows hold both readings — the
+        knowledge — and the clause's own dependency picks one, exactly as it picks a wh-word's.
+        Until 2026-09-18 `mark` filtered to the subordinator, so `whether` never opened a truth.
+
+        *The asking row is sought among ALL the form's rows, not only the survivors: `mark` admits
+        no `interrogative`, so the relation filtered it out — and the clause is the better witness,
+        for the reason the dependency outranks the POS.*
+        """
+        if bare(dep or "") != "mark" or bare(head_dep or "") not in COMPLEMENT_CLAUSE_DEPS:
+            return None
+        return next((r for r in self._by_form[form]
+                     if (r.get("compiled") or {}).get("opens") == "truth"), None)
+
+    def _by_clause(self, form: str, survivors: Sequence[dict], head_dep: str | None,
+                   in_root_clause: bool | None) -> dict | None:
+        """The wh-reading the CLAUSE settles, when every survivor is a wh-reading — else None.
+
+        **A WH-WORD HAS THREE READINGS, NOT TWO, AND R5's BINARY TEST CONFLATED THE LAST PAIR.**
+
+          «WHO sleeps?»                 root clause          -> INTERROGATIVE: opens a slot, and
+                                                                the utterance is a question
+          «the cat WHO sleeps»          an `acl:relcl`       -> RELATIVE: binds an antecedent and
+                                                                opens nothing — one cat, described
+          «I know WHO did it»           a complement clause  -> FREE RELATIVE: opens a slot, and
+                                                                the utterance is NOT a question
+
+        R5 asks «is this the root clause» and answers the MOOD question correctly — «I am happy
+        WHEN I talk» is not an interrogative. It was then read as «therefore relative», which is
+        the conflation: an embedded question opens its slot exactly as a root one does, and only
+        the utterance's mood differs. That is why «if you know WHO did it» left `who` unplaced.
+
+        **UD MARKS THE DIFFERENCE AND NOTHING ELSE DOES**: a relative clause modifies a NOUN and is
+        `acl:relcl`; an embedded question is a clausal COMPLEMENT — `ccomp`, `csubj`, `xcomp` — or
+        an argument in its own right. So the clause's own dependency chooses, and `head_dep` is
+        already that: the wh-word is `nsubj`/`obj` of its clause's verb, so its head IS the clause.
+
+        **THE CLAUSE SETTLES ONLY THE WH-TRIO, SO IT SPEAKS ONLY WHEN THE TIE LIES WITHIN IT.**
+        Survivors that include a non-wh reading — `what` the exclamative quantifier beside `what`
+        the question — are a tie the clause has no evidence about, and it stays a tie. Where it
+        does speak, its reading is sought among ALL the form's rows: «the day WHEN I left» is
+        `advmod`, which admits no `relative`, and the clause is the better witness.
+        """
+        trio = ("interrogative", "relative", "free_relative")
+        if not all(r["role"] in trio for r in survivors):
+            return None
+        if in_root_clause:
+            wanted = "interrogative"
+        elif bare(head_dep or "") in RELATIVE_CLAUSE_DEPS:
+            wanted = "relative"
+        elif in_root_clause is None:
+            return None            # the caller holds no tree, and nothing else can say
+        else:
+            wanted = "free_relative"
+        rows = self._by_form[form]
+        better = next((r for r in rows if r["role"] == wanted), None)
+        # **FALL BACK TO THE INTERROGATIVE READING, NOT TO WHATEVER WAS FIRST.** Not every wh-word
+        # has a free-relative row — `why` has none — and an embedded «why» still ASKS. The
+        # interrogative reading is the one that opens a slot, which is what an embedded question
+        # needs; the mood is the compiler's business and it knows the clause is not the root.
+        if better is None and wanted == "free_relative":
+            better = next((r for r in rows if r["role"] == "interrogative"), None)
+        return better
 
     def walk_skeleton(self, skeleton):
         """Every closed-class form in a SKELETON — the walk a compiler actually runs.
@@ -454,11 +498,18 @@ def standing_closed_classes(db_name: str | None = None) -> ClosedClasses:
         rows = list(database(db_name)[ClosedClassDoc.Settings.name].find({}, {"_id": 0}))
         if rows:
             version = max(r["version"] for r in rows)
-            return ClosedClasses(rows, f"{db_name}.{ClosedClassDoc.Settings.name} v{version}")
+            # **THE SAME DATABASE'S READINGS, NAMED IN THE SOURCE.** Which roles a relation admits
+            # is part of how this table is read (`db/0034`), so a live table read against the
+            # migrations' readings — or the reverse — would be a number nobody could attribute.
+            readings = standing_ud_readings(db_name)
+            return ClosedClasses(rows, f"{db_name}.{ClosedClassDoc.Settings.name} v{version} · "
+                                       f"readings {readings.source}", readings=readings)
 
     from tk2.datatier.policy_source import newest_migration_declaring
 
     found, module = newest_migration_declaring("CLOSED_CLASS_ROWS")
     rows = module.CLOSED_CLASS_ROWS
     version = max(r.get("version", 1) for r in rows)
-    return ClosedClasses(rows, f"db/{found.label} v{version} (not applied)")
+    readings = standing_ud_readings()
+    return ClosedClasses(rows, f"db/{found.label} v{version} (not applied) · readings "
+                               f"{readings.source}", readings=readings)
