@@ -14,15 +14,16 @@
 ## E1d — the audit's repairs ✅ 2026-09-14 — see `landed.md`
 
 ## E1e — the tests, isolated *(opened 2026-09-17 — runs AFTER E3 closes)*
+- [x] **the pacing rule** *(answered 09-22, and the answer REVERSED it)* — the gate is
+      `pytest -m spine` plus the section; the full suite is a DEPLOY condition, on the body. And the
+      suite was slow by DEFECT: `Migration.load` re-ran the chain, now memoised (186s → 0.2s). Root
+      `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
 - [ ] **⚑ sweep E0 → E3 for test material leaking into the BL** — formal order included
 - [ ] **the third kingdom** — frame · knowledge · **evidence**; evidence keeps the ledger properties
       but never runs in the app
 - [ ] `dictionary_bar` out of the body; only `bar_version` + `bar_fingerprint` stay, as provenance
 - [ ] bar words become `extra_seeds` on a measuring run — **cost: moves the config fingerprint**
 - [ ] the doctrine line in `core/models/__init__.py` calls three things one thing
-- [x] **the pacing rule** *(answered 09-22, and the answer REVERSED it)* — the gate is the
-      broad-short test plus the section; the full suite is a DEPLOY condition, on the body. Root
-      `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
 
 ## E2 — the format (tkzip v2) ✅ 2026-09-14 — see `landed.md`
 
@@ -120,13 +121,8 @@
       variable and threw `cat.n` away. 0 of 87 zips now name a variable nothing binds
 - [x] **⚑ the relative clause's DECOMPILER half** *(09-22, req 36)* — an unasserted row sharing a
       binder's variable IS that binder's relative clause; dropping it claims MORE than the zip.
-      `db/0031` speaks it with «that». **`aw-13`/`aw-14` fixed — SILENT 3 → 1**
-- [x] **⚑ THE GATE IS THE SPINE + THE SECTION, and `Migration.load` is memoised** *(the Captain,
-      09-22)* — the closed-class chain re-executed everything beneath each level: 186s → 0.2s, the
-      suite ~2h → ~34 min. `pytest -m spine` is the broad-short gate. Record `202609220900_…`
-- [x] **⚑ a binder the decompiler cannot say** *(09-21 → closed 09-22)* — `_share_variable`'s
-      inverse, and it IS the decompiler half above: **`aw-13`/`aw-14` both FIXED**, «All that
-      glitters is not gold» round-trips. *This line outlived the work by a day*
+      `db/0031` speaks it with «that». **`aw-13`/`aw-14` fixed — SILENT 3 → 1** (it absorbed «a binder
+      the decompiler cannot say», the same item under a second name)
 - [x] **drill automated = acceptance gate** *(ticked 09-20 — it was already met)* — `tests/test_drill.py`
       scores the bar, keeps the forced-change ledger and prints the report on every suite run
 - [x] **⚑ the frame/knowledge audit — E3's closing act** *(09-22)* — 52 constants walked, four move,
@@ -135,24 +131,12 @@
 - [x] **the audit's migration — `db/0032`, three arguments out of code** *(09-22)* — `vocative`
       compiles to nothing · `xcomp` opens no row · only a NOUN states a number. `CLAUSE_DEPS` got
       BIGGER and is now pure transcription. Measurements unmoved. `SAYING_VERBS` waits for E4
-
-### still open — in the order they are to be done, and nothing waits on anything below it
-
 - [x] **⚑ task 9 — THE DOMAIN, the fifth prefix element, built at last** *(09-22, rules reqs 6-7)*
       — the station had NEVER raised a `DomainRow`; the schema, the decompiler and three drill
       cases were all waiting. Two signals, measured clean in both directions on
       `tools/domain_bench.py`: a fronted `as` (a capacity) and a fronted phrase whose BOX IS
       CONTESTED. **`aw-15` green, and France stopped being `unplaced`** — a word lost, not misfiled
-- [ ] **THE GATE'S FOUR, EACH WITH ITS CAUSE AND ITS OWNER** — the pinned set, and the only place
-      they are all named. *`q-6` · `t-dc-5` are ANAPHORA (a described OPEN where the drill has the
-      name) → E3b, below · `aw-19` «I ate with Anna» is comitative because Anna is a PERSON → E3b's
-      markers' third reading · `t-ws-7` is a stanza misparse and the station abstains, ticked 09-18.*
-      **None of the four is E3's own any more**
-- [ ] **the domain's two open halves** *(09-22, both measured or reasoned, neither guessed)* — a
-      fronted ADVERB («Legally,») needs `legally` → `law.n`, a derivation the compiler has no reader
-      for and which the decompiler already refuses to say · a NON-fronted `as` («I work as a
-      teacher») was never benched, and may be the job rather than the frame
-- [ ] **a bare fronted locative is IRREDUCIBLE and the station abstains** *(09-22, a RESULT)* —
+- [x] **a bare fronted locative is IRREDUCIBLE and the station abstains** *(09-22, a RESULT)* —
       «Legally, in Italy, he is still married» (DOMAIN) and «In France, I ate well» (LOCATION) are
       identical on every fact the parse gives. `aw-17` stays red honestly rather than green on a
       rule that would invent domains elsewhere
@@ -165,22 +149,27 @@
       marker `db/0015` named and the table never had. But the row alone made it WORSE: stanza reads
       the phrase two ways and in the past tense the nominal hangs off a token INSIDE the marker,
       with no `case` child. Reading the marker's SPAN holds under both. Read-whole 73 → 74
+
+### still open — in the order they are to be done, and nothing waits on anything below it
+
+- [ ] **⚑ `UD_DEP_TO_ROLE` is welded** *(09-22, wants the Captain)* — WHICH roles a relation admits is
+      frame; the BEST-FIRST ORDER is a claim about English and is knowledge. One tuple carries both
 - [ ] **the fixpoint's 12 remaining** — 11 MOVED · 1 SILENT, all on sentences the compiler read
       whole. The SILENT one is `t-md-2` «So a calculator does not necessarily think»: **a negation
       OUTSIDE a necessity has no form in the table**, which is a vocabulary gap, not a logic one
 - [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
       (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
       DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 12 above**
-- [ ] **⚑ `UD_DEP_TO_ROLE` is welded** *(09-22, wants the Captain)* — WHICH roles a relation admits is
-      frame; the BEST-FIRST ORDER is a claim about English and is knowledge. One tuple carries both
+- [ ] **the domain's two open halves** *(09-22, both measured or reasoned, neither guessed)* — a
+      fronted ADVERB («Legally,») needs `legally` → `law.n`, a derivation the compiler has no reader
+      for and which the decompiler already refuses to say · a NON-fronted `as` («I work as a
+      teacher») was never benched, and may be the job rather than the frame
 - [ ] **FOUR SMALL THINGS RECORDED RATHER THAN FIXED** *(09-21/22)* — none load-bearing, each named
       where it was found: a DEFINITE's relative clause is a presupposition and is kept claimed so
       the brain gets the fact · a quantifier's DOMAIN CARDINALITY is not in the zip, so «Neither is
       late» reads back a bare negative (`Box.count` is where it goes) · «one another» keeps
       `number: pl`, the same column confusion as `dual` but admissible · a clause-headed phrase
       takes the PLURAL universal on the QM's grammar, not on evidence
-- [ ] **anaphora → E3b** *(the Captain, 09-20)* — «she» has its features since v4; what is missing is
-      that Marie is feminine, which is a named individual's ATTRIBUTE
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence
@@ -197,7 +186,10 @@
       where curation cannot finish AND the answer moves over time
 - [ ] **what a name is in a zip** — type centroid = SEMANTIC, uid = IDENTITY, never merged
 - [ ] **the markers' third reading** — «went with Anna» is comitative because Anna is a PERSON, with
-      no rule about Anna anywhere. E3b's acceptance test
+      no rule about Anna anywhere. E3b's acceptance test, and the drill gate's red `aw-19`
+- [ ] **anaphora** *(moved from E3, the Captain 09-20)* — «she» has its features since v4; what is
+      missing is that Marie is feminine, a named individual's ATTRIBUTE. The drill gate's reds `q-6` ·
+      `t-dc-5` (the fourth, `t-ws-7`, is a stanza misparse the station abstains on)
 
 ## E4 — the evaluator
 - [ ] verdict shape (pure; truth · status · bindings · derivation)
