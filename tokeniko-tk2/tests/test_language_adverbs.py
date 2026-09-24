@@ -177,3 +177,38 @@ def test_however_gained_its_discourse_reading_beside_the_free_relative():
     assert len(however) == 2
     kinds = {r["compiled"]["kind"] for r in however}
     assert kinds == {"open", "join"}, "«however you do it» and «however, he left»"
+
+
+# ------------------------------------------------------------------------------------------------
+# 4 — the voice (`db/0035`)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_v3_sets_ONE_flag_and_moves_nothing_else():
+    """`necessarily` speaks a necessity outside a negation; every other column of every row is v2's.
+    The necessity adverbs are ten forms for one meaning, so the choice is curation — and exactly one
+    choice was made."""
+    v2 = [r for r in migration(15).ADVERB_KIND_ROWS if r["version"] == 2]
+    v3 = migration(35).ADVERB_KIND_ROWS
+
+    assert [{k: v for k, v in r.items() if k not in ("version", "spoken")} for r in v3] == \
+        [{k: v for k, v in r.items() if k != "version"} for r in v2]
+    assert [(r["kind"], r["form"]) for r in v3 if r["spoken"]] == [(EPISTEMIC, "necessarily")]
+    assert next(r for r in v3 if r["spoken"])["compiled"]["modality"] == Modality.NECESSITY.value
+
+
+def test_the_check_asks_the_question_the_LOOKUP_asks():
+    """**THE MIGRATION'S `_meaning()` IS THE DECOMPILER'S KEY** — `db/0029`'s lesson, pinned on every
+    row rather than trusted: a check on a coarser or finer key than the lookup's checks a table that
+    does not exist, and the loser of a shared key is silent."""
+    from tk2.language.decompile import Decompiler
+
+    module = migration(35)
+    for row in module.ADVERB_KIND_ROWS:
+        assert module._meaning(row) == Decompiler._key(None, row["compiled"]), row["form"]  # noqa: SLF001
+
+    reader = Decompiler(adverbs=AdverbKinds(module.ADVERB_KIND_ROWS, "db/0035 (test)"))
+    assert reader.the_adverb(kind="prefix", element="modality",
+                             modality="necessity") == "necessarily"
+    assert reader.the_adverb(kind="prefix", element="modality", modality="possibility") is None, \
+        "eleven possibility adverbs and no flag: a choice, and not one made in code"

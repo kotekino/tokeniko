@@ -68,6 +68,17 @@ class AdverbKindDoc(LogicDocument, Timestamped):
     #: Where the row came from, so «is this list complete?» is answerable by re-walking the source.
     source: str = Field(min_length=1)
 
+    #: **THE FORM THIS MEANING IS SPOKEN WITH** — `ClosedClassDoc.spoken`, for the second roster
+    #: (`db/0035`). The same many-to-one and the same answer: ten adverbs all compile to a necessity,
+    #: so the backward reading is a CHOICE, and a choice is curation. At most one row per meaning
+    #: carries it.
+    #:
+    #: **A meaning here is asked for only where the closed classes cannot voice it**, and that is
+    #: position, not vocabulary: an auxiliary stands before «not», so «must not» can only put the
+    #: negation inside; an adverb stands after it, so «not necessarily» is the one place a negation
+    #: outside a modality can be said. Word order, therefore frame — no column says where it sits.
+    spoken: bool = False
+
     #: Why this row is here, or what is odd about it — the forms that are also something else.
     note: str = ""
 

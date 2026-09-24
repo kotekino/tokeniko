@@ -159,12 +159,17 @@
 - [x] **⚑ G2 · G3 · G4 — a sentence is a tree, «the result OF perception», and no relative clause
       lost in silence** *(09-24)* — a tree ratchet over the drill; a consumed row is said or named in
       `unsaid`. Read-whole FIXED 62 → 63 of 71. Record `202609241130_…`
+- [x] **⚑ G10 — «not necessarily», said at last** *(09-24)* — the decompiler reads the adverb table
+      backwards (`db/0035` flags `necessarily`); SILENT 1 → 0, read-whole FIXED 63 → 64 of 71
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] **the fixpoint's 8 remaining — G1 · G6–G10 and `t-ws-1`'s bracketing** — five want the Captain
+- [ ] **⚑ MODAL SCOPE — two compiler errors G10 found** *(09-24)* — «necessarily does not» compiles
+      as ¬□, the opposite claim (word order is frame: a fix) · where «not» scopes over an auxiliary
+      is per word («need not» ¬□, «cannot» ¬◇): knowledge, wants the Captain. Record `202609241130_…`
+- [ ] **the fixpoint's 7 remaining — G1 · G6–G9 and `t-ws-1`'s bracketing** — five want the Captain
       (G1 · G6 · G7 · G9 · the zero relative's valency), plus `t-dc-5`'s double join (a design ruling) and
-      two bookkeeping defects found on the way. Record `202609241130_…`
+      two bookkeeping defects and «So» lost in silence. Record `202609241130_…`
 - [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
       (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
       DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 11 above**

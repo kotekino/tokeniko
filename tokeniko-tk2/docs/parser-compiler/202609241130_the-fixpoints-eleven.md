@@ -128,3 +128,37 @@ do not know…», «…only from minds that you trust» — all come back as sai
 2. **every UNCLAIMED row reports a false loss** — `_clause` logs «held at None and a hedge is not
    built yet» because `None not in (CLAIMED, DENIED)`, so every conditional calls itself not whole
 3. **an empty object phrase is dropped quietly** — the reason is recorded, the clause said without it
+
+## G10 — «not necessarily», fixed the same day *(1st Officier)*
+
+The prefix order is the scope order, and the 2×2 was benched before building:
+
+| | necessity | possibility |
+|---|---|---|
+| **negation inside** (`mod · neg`) | «must not think» — unchanged | «can not think» — unchanged («may not» comes back «can not») |
+| **negation outside** (`neg · mod`) | REFUSED → **«does not necessarily think»**, also on the copula and in a question | REFUSED, and stays so — «does not possibly» is not English, so no flag |
+
+**The decompiler reads the adverb table backwards** when a negation sits outside a modality, after
+the closed classes and never before them; the adverb rides with the negation, so every verb form
+already built takes it. **`db/0035`** flags `necessarily` `spoken` — the word the corpus attests,
+and unambiguous for ¬□. Keyed on MEANING (`Decompiler._key`), which the migration's `_meaning()`
+equals on every row; position is word order and stays frame. One column added,
+`AdverbKindDoc.spoken`, copying `ClosedClassDoc.spoken` — the model had nowhere to carry the flag.
+Refused rather than half-said: ¬□¬ · a negated modality beside a second modality · an imperative.
+
+| | before | after |
+|---|---|---|
+| drill | 67 · 4 · 16 | byte-identical |
+| fixpoint | 73 · 13 · 1 · of 71 whole 63 · 7 · 1 | **74 · 13 · 0 · of 71 whole 64 · 7 · 0** |
+| UD gate | 34 · 0 · 11 | identical |
+
+**⚑ Found — two compiler errors about modal scope, reproduced by the QM:**
+1. **the compiler ignores WORD ORDER for an adverb's scope** — «A calculator necessarily does not
+   think» (□¬) compiles to `neg · mod`, ¬□: **a wrong claim with no warning**. Likewise «possibly
+   does not» → ¬◇. Which side of «not» the adverb stands on is the tree's shape — frame
+2. **where «not» scopes over an AUXILIARY is a fact about each word**, and the code assumes it is
+   always inside: «must not» □¬, but «need not» ¬□, «cannot» ¬◇, «may not» ambiguous. «A calculator
+   cannot think» compiles to a bare `think` with `cannot` unplaced — the opposite claim, recorded
+   only as a word left over. **A per-word fact is knowledge**: rows, for the Captain to rule
+3. **«So» with no row before it is lost in silence** — the join is never built and nothing enters
+   `unplaced` or `abstained`; the loss G4 closed for relative clauses, in the compiler

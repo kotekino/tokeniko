@@ -390,23 +390,95 @@ def test_a_NEGATION_applies_to_what_FOLLOWS_it_and_that_is_the_whole_difference(
     assert decompiler.decompile(zip_(("b", "neg"))).text == "Every glitterer is not gold."
 
 
-def test_a_MODALITY_is_an_auxiliary_and_a_negation_outside_it_is_REFUSED(decompiler):
-    """«a calculator can think» — and «a calculator does not NECESSARILY think» is an adverb the
-    table does not carry. «must not» is not «not must», so saying the modal would move the negation
-    inside it and claim the opposite: the row is not said at all."""
-    plain = decompiler.decompile(Zip(rows=[
-        ModalityRow(name="m", scopes="t", modality=Modality.POSSIBILITY),
-        row("t", predicate="think.v", experiencer=Box(head="calculator.n")),
-    ]))
-    negated = decompiler.decompile(Zip(rows=[
+def _modal_zip(*prefix):
+    """«a calculator thinks» under the prefix rows given, in the order given — which is scope order."""
+    made = {"neg": NegationRow(name="n", scopes="t"),
+            "nec": ModalityRow(name="m", scopes="t", modality=Modality.NECESSITY),
+            "pos": ModalityRow(name="m", scopes="t", modality=Modality.POSSIBILITY)}
+    return Zip(rows=[*(made[p] for p in prefix),
+                     row("t", predicate="think.v", experiencer=Box(head="calculator.n"))])
+
+
+def test_a_MODALITY_is_an_auxiliary_and_a_negation_INSIDE_it_follows_it(decompiler):
+    """«a calculator can think» · «a calculator must not think» — □¬: the auxiliary stands before
+    «not», so a negation after the modality in scope order is said after it in the clause."""
+    assert decompiler.decompile(_modal_zip("pos")).text == "Calculator can think."
+    assert decompiler.decompile(_modal_zip("nec", "neg")).text == "Calculator must not think."
+
+
+def test_a_negation_OUTSIDE_a_necessity_is_said_with_the_adverb_after_it(decompiler):
+    """**¬□ — «does not NECESSARILY think»** (`db/0035`, the fixpoint's G10). An auxiliary cannot say
+    it: «must not» puts the negation inside and claims the opposite. An adverb stands AFTER «not»,
+    so the order says the scope, and the adverb is the one curation flagged `spoken`. It rides with
+    the negation, so every carrier — do, the copula, a question's inversion — takes it unchanged."""
+    out = decompiler.decompile(_modal_zip("neg", "nec"))
+    assert out.whole
+    assert out.text == "Calculator does not necessarily think."
+
+    copular = decompiler.decompile(Zip(rows=[
         NegationRow(name="n", scopes="t"),
         ModalityRow(name="m", scopes="t", modality=Modality.NECESSITY),
+        row("t", patient=Box(head="calculator.n", determination=Determination.INDEFINITE),
+            complement=Box(head="mind.n", determination=Determination.INDEFINITE)),
+    ]))
+    assert copular.text == "A calculator is not necessarily a mind."
+
+
+def test_a_negation_OUTSIDE_a_possibility_is_still_REFUSED(decompiler):
+    """¬◇ has no spoken adverb — «does not possibly think» is not how English says it, and «cannot»
+    is a closed-class form with its own scope question. Refused, and the reason named: saying «can
+    not» would move the negation inside, ◇¬, which is a different claim."""
+    out = decompiler.decompile(_modal_zip("neg", "pos"))
+
+    assert out.text == ""
+    assert any("negation outside a possibility" in said for said in out.refused)
+
+
+def test_a_negation_on_BOTH_sides_of_a_necessity_is_refused_rather_than_halved(decompiler):
+    """¬□¬ — one carrier for two negations. Dropping either says something the zip does not."""
+    out = decompiler.decompile(Zip(rows=[
+        NegationRow(name="n1", scopes="t"),
+        ModalityRow(name="m", scopes="t", modality=Modality.NECESSITY),
+        NegationRow(name="n2", scopes="t"),
         row("t", predicate="think.v", experiencer=Box(head="calculator.n")),
     ]))
 
-    assert plain.text == "Calculator can think."
-    assert negated.text == ""
-    assert any("negation outside" in said for said in negated.refused)
+    assert out.text == ""
+    assert any("cannot both be said" in said for said in out.refused)
+
+
+def test_EVERY_adverb_curation_gave_a_voice_can_be_REACHED(decompiler):
+    """`test_EVERY_form_curation_gave_a_voice_can_be_REACHED` for the second roster: one voice per
+    meaning, so the flags and the index keys are the same count — and a flag the lookup cannot hear
+    is `db/0028`'s silent loss again."""
+    flagged = [r for r in decompiler.adverbs._rows if r.get("spoken")]      # noqa: SLF001
+
+    assert flagged, "the adverb table carries no voice — `db/0035` did not land"
+    assert len(decompiler._adverb_spoken) == len(flagged), (                # noqa: SLF001
+        "two flagged adverbs share a meaning and one of them will never be spoken")
+
+
+def test_the_fixpoint_s_t_md_2_comes_back_as_the_zip_it_went_out_as():
+    """**THE ROUND TRIP ITSELF** — the one the fixpoint scored SILENT until `db/0035`. Sentence to
+    zip to sentence to zip, and the two zips must be IDENTICAL: the negation still outside the
+    necessity, which is the whole of the meaning. The discourse «So» reaches neither zip."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider("So a calculator does not necessarily think."),
+                              DRILL_CONTEXT).zip
+    assert [r.kind for r in first.rows][:2] == ["negation", "modality"], "the compiler moved"
+
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    assert out.text == "A calculator does not necessarily think."
+
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+    assert canonical(second) == canonical(first)
 
 
 def test_a_DOMAIN_is_fronted_and_an_unmarked_one_is_recorded_instead(decompiler):

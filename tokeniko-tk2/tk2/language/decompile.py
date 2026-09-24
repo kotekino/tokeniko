@@ -80,6 +80,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
+from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import FUSED_QUANTIFIER, ClosedClasses, standing_closed_classes
 from tk2.language.inflect import (
     PARTICIPLE, PAST, PLURAL, PRESENT, Inflections, standing_inflections,
@@ -233,8 +234,13 @@ class Decompiler:
 
     def __init__(self, table: ClosedClasses | None = None,
                  inflections: Inflections | None = None,
-                 context: Context = NO_CONTEXT) -> None:
+                 context: Context = NO_CONTEXT,
+                 adverbs: AdverbKinds | None = None) -> None:
         self.table = table if table is not None else standing_closed_classes()
+        #: **THE SECOND ROSTER, READ BACKWARDS** (`db/0035`) — the compiler's own `adverbs`, and for
+        #: the compiler's reason: «what does this word compile to» has two tables. Asked only where
+        #: the closed classes cannot voice a meaning in its position, and never before them.
+        self.adverbs = adverbs if adverbs is not None else standing_adverb_kinds()
         #: The spelling rule and the words it gets wrong (`db/0022`). Without it every clause is a
         #: string of lemmas, and a lemma verb is an IMPERATIVE to the parser — 26 of the round
         #: trip's first 32 failures were that one artefact.
@@ -246,6 +252,7 @@ class Decompiler:
         self.context = context
         self._by_meaning = self._invert(self.table)
         self._spoken = self._voices(self.table)
+        self._adverb_forms, self._adverb_spoken = self._adverbs_by_meaning(self.adverbs)
         self._pronouns = self._persons(self.table)
         #: The marker a possessor is said with after its noun — «the result OF perception». The
         #: name is the Box's own FIELD, as `_possessive`'s clitic is looked up by it.
@@ -297,6 +304,37 @@ class Decompiler:
             found[cls._key(row.get("role"), row.get("compiled") or {},
                            features.get("sort"), features.get("takes_number"))] = row["form"]
         return found
+
+    @classmethod
+    def _adverbs_by_meaning(cls, adverbs: AdverbKinds) -> tuple[dict, dict]:
+        """MEANING → the adverbs that carry it, and MEANING → the one flagged `spoken` (`db/0035`) —
+        `_invert` and `_voices` for the second roster, built the same way and for the same reason.
+
+        **THE KEY IS `_key(None, compiled)`, and `db/0035`'s `_meaning()` is the same key.** An
+        adverb row has no closed-class role, sort or number; what it shares with the closed classes
+        is the `compiled` vocabulary, and that is the whole of its meaning here.
+        """
+        forms: dict[tuple, set[str]] = {}
+        spoken: dict[tuple, str] = {}
+        for row in adverbs._rows:                     # noqa: SLF001 — the table's own inverse index
+            compiled = row.get("compiled") or {}
+            if not compiled:
+                continue
+            key = cls._key(None, compiled)
+            forms.setdefault(key, set()).add(row["form"])
+            if row.get("spoken"):
+                spoken[key] = row["form"]
+        return forms, spoken
+
+    def the_adverb(self, **compiled) -> str | None:
+        """The adverb that voices this meaning — `the_form`'s discipline on the second roster: the
+        flagged row answers, a meaning with exactly one adverb answers, and otherwise nothing does
+        and the caller records the silence."""
+        key = self._key(None, compiled)
+        if key in self._adverb_spoken:
+            return self._adverb_spoken[key]
+        found = self._adverb_forms.get(key, set())
+        return next(iter(found)) if len(found) == 1 else None
 
     @staticmethod
     def _persons(table: ClosedClasses) -> list[dict]:
@@ -635,17 +673,30 @@ class Decompiler:
                 rd.out.refused.append(f"{name}: a negation over a {following.kind} cannot be said")
                 return None
 
-        modal = ""
+        modal = adverb = ""
         for element in prefix:
             if element.kind != "modality":
                 continue
             if id(element) in negated_by:
-                # «must not» is not «not must»: a negation OUTSIDE a necessity is «does not
-                # necessarily», an adverb the table does not carry. Saying the modal would move the
-                # negation inside it and claim the opposite, so the row is not said at all.
-                rd.out.refused.append(f"{name}: a negation outside a {element.modality.value} "
-                                      f"has no form in the table")
-                return None
+                # **«must not» is not «not must».** An auxiliary stands BEFORE the negation, so it
+                # can only put the negation inside: saying the modal here would claim the opposite.
+                # An adverb stands AFTER it — «does NOT NECESSARILY think» — and that is the one
+                # order English has for a negation outside a modality. The order is frame; WHICH
+                # adverb is the second roster's, read backwards (`db/0035`).
+                form = self.the_adverb(kind="prefix", element="modality",
+                                       modality=element.modality.value)
+                if form is None:
+                    rd.out.refused.append(f"{name}: a negation outside a {element.modality.value} "
+                                          f"has no form in the table")
+                    return None
+                if negate_clause or adverb or getattr(row, "truth", None) == DENIED:
+                    # «does not necessarily NOT think» — a second negation inside the first has no
+                    # carrier left, and dropping either one says something the zip does not.
+                    rd.out.refused.append(f"{name}: a negation outside a {element.modality.value} "
+                                          f"and another one inside it cannot both be said")
+                    return None
+                adverb = form
+                continue
             form = self.the_form("modality", kind="prefix", element="modality",
                                  modality=element.modality.value)
             if form is None:
@@ -653,14 +704,26 @@ class Decompiler:
                                       f"{element.modality.value} and none is preferred")
                 return None
             modal = form
+        if adverb and modal:
+            # Two modalities and one of them outside a negation: which one the negation sits between
+            # is the whole claim, and one auxiliary slot plus one adverb slot cannot show it.
+            rd.out.refused.append(f"{name}: a negated modality beside another modality cannot be "
+                                  f"ordered in one clause")
+            return None
 
         attitudes = [element for element in prefix if element.kind == "attitude"]
         imperative = self._imperative(row, attitudes, rd)
         if imperative is not None:
+            if adverb:
+                rd.out.refused.append(f"{name}: an imperative has no place for «not {adverb}»")
+                return None
             return imperative
 
-        body = self._body(row, rd, negated=negate_clause, modal=modal,
-                          embedded=embedded or bool(attitudes), asks=bool(attitudes))
+        # **THE NEGATION CARRIES THE ADVERB**: «not necessarily» is said where «not» is, so every
+        # carrier the clause already knows — do · is · will — takes it with no rule of its own.
+        body = self._body(row, rd, negated=negate_clause or bool(adverb), modal=modal,
+                          embedded=embedded or bool(attitudes), asks=bool(attitudes),
+                          adverb=adverb)
         if body is None:
             return None
 
@@ -695,14 +758,14 @@ class Decompiler:
         return body
 
     def _body(self, row, rd: _Reading, negated: bool, modal: str,
-              embedded: bool, asks: bool) -> _Said | None:
+              embedded: bool, asks: bool, adverb: str = "") -> _Said | None:
         if row.kind == "join":
             if negated or modal:
                 rd.out.unsaid.append(f"{row.name}: a join cannot carry a modality or a negation yet")
             return self._join(row, rd, embedded=embedded)
         if row.kind == "content":
             return self._clause(row, rd, negated=negated, modal=modal, embedded=embedded,
-                                asks=asks)
+                                asks=asks, adverb=adverb)
         rd.out.unsaid.append(f"{row.kind} row {row.name}")
         return None
 
@@ -897,7 +960,8 @@ class Decompiler:
     # -- the clause -----------------------------------------------------------------------------------
 
     def _clause(self, row: ContentRow, rd: _Reading, negated: bool, modal: str,
-                embedded: bool, asks: bool = False, imperative: bool = False) -> _Said | None:
+                embedded: bool, asks: bool = False, imperative: bool = False,
+                adverb: str = "") -> _Said | None:
         """One content row to one clause, or None when it cannot be said without lying."""
         boxes = dict(row.boxes)
         asked = isinstance(row.truth, Open)
@@ -919,6 +983,8 @@ class Decompiler:
             # the clause without its negation would say the OPPOSITE of the zip.
             rd.out.refused.append(f"{row.name}: the negation has no single form in the table")
             return None
+        if adverb:
+            negation = f"{negation} {adverb}"
         if row.pov is not None:
             rd.out.unsaid.append(f"{row.name}: a point of view held by "
                                  f"«{keys.word_of(str(getattr(row.pov.holder, 'head', '?')))}»")
