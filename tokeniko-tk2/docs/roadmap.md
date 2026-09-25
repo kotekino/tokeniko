@@ -177,13 +177,19 @@
       «and». Every drill zip is a TREE. Read-whole 64 → 65 of 71. Record `202609241130_…`
 - [x] `E3.3.2.5.1` **⚑ the zero relative — the gap's role when frames and supersense AGREE** *(09-25)* — `db/0038`;
       held-out 23 fresh cases: 7 right, 0 wrong. Read-whole 66 of 72. Record `202609241130_…`
+- [x] `E3.3.11` **⚑ the fixpoint sees SCOPE** *(09-25)* — one `sorted()` erased prefix order; each
+      target's prefix is now an ordered stack. Nothing was hiding: 76 · 11 · 0. Record `202609241130_…`
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] `E3.3.11` **⚑ THE FIXPOINT IS BLIND TO SCOPE** *(09-24)* — `canonical` sorts the rows, so □¬ and ¬□
-      compare equal; an instrument defect. Record `202609241130_…`
+- [ ] `E3.3.11.1 · .2` **⚑ TWO TRUTH ERRORS: a negation and an attitude** *(09-25)* — «I think that he
+      does not sleep» puts ¬ OUTSIDE the thinking; «I do not think that he sleeps» claims both.
+      Neg-raising is a reading for the Captain. Record `202609241130_…`
 - [ ] `E3.3.12` **⚑ «I remember the day I slept» is a WRONG COMPLETE ZIP** *(09-25)* — stanza's `obl:tmod` on the
       matrix; the withheld clause used to hide it. Seven bench cases. Record `202609241130_…`
+- [ ] `E3.3.11.3 – .8` **the scope reading's smaller findings** — the fixpoint blind to a chain's
+      truth (a ruling) · the drill gate blind to prefix order · «by by» · «need not» read as a verb ·
+      no domain before a modal · a modal carries no theatre. Record `202609241130_…`
 - [ ] `E3.3.2` **the fixpoint's 6 remaining** — `E3.3.2.8` correct English the provider misreads (a bench
       against the 66 FIXED first) · `E3.3.2.6` → `E3b.6.1` · first-leg misparses · `E3.3.2.4.1–.2`
       two bookkeeping defects · `E3.3.2.10.2` «So» / «and so» lost in silence · `E3.3.2.1.1` «so»

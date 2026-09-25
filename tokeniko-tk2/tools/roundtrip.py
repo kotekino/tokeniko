@@ -38,7 +38,7 @@ from tk2.language import standing_closed_classes  # noqa: E402
 from tk2.language.compile import Compiler  # noqa: E402
 from tk2.language.decompile import Decompiler  # noqa: E402
 from tk2.language.utterance import compile_utterance  # noqa: E402
-from tools.drill_gate import DISAGREED, DRILL_CONTEXT, compare  # noqa: E402
+from tools.drill_gate import DISAGREED, DRILL_CONTEXT, PREFIX_KINDS, compare  # noqa: E402
 
 
 def fixpoint(argv, args) -> int:
@@ -194,7 +194,23 @@ def canonical(zip_) -> dict:
     signed = {name: sign(name) for name in rows}
     body = zip_.model_dump(exclude_none=True)
     body.pop("unplaced", None)
-    body["rows"] = sorted(text for name, text in signed.items() if name not in absorbed)
+    # **THE PREFIX KEEPS ITS ORDER, AND ONLY WHERE THE FORMAT SAYS ORDER IS MEANING** *(E3.3.11,
+    # 2026-09-25)*. The rows were sorted whole, so `p0 modality · p1 negation · r0` (□¬, «must not»)
+    # and `p0 negation · p1 modality · r0` (¬□, «does not necessarily») signed the same two strings
+    # and compared EQUAL — every scope claim the fixpoint ever passed was unverified by it. The
+    # schema (req 35, `_PrefixRow`) is exact about where order lives: prefix elements are ordered
+    # relative to each other WHEN THEY SCOPE THE SAME TARGET, and between different targets «order
+    # says nothing». So each target's prefix is one entry, its elements in row order, outermost
+    # first — and the entries, like the matrix rows, are then free to sort. Every prefix kind rides
+    # this at once: ∀>∃ against ∃>∀, ¬∀ against ∀¬, de re against de dicto, a domain over a modality.
+    stacks: dict[str, list[str]] = {}
+    for name, row in rows.items():                 # a dict keeps the zip's own row order
+        if row.get("kind") in PREFIX_KINDS:
+            stacks.setdefault(row["scopes"], []).append(signed[name])
+    body["rows"] = sorted(
+        [text for name, text in signed.items()
+         if name not in absorbed and rows[name].get("kind") not in PREFIX_KINDS]
+        + [json.dumps(stack) for stack in stacks.values()])
     return body
 
 

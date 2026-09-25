@@ -496,8 +496,8 @@ def test_the_fixpoint_s_t_md_2_comes_back_as_the_zip_it_went_out_as():
 def test_a_negated_modal_comes_back_as_the_scope_it_went_out_as(text, scope, back):
     """The round trip for the two meanings `db/0036` taught the compiler. ¬◇ from «cannot» is said
     «cannot»; ¬□ from «need not» keeps the voice it already had — «does not necessarily», the flagged
-    adverb — and «need not» does not take it over. **The prefix ORDER is asserted apart**:
-    `canonical` sorts the rows, so it cannot tell □¬ from ¬□."""
+    adverb — and «need not» does not take it over. The prefix order is asserted apart as well: it
+    was written when `canonical` sorted the rows and could not tell □¬ from ¬□ (`E3.3.11`)."""
     from tk2.language import StanzaSkeletons, standing_closed_classes
     from tk2.language.compile import Compiler
     from tk2.language.utterance import compile_utterance
@@ -515,6 +515,30 @@ def test_a_negated_modal_comes_back_as_the_scope_it_went_out_as(text, scope, bac
     second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
     assert [r.kind for r in second.rows][:2] == scope
     assert canonical(second) == canonical(first)
+
+
+def test_the_fixpoint_s_comparison_sees_SCOPE_and_not_row_names():
+    """`E3.3.11`. The fixpoint's `canonical` sorted every row, so □¬ («must not») and ¬□ («does not
+    necessarily») compared EQUAL. The prefix order over one target is meaning; the rows' names and
+    the order between different targets are not."""
+    from tools.roundtrip import canonical
+
+    def zip_(*prefix, matrix="r0"):
+        return Zip(rows=[*prefix, row(matrix, predicate="think.v", experiencer="calculator.n")])
+
+    must_not = zip_(ModalityRow(name="p0", scopes="r0", modality=Modality.NECESSITY),
+                    NegationRow(name="p1", scopes="r0"))
+    not_necessarily = zip_(NegationRow(name="p0", scopes="r0"),
+                           ModalityRow(name="p1", scopes="r0", modality=Modality.NECESSITY))
+    renamed = zip_(ModalityRow(name="m", scopes="c", modality=Modality.NECESSITY),
+                   NegationRow(name="n", scopes="c"), matrix="c")
+    assert canonical(must_not) != canonical(not_necessarily)
+    assert canonical(must_not) == canonical(renamed)
+
+    every = QuantifierRow(name="q", scopes="r0", binds="X", quantity=Quantity.UNIVERSAL,
+                          restriction=Box(head="calculator.n"))
+    assert canonical(zip_(every, NegationRow(name="n", scopes="r0"))) != \
+        canonical(zip_(NegationRow(name="n", scopes="r0"), every))
 
 
 def test_a_DOMAIN_is_fronted_and_an_unmarked_one_is_recorded_instead(decompiler):

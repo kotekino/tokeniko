@@ -396,3 +396,45 @@ takes the patient) fills the box the object gap needs, and the clause is withhel
 passive is said as an active: «The day she was born» → «The day that she bore» (the decompiler, old)
 · «I» lowercased inside a relative clause · the drill's «If I tell you something…» row has no
 `know.v` (E1e) · `test_migrations` is DB-bound at ~40 minutes.
+
+## `E3.3.11` — the fixpoint sees scope *(1st Officier, 09-25)*
+
+**The blindness was one line**: the final `sorted(...)` over every row's signature in
+`tools/roundtrip.canonical`. The pointer structure was already right — each prefix row's signature
+carries the signature of the row it scopes — so `□¬` and `¬□` produced the same two strings, and
+sorting deleted the only thing that told them apart. The schema is exact about where order means
+(req 35): prefix rows are ordered **relative to each other when they scope the same target**, and
+between targets order says nothing. `canonical` now emits each target's prefix as one ORDERED stack
+and sorts only the stacks and the matrix rows. All five prefix kinds at once.
+
+**Nothing was hiding.** Fixpoint 76 · 11 · 0 and read-whole 66 of 72, identical; six FIXED cases
+carry two or more prefix rows on one target and all six come back in order («Clouds can produce rain
+but not every cloud produces rain» ¬∀ · «So a calculator does not necessarily think» ¬□ · «Every
+teacher gave some student a book» ∀∃ · «All that glitters is not gold» ∀¬ ×2 · «In Italy, you may
+drive in France…» D◇); and 31 scope sentences outside the corpus, judged by both versions, move
+nothing. **The earlier passes were right — they were only unchecked.** Drill and UD gate identical
+(neither uses `canonical`, verified).
+
+**Findings under `E3.3.11`:**
+- **`E3.3.11.1` ⚑ TRUTH ERROR — «I think that he does not sleep»** compiles `¬ · attitude(think) ·
+  sleep`, both over `sleep`: the negation sits OUTSIDE the attitude — «it is not so that I think he
+  sleeps». The embedded clause's negation is placed above the attitude row its clause dissolves
+  into. Reproduced by the QM
+- **`E3.3.11.2` ⚑ TRUTH ERROR — «I do not think that he sleeps»** compiles a claimed `think.v`
+  content row with ¬ over it PLUS `attitude(think)` over `sleep`: the zip says both «I think he
+  sleeps» and «I do not think». Nothing unplaced, round trip FIXED. Reproduced by the QM. *(English
+  also has NEG-RAISING here — «I don't think he sleeps» usually means «I think he doesn't» — which
+  is a reading for the Captain, not a fix)*
+- **`E3.3.11.3`** `canonical` is also blind to the TRUTH of a flattened `and`/`or` chain (claimed
+  vs denied vs open compare equal; an unclaimed inner join is absorbed into a claimed one). A scratch
+  tightening moves nothing today. Wants a ruling: tighten or not
+- **`E3.3.11.4`** the DRILL GATE is blind to prefix order too — `_prefix_pass` pairs on (kind,
+  target, about) and never compares order. A separate instrument
+- **`E3.3.11.5`** «A woman is loved by every man» → «…loved BY BY every man» (decompiler; FIXED only
+  because stanza tolerates it)
+- **`E3.3.11.6`** «Legally, you need not drive» — «need» read as the main verb, `drive` unplaced,
+  no modality, no domain
+- **`E3.3.11.7`** «In Italy, you must not drive» / «…cannot drive» raise no domain: «in Italy»
+  becomes a location (the bare fronted locative, `E3.9.1`, meeting a modal)
+- **`E3.3.11.8`** «necessarily does not» / «possibly does not» come back MOVED on the theatre only —
+  a modal carries none (`E3.3.2.10.1`'s «could loses its past», same mechanism)
