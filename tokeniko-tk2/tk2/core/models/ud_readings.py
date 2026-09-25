@@ -27,7 +27,7 @@ what differs, a miss is an ANSWER rather than an absence, and the ordinary readi
                                            `MarkerSelector`'s rule vocabulary (`db/0038`)
 
 **WHY EACH OF THESE IS A ROW AND NOT A SET IN CODE** — E3's frame/knowledge audit, 2026-09-22
-(`docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`). Each was a frozenset whose
+(`docs/E3-parser-compiler/202609220930_the-frame-knowledge-audit.md`). Each was a frozenset whose
 membership encoded an argument: «a vocative is addressing, not content» is an E2 ruling, «nobody
 asserts that you swim» is a semantic judgement about English complementation, and «a proper noun's
 number is not evidence» is a claim about how stanza tags. **A one-member set is never a set — it is

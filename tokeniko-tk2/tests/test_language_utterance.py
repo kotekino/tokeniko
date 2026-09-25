@@ -256,7 +256,7 @@ def test_REPORTED_speech_does_not_rotate(compiler):
     on the joiner's `asserts: matrix`, a flag that lives on the word «that»: present in precisely
     the case where rotating is wrong, absent from the bare quoted `ccomp` where it is right.
     Found by the drill's quotation block the next morning (`q-2` `q-4` `q-7` `q-9`); read
-    `docs/parser-compiler/202609170533_the-quotation-block.md`.
+    `docs/E3-parser-compiler/202609170533_the-quotation-block.md`.
 
     **The attitude is still raised and still records its addressee** — schema v3 is untouched. What
     changed is only what the rotation is triggered by.

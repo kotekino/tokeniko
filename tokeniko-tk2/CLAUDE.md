@@ -20,10 +20,14 @@ the knowledge that stops a question being reopened badly.
 Before working on any point, read the chapter it belongs to, **in full**. The chapters:
 
 ```
-docs/tkzip/  docs/dictionary/  docs/parser-compiler/  docs/evaluator/  docs/brain/
-docs/rules/  docs/heart/  docs/senses/  docs/micro-nn/  docs/rag/  docs/data-modeling/
-docs/datatier/  docs/body/  docs/stack/  docs/tooling/  docs/website/
+docs/E0-data-modeling/  docs/E0-datatier/  docs/E0-stack/  docs/E1-dictionary/  docs/E1e-tooling/
+docs/E2-tkzip/  docs/E3-parser-compiler/  docs/E4-evaluator/  docs/E5-micro-nn/  docs/E6-brain/
+docs/E6-rules/  docs/E7-heart/  docs/E8-senses/  docs/E8-rag/  docs/E10-body/  docs/E10-website/
 ```
+
+**A chapter is prefixed with the epic that OWNS it** — where it was born; its `requirements.md` opens
+with `*Serves: …*` for every id it elaborates. `docs/README.md` maps the old folder names (still in the
+applied migrations, which are immutable, and in `.claude/briefs/`) to the new ones.
 
 Plus `docs/charter.md` (the phase-1 record: the method, the inheritance ledger, the open-questions
 ledger), `docs/carried-in.md` (what the tk2 filter moved off the v1 road) and `docs/ideas.md`.
@@ -47,11 +51,11 @@ Stated in full at the top of `docs/plan.md`, and they decide arguments here:
 ## Non-obvious sources
 
 - `../docs/notes.xlsx` — the Captain's original working spreadsheet, where the idea started. The
-  `TKZIP2` tab is transcribed at `docs/tkzip/origin-the-excel-draft.md`. **Other tabs are not yet
+  `TKZIP2` tab is transcribed at `docs/E2-tkzip/origin-the-excel-draft.md`. **Other tabs are not yet
   transcribed**: `General schema` · `Key Concepts` · `LL` · `Components` · `Compiler` · `Examples` ·
   `Problems` · `Next step` · `Inconsistencies`. Read one before reopening a question it might already
   answer. *(An .xlsx is a zip of XML — `zipfile` + `xml.etree` reads it with no dependency.)*
-- `docs/dictionary/origin-prototype/` — the **superseded** dictionary instrument (né
+- `docs/E1-dictionary/origin-prototype/` — the **superseded** dictionary instrument (né
   dictionary-review), kept as the record of what the prototype proved before E1 industrialised it.
   Cited by docstrings across `tk2/`; **not runnable equipment** and not to be confused with `tools/`.
 - `../tokeniko-tk1/docs/ref/captain-hunches.md` — the Captain's private future strategy. Awareness
@@ -67,11 +71,12 @@ The root rule says reconcile before proposing. Concretely, here, that is four ch
    **One line per item**: the reasoning belongs in the chapter note, and a roadmap that grows prose
    is a roadmap he can no longer read at a glance.
 2. **`plan.md`** — does the epic's task list still match what the epic turned out to be? New tasks
-   found by the work go in, with their measurement. A task gets a number only if it is a real
-   sibling, and that number must also appear in `roadmap.md`.
+   found by the work go in, with their measurement. **Every item has its nested id** (root
+   `CLAUDE.md`): a new one takes the next free child of its SOURCE — `E3.3.2.10.1` was found while
+   building `E3.3.2.10` — and the same id appears in `roadmap.md`.
 3. **`landed.md`** — only when an epic CLOSES. Items move there, never copied.
-4. **The chapter** — a ruling or a measurement goes in `docs/<chapter>/` as a dated note, and the
-   `requirements.md` line it amends says so.
+4. **The chapter** — a ruling or a measurement goes in `docs/<chapter>/` as a dated note, headed
+   `*Roadmap: <ids>*`, and the `requirements.md` line it amends says so.
 
 ## THE GATE, CONCRETELY — the two commands, and which files own which section
 

@@ -66,6 +66,27 @@ reads it. This costs one edit and saves him the work of reconstructing what I me
 called `2d` that lived in `plan.md`, indented so markdown never even numbered it, and was then used
 in chat as though it were shared.
 
+**AND EVERY ID IS NESTED UNDER ITS SOURCE, AND NEVER CHANGES** *(the Captain, 2026-09-25)*.
+
+> *«Every sub-facts/event/task/operation/newpoint that you normally refer to with some counter (every
+> time different) should, instead, be rigidly dependent from the source from which it's born. […] Any
+> "label" that is not hierarchically dependent by its source should be avoided: I can't grasp
+> quickly what it is. Vice versa, nesting all the additions gives me a clear understanding nearly at
+> first sight.»*
+
+- epic E22 has **E22.1 … E22.12**; a branch found on E22.6 is **E22.6.1**; its issues **E22.6.1.1** …
+- **an id is an IDENTITY, not a position** — assigned at birth, never renumbered, never reused, so
+  every reference survives. A list's order is execution order; its ids need not be sequential. An
+  item moved elsewhere takes a new id in its new home, and the old place keeps a one-line pointer
+- **plan and roadmap carry the same ids**, and the chapter notes in `docs/<scope>/` carry the ids
+  they elaborate, so a mentioned id leads straight to its reasoning
+- **no free-floating labels** — not «G5», not «point a», not «option 2» for a thing that outlives
+  the message. A drill case id (`t-ng-4`) names EVIDENCE, not work: never used bare in conversation,
+  always with its sentence
+
+The failure it was written for: a reading of eleven sentences was labelled «G1–G10» in one note and
+in chat, and every mention cost him a reconstruction.
+
 ## SYNTHESIS IS NOT A COURTESY — IT IS HOW STEERING SURVIVES *(the Captain, 2026-09-17)*
 
 > *«As a human I spend time reading a lot of tokens: I don't have an upper limit like a model, but I

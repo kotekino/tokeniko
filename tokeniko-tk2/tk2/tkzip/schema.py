@@ -88,7 +88,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # was to leave the format alone and let the resolver read the `recipient` box of a `say` row — which
 # adds nothing to the schema and asks the resolver to KNOW THAT SAYING-VERBS ARE SPECIAL, i.e. a
 # closed set of verbs in code, which is what two days of this epic have been moving into rows.
-# Ruled by the Captain: the field. Record: `docs/parser-compiler/202609161349_the-person-axis.md`.
+# Ruled by the Captain: the field. Record: `docs/E3-parser-compiler/202609161349_the-person-axis.md`.
 # **v7, 2026-09-21 — A NUMBER IS `sg` OR `pl`, AND THE FORMAT NOW REFUSES ANYTHING ELSE.** The
 # column was `str | None`, and `both` · `neither` · `either` · `each other` carry `number: dual` in
 # the closed-class rows — meaning *this word is about exactly TWO*, which is a fact about the SET

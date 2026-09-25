@@ -23,7 +23,7 @@ domain» fits all three drill cases and also swallows «In the morning, I go to 
 
 Same relation, same marker, same fronting, same comma. If nothing in the parse separates them, then
 the station must ABSTAIN there rather than guess — which is the placement floor's answer
-(`docs/dictionary/202609191500_the-placement-floor.md`) and the confidence bench's, and it is a
+(`docs/E1-dictionary/202609191500_the-placement-floor.md`) and the confidence bench's, and it is a
 result, not a failure.
 """
 

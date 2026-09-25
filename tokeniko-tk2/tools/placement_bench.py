@@ -116,7 +116,7 @@ def report_bar() -> int:
         print("  trusts without ever trusting wrongly, and abstains on the rest. Over the whole")
         print("  build that is 31.5% of relations placements and 0.0% of distributional ones, which")
         print("  cannot be otherwise: a sense reaches D by stating no relations at all.")
-        print("  Record: `docs/dictionary/202609191500_the-placement-floor.md`.")
+        print("  Record: `docs/E1-dictionary/202609191500_the-placement-floor.md`.")
     return 1 if crossed else 0
 
 

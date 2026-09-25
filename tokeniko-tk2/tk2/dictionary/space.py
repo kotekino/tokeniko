@@ -610,7 +610,7 @@ class DictionarySpace:
         is the sin (parser-compiler req 8). *The alternative on the table trusted every R placement
         and would have carried six wrong trusts in twenty.*
 
-        Record: `docs/dictionary/202609191500_the-placement-floor.md`.
+        Record: `docs/E1-dictionary/202609191500_the-placement-floor.md`.
         """
         out: dict[str, list[Neighbour]] = {}
         for sense_key in sorted(self._senses_by_word.get(keys.normalize_word(word), ())):

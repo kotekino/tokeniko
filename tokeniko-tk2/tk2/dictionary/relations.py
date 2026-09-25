@@ -6,7 +6,7 @@ and accountable per cell. What two definitions happen to share is a different qu
 different answer, and it is D's (T4); `gloss_overlap` is therefore not a relation of R's and never
 was one, whatever the prototype's single weight table made it look like.
 
-WHAT THE PROTOTYPE PROVED AND THIS INDUSTRIALISES (`docs/dictionary/origin-prototype/tk2_matrix.py`, the 2026-08-12
+WHAT THE PROTOTYPE PROVED AND THIS INDUSTRIALISES (`docs/E1-dictionary/origin-prototype/tk2_matrix.py`, the 2026-08-12
 review): the walk, the weights, the sign, and the four decisions worth restating because a rewrite
 is exactly where they get lost —
 

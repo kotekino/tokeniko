@@ -171,7 +171,7 @@ are left in the ledger because a ledger records what happened.*
 `docs/<chapter>` and see if we missed something in the old requirements» — and because of how he
 framed the audit: **«if we ruled in some direction, it is not relevant. What is relevant is the final
 status, how much it differs from all the original requirements, and what we can do to fix.»** The
-`docs/dictionary/` audit measured all 21 requirements against the sealed base: **11 clean · 6 partial
+`docs/E1-dictionary/` audit measured all 21 requirements against the sealed base: **11 clean · 6 partial
 · 2 LOST · 1 contradicted by construction · 1 superseded.***
 
 - [x] **the audit itself** — 21 statuses corrected in the chapter (`202609141115_the-e1-audit.md`). What it found: **req 2 «eat stays near food» was marked PROVEN at +0.405 and read +0.048** — their glosses share nothing, because D measures what two definitions SHARE and the real relation is that eat's definition NAMES food · **req 10 said «never blended into one float» and the reader returned `cos(R + 0.15·D)`** · **req 20's two hand-approved curated edges were GONE**, zero curated cells in the base, because a curated edge was an OUTPUT of a build and not an INPUT to one.

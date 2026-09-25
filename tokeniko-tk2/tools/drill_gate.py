@@ -30,7 +30,7 @@ filler under two names, which is precisely the defect this gate was built for.
 attitude's holder, verb, addressee and strength, every negation, modality, domain and quantifier, and
 every join's truth slot — were outside the instrument. A prefix row is resolved to the row it SCOPES
 (`target_keys`, so no name is ever compared), pairs on what it IS (`about`) and is compared on what
-it SAYS (`says_what`). Record: `docs/parser-compiler/202609190900_the-gate-sees-the-prefix.md`.
+it SAYS (`says_what`). Record: `docs/E3-parser-compiler/202609190900_the-gate-sees-the-prefix.md`.
 """
 
 import argparse

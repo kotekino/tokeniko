@@ -1,0 +1,29 @@
+# brain — REQUIREMENTS
+
+*Serves: `E6` — the ids of `roadmap.md` / `plan.md`*
+
+*What the brain must be. One line each. Evidence lives in the dated `_notes.md` beside this.*
+
+1. **The brain is an orchestrator of inner actions** — v1's compensator half dies; the dual read absorbs it.
+2. **The inner actions**: wonder · chain · retreat · summarize · collapse-to-act.
+3. **Summarizing is creation** — it mints a NEW zip.
+4. **Provenance is mandatory** — a summary retreats with its parents; self-talk's provenance is himself.
+5. **Minting ≠ believing** — he can disbelieve himself; every self-thought passes the evaluator as a candidate.
+6. **A ladder of optional services, one mandatory rung**: typofixer · translator · parser/compiler · EVALUATOR — the chain depends on the input; the evaluator is the KB's door, never skipped, even by self-talk.
+7. **WSD is the evaluator's job** — consistency needs the KB; the parser emits the lemma with the sense slot OPEN: an unbound variable like any other.
+8. **The loop is dna** (its existence, its cpu-bound timing); the HOW is kb — triggers, levels (0–1), personality.
+9. **Seeding is the default** — no hardwired fallback rules; the seed is stored rules, and they MAY change like everything in kb.
+10. **Catatonia is a legal state** — the dna loop ticks on empty; rescue comes only from outside, through the senses.
+11. **Phases are kb reweighting** — dna knows only that they exist; summarize and retreat are (sub-)phases.
+12. **Memory proposes by cosine — R'S cosine (ruled 2026-09-14); chaining runs on the working set** — a small «in mind» set, geometrically refreshed. **[WHOSE cosine was never said, and it matters: D's was benched as a proposer and cannot rank — 5.9% precision@10 against gold, 36.6% junk, and no variant of D helps, because `eat.v` shares 49 of its ~50 gloss columns with `lead.v` on the word «take». R scores 28.7%. **R proposes and there is no fallback**: where R is silent (14 of 4,555 dimensions, 0.3%) NOTHING is proposed, because the fallback it replaces was offering cosines of +0.000. Evidence: `../dictionary/202609141853_d-cannot-propose.md`.]**
+13. **Truth is the deterministic invariant** — fuzziness grants the shades there; unpredictability lives in CHOICE only (tie-breaks, sampling, what to wonder next).
+14. **Urge decay is physiological** — dna physics, never moved by experience.
+15. **Everything is rows**: kb → db (rw) · parameters → db (r) · hardwired logic → db (r); the body is an INTERPRETER of the db, deploys are migrations; r-data cached at boot, refreshed on a slow tick.
+16. **Retreat timing is a kb threshold** — instant repair vs sleeping on it, variable per context.
+17. **Instinct = micro-neural-nets over iterated threshold decisions** — blackbox, positive-feedback-fed; it only ever picks among already-legal options (no provenance ⇒ it never mints or admits a belief), and a kb rule outranks it ALWAYS.
+18. **Reward is a family, not a scalar** — an open equation closing is the intellectual reward; the second family is the Heart (chapter below).
+
+## The Heart
+
+*Seeded here 2026-08-13 (H1–H5); conceived in full 2026-08-22 and MOVED to its own component —
+the living requirements are `../heart/requirements.md` (register #5).*

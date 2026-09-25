@@ -160,7 +160,7 @@ migration. The floor every later epic writes on.
 
 **Tasks**
 1. **Repo scaffold** — `tokeniko-tk2/` grows the package beside `docs/`: `lib/` (core, models),
-   `db/` (migrations), `tools/`; python + pyproject, stack per `stack/requirements.md` (numpy-scale,
+   `db/` (migrations), `tools/`; python + pyproject, stack per `E0-stack/requirements.md` (numpy-scale,
    bunnet/pydantic/mongo, no heavyweight ML).
 2. **The write-class schema** — every collection declares kb (rw) · parameters (r) · hardwired-logic
    (r); pydantic models are the single source of shape (data-modeling 4, 6).
@@ -180,7 +180,7 @@ sample migration alters a parameter live (slow-tick pickup, no restart).
 
 ## E1 — The dictionary at scale *(the two-matrix base, industrialized)*
 
-**Goal:** the PoC (983 dims, `docs/dictionary/origin-prototype/`) becomes the full base: every lexicon word under
+**Goal:** the PoC (983 dims, `docs/E1-dictionary/origin-prototype/`) becomes the full base: every lexicon word under
 POS-split keys, R and D built whole, the curation loop production-grade. **Assets migrate** — the
 curated senses, scaffolds and anchor sets cross intact (inheritance ledger).
 
@@ -462,7 +462,7 @@ did, so the same +0.15 reads **NEAR for 99.7%** of relations-placed senses and 8
 distribution-placed ones. **A floor that says NEAR to everything is not discriminating** — it is a
 threshold calibrated on another population. Nothing is wrong with the base's floor, which is the
 point: the sense layer needs its OWN, fitted its own way, and E3 is where a placement first has to
-be trusted or refused.* ***ANSWERED 2026-09-19 (E3 task 6): it needs no floor of its own. On forty ruled placements the cosine does not separate the trustworthy from the rest in either half — what separates them is WHICH HALF placed the sense. Record `docs/dictionary/202609191500_the-placement-floor.md`.***
+be trusted or refused.* ***ANSWERED 2026-09-19 (`E3.6`): it needs no floor of its own. On forty ruled placements the cosine does not separate the trustworthy from the rest in either half — what separates them is WHICH HALF placed the sense. Record `docs/E1-dictionary/202609191500_the-placement-floor.md`.***
 
 ---
 
@@ -472,7 +472,7 @@ be trusted or refused.* ***ANSWERED 2026-09-19 (E3 task 6): it needs no floor of
 
 **Why it exists.** At E2's close the Captain called in a parked order: *«go through all the docs of
 `tokeniko-tk2/docs/<chapter>` and see if we missed something in the old requirements.»* The
-`docs/dictionary/` audit measured all 21 requirements against the sealed build and found **11 clean ·
+`docs/E1-dictionary/` audit measured all 21 requirements against the sealed build and found **11 clean ·
 6 partial · 2 lost · 1 contradicted by construction · 1 superseded**.
 
 **His framing, and it governs the epic:** *«as you were wrong in not taking into consideration the
@@ -482,7 +482,7 @@ from all the original requirements, and what we can do to fix.»* **So E1d is ju
 chapter as written, never against what was ruled later.**
 
 **Tasks**
-1. ~~**The audit, written in**~~ **— DONE 2026-09-14.** `docs/dictionary/202609141115_the-e1-audit.md`;
+1. ~~**The audit, written in**~~ **— DONE 2026-09-14.** `docs/E1-dictionary/202609141115_the-e1-audit.md`;
    21 statuses corrected in place, the original wording left untouched because what a requirement SAID
    is part of the record.
 2. **SEPARATE READS (req 10)** — the requirement says R and D are *«consulted separately, every answer
@@ -521,7 +521,7 @@ chapter as written, never against what was ruled later.**
    0.10 on a plateau to 0.20 (19 of 37). **The floor is NOT moved** (the Captain's ruling): at the
    standing 0.28 v13 decides 17, one fewer than T5 (`buy.n~buy.v` falls to +0.246), so the re-ruling
    after the rebuild is a real dependency.
-   **Decision record: `docs/dictionary/202609141714_requirement-16.md`.**
+   **Decision record: `docs/E1-dictionary/202609141714_requirement-16.md`.**
 
 7. ~~**APPLY, REBUILD, RE-MEASURE, RULE THE FLOOR**~~ **— DONE 2026-09-14, on the Captain's order.**
    `0003`–`0006` applied; the base rebuilt as **`969766250c02`** with the sense layer and read back
@@ -563,7 +563,7 @@ fingerprint every consumer reads. The original reason is sound — `eat.v NEAR f
 measured if `food.n` is not in the space — but that justifies *a bar-measuring RUN* adding them, not
 *the standing policy* declaring them for everybody.
 
-### THE THIRD KINGDOM
+### `E1e.7` THE THIRD KINGDOM
 
 The frame/knowledge rule governs the APP'S BUSINESS LOGIC, and the Captain drew the line explicitly:
 
@@ -581,21 +581,21 @@ runtime, so it is app knowledge.
 
 ### THE TASKS
 
-1. **Sweep E0 → E3 for test material in the BL** — formal order included: what does app code import,
+`E1e.1` **Sweep E0 → E3 for test material in the BL** — formal order included: what does app code import,
    read or configure that exists to judge it? `dictionary_bar` is the known case; the sweep is for
    the ones nobody has noticed.
-2. **`dictionary_bar` out of the body.** To the test database, or to `bar_snapshot.json` alone,
+`E1e.2` **`dictionary_bar` out of the body.** To the test database, or to `bar_snapshot.json` alone,
    which already exists, is hash-pinned, and already runs with no body reachable.
-3. **The body keeps only PROVENANCE** — `dictionary_builds.bar_version` + `bar_fingerprint`, a claim
+`E1e.3` **The body keeps only PROVENANCE** — `dictionary_builds.bar_version` + `bar_fingerprint`, a claim
    checkable against the snapshot.
-4. **Bar words stop being standing seeds** and become `extra_seeds` on a measuring run — a mechanism
+`E1e.4` **Bar words stop being standing seeds** and become `extra_seeds` on a measuring run — a mechanism
    that already exists and whose own docstring is the argument for this: *«what a run argues with the
    standing policy… so a run that added seeds can never be mistaken for the standard one»*.
    **COST, STATED: this moves the config fingerprint**, so builds recorded under the old one stop
    being directly comparable. E9-shaped, not a free edit.
-5. **The doctrine line** in `tk2/core/models/__init__.py` calls policy, bar and closed classes one
+`E1e.5` **The doctrine line** in `tk2/core/models/__init__.py` calls policy, bar and closed classes one
    thing («CURATION (logic)»). It is three things now, and the comment says two.
-6. **THE TRIAGE — tests follow decisions** *(the Captain, 2026-09-25)*. «Tests are here to test what
+`E1e.6` **THE TRIAGE — tests follow decisions** *(the Captain, 2026-09-25)*. «Tests are here to test what
    we decided to do and check if the code does. They don't dictate anything.» Run the tests on the
    closed E3 and sort every disagreement: **(a)** expectation true, result disagrees → change the
    CODE · **(b)** expectation false → change the TEST · **(c)** they agree → keep both. Known (b):
@@ -603,7 +603,7 @@ runtime, so it is app knowledge.
    *During E3, minimal tests only: «we build too much machinery on the tests, while they are
    something to apply to something closed, not ongoing with decisions pending».*
 
-### AND THE PACING RULE, WHICH IS THE OTHER HALF
+### `E1e.8` AND THE PACING RULE, WHICH IS THE OTHER HALF
 
 > *«I would like the development of these foundational points (dictionary, tkzip) to be agile and
 > fast paced: burdening every single move with a gargantuan suite of tests for each micro step is
@@ -628,12 +628,12 @@ mood/imperative field, third-memory-tier framing).
 **Tasks**
 1. ~~**Role inventory**~~ **— DONE 2026-09-11.** Seventeen boxes plus the predicate, cut from
    VerbNet (29 roles / 429 classes), PropBank (112,917 annotated sentences) and FrameNet (1,221
-   frames), and cross-checked against the Captain's own first draft (`docs/tkzip/origin-the-excel-draft.md`).
+   frames), and cross-checked against the Captain's own first draft (`docs/E2-tkzip/origin-the-excel-draft.md`).
    The inventory is **FRAME** — code, fixed, exhaustive; a miss is a bug, never a migration. Roles are
    **named and verb-independent**. The noun-phrase record is five fields (quantity · count ·
    determination · relation · noun). OQ2, OQ3, OQ4, OQ5, OQ13 answered; OQ7's quantity/determination
    split answered, its definiteness-as-scoping half carried into task 2.
-   **Decision record: `docs/tkzip/202609111051_notes.md`; requirements 18–32.**
+   **Decision record: `docs/E2-tkzip/202609111051_notes.md`; requirements 18–32.**
 2. ~~**Named rows & scope**~~ **— DONE 2026-09-11.** A zip is a FLAT LIST; nesting is naming
    (Tseitin, OQ8). **Row order = scope order** (OQ6), and the prefix carries FIVE scope-bearing
    elements — `quantifier · negation · modality · attitude · domain` — so row order is never free for
@@ -643,7 +643,7 @@ mood/imperative field, third-memory-tier framing).
    «because» vs «if» is carried by ASSERTION STATUS, «only» converts IMPLY→EQ. **The operator set is
    the TEN non-degenerate binary truth functions — frame, closed by mathematics, never trimmed to
    what English marks.** `domain` satisfies req 6 with no new machinery.
-   **Decision record: `docs/tkzip/202609111511_notes.md`; requirements 33–46, req 29 rewritten.**
+   **Decision record: `docs/E2-tkzip/202609111511_notes.md`; requirements 33–46, req 29 rewritten.**
 3. ~~**Binding states & moods**~~ **— DONE 2026-09-11.** The largest collapse of the epic:
    **mood is not a field.** Question = something OPEN (a box, or the row's TRUTH for polar questions)
    · imperative = POV(want) over an unasserted row · supposition = POV(suppose), which is what
@@ -652,7 +652,7 @@ mood/imperative field, third-memory-tier framing).
    are the SAME zip (the Captain's own 2026-08-11 ruling, found in the notes).
    **Net addition: the binding state (`BOUND` · `OPEN` · `EMPTY`) on any slot, a PRIOR on an open
    slot, and the nominal record's sixth field (`sense`).** Scalar wherever there is a quantity.
-   **Decision record: `docs/tkzip/202609111607_notes.md`; requirements 47–57, req 26 extended.**
+   **Decision record: `docs/E2-tkzip/202609111607_notes.md`; requirements 47–57, req 26 extended.**
 4. ~~**Confidence + provenance fields**~~ **— DONE 2026-09-12.** Mostly an audit: almost everything
    expected here was already built at E0 or answered by task 3. **Net addition: ONE field,
    `parse_confidence` — one scalar on the whole zip, and a slot, so it may be EMPTY** (self-talk
@@ -663,9 +663,9 @@ mood/imperative field, third-memory-tier framing).
    DOCUMENT-level and all four exist since E0. A resolved forecast mints a new belief; the stored zip
    never mutates.
    **Two findings handed to their own chapters rather than decided here** (the Captain's ruling,
-   2026-09-12): `docs/data-modeling/` req 7 — what a PARSED belief's parents are; `docs/datatier/`
+   2026-09-12): `docs/E0-data-modeling/` req 7 — what a PARSED belief's parents are; `docs/E0-datatier/`
    req 7 — the retreat cascade has no reverse index on `parents.id`.
-   **Decision record: `docs/tkzip/202609121556_notes.md`; requirements 58–60.**
+   **Decision record: `docs/E2-tkzip/202609121556_notes.md`; requirements 58–60.**
 5. ~~**Storage**~~ **— DONE 2026-09-12.** Decided by measurement: PropBank's 112,917 predicate
    instances give **mean 2.59 roles per row of 18 slots — ~80% of every row is EMPTY** — so storage is
    **sparse** and fixed arity is a property of the schema, not of the storage (OQ9). **The KEY is the
@@ -675,7 +675,7 @@ mood/imperative field, third-memory-tier framing).
    translation night is for a SCHEMA change and never for a new base.** The theatre is a cache on the
    same pattern. Row names are zip-local, so a zip is self-contained — whether it is EMBEDDED is
    data-modeling's call. Case 7 added a seventh record field (`marker`).
-   **Decision record: `docs/tkzip/202609121807_notes.md`; requirements 61–66, req 26 extended.**
+   **Decision record: `docs/E2-tkzip/202609121807_notes.md`; requirements 61–66, req 26 extended.**
 6. ~~**THE DRILL**~~ **— DONE 2026-09-14. ⚑ 78 sentences, 97.4% no-abstention, 0 silent-wrong,
    BAR MET.** Bar and scoring rules declared and committed BEFORE the drill existed (`1a68337`).
    Raised 50 → 75 (drilled 78). **All 28 sentences drawn from his own stored journeys zipped clean.**
@@ -686,7 +686,7 @@ mood/imperative field, third-memory-tier framing).
    errors, none of them the schema's fault — attributive adjectives are second rows.
    **Deliverables: `tk2/tkzip/schema.py` (frame, frozen v2.0) · `tests/fixtures/drill.py` ·
    `tests/test_tkzip_schema.py` · `tests/test_drill.py`. 796 checks green.**
-   **Decision record: `docs/tkzip/202609141009_notes.md`; requirements 67–73.**
+   **Decision record: `docs/E2-tkzip/202609141009_notes.md`; requirements 67–73.**
 
 **Done when:** the drill passes its pre-set bar on paper and the schema is frozen v2.0 (changes
 after freeze are migrations, not edits).
@@ -700,7 +700,7 @@ after freeze are migrations, not edits).
 evaluator's and the mind's, which is evaluator req 5 already written down. The station consults the
 dictionary for **SHAPE, never for MEANING**: the ported content lists become geometry with a
 nearest-anchor fallback, and the sense slot is emitted **OPEN**. Record:
-`docs/parser-compiler/202609151148_the-ud-gate-and-the-stations-edges.md`.
+`docs/E3-parser-compiler/202609151148_the-ud-gate-and-the-stations-edges.md`.
 
 **Goal:** surface → tkzip → surface, one pure bidirectional library. tk1's AST/LLC die as
 interfaces — **and its ~40 hand lists die with them**: the standing law above prices this epic's
@@ -712,7 +712,7 @@ copied across as written is a rebuild that inherited the defect.
 it).
 
 **Tasks**
-0. ~~**The closed classes as typed KB rows**~~ **— THE TABLE EXISTS. What is owed is its SEMANTICS.**
+`E3.0` ~~**The closed classes as typed KB rows**~~ **— THE TABLE EXISTS. What is owed is its SEMANTICS.**
    *Rewritten 2026-09-15, on the Captain's ruling, after checking the body rather than the plan.*
    E1 built `language_closed_classes` when it needed to exclude function words from its seed
    ranking — the «born earlier, one table two consumers» clause below came true — and it holds
@@ -732,13 +732,13 @@ it).
    class is closed BY ENUMERATION; a corpus can TEST its completeness and can never generate it.
    Deriving it from text is how the set silently becomes open — «the db option by the back door»,
    refused once already for tkzip's typed `other`.
-1. **Skeleton adapter** — stanza behind the lib boundary, swappable (req 2); the torch-load patch
+`E3.1` **Skeleton adapter** — stanza behind the lib boundary, swappable (req 2); the torch-load patch
    and model-loading quirks contained in the adapter.
-2. **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an
+`E3.2` *(sub-items: E3.2.1–E3.2.16 and their children)* **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an
    asset); sense slots left OPEN; context-as-argument for anaphora/ellipsis/fragments (req 7);
    partial zips with open variables (req 8).
    **HALF DONE 2026-09-15** (`tk2/language/compile.py`, record
-   `docs/parser-compiler/202609151415_the-compile-core.md`): one content row, both halves of the
+   `docs/E3-parser-compiler/202609151415_the-compile-core.md`): one content row, both halves of the
    mapping, quantifier binders with their restriction, possessors inside the record, senses OPEN —
    **18 of 25 UD cases whole, mean coverage 89.5%**. The frame caught a design error on the way: a
    `QuantifierRow`'s `restriction` is a Box, so a binder cannot be emitted on meeting «every».
@@ -873,9 +873,9 @@ it).
      wolf is worse than no report.
      **Ratchet 24/25 at 99.4%** — a new high — gate **33 answered · 0 WRONG**.
    Context-as-argument is untouched; nothing has needed it yet.
-2b. **⚑ THE PERSON AXIS — deixis, and the rotation under a point of view** *(the Captain asked
+`E3.2.1` *(was task 2b)* **⚑ THE PERSON AXIS — deixis, and the rotation under a point of view** *(the Captain asked
    2026-09-16; the answer was that tk2 had no plan and no note, and he ruled it E3 SCOPE the same
-   day)*. Record: `docs/parser-compiler/202609161349_the-person-axis.md`, requirement 20.
+   day)*. Record: `docs/E3-parser-compiler/202609161349_the-person-axis.md`, requirement 20.
 
    > *«John said to Marie: "You are a clever girl". The "you" should rotate to take for tokeniko the
    > meaning of Marie, not himself… and in general the pronouns to rotate the meaning depending on
@@ -995,7 +995,7 @@ it).
    target. The mechanisms are separable — a «you» can rotate to «the person addressed» without
    knowing who that is — but a rotation that cannot name its target is half an answer.*
 
-2c. **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
+`E3.2.2` *(was task 2c)* **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
    2b — and it is NOT a person-axis task, which is why it has a number of its own)*. «Is the cat
    hungry?» compiles at **truth 1.0**, where the schema's own docstring says it *«has every box
    bound and its truth OPEN»*. Wh-questions open a BOX and are fine; `whether` opens the truth from
@@ -1023,7 +1023,7 @@ it).
    the cat hungry or tired?». **The drill gate had a third blindness: it never compared truth**, so
    it could see neither the bug nor the fix. It now compares the truth slot's STATE (a value · OPEN
    · unstated): on the old station it flags `t-mo-1` «Do you exist?», on the new one it does not —
-   and it found `aw-21`, the imperative, at once (task 2d).
+   and it found `aw-21`, the imperative, at once (`E3.2.3`).
    **TWO ROW DEFECTS FOUND ON THE BENCH, both curation (db), not yet fixed:**
    - **`whether` never opens its truth.** Its row reads it as a JOIN (`imply`, `asserts: neither`),
      so «I wonder whether the cat is hungry» is a conditional and req 14's subordinate polar never
@@ -1054,7 +1054,7 @@ it).
      we know is wrong the station abstains (the `q-5` precedent), so `t-ws-7` stays in the ratchet,
      re-labelled a provider defect.
 
-2d. **⚑ THE IMPERATIVE IS COMPILED AS A CLAIM** *(found 2026-09-18 by the widened drill gate —
+`E3.2.3` *(was task 2d)* **⚑ THE IMPERATIVE IS COMPILED AS A CLAIM** *(found 2026-09-18 by the widened drill gate —
    `aw-21`)*. «Close the door!» compiles as «you close the door», stated; the drill (and tkzip req
    48) has POV(me · want) over an UNSTATED row. **Stanza carries it structurally**: `Mood=Imp` on
    the verb — in a quote, under a conditional («If it rains, stay home»), in coordination («Go and
@@ -1084,7 +1084,7 @@ it).
    *happy* and buys a lemma exception row. Record `202609190900_the-gate-sees-the-prefix.md`.
    **Gate: 59 · 3 → 59 · 5, and the two new reds are what `db/0019` and `db/0020` close.**
 
-3. **The DECOMPILER** — zip → a sentence that compiles back to that zip, same lib (req 9).
+`E3.3` *(sub-items: E3.3.1–E3.3.13 and their children — `E3.3.2`'s tree is the fixpoint's reading (`202609241130_…`))* **The DECOMPILER** — zip → a sentence that compiles back to that zip, same lib (req 9).
    *Named by the Captain on 2026-09-19, and the name is the design: «mimicking the compiler/decompiler of computer languages». Decompiled source is never the original source — it is A source that compiles to the same object — so the acceptance test comes with the analogy: RECOMPILE AND COMPARE THE ZIPS, using the drill gate's own `compare()` over the drill's 87 hand-compiled zips. It is faithful to the ZIP, not to the sentence: the gap between the two is the misparse signal (req 3) and the confidence scalar's input (reqs 4, 6). The senses speak its output, and rag-out only POLISHES it — which is what keeps the LLM from inventing content (rag reqs 3, 5).*
    **FIRST SLICE BUILT AND MEASURED 2026-09-19** — `tk2/language/decompile.py`, one content row to
    one clause, with `tools/roundtrip.py` as its gate from the first run. **46 of 87 → 79 of 82 read
@@ -1130,14 +1130,14 @@ it).
    `db/0025` (`look` → agent, `die` → patient).
    Record `202609201100_the-station-against-itself.md`.
 
-3b. **⚑ THE OPEN SLOT CANNOT SAY WHAT IS KNOWN ABOUT THE UNKNOWN** *(2026-09-20, req 27 — THE
+`E3.3.1` *(was task 3b)* **⚑ THE OPEN SLOT CANNOT SAY WHAT IS KNOWN ABOUT THE UNKNOWN** *(2026-09-20, req 27 — THE
    CAPTAIN'S, because it is a FORMAT ruling under the frozen schema, tkzip req 73)*. «who» vs
    «what», «he» vs «she», «its cubs»: three defects, one missing field. `Open` carries a `prior` and
    nothing else. Partly bought back by keeping an unresolved pronoun's own key, which is what the
    drill writes — but that stand-in abstains on the wrong grounds («In Italy, HE is married» sees
    *Italy* as an antecedent) and it is not the field.
 
-3c. **The fixpoint's remaining — READ 2026-09-24, and it was ten mechanisms, not the 19 named here.**
+`E3.3.2` *(was task 3c)* **The fixpoint's remaining — READ 2026-09-24, and it was ten mechanisms, not the 19 named here.**
    Read case by case: G1–G10 in four families, seven cases with more than one cause, and THREE TRUTH
    ERRORS the fixpoint could not see (G5's overwritten subject, adverb scope, auxiliary scope — the
    seven wrong modal claims). Fixed 09-24/25: G2 · G3 · G4 · G5 · G10 · modal scope · G1 · G7 · G9 ·
@@ -1145,9 +1145,9 @@ it).
    building), the fixpoint's blindness to SCOPE (an instrument defect), G8 (a bench first), and the
    bookkeeping defects found on the way.** Read-whole: 50 of 69 → **65 of 71**.
    Record `202609241130_the-fixpoints-eleven.md`.
-4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
+`E3.4` **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
-5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
+`E3.5` *(sub-items: E3.5.1 (the UD gate, E3.5.1.1–.3) · E3.5.2 (the drill gate, E3.5.2.1))* **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
    fashion by tooling. **TICKED 2026-09-20, and it was already met** — the honest finding when the
    task was picked up. `tests/test_drill.py` scores the declared bar (≥90% no-abstention · 100%
    no-silent-wrong), keeps the FORCED-CHANGE ledger that stops the instrument being satisfied by
@@ -1156,12 +1156,12 @@ it).
    standalone `tools/drill.py`, and a sixty-line printer is not what this task was about.* *The drill is the FORMAT's gate and stays one — it proved tkzip can HOLD the
    world. It is not the STATION's gate: it says nothing about whether stanza's skeleton was read
    correctly.*
-5b. **⚑ THE UD GATE — the station's real acceptance test** *(the Captain, 2026-09-15)*. Every one of
+`E3.5.1` *(was task 5b)* **⚑ THE UD GATE — the station's real acceptance test** *(the Captain, 2026-09-15)*. Every one of
    **UD's 37 dependency relations and 17 POS tags**, handled consistently against **UD's own
    published examples** (`universaldependencies.org/u/dep/`, `/u/pos/` — 67 relations have a global
    page with examples). Both ends are CLOSED — 37 relations in, 18 tkzip roles + 10 operators + the
    five-element prefix out — so **the mapping table can be COMPLETE, and it is E3's real
-   deliverable.** `case` is the relation that fills task 0's empty `compiled` field.
+   deliverable.** `case` is the relation that fills `E3.0`'s empty `compiled` field.
    *Why UD and not more of our own sentences: our fixtures encode OUR habits. UD's examples are
    strangers'. And stanza is chosen precisely because it TARGETS this standard — «close enough» is
    a measurement owed relation by relation, not an assumption carried.*
@@ -1190,7 +1190,7 @@ it).
      never get worse) and a **frontier** (the 18 added: 6 whole, 76.6%, and it is meant to climb).
      One averaged figure would let a regression on the old be paid for by a gain on the new.
 
-6. **THE PLACEMENT FLOOR — inherited from E1c/E1d, and measured before it was handed over.** The
+`E3.6` *(sub-items: E3.6.1)* **THE PLACEMENT FLOOR — inherited from E1c/E1d, and measured before it was handed over.** The
    station is where a placement is first trusted or refused: a word it does not know reaches the
    geometry through `place()`, which returns each reading with a verdict. That verdict currently uses
    **the BASE's floor**, and the base's floor was fitted on base-to-base cosines where p90 is +0.000
@@ -1224,10 +1224,10 @@ it).
    `tests/fixtures/placement_bar.py`, NOT `dictionary_bar` rows: every bar word becomes a seed
    (dictionary req 12), so declaring them there would have pulled the senses under test into the
    base as dimensions and invalidated the build they were measured on. Bench
-   `tools/placement_bench.py`; record `docs/dictionary/202609191500_the-placement-floor.md`.
-7. **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
+   `tools/placement_bench.py`; record `docs/E1-dictionary/202609191500_the-placement-floor.md`.
+`E3.7` **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
    them. The count is in the manifest, so it is predictable rather than surprising.
-8. **⚑ THE FRAME/KNOWLEDGE AUDIT — the epic's closing act** *(the Captain, 2026-09-16, and the first
+`E3.8` *(sub-items: E3.8.1 · E3.8.2)* **⚑ THE FRAME/KNOWLEDGE AUDIT — the epic's closing act** *(the Captain, 2026-09-16, and the first
    of these)*. *«At the end of E3 we should go through everything we have done and double check if
    something we consider frame should be moved in the knowledge kingdom.»* Walk every set this epic
    put in a `.py` file and re-ask the FRAME test on it: is it LAW, or a revisable fact about a
@@ -1261,7 +1261,7 @@ it).
    | `takes_number` · `count`-as-cardinality (`db/0029`, `db/0030`) | **already rows.** Named here so the audit shows what went the right way without being asked |
    | the clause-headed PLURAL universal (`decompile.py`) | **open, and not measured** — «all that glitters», never «every that glitters». A `takes_clause` feature is where it would go if evidence appears |
 
-   **Record: `docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`** — all 52 constants,
+   **Record: `docs/E3-parser-compiler/202609220930_the-frame-knowledge-audit.md`** — all 52 constants,
    the ones cleared argued rather than waved through.
 
    **Done when:** ✅ **MET 2026-09-22.** Every constant this epic put in a `.py` file re-asked the
@@ -1277,21 +1277,21 @@ it).
 **Done when:** the drill bar passes through the real lib (parse AND render), **every UD relation and
 POS tag is read consistently against UD's own examples**, clean input costs one parse, confidence
 orders the drill's failures sensibly, **a placement is judged by a floor fitted to placements**, and
-**a pronoun under a point of view resolves to that POV's participants** (task 2b).
+**a pronoun under a point of view resolves to that POV's participants** (`E3.2.1`).
 
 *NOT owed by this epic: named individuals. A proper noun reaching a box with an identity is **E3b**,
 opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which is req 8 working.*
 
 ---
 
-9. **⚑ THE DOMAIN — the fifth prefix element** *(found 2026-09-22, while «fixing `aw-15`»)*. **It was
+`E3.9` *(sub-items: E3.9.1 · E3.9.2)* **⚑ THE DOMAIN — the fifth prefix element** *(found 2026-09-22, while «fixing `aw-15`»)*. **It was
    never built.** The schema had held it since E2 — *«the context a claim holds in: legally · in
    chess · as a doctor · in Italy»* — the decompiler could already SAY one, the drill hand-compiles
    three cases, and rules reqs 6-7 depend on it: «as a doctor I disagree; as a father I understand»
    must be two positions honestly held rather than a KB contradiction. `grep DomainRow tk2/language/`
    was empty. One side of the format was built and the other never was.
 
-   **It is a real sibling and not a defect inside task 2**, because a domain is precisely NOT one of
+   **It is a real sibling and not a defect inside `E3.2`**, because a domain is precisely NOT one of
    the eighteen roles — req 12's dichotomy needed a third category.
 
    **THE BENCH CAME FIRST AND KILLED THE OBVIOUS RULE.** «A marked nominal before the subject is a
@@ -1319,7 +1319,7 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
 with two errors and both were «Anna» — WordNet holds the spelling only as an Indian coin. I called it
 «the named-individual hole, which already has its answer waiting». **He refused the parking and
 widened the scope**: names are a point of their own, and they run from *is this a name at all* to
-*which Paris did he mean*. Record: `docs/parser-compiler/202609160959_the-name-question.md`.
+*which Paris did he mean*. Record: `docs/E3-parser-compiler/202609160959_the-name-question.md`.
 
 **Scope:** everything between a proper noun on the wire and a box whose head is a named individual.
 **Not** in scope: what the individual MEANS to him — that is the KB's, and the heart's target table
@@ -1328,7 +1328,7 @@ is already keyed by uid.
 **Answers to:** parser-compiler req 16 · micro-nn reqs 1–4, 7, **9** (the admission criterion, which
 this epic is the first case of).
 
-**⚑ AND ANAPHORA DEPENDS ON IT, which is why anaphora is parked here and not in E3** *(the Captain,
+`E3b.8` **⚑ AND ANAPHORA DEPENDS ON IT, which is why anaphora is parked here and not in E3** *(the Captain,
 2026-09-20: «agree with your lean, park it for E3b, absolutely in scope for it from which it
 depends»)*. The station resolves the FIRST and SECOND person — they are participants in the speech
 act and the `Context` names them. The THIRD person points backwards into the discourse, and after
@@ -1357,7 +1357,7 @@ alternative is to let PS1 run with names unresolved and see what actually breaks
 > **AND IT CARRIES E5's MACHINERY — the Captain, 2026-09-16** *(open question 15, answered)*:
 > *«Bring E5 forward because it is propaedeutic to closing the E3 name hole. So E5 remains where it
 > is, but the machinery (micro-nn abstraction) should go in E3b.»* **The epic stays where it is and
-> the ABSTRACTION lands here**, as task 5a. That is the better half of the trade in both directions:
+> the ABSTRACTION lands here**, as `E3b.5.1`. That is the better half of the trade in both directions:
 > the name hole cannot close without a net, and a framework whose first instance arrives with it is
 > a framework that has met a real case before it is declared general — which is the failure mode
 > «one abstraction, many instances» is most exposed to.
@@ -1368,14 +1368,14 @@ transcribes them; the short version is that **the places table is an asset and t
 biography**, and those go to different epics — the Captain's own boundary of 2026-09-15.
 
 **Tasks**
-1. **IS IT A NAME?** — stanza's NER against spaCy's, measured on the same text, with UD's `PROPN` and
+`E3b.1` **IS IT A NAME?** — stanza's NER against spaCy's, measured on the same text, with UD's `PROPN` and
    the casing as separate weak evidence. **Casing is an indicator and not a test**, and tk1 proved it
    from both sides: its gate admitted OOV gibberish that spaCy labelled `GPE` (repaired with a
    `has_vector` guard) and refused «kotekino is my creator», which is lower case and perfectly known
    (repaired with a second, recognition-only path). Those two are the bench's first cases.
    *This does not reopen req 2 — entity recognition is not a UD task and has no UD relation, so a
    second model here is not a second opinion on a dependency parse.*
-2. **A NAME OF WHAT? — OUR KINDS, AND THEY ARE ROWS** *(the Captain, 2026-09-16, req 17)*. The
+`E3b.2` **A NAME OF WHAT? — OUR KINDS, AND THEY ARE ROWS** *(the Captain, 2026-09-16, req 17)*. The
    inventory is ours and it lives in the db, not in code: *«with our inventory as db we can modify it
    keeping the logic — everything is KB. If we rely on a third party we lose this ability.»* So two
    tables and no enum — **the kinds** (person · organization · place · work · event · none, each row
@@ -1384,56 +1384,56 @@ biography**, and those go to different epics — the Captain's own boundary of 2
    tk1's nine mappings are the map's starting position: `PERSON → person.n.01`,
    `ORG → organization.n.01`, `GPE/LOC/FAC → location.n.01`, `NORP → group.n.01`,
    `PRODUCT`/`WORK_OF_ART → artifact.n.01`, `EVENT → event.n.01`.
-   **Prominence is NOT a kind** — it is a scalar on the resolution, and it is what task 5 ranks.
+   **Prominence is NOT a kind** — it is a scalar on the resolution, and it is what `E3b.5` ranks.
    *A consequence to hold on to: a kind that is a row cannot be an enum the compiler branches on, so
    the box carries it as a string. The precedent is `ClosedClassDoc.word_class`, which is a string
    and not an enum for this exact reason — «a class that needed a code change to exist would put the
    table back in code».*
-3. **THE PLACES TABLE, INHERITED** — **measured against the live v1 body, 2026-09-16: 4,674,701
+`E3b.3` **THE PLACES TABLE, INHERITED** — **measured against the live v1 body, 2026-09-16: 4,674,701
    rows**, two containment chains (`path_admin` political · `path_geo` physical), a **`type` column of
    EXACTLY 21 values** which is an `is_a` statement, a second closed axis `category`
    (administrative · geographical), coordinates on **99.9%** and `physical_features` on **54.9%**.
    Both ends closed again, so the type → sense map can be COMPLETE. **Read lazily and never
    materialized** — `places.py`'s own words, and the cascade-noise ruling applied once already at
    this exact table. It goes on the inheritance ledger beside the curated senses.
-3b. **THE NAMES LIST, INHERITED — AND IT CANNOT BE A TEST.** `tokeniko.names`: **21,975 rows, one
+`E3b.3.1` *(was task 3b)* **THE NAMES LIST, INHERITED — AND IT CANNOT BE A TEST.** `tokeniko.names`: **21,975 rows, one
    column**, a flat roster of personal-name spellings. It holds `anna` and would fix the marker
    bench's two errors on the spot. Measured the same day: **28.1% of it is also a place name** (6,170
    — `paris` among them) and **15.2% is also a WordNet common noun** (3,333 — `abbey`, `ace`,
    `acacia`). Membership is EVIDENCE with a 28% collision rate, never a test, and that measurement is
-   the sharpest argument for task 5. *(It also needs a cleaning pass: the string `TRUE` is in it, a
+   the sharpest argument for `E3b.5`. *(It also needs a cleaning pass: the string `TRUE` is in it, a
    spreadsheet boolean that survived ingestion.)*
-4. **HAVE I MET IT?** — recognition against a names table, which is a different question from
+`E3b.4` **HAVE I MET IT?** — recognition against a names table, which is a different question from
    identification and is the one that carries identity. tk1's preference order is inherited whole:
    the individual scoped to THIS talker's context, else a participant (a real interlocutor with a
    global identity), else a unique individual from another context, and **genuinely ambiguous → never
    guess**. The MECHANISM is E3b's; the ROWS are biography and E9 migrates them — and there are
    **18 of them** (`tokeniko_mem.stakeholders`, measured 2026-09-16), so this half is small and the
    scale lives entirely in tasks 3 and 3b.
-5a. **⚑ THE MICRO-NN ABSTRACTION ITSELF — brought forward from E5 by the Captain's ruling.** The
+`E3b.5.1` *(was task 5a)* **⚑ THE MICRO-NN ABSTRACTION ITSELF — brought forward from E5 by the Captain's ruling.** The
    lib (features → a ranking or a scalar in [0,1], online updates, weights as epoch-stamped db rows,
    deterministic per epoch — micro-nn reqs 1–4, 8) and the instance registry (declaration rows: input
    schema · output kind · reward source) with **the shared fence enforced STRUCTURALLY** — candidates
    in, ordering out, no candidate creation (req 7). *Reward plumbing is NOT here: the reward families
    arrive with E7 and E8, so this instance learns from the correction signal the station already has
-   and the rest is wired later.* **Built to serve task 5 and generalized against it, never before
+   and the rest is wired later.* **Built to serve `E3b.5` and generalized against it, never before
    it.**
-5. **⚑ WHICH ONE? — THE FIRST INSTANCE, and the first admitted by micro-nn req 9.** «Paris» is a city
+`E3b.5` **⚑ WHICH ONE? — THE FIRST INSTANCE, and the first admitted by micro-nn req 9.** «Paris» is a city
    in France and a town in Ontario; tk1 logged the problem («name lookup is not disambiguated by
    prominence, so homonyms resolve to whichever the knowledge base returns first») and never solved
    it. **It passes both of the Captain's tests**: curation can cover the places we have seen and never
    the next one, and the answer MOVES — what is prominent this year was not prominent last year.
-   An instance declaration (input schema · output kind · reward source) against the framework task 5a
+   An instance declaration (input schema · output kind · reward source) against the framework `E3b.5.1`
    builds, **ranking candidates the curated tables produced** — the places rows, the names roster, the
-   stakeholders he has met — under the shared fence. **The 28.1% collision measured in task 3b is
+   stakeholders he has met — under the shared fence. **The 28.1% collision measured in `E3b.3.1` is
    this task's brief**: the signals are strong and they contradict each other, which is exactly the
    split decision that cannot be curated.
-6. **WHAT A NAME IS IN A ZIP** — a box whose `head` is a named individual: the **type centroid is the
+`E3b.6` **WHAT A NAME IS IN A ZIP** — a box whose `head` is a named individual: the **type centroid is the
    SEMANTIC content** and the **uid is the IDENTITY**, and the two never merge (the second standing
    law, and `plan.md`'s own «uid + type-centroid» for `kotekino` and `tokeniko`). Identity uids are
    `name@channel:talker_uid` and `docs/ideas.md` already flags the trap: a new channel mints a NEW
    individual unless it is deliberately bound.
-7. **THE MARKERS GET THEIR THIRD READING** — `db/0012`'s selector reads a nominal's supersense, and a
+`E3b.7` **THE MARKERS GET THEIR THIRD READING** — `db/0012`'s selector reads a nominal's supersense, and a
    named individual has a type centroid instead. The day this lands, «went with Anna» becomes
    comitative because Anna is a PERSON, with no rule about Anna anywhere. **That is the acceptance
    test**: the two residual errors on the marker bench turn green without the bench being touched.
@@ -1452,10 +1452,10 @@ minting a candidate — and the marker bench's «with Anna» cases pass.
 **Answers to:** evaluator reqs 1–12 · dictionary req 19 (dual read) · rules req 13 (sign-gate).
 
 **Tasks**
-1. **Verdict shape** — truth · status · bindings · derivation; pure, stores nothing.
-2. **Form kernel** — the logic floor migrates and generalizes (reflexive pins, antonym contraries,
+`E4.1` **Verdict shape** — truth · status · bindings · derivation; pure, stores nothing.
+`E4.2` **Form kernel** — the logic floor migrates and generalizes (reflexive pins, antonym contraries,
    crisp enumeration); INCONSISTENT reserved for logic.
-3. **Bind-and-ground** — the one search over sense slots / wh-gaps / unbound roles; dual read at
+`E4.3` **Bind-and-ground** — the one search over sense slots / wh-gaps / unbound roles; dual read at
    both floors, source named in the derivation; ABSTAIN first-class.
    *Amended 2026-09-14 — «dual read» here predates policy v11 and must not be read as a blend:
    **R DECIDES, D PROPOSES, and where R is silent the answer is ABSTAIN.** A stated cell decides
@@ -1463,16 +1463,16 @@ minting a candidate — and the marker bench's «with Anna» cases pass.
    floors; D has none, because D never issues a verdict. `space.similarity()` no longer exists —
    `read(a, b)` is the door, and it already names its source, which is what «source named in the
    derivation» was asking for.*
-4. **Chaining** — the forward-chainer migrates and generalizes (fixpoint, corroborate/KB-refute).
-5. **Budget & ordering** — depth/time caps as db(r) params; depth-stamped insufficient; the
+`E4.4` **Chaining** — the forward-chainer migrates and generalizes (fixpoint, corroborate/KB-refute).
+`E4.5` **Budget & ordering** — depth/time caps as db(r) params; depth-stamped insufficient; the
    micro-nn ordering hook (verdict untouched).
-6. **Stake resolution** — arriving events matched against staked forecasts; the serendipity/
+`E4.6` **Stake resolution** — arriving events matched against staked forecasts; the serendipity/
    disillusion verdicts emitted for E7 to consume.
 
 **Done when:** every drill sentence evaluates against a seed KB with a defensible verdict, and the
 evaluator's answers cite their floor (cell vs cosine vs chain).
 
-### ⚑ PROOF SLICE 1 — after E4
+### `E4.7` ⚑ PROOF SLICE 1 — after E4
 One sentence end-to-end, statically: raw text → station → zip (confidence stamped) → evaluator →
 verdict + derivation, against a small seed KB, on the sandbox. Landed under the Captain's eye.
 
@@ -1492,16 +1492,16 @@ verdict + derivation, against a small seed KB, on the sandbox. Landed under the 
 > pointer rather than repeated — one item, one status, one doc.
 
 **Tasks**
-1. ~~**The lib**~~ **— BUILT IN E3b (task 5a).** Features → ranking/scalar; online updates; weights
+`E5.1` ~~**The lib**~~ **— BUILT IN `E3b.5.1`.** Features → ranking/scalar; online updates; weights
    epoch-stamped in db; deterministic per epoch.
-2. ~~**Instance registry**~~ **— BUILT IN E3b (task 5a).** Declaration rows (input schema · output
+`E5.2` ~~**Instance registry**~~ **— BUILT IN `E3b.5.1`.** Declaration rows (input schema · output
    kind · reward source); the shared fence enforced structurally (candidates in, ordering out — no
    candidate creation).
-3. **Instance breadth** — E3b declares the first (name prominence, and the first admitted by req 9
+`E5.3` **Instance breadth** — E3b declares the first (name prominence, and the first admitted by req 9
    rather than at conception). This epic adds the rest: station confidence calibration (E3),
    evaluator search order (E4), and then the sites that need an organ — the heart jump, the
    figurative layer, the channel register, the mouth's coloring.
-4. **Reward plumbing** — the intellectual and heart families wired to the instances; arrives with
+`E5.4` **Reward plumbing** — the intellectual and heart families wired to the instances; arrives with
    E7 (heart) and E8 (dialogue feedback), which is why it could never have landed with the lib.
 
 **Done when:** two live instances demonstrably reorder/calibrate without ever changing a verdict,
@@ -1517,22 +1517,22 @@ verdict + derivation, against a small seed KB, on the sandbox. Landed under the 
 directions: depth-weighted cost, self-modifying detection, plurality — mechanisms land here).
 
 **Tasks**
-1. **Rules as zips** — seed + experience, same shape as facts; the matcher sign-gated by R; solvable
+`E6.1` **Rules as zips** — seed + experience, same shape as facts; the matcher sign-gated by R; solvable
    → action, unsolvable → the search, many → urge collapse; defeat in context, never deletion; open
    conflict legal.
-2. **The three sockets** — say[channel,user] · swapPhase · commit; verbs select the act.
-3. **The loop** — dna: existence + timing; each tick one bounded unit; phases as kb reweighting
+`E6.2` **The three sockets** — say[channel,user] · swapPhase · commit; verbs select the act.
+`E6.3` **The loop** — dna: existence + timing; each tick one bounded unit; phases as kb reweighting
    (wake/sleep/summarize/retreat as sub-phases).
-4. **Working set** — memory proposes by cosine (+ the E5 jump instance later); chaining runs on the
+`E6.4` **Working set** — memory proposes by cosine (+ the E5 jump instance later); chaining runs on the
    working set; brain_state continuity.
-5. **Self-talk & summarizing** — minting ≠ believing (every self-thought through the evaluator);
+`E6.5` **Self-talk & summarizing** — minting ≠ believing (every self-thought through the evaluator);
    summaries with provenance, retreating with parents.
-6. **Seeding** — the newborn's rule set (axiom ordering law); the etiquette worked example as the
+`E6.6` **Seeding** — the newborn's rule set (axiom ordering law); the etiquette worked example as the
    FIRST learnable-revisable rule (carried-in: limit A in miniature).
-7. **Revision economics** — depth-weighted revision cost; the derivative guard on self-modifying
+`E6.7` **Revision economics** — depth-weighted revision cost; the derivative guard on self-modifying
    rules (detected and priced, never forbidden).
 
-**Done when:** the step-7 test passes on the sandbox — a seeded rule is revised on evidence and
+`E6.8` **Done when:** the step-7 test passes on the sandbox — a seeded rule is revised on evidence and
 trust through the machinery, no hand edit; and one behaviour appears that we did not seed (the A
 test, first sighting).
 
@@ -1545,19 +1545,19 @@ test, first sighting).
 **Answers to:** heart reqs 1–17.
 
 **Tasks**
-1. **Spheres & spikes** — six spheres (independent poles, per-target rows), three spikes
+`E7.1` **Spheres & spikes** — six spheres (independent poles, per-target rows), three spikes
    (depth-weighted amplitude, dna decay curves as db-r params).
-2. **Three tiers** — levels → mood → temperament integrators; rates dna(r), values biography;
+`E7.2` **Three tiers** — levels → mood → temperament integrators; rates dna(r), values biography;
    the emotional log.
-3. **Wiring** — in: evaluator events only (evaluated, never raw); out: mood → phase weights,
+`E7.3` **Wiring** — in: evaluator events only (evaluated, never raw); out: mood → phase weights,
    levels → mouth tone (for E8), reward → E5 instances.
-4. **Forecast stakes** — hope(x) rows; E4's stake resolution feeding serendipity/disillusion;
+`E7.4` **Forecast stakes** — hope(x) rows; E4's stake resolution feeding serendipity/disillusion;
    suppositions at imagination gain (<1, db-r).
 
 **Done when:** a retreat of a load-bearing staked belief measurably spikes disillusion, drags mood,
 and (slowly) bends temperament — all visible in the log.
 
-### ⚑ PROOF SLICE 2 — after E7
+### `E7.5` ⚑ PROOF SLICE 2 — after E7
 The inner life, end-to-end: teach a fact → belief admitted (trust-gated) → a later contradiction →
 retreat through the machinery → disillusion fires → mood shifts → the next answer's tone differs.
 Under the Captain's eye, on the sandbox.
@@ -1571,21 +1571,21 @@ Under the Captain's eye, on the sandbox.
 **Answers to:** senses reqs 1–11 · rag reqs 1–7 · ideas §1 (the console).
 
 **Tasks**
-1. **Adapter framework** — dumb boundary, provenance stamps, channel-scoped uids; Discord first.
-2. **The mouth** — render (station's renderer) → color (heart deviation + channel register + E5
+`E8.1` **Adapter framework** — dumb boundary, provenance stamps, channel-scoped uids; Discord first.
+`E8.2` **The mouth** — render (station's renderer) → color (heart deviation + channel register + E5
    instance) → polish (rag-out when enabled); the round-trip fence: styles, never restates.
-3. **The channel register** — learned kb rows per channel, micro-nn-fed from that channel's traffic.
-4. **rag port** — tk1's `lib/rag` shape carried (one client, one registry); escalation-only in;
+`E8.3` **The channel register** — learned kb rows per channel, micro-nn-fed from that channel's traffic.
+`E8.4` **rag port** — tk1's `lib/rag` shape carried (one client, one registry); escalation-only in;
    optional by design (kill-switch proves graceful degradation).
-5. **THE CONSOLE** — the intimate channel: local, no third party, **rag-off as a CHANNEL property**
+`E8.5` **THE CONSOLE** — the intimate channel: local, no third party, **rag-off as a CHANNEL property**
    (the gate extended beside consent, not a config flag); the kotekino identity binding DECIDED
    BEFORE the first line (the pending selves-merge ruling); doubles as the rescue channel.
-6. **Same-person linking** — cross-channel identity as KB belief (senses 8), never config.
+`E8.6` **Same-person linking** — cross-channel identity as KB belief (senses 8), never config.
 
 **Done when:** a full conversation runs on Discord and the console with the body on the sandbox db,
 tone visibly tracking heart state, and rag switched off mid-conversation without breakage.
 
-### ⚑ PROOF SLICE 3 — after E8
+### `E8.7` ⚑ PROOF SLICE 3 — after E8
 A stranger's first hour, simulated then real: messy input, fragments, a metaphor, a correction —
 live traffic finds what tests cannot. The confidence ladder's thresholds tuned on what it finds.
 
@@ -1598,11 +1598,11 @@ live traffic finds what tests cannot. The confidence ladder's thresholds tuned o
 **Answers to:** blueprint §2 (settled) · data-modeling 1, 5 · the no-regression ratchet (§8 test 5).
 
 **Tasks**
-1. **Additive translation** — every v1 memory gains a v2 zip BESIDE the v1 zip (never replacing);
+`E9.1` **Additive translation** — every v1 memory gains a v2 zip BESIDE the v1 zip (never replacing);
    `original` untouched; `_ME_UID` and every trust episode carried.
-2. **KB translation** — definitions/axioms/theorems re-expressed; derivations re-pointed; what no
+`E9.2` **KB translation** — definitions/axioms/theorems re-expressed; derivations re-pointed; what no
    longer re-derives is NOT hand-fixed.
-3. **The no-regression ratchet** — v1's corpora and test-feedback log replayed: everything v1
+`E9.3` **The no-regression ratchet** — v1's corpora and test-feedback log replayed: everything v1
    answered correctly, v2 must.
    **THE LOG IS NAMED, and it is measured** *(2026-09-15)*: `tokeniko_mem.tkzipdebug` — **583
    journeys, 546 distinct, 529 never spent on E2's drill, and v1 read 209 of them WRONG (40%)**.
@@ -1612,7 +1612,7 @@ live traffic finds what tests cannot. The confidence ladder's thresholds tuned o
    on every mismatch. **They arrived here by the Captain's own catch**: the QM had proposed them as
    E3's derivation corpus, and they are memory inherited from tk1, which is this epic. They may
    still inform E3 as EVIDENCE; they are never its gate.
-4. **The migration night of sleep** — he wakes on v2, wonders, finds what no longer follows, and
+`E9.4` **The migration night of sleep** — he wakes on v2, wonders, finds what no longer follows, and
    retreats it himself — an event in his life, not surgery. The night is observed and logged.
 
 **Done when:** the ratchet is green, the biography is intact and doubled, and his own morning-after
@@ -1627,13 +1627,13 @@ reconciliation has run through the machinery.
 **Answers to:** body reqs 1–6 · website reqs 1–5 · tooling reqs 1–6 (the runbook).
 
 **Tasks**
-1. **The interpreter runtime on the mini** — process split (mind / surface / connectors), boot
+`E10.1` **The interpreter runtime on the mini** — process split (mind / surface / connectors), boot
    cache, slow tick; deploy-by-migration runbook evolved from `body/tools/`.
-2. **Cutover** — sandbox → the real dbs, the guard's boundary formally moved; v1 stays runnable
+`E10.2` **Cutover** — sandbox → the real dbs, the guard's boundary formally moved; v1 stays runnable
    (the instrument is not a museum piece yet — its corpora remain the ratchet).
-3. **The window rewire** — `/api/mind` mock → live KPI feed (the contract shape holds); transmit
+`E10.3` **The window rewire** — `/api/mind` mock → live KPI feed (the contract shape holds); transmit
    channel as an action target.
-4. **Observability** — probes, bars, the map, heart/mood dashboards; ship him things to look at.
+`E10.4` **Observability** — probes, bars, the map, heart/mood dashboards; ship him things to look at.
 
 **Done when:** tokeniko-2 runs embodied on the mini, speaks on his channels, publishes one-way to
 the window — and the register's sixteen requirements files each read true against the running body.

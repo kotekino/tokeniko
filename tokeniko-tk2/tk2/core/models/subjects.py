@@ -21,7 +21,7 @@ resource that classifies it — knowledge, by the standing rule. The station hol
 
 **MEASURED BEFORE IT WAS RULED** (2026-09-18, on every subject the drill holds): the copular half
 separated perfectly; the verb half did not by any published instrument, and three of the drill's own
-rows turned out to be errors — record `docs/parser-compiler/202609181400_the-subject-role.md`.
+rows turned out to be errors — record `docs/E3-parser-compiler/202609181400_the-subject-role.md`.
 """
 
 from typing import Annotated, Any

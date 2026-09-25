@@ -9,7 +9,7 @@ calibrated aggregate of coverage · repairs-taken · self-round-trip», and the 
 E5's seventh micro-nn site. **Before any weight is chosen, the question is whether the signals carry
 any separation at all** — a scalar built from signals that do not separate would be a number that
 looks like knowledge and is noise, which is the placement floor's lesson (`db/0002`, `db/0007`, and
-`docs/dictionary/202609191500_the-placement-floor.md`, where the honest answer was that no floor
+`docs/E1-dictionary/202609191500_the-placement-floor.md`, where the honest answer was that no floor
 exists).
 
 **THE TRUTH COLUMN IS THE DRILL GATE'S.** For each of the 87 hand-compiled sentences the gate says

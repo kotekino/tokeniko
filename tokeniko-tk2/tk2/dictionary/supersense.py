@@ -7,7 +7,7 @@ and the standing ruling of the dictionary chapter is that geometry does not answ
 *«dictionary cosine = co-occurrence, not hypernymy; true cross-abstraction edges read FAR»*. It was
 benched here anyway, because `db/0008` predicted geometry would be the instrument, and it measured
 worse than the resource's own label on every bucket. The record is in
-`docs/parser-compiler/202609161010_the-ambiguous-markers.md`.
+`docs/E3-parser-compiler/202609161010_the-ambiguous-markers.md`.
 
 **WHAT A SUPERSENSE IS.** WordNet files every synset in one of 45 *lexicographer files* — 26 for
 nouns, 15 for verbs, plus the adjective and adverb files — and the name of that file is a broad

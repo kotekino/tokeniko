@@ -4,7 +4,7 @@
                                                               [--no-live]
 
 **WHAT IT ASKED FIRST, AND WHAT WAS RULED** (the frame/knowledge audit, 2026-09-22,
-`docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`). `ClosedClasses.select` used a
+`docs/E3-parser-compiler/202609220930_the-frame-knowledge-audit.md`). `ClosedClasses.select` used a
 code map, `UD_DEP_TO_ROLE`, twice: as a FILTER — which roles a relation admits — and as a TIE-BREAK,
 «best-first». This bench's first version refused every tie the order decided, and reversed every
 tuple: **neither moved a single verdict** on the drill, the UD gate or the fixpoint, and the one

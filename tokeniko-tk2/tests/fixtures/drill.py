@@ -1,7 +1,7 @@
 """THE SEVENTY-FIVE SENTENCE DRILL — E2's acceptance gate, drilled BY HAND.
 
 The bar and the scoring rules were declared and committed BEFORE this file existed:
-`docs/tkzip/202609140917_the-drill-bar.md`, commit `1a68337`. Nothing here may quietly move them.
+`docs/E2-tkzip/202609140917_the-drill-bar.md`, commit `1a68337`. Nothing here may quietly move them.
 
   PASS     every content element lands in a slot and the zip's structure is the sentence's
   PARTIAL  something could not be placed AND the zip says so honestly — counts against the 90%
@@ -801,7 +801,7 @@ case("aw-22", "It will rain tomorrow.", "awkward:forecast",
 # AWKWARD — QUOTATION: whose «I», whose «you»?
 #
 # Added 2026-09-17, after schema v3 gave `Pov` and `AttitudeRow` an `addressee` (E3 task 2b.3). The
-# amendment is recorded in `docs/tkzip/202609140917_the-drill-bar.md`; the bar itself is untouched.
+# amendment is recorded in `docs/E2-tkzip/202609140917_the-drill-bar.md`; the bar itself is untouched.
 #
 # **THE POINT OF EVERY CASE BELOW IS THAT THE PRONOUN IS GONE.** A zip is meaning, not words, so a
 # «you» that survives into a row is an unresolved reference and not a reading. What the sentence says

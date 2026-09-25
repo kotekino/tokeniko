@@ -922,7 +922,7 @@ def test_the_gloss_walk_is_rows_from_its_first_day():
 
 def test_the_walk_is_the_prototypes_own_values():
     """T4b-i's rule, kept: «today's values migrate across VERBATIM». Every one of these is in
-    `docs/dictionary/origin-prototype/tk2_config.py` or in `tk2_matrix.cell`, and the comparison the Captain is about to
+    `docs/E1-dictionary/origin-prototype/tk2_config.py` or in `tk2_matrix.cell`, and the comparison the Captain is about to
     rule on is only honest if the starting point is the thing that was measured before."""
     walk = policy.config_from_rows(policy_rows_v6(), bar_rows()).distribution
     assert (walk.measure, walk.weighting, walk.vocabulary) == ("jaccard", "uniform", "base")
