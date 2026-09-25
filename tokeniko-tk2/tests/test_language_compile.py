@@ -2129,3 +2129,355 @@ def test_a_MULTI_WORD_marker_that_swallowed_the_nominals_head_is_still_its_marke
     assert clause.boxes[Role.DESTINATION].head == noun
     assert clause.boxes[Role.DESTINATION].marker == "as far as", (
         "req 65 puts «no arrival entailed» in the MARKER, so the box must carry which one it was")
+
+
+# ------------------------------------------------------------------------------------------------
+# G1 — a purpose is an implication, and its subject is controlled (the Captain, 2026-09-25;
+# `db/0037`). Skeletons are stanza's parses, measured 2026-09-25; FEATS added by hand as above.
+# ------------------------------------------------------------------------------------------------
+
+def _with_feats(skeleton, **by_index):
+    from dataclasses import replace as _replace
+    words = tuple(_replace(w, feats={**w.feats, **by_index[f"w{w.index}"]})
+                  if f"w{w.index}" in by_index else w for w in skeleton.words)
+    return _replace(skeleton, words=words)
+
+
+_INF, _FIN = {"VerbForm": "Inf"}, {"VerbForm": "Fin", "Tense": "Pres"}
+
+GO_TO_SLEEP = _with_feats(skeleton_from_conllu("I go to sleep .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "go", "go", "VERB", "0", "root"),
+    ("3", "to", "to", "PART", "4", "mark"),
+    ("4", "sleep", "sleep", "VERB", "2", "advcl"),
+    ("5", ".", ".", "PUNCT", "2", "punct"),
+]), w1=_FIN, w3=_INF)
+
+GO_TO_SLEEP_BECAUSE = _with_feats(skeleton_from_conllu("I go to sleep because I 'm tired .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "go", "go", "VERB", "0", "root"),
+    ("3", "to", "to", "PART", "4", "mark"),
+    ("4", "sleep", "sleep", "VERB", "2", "advcl"),
+    ("5", "because", "because", "SCONJ", "8", "mark"),
+    ("6", "I", "I", "PRON", "8", "nsubj"),
+    ("7", "'m", "be", "AUX", "8", "cop"),
+    ("8", "tired", "tired", "ADJ", "2", "advcl"),
+    ("9", ".", ".", "PUNCT", "2", "punct"),
+]), w1=_FIN, w3=_INF, w6=_FIN)
+
+BECAUSE_GO_TO_SLEEP = _with_feats(skeleton_from_conllu("Because I 'm tired , I go to sleep .", [
+    ("1", "Because", "because", "SCONJ", "4", "mark"),
+    ("2", "I", "I", "PRON", "4", "nsubj"),
+    ("3", "'m", "be", "AUX", "4", "cop"),
+    ("4", "tired", "tired", "ADJ", "7", "advcl"),
+    ("5", ",", ",", "PUNCT", "7", "punct"),
+    ("6", "I", "I", "PRON", "7", "nsubj"),
+    ("7", "go", "go", "VERB", "0", "root"),
+    ("8", "to", "to", "PART", "9", "mark"),
+    ("9", "sleep", "sleep", "VERB", "7", "advcl"),
+    ("10", ".", ".", "PUNCT", "7", "punct"),
+]), w2=_FIN, w6=_FIN, w8=_INF)
+
+IN_ORDER_TO_SLEEP = _with_feats(skeleton_from_conllu("I go in order to sleep .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "go", "go", "VERB", "0", "root"),
+    ("3", "in", "in", "ADP", "6", "mark"),
+    ("4", "order", "order", "NOUN", "3", "fixed"),
+    ("5", "to", "to", "PART", "6", "mark"),
+    ("6", "sleep", "sleep", "VERB", "2", "advcl"),
+    ("7", ".", ".", "PUNCT", "2", "punct"),
+]), w1=_FIN, w5=_INF)
+
+BROUGHT_HIM_TO_HELP = _with_feats(skeleton_from_conllu("I brought him to help .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "brought", "bring", "VERB", "0", "root"),
+    ("3", "him", "he", "PRON", "2", "obj"),
+    ("4", "to", "to", "PART", "5", "mark"),
+    ("5", "help", "help", "VERB", "2", "advcl"),
+    ("6", ".", ".", "PUNCT", "2", "punct"),
+]), w1={"VerbForm": "Fin", "Tense": "Past"}, w4=_INF)
+
+GAVE_HER_MONEY_TO_BUY = _with_feats(skeleton_from_conllu("I gave her money to buy food .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "gave", "give", "VERB", "0", "root"),
+    ("3", "her", "she", "PRON", "2", "iobj"),
+    ("4", "money", "money", "NOUN", "2", "obj"),
+    ("5", "to", "to", "PART", "6", "mark"),
+    ("6", "buy", "buy", "VERB", "2", "advcl"),
+    ("7", "food", "food", "NOUN", "6", "obj"),
+    ("8", ".", ".", "PUNCT", "2", "punct"),
+]), w1={"VerbForm": "Fin", "Tense": "Past"}, w5=_INF)
+
+WANT_TO_SLEEP = _with_feats(skeleton_from_conllu("I want to sleep .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "want", "want", "VERB", "0", "root"),
+    ("3", "to", "to", "PART", "4", "mark"),
+    ("4", "sleep", "sleep", "VERB", "2", "xcomp"),
+    ("5", ".", ".", "PUNCT", "2", "punct"),
+]), w1=_FIN, w3=_INF)
+
+TO_SEE_THE_LIGURIAN_SEA = _with_feats(skeleton_from_conllu("I went to Genoa to see the Ligurian sea .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "went", "go", "VERB", "0", "root"),
+    ("3", "to", "to", "ADP", "4", "case"),
+    ("4", "Genoa", "Genoa", "PROPN", "2", "obl"),
+    ("5", "to", "to", "PART", "6", "mark"),
+    ("6", "see", "see", "VERB", "2", "advcl"),
+    ("7", "the", "the", "DET", "9", "det"),
+    ("8", "Ligurian", "Ligurian", "ADJ", "9", "amod"),
+    ("9", "sea", "sea", "NOUN", "6", "obj"),
+    ("10", ".", ".", "PUNCT", "2", "punct"),
+]), w1={"VerbForm": "Fin", "Tense": "Past"}, w5=_INF)
+
+EVERYONE_WORKS_TO_EARN = _with_feats(skeleton_from_conllu("Everyone works to earn money .", [
+    ("1", "Everyone", "everyone", "PRON", "2", "nsubj"),
+    ("2", "works", "work", "VERB", "0", "root"),
+    ("3", "to", "to", "PART", "4", "mark"),
+    ("4", "earn", "earn", "VERB", "2", "advcl"),
+    ("5", "money", "money", "NOUN", "4", "obj"),
+    ("6", ".", ".", "PUNCT", "2", "punct"),
+]), w1=_FIN, w3=_INF)
+
+
+def _joins(out):
+    return {r.name: r for r in out.zip.rows if r.kind == "join"}
+
+
+def _clause_of(out, predicate):
+    return next(r for r in out.zip.rows if r.kind == "content" and r.predicate == predicate)
+
+
+def test_a_PURPOSE_is_an_implication_that_claims_the_act_and_not_the_end(compiler):
+    """«I go to sleep» — the speaker says he goes; that the going leads to the sleep is the join's
+    claim, and the sleep itself is not claimed at all (the Captain: *«maybe there is a dog barking
+    and I can't sleep»*). It was an AND, and the sleep was claimed."""
+    out = compiler.compile(GO_TO_SLEEP)
+    go, sleep = _clause_of(out, "go.v"), _clause_of(out, "sleep.v")
+    (join,) = _joins(out).values()
+
+    assert join.operator is Operator.IMPLY
+    assert join.operands == [go.name, sleep.name], "the ACT is the antecedent, the end follows"
+    assert (join.truth, go.truth, sleep.truth) == (1.0, 1.0, None)
+    assert not out.zip.unplaced
+
+
+def test_the_END_of_a_purpose_keeps_no_theatre_because_the_format_cannot_say_after_ITS_PARTNER(
+        compiler):
+    """The act at t-1, the end at t — relative to each other. `Theatre` is relative to the
+    UTTERANCE and the infinitive carries no tense, so nothing is written: the order lives in the
+    IMPLY's operands, antecedent first (tkzip req 37). A partner-relative time axis is what is
+    missing, and it is not invented here."""
+    out = compiler.compile(GO_TO_SLEEP)
+
+    assert _clause_of(out, "go.v").theatre is not None
+    assert _clause_of(out, "sleep.v").theatre is None
+
+
+def test_IN_ORDER_TO_is_the_same_purpose_as_TO(compiler):
+    """`db/0037` corrected the row: it compiled imply/both with the introduced clause FIRST —
+    «Because money earns, I work» — the end claimed and the arrow reversed."""
+    from tools.roundtrip import canonical
+
+    assert canonical(compiler.compile(IN_ORDER_TO_SLEEP).zip) == \
+        canonical(compiler.compile(GO_TO_SLEEP).zip)
+
+
+def test_a_COMPLEMENT_is_not_a_purpose_and_still_opens_no_row(compiler):
+    """«I want to sleep» — the same `to`, the same `mark`, and an `xcomp`: `db/0032` rules it opens
+    no row, and the purpose row names `advcl` and only `advcl`."""
+    out = compiler.compile(WANT_TO_SLEEP)
+
+    assert not _joins(out)
+    assert [r.predicate for r in out.zip.rows if r.kind == "content"] == ["want.v"]
+    assert out.placement[2] == "structure", "the infinitive marker, as it always was"
+
+
+def test_the_CONTROLLED_subject_is_the_matrix_subject_when_the_matrix_has_no_complement(compiler):
+    """«I go to sleep» — I sleep. The subject a non-finite clause does not say is the one its
+    matrix does, in the box the end's own predicate gives a subject (`db/0018`)."""
+    out = compiler.compile(GO_TO_SLEEP)
+
+    assert _clause_of(out, "sleep.v").boxes[Role.AGENT] == _clause_of(out, "go.v").boxes[Role.AGENT]
+
+
+def test_the_CONTROLLED_subject_is_the_OBJECT_when_the_matrix_has_one(compiler):
+    """«I brought HIM to help» — he helps. The ruling's `obj` half; `iobj` is read the same way."""
+    out = compiler.compile(BROUGHT_HIM_TO_HELP)
+    helper = _clause_of(out, "help.v").boxes[Role.AGENT].head
+
+    assert helper == _clause_of(out, "bring.v").boxes[Role.PATIENT].head
+    assert isinstance(helper, Open) and helper.gender == "m"
+
+
+def test_TWO_complements_name_no_controller_and_the_subject_is_left_unsaid(compiler):
+    """«I gave her money to buy food» — the rule names ONE complement, and this matrix has two. The
+    subject is left empty and the abstention says why; picking one would be a guess in the zip."""
+    out = compiler.compile(GAVE_HER_MONEY_TO_BUY)
+    buy = _clause_of(out, "buy.v")
+
+    assert set(buy.boxes) == {Role.PATIENT}, "the food, and no buyer"
+    assert any("two complements" in why for why in out.abstained)
+
+
+def test_a_QUANTIFIED_controller_s_binder_comes_to_scope_the_purpose(compiler):
+    """«Everyone works to earn money» — the earner is the same everyone, so the variable appears in
+    both rows, and a binder scoping only the act would leave it free in the end."""
+    out = compiler.compile(EVERYONE_WORKS_TO_EARN)
+    binder = next(r for r in out.zip.rows if r.kind == "quantifier")
+    (join,) = _joins(out).values()
+
+    assert _clause_of(out, "earn.v").boxes[Role.AGENT].head == Var(name=binder.binds)
+    assert binder.scopes == join.name
+
+
+def test_a_purpose_BRACKETS_the_same_whichever_side_the_because_stands(compiler):
+    """«I go to sleep because I'm tired» and «Because I'm tired, I go to sleep» are one thought —
+    what the tiredness explains is the going-to-sleep. The purpose extends its act the way a `conj`
+    extends its clause; attached to the outermost join instead, the two orders were two trees."""
+    from tools.roundtrip import canonical
+
+    after = compiler.compile(GO_TO_SLEEP_BECAUSE)
+    before = compiler.compile(BECAUSE_GO_TO_SLEEP)
+    assert canonical(after.zip) == canonical(before.zip)
+
+    joins = _joins(after)
+    purpose = next(j for j in joins.values() if _clause_of(after, "go.v").name in j.operands)
+    because = next(j for j in joins.values() if j is not purpose)
+    assert because.operands == [_clause_of(after, None).name, purpose.name], (
+        "the tiredness implies the WHOLE purpose, in that order")
+
+
+def test_an_ADJECTIVE_in_the_end_of_a_purpose_does_not_claim_the_end_again(compiler):
+    """«…to see the LIGURIAN sea» — the adjective's conjunction takes the seeing row's place, so it
+    takes its truth: held CLAIMED, it asserted the seeing all over again. The adjective's own row
+    stays claimed — the sea is Ligurian whether or not I saw it."""
+    out = compiler.compile(TO_SEE_THE_LIGURIAN_SEA)
+    see = _clause_of(out, "see.v")
+    wrapper = next(j for j in _joins(out).values() if see.name in j.operands)
+    ligurian = next(r for r in out.zip.rows if r.name in wrapper.operands and r is not see)
+
+    assert (see.truth, wrapper.truth, ligurian.truth) == (None, None, 1.0)
+    assert see.boxes[Role.EXPERIENCER] == _clause_of(out, "go.v").boxes[Role.AGENT], (
+        "and the seer is the goer")
+
+
+# ------------------------------------------------------------------------------------------------
+# G7 — the understood marker is stored (schema v9, the Captain 2026-09-25)
+# ------------------------------------------------------------------------------------------------
+
+GAVE_ANNA_A_BOOK = skeleton_from_conllu("I gave Anna a book .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "gave", "give", "VERB", "0", "root"),
+    ("3", "Anna", "Anna", "PROPN", "2", "iobj"),
+    ("4", "a", "a", "DET", "5", "det"),
+    ("5", "book", "book", "NOUN", "2", "obj"),
+    ("6", ".", ".", "PUNCT", "2", "punct"),
+])
+
+GAVE_A_BOOK_TO_ANNA = skeleton_from_conllu("I gave a book to Anna .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "gave", "give", "VERB", "0", "root"),
+    ("3", "a", "a", "DET", "4", "det"),
+    ("4", "book", "book", "NOUN", "2", "obj"),
+    ("5", "to", "to", "ADP", "6", "case"),
+    ("6", "Anna", "Anna", "PROPN", "2", "obl"),
+    ("7", ".", ".", "PUNCT", "2", "punct"),
+])
+
+TOLD_HER_THE_TRUTH = skeleton_from_conllu("I told her the truth .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "told", "tell", "VERB", "0", "root"),
+    ("3", "her", "she", "PRON", "2", "iobj"),
+    ("4", "the", "the", "DET", "5", "det"),
+    ("5", "truth", "truth", "NOUN", "2", "obj"),
+    ("6", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
+def test_a_BARE_indirect_object_carries_the_recipient_s_marker_understood(compiler):
+    """«I gave Anna a book» is «to Anna» — the meaning — said bare — the surface. The marker is the
+    table's one recipient marker, never a word of the compiler's."""
+    bare = main_row(compiler.compile(GAVE_ANNA_A_BOOK)).boxes[Role.RECIPIENT]
+    said = main_row(compiler.compile(GAVE_A_BOOK_TO_ANNA)).boxes[Role.RECIPIENT]
+
+    assert bare.marker == compiler.table.marker_for("recipient") == said.marker == "to"
+    assert (bare.marker_implicit, said.marker_implicit) == (True, None)
+
+
+def test_a_bare_PRONOUN_recipient_is_understood_the_same_way(compiler):
+    box = main_row(compiler.compile(TOLD_HER_THE_TRUTH)).boxes[Role.RECIPIENT]
+    assert (box.marker, box.marker_implicit) == ("to", True)
+
+
+# ------------------------------------------------------------------------------------------------
+# G9 — an AND under a supposition is supposed, like its halves (the Captain, 2026-09-25)
+# ------------------------------------------------------------------------------------------------
+
+IF_I_GO_AND_YOU_STAY = skeleton_from_conllu("If I go and you stay , I am happy .", [
+    ("1", "If", "if", "SCONJ", "3", "mark"),
+    ("2", "I", "I", "PRON", "3", "nsubj"),
+    ("3", "go", "go", "VERB", "10", "advcl"),
+    ("4", "and", "and", "CCONJ", "6", "cc"),
+    ("5", "you", "you", "PRON", "6", "nsubj"),
+    ("6", "stay", "stay", "VERB", "3", "conj"),
+    ("7", ",", ",", "PUNCT", "10", "punct"),
+    ("8", "I", "I", "PRON", "10", "nsubj"),
+    ("9", "am", "be", "AUX", "10", "cop"),
+    ("10", "happy", "happy", "ADJ", "0", "root"),
+    ("11", ".", ".", "PUNCT", "10", "punct"),
+])
+
+
+def test_an_AND_inside_a_supposition_is_SUPPOSED_like_its_halves(compiler):
+    """Both conditions must hold — a boolean AND, which is the zip's reading. The defect was only
+    its truth: CLAIMED over two supposed halves, it asserted the going and the staying."""
+    out = compiler.compile(IF_I_GO_AND_YOU_STAY)
+    joins = _joins(out)
+    conditional = next(j for j in joins.values() if j.operator is Operator.IMPLY)
+    both = joins[conditional.operands[0]]
+
+    assert both.operator is Operator.AND
+    assert (conditional.truth, both.truth) == (1.0, None)
+    assert all(out.zip.row(name).truth is None for name in both.operands)
+
+
+# ------------------------------------------------------------------------------------------------
+# t-dc-5 — «and» + a CAUSAL discourse adverb is the adverb's join (the Captain, 2026-09-25)
+# ------------------------------------------------------------------------------------------------
+
+def _and_then(adverb):
+    return skeleton_from_conllu(f"It rained and {adverb} the river flooded .", [
+        ("1", "It", "it", "PRON", "2", "expl"),
+        ("2", "rained", "rain", "VERB", "0", "root"),
+        ("3", "and", "and", "CCONJ", "7", "cc"),
+        ("4", adverb, adverb, "ADV", "7", "advmod"),
+        ("5", "the", "the", "DET", "6", "det"),
+        ("6", "river", "river", "NOUN", "7", "nsubj"),
+        ("7", "flooded", "flood", "VERB", "2", "conj"),
+        ("8", ".", ".", "PUNCT", "2", "punct"),
+    ])
+
+
+@pytest.mark.parametrize("adverb", ["therefore", "consequently", "thus"])
+def test_AND_plus_a_CAUSAL_adverb_is_the_adverb_s_implication_replacing_the_and(compiler, adverb):
+    """«A and therefore B» claims A, B and A → B — ONE join, the implication, over halves that stay
+    claimed. The adverb's row says IMPLY (`db/0013`); the class is read off it, not off the word."""
+    out = compiler.compile(_and_then(adverb))
+    (join,) = _joins(out).values()
+    rain, flood = _clause_of(out, "rain.v"), _clause_of(out, "flood.v")
+
+    assert join.operator is Operator.IMPLY
+    assert join.operands == [rain.name, flood.name], "the marked clause is the consequent"
+    assert (join.truth, rain.truth, flood.truth) == (1.0, 1.0, 1.0)
+
+
+@pytest.mark.parametrize("adverb", ["also", "nevertheless"])
+def test_a_NON_causal_adverb_does_not_replace_the_and_and_builds_no_second_join(compiler, adverb):
+    """«and ALSO» is the coordination's own AND said again — nothing to add, so nothing is built, and
+    the zip stays a tree. A parked reading («nevertheless» is concessive) is still named."""
+    out = compiler.compile(_and_then(adverb))
+    (join,) = _joins(out).values()
+
+    assert join.operator is Operator.AND
+    if adverb == "nevertheless":
+        assert any("concessive" in why for why in out.abstained)

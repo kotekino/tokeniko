@@ -126,6 +126,12 @@ CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis", 
 #: What a joining word claims about its halves (closed classes v4, `db/0010`).
 ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
 ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
+#: **THE FOURTH ANSWER, A PURPOSE'S** (`db/0037`, the Captain 2026-09-25): the join claims its
+#: ANTECEDENT and not its consequent — «I go to sleep» says that I go, not that I sleep. And the
+#: column beside it that says WHICH clause the antecedent is: every implication before it took the
+#: introduced clause («because Y, X» is Y → X), and a purpose runs the other way, the act first.
+ASSERTS_ANTECEDENT = "antecedent"
+ANTECEDENT, MATRIX = "antecedent", "matrix"
 
 #: Kinds a LATER pass owns. A joining word is built by `_relate` once every clause exists, and a
 #: relative pronoun by `_share_variable` — so neither is an abstention when the per-clause walk meets
@@ -425,13 +431,15 @@ class Compiler:
 
         dissolved: set[str] = set()
         withheld: list[int] = []      # relative clauses whose gap no machinery could place
+        coordinated: dict = {}        # a `conj` clause's row -> the join its coordination built
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained,
-                             dissolved, withheld)
+                             dissolved, withheld, coordinated)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
         self._question(skeleton, heads, owner, content, joins, asked)
         self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
-        extra += self._modify(modifiers, joins)
-        self._connect(adverb_joins, content, joins, abstained)
+        extra += self._modify(modifiers, joins, content)
+        self._control(skeleton, heads, content, marks, covered, prefix_rows, joins, abstained)
+        self._connect(adverb_joins, content, joins, abstained, coordinated)
         if withheld or unscoped:
             prefix_rows, content, extra, joins = self._withhold(
                 skeleton, heads, withheld, content, prefix_rows, extra, joins, covered,
@@ -827,6 +835,18 @@ class Compiler:
             if word.index not in covered:
                 abstained.append(f"{word.text}: nominal with no role")
 
+        # **THE UNDERSTOOD MARKER IS STORED** (schema v9, the Captain's G7 ruling). A bare indirect
+        # object means what the marked one means — «I gave ANNA a book» is «to Anna» — so its box
+        # carries the recipient's marker, READ FROM THE TABLE, and says that nobody wrote it. The
+        # relation is the tree's (`iobj` IS the unmarked recipient, UD's own definition); the word
+        # is the table's. A pronoun's box is built elsewhere and arrives here the same way.
+        understood = self.table.marker_for(RELATION_FILLS_ROLE["iobj"].value)
+        recipient = RELATION_FILLS_ROLE["iobj"]
+        if understood and any(skeleton[i].bare_dep == "iobj" and i in covered for i in mine) \
+                and recipient in boxes and boxes[recipient].marker is None:
+            boxes[recipient] = boxes[recipient].model_copy(
+                update={"marker": understood, "marker_implicit": True})
+
         return ContentRow(name=name, predicate=predicate, theatre=self._theatre(skeleton, head),
                           predicate_sense=Open() if predicate else None, boxes=boxes)
 
@@ -901,7 +921,8 @@ class Compiler:
 
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
                 marks: dict, covered: Placements, prefix_rows: list, abstained: list,
-                dissolved: set, withheld: list | None = None) -> list[JoinRow]:
+                dissolved: set, withheld: list | None = None,
+                coordinated: dict | None = None) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -974,6 +995,18 @@ class Compiler:
                 asserts = ASSERTS_NEITHER
 
             inner, outer_row = content[head.index], content[outer.index]
+            # **A PURPOSE CLAIMS THE ACT AND NOT THE END** (`db/0037`, the Captain 2026-09-25):
+            # «I go to sleep» — the speaker says he goes; that the going leads to the sleep is the
+            # join's claim, fallible like every claim, and the sleep itself is not claimed at all.
+            purpose = asserts == ASSERTS_ANTECEDENT
+            if purpose:
+                unasserted.add(inner.name)
+            # **A JOIN INSIDE A SUPPOSITION IS SUPPOSED, LIKE ITS HALVES** (G9, the Captain
+            # 2026-09-25). «If I go and you stay, I am happy»: both conditions must hold, a boolean
+            # AND — and the AND was held CLAIMED while both its halves were supposed, which asserted
+            # the going and the staying through the back door. What claims its halves claims only
+            # as much as the clause it extends does.
+            supposed = outer_row.name in unasserted and asserts in (ASSERTS_BOTH, ASSERTS_ANTECEDENT)
             if outer_row.name in unasserted and asserts == ASSERTS_BOTH:
                 # **UNASSERTION PROPAGATES DOWN, AND NOT PROPAGATING IT IS A TRUTH ERROR.** «if you
                 # know WHO DID IT, tell me» does not assert that anybody did it — the whole antecedent
@@ -1011,23 +1044,33 @@ class Compiler:
             #     earlier join named it — «because (I think and I love), I am happy»;
             #   - anything else attaches to the whole of what is already there, so it takes the
             #     OUTERMOST join the clause sits in — «(I'm not software but I am a mind), because…».
-            coordinating = head.bare_dep == "conj"
+            #
+            # **AND A PURPOSE EXTENDS ITS ACT THE WAY A `conj` EXTENDS ITS CLAUSE** *(2026-09-25)*.
+            # «I go to sleep because I'm tired» and «Because I'm tired, I go to sleep» are one
+            # thought: what the tiredness explains is the going-to-sleep, not the going. Attached to
+            # the outermost join instead, the two orders compiled to two different trees.
+            coordinating = head.bare_dep == "conj" or purpose
             left = outer_row.name if coordinating else self._outermost(outer_row.name, joins)
             right = inner.name if coordinating else self._outermost(inner.name, joins)
             if left == right:
                 # Both ends already live in one join; a join of a thing with itself is not a join.
                 abstained.append(f"{inner.name}: already joined to {outer_row.name} — not re-joined")
                 continue
-            operands = ([right, left] if operator == "imply"
+            # **WHICH HALF IS THE ANTECEDENT IS THE WORD'S, NOT THE TREE'S.** The introduced clause,
+            # unless the row says the matrix is (`db/0037`: a purpose leads FROM the act).
+            matrix_first = joiner is not None and joiner.compiled.get(ANTECEDENT) == MATRIX
+            operands = ((([left, right] if matrix_first else [right, left])) if operator == "imply"
                         else sorted([left, right], key=lambda n: 0 if n == left else 1))
             fresh = JoinRow(name=f"j{len(joins)}", operator=Operator(operator),
-                            operands=operands, truth=CLAIMED)
+                            operands=operands, truth=None if supposed else CLAIMED)
             if coordinating:
                 for join in joins:
                     if outer_row.name in join.operands:
                         join.operands = [fresh.name if name == outer_row.name else name
                                          for name in join.operands]
             joins.append(fresh)
+            if head.bare_dep == "conj" and coordinated is not None:
+                coordinated[inner.name] = fresh
             if joiner is not None:
                 covered.update(range(joiner_index(skeleton, head, joiner),
                                      joiner_index(skeleton, head, joiner) + joiner.length),
@@ -1230,7 +1273,8 @@ class Compiler:
             if join.truth == CLAIMED and wanted and set(join.operands) <= wanted:
                 join.truth = None
 
-    def _connect(self, adverb_joins: list, content: dict, joins: list, abstained: list) -> None:
+    def _connect(self, adverb_joins: list, content: dict, joins: list, abstained: list,
+                 coordinated: dict | None = None) -> None:
         """A DISCOURSE adverb relates two ROWS, so it can only be built once both exist.
 
         «He was tired. Therefore he left.» — `therefore` is an IMPLY between the row it sits in and
@@ -1245,6 +1289,31 @@ class Compiler:
         """
         order = [row.name for row in content.values()]
         for owner, operator, pragmatic in adverb_joins:
+            coordination = (coordinated or {}).get(owner)
+            if coordination is not None:
+                # **«AND THEREFORE» IS THE ADVERB'S JOIN, AND IT REPLACES THE «AND»** (t-dc-5, the
+                # Captain 2026-09-25). The clause is already joined to its partner — by the
+                # coordination, and to the right partner, which «the row before it» is not when the
+                # first conjunct holds a clause of its own («Osaka is where you LIVE and it is ALSO
+                # …»). A second join over the same two was a DAG and said A twice. So the adverb acts
+                # on the coordination's join instead:
+                #
+                #   an IMPLY — causal, the format's only cause (tkzip: «No cause … relation. All
+                #     three are IMPLY»): it REPLACES the AND. «A and therefore B» claims A, B and
+                #     A → B; the halves were claimed and stay claimed, and the converse is not said
+                #   the coordination's own operator — «and ALSO», «and NEVERTHELESS»: nothing to
+                #     add, so nothing is built; a parked reading is still named
+                #   anything else — a meaning the coordination cannot also carry: not built, and
+                #     the loss is named rather than written as a second parent
+                if Operator(operator) is Operator.IMPLY:
+                    coordination.operator = Operator.IMPLY
+                elif Operator(operator) is not coordination.operator:
+                    abstained.append(f"a {operator} connective inside a {coordination.operator.value} "
+                                     f"coordination — one join cannot be both, and the "
+                                     f"coordination's is kept")
+                if pragmatic:
+                    abstained.append(f"{operator} carries a parked `{pragmatic}` reading")
+                continue
             position = order.index(owner) if owner in order else -1
             if position <= 0:
                 abstained.append(f"a {operator} connective with no row before it — the other half is "
@@ -1312,7 +1381,7 @@ class Compiler:
 
         return set()
 
-    def _modify(self, modifiers: list, joins: list) -> list:
+    def _modify(self, modifiers: list, joins: list, content: dict | None = None) -> list:
         """**ATTRIBUTIVE ADJECTIVES BECOME ROWS** — tkzip req 70, and the shape is the drill's own.
 
         «I live in a human body» is hand-compiled in E2's drill as
@@ -1335,6 +1404,12 @@ class Compiler:
         attached: dict[str, str] = {}      # owner row -> the conjunction built over it so far
         binders: dict[str, list] = {}      # owner row -> every binder whose scope must follow it
         clause_joins = list(joins)         # the joins `_relate` and its neighbours already built
+        # **AND IT TAKES THE ROW'S TRUTH, NOT A CLAIM OF ITS OWN** *(2026-09-25)*. The conjunction
+        # takes the row's place (below), so it says what the row said: «I went to Genoa to see the
+        # Ligurian sea» leaves the SEEING unclaimed (a purpose, `db/0037`), and a conjunction of it
+        # with «the sea is Ligurian» held CLAIMED asserted the seeing all over again. The adjective's
+        # own row stays claimed — the sea is Ligurian whether or not I saw it.
+        truth_of = {row.name: row.truth for row in (content or {}).values()}
         for position, (var, key, binder, owner) in enumerate(modifiers):
             row = ContentRow(
                 name=f"m{position}", truth=CLAIMED,
@@ -1347,7 +1422,8 @@ class Compiler:
             # A zip with two unrelated top-level assertions says the same thing in a shape nothing
             # else in the format uses.
             join = JoinRow(name=f"j{len(joins)}", operator=Operator.AND,
-                           operands=[row.name, attached.get(owner, owner)], truth=CLAIMED)
+                           operands=[row.name, attached.get(owner, owner)],
+                           truth=truth_of.get(owner, CLAIMED))
             joins.append(join)
             attached[owner] = join.name
             binders.setdefault(owner, []).append(binder)
@@ -1373,6 +1449,99 @@ class Compiler:
                     join.operands = [outermost if name == owner else name
                                      for name in join.operands]
         return raised
+
+    def _control(self, skeleton: Skeleton, heads: list[Word], content: dict, marks: dict,
+                 covered: Placements, prefix_rows: list, joins: list, abstained: list) -> None:
+        """**THE CONTROLLED SUBJECT** — who does the sleeping in «I go to sleep» (the Captain,
+        2026-09-25). A non-finite adverbial clause says no subject and has one, and the matrix names
+        it:
+
+            no complement in the matrix     its SUBJECT     «I go to sleep» · «I work to earn»
+            an `obj` or an `iobj`           THAT complement «I brought HIM to help»
+
+        The two relations are the ruling's own, read off the tree — frame, like every other reading
+        of its shape. **Where the rule is wrong for a verb, the fallback is knowledge**: «I promised
+        her to go» is measured `iobj` and yet not her going alone — the Captain reads it as WE go —
+        and that is for the micro-nns, later. No per-verb row is written, and no exception is coded.
+
+        **NOT A FINITE CLAUSE.** English leaves the subject unsaid only where no finite verb
+        carries it: «to sleep», «walking home». «If possible» has no verb at all, and its missing
+        subject is «it», not mine — so the test is the carrier's `VerbForm`, the same features
+        `_tense` reads. And only an `advcl` opens a row to hold it: an `xcomp` opens none
+        (`db/0032`), so the ruling's second half has nothing to act on until one does.
+
+        Run after `_imperative` — «Go to sleep!» is controlled by the addressee it put in the box —
+        and after `_modify`, whose conjunctions a controlling binder must come to scope.
+        """
+        for head in heads:
+            if head.bare_dep != "advcl" or head.index not in content:
+                continue
+            children = list(skeleton.children(head.index))
+            if any(c.bare_dep in SUBJECT_DEPS for c in children):
+                continue
+            forms = [(w.feats or {}).get("VerbForm")
+                     for w in (head, *(c for c in children if c.bare_dep in ("aux", "cop")))]
+            if "Fin" in forms or not any(form is not None for form in forms):
+                continue
+            outer = self._enclosing(skeleton, head, content)
+            if outer is None or outer.index not in content:
+                continue
+            inner, outer_row = content[head.index], content[outer.index]
+
+            around = list(skeleton.children(outer.index))
+            complements = [c for c in around if c.bare_dep in ("obj", "iobj")]
+            if len(complements) > 1:
+                abstained.append(f"{inner.name}: the matrix has two complements, and the rule names "
+                                 f"one controller — the subject is left unsaid")
+                continue
+            copular = outer_row.predicate is None
+            named = complements[0] if complements else next(
+                (c for c in around if c.bare_dep in SUBJECT_DEPS), None)
+            # WHICH BOX the controller became: where it was placed, else the role its relation
+            # gives it — a pronoun is placed as an `entity` and its box is still its relation's. A
+            # matrix with no subject word at all («Go to sleep!») has the one `_imperative` gave it.
+            role = (self._placed_role(covered, named.index)
+                    or self._role_of(named, skeleton, marks, copular)) if named is not None \
+                else self._subject_role(outer, copular, skeleton)
+            controller = outer_row.boxes.get(role) if role is not None else None
+            if controller is None:
+                abstained.append(f"{inner.name}: its controller reached no box of "
+                                 f"{outer_row.name} — the subject is left unsaid")
+                continue
+            mine = self._subject_role(head, inner.predicate is None, skeleton)
+            if mine in inner.boxes:
+                continue
+            # The phrase, not the way the matrix marked it: «to HIM» is the matrix's own marker.
+            inner.boxes[mine] = controller.model_copy(update={"marker": None,
+                                                              "marker_implicit": None})
+            if isinstance(controller.head, Var):
+                self._rescope(controller.head.name, inner.name, prefix_rows, joins)
+
+    @staticmethod
+    def _rescope(var: str, row: str, prefix_rows: list, joins: list) -> None:
+        """A binder whose variable now appears in `row` as well must SCOPE it — so it moves out to
+        the smallest join that holds both what it scoped and `row`. Unmoved when it already does."""
+        binder = next((p for p in prefix_rows if getattr(p, "binds", None) == var), None)
+        if binder is None:
+            return
+        by_name = {join.name: join for join in joins}
+
+        def under(name: str) -> set[str]:
+            seen, frontier = {name}, [name]
+            while frontier:
+                join = by_name.get(frontier.pop())
+                for operand in (join.operands if join is not None else ()):
+                    if operand not in seen:
+                        seen.add(operand)
+                        frontier.append(operand)
+            return seen
+
+        if row in under(binder.scopes):
+            return
+        holding = [join for join in joins
+                   if binder.scopes in under(join.name) and row in under(join.name)]
+        if holding:
+            binder.scopes = min(holding, key=lambda join: len(under(join.name))).name
 
     def _enclosing(self, skeleton: Skeleton, head: Word, content: dict) -> Word | None:
         """The clause this one hangs off — its head's own clause."""

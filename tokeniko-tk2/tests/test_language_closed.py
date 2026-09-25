@@ -341,3 +341,30 @@ def test_the_clause_does_not_settle_a_tie_OUTSIDE_the_wh_readings():
              readings=readings(det={"quantificational", "interrogative"}))
 
     assert t.read(["what"], 0, None, "det", head_dep="root", in_root_clause=True) is None
+
+
+# ------------------------------------------------------------------------------------------------
+# a row may name the clause it is the reading for — `features.introduces`, `db/0037`
+# ------------------------------------------------------------------------------------------------
+
+
+def test_TO_is_a_purpose_under_an_advcl_and_structure_anywhere_else(table):
+    """«I go TO sleep» and «I want TO sleep» are one token, one tag, one relation; the clause it
+    introduces is what differs (the Captain, 2026-09-25: *«recognised by SHAPE»*)."""
+    mark = dict(upos="PART", dep="mark")
+
+    purpose = table.read(["to"], 0, **mark, head_dep="advcl", in_root_clause=False)
+    assert purpose.compiled == {"kind": "join", "operator": "imply", "asserts": "antecedent",
+                                "antecedent": "matrix"}
+    assert table.read(["to"], 0, **mark, head_dep="xcomp", in_root_clause=False).compiled == \
+        {"kind": "structure"}
+    assert table.read(["to"], 0, **mark, head_dep="csubj", in_root_clause=False).compiled == \
+        {"kind": "structure"}, "«To err is human» is no purpose"
+
+
+def test_a_reader_with_NO_TREE_never_sees_a_row_that_names_a_clause(table):
+    """`select` and a token walk hold no clause, so the clause-bound reading cannot be theirs — and
+    the old `to` answers exactly as it did."""
+    assert table.select("to", "PART", "mark")["compiled"] == {"kind": "structure"}
+    assert all((r.get("features") or {}).get("introduces") is None
+               for r in table.candidates("to", "PART", "mark"))

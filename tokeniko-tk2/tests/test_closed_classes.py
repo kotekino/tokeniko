@@ -309,3 +309,60 @@ def test_the_0036_check_asks_the_question_the_LOOKUP_asks():
     modality = {"kind": "prefix", "element": "modality"}
     assert reader.the_modal("inside", **modality, modality="necessity") == "must"
     assert reader.the_modal("inside", **modality, modality="possibility") == "might"
+
+
+# ------------------------------------------------------------------------------------------------
+# `db/0037` — a purpose claims the act and not the end (the Captain, 2026-09-25)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_every_PURPOSE_row_claims_its_antecedent_and_names_the_matrix_as_it():
+    """«to», «in order to», «so that» — one meaning. v19 compiled the two subordinators imply/both
+    with the introduced clause first: the end claimed and the arrow reversed."""
+    module = migration(37)
+    purpose = {r["form"]: r for r in module.CLOSED_CLASS_ROWS
+               if r["compiled"].get("asserts") == module.ANTECEDENT}
+
+    assert set(purpose) == {"to", "in order to", "so that"}
+    assert all(r["compiled"] == module.PURPOSE for r in purpose.values())
+    assert purpose["to"]["features"]["introduces"] == "advcl"
+    assert [f for f, r in purpose.items() if r.get("spoken")] == ["to"], "the voice is «to»"
+
+
+def test_0037_adds_ONE_row_moves_no_form_and_touches_no_other_meaning():
+    module, before = migration(37), migration(36)
+
+    assert set(module.CLOSED_CLASS_FORMS) == set(before.CLOSED_CLASS_FORMS)
+    assert len(module.CLOSED_CLASS_ROWS) == len(before.CLOSED_CLASS_ROWS) + 1
+    moved = [was["form"] for row, was in zip(module.CLOSED_CLASS_ROWS, before.CLOSED_CLASS_ROWS)
+             if row["compiled"] != was["compiled"]]
+    assert sorted(moved) == ["in order to", "so that"]
+
+
+def test_the_0037_check_REFUSES_a_purpose_that_does_not_say_which_clause_leads(monkeypatch):
+    module = migration(37)
+    rows = [dict(r, compiled=dict(r["compiled"])) for r in module.CLOSED_CLASS_ROWS]
+    next(r for r in rows if r["form"] == "in order to")["compiled"].pop(module.ANTECEDENT)
+    monkeypatch.setattr(module, "CLOSED_CLASS_ROWS", rows)
+
+    with pytest.raises(ValueError, match="in order to"):
+        module._check()                                                     # noqa: SLF001
+
+
+def test_the_0037_check_asks_the_question_the_LOOKUP_asks():
+    """The decompiler asks the three joining roles for the purpose meaning, keyed on the same tuple
+    as the migration's `_meaning()` — and finds «to», said as the infinitive."""
+    from tk2.language.closed import ClosedClasses
+    from tk2.language.decompile import Decompiler
+
+    module = migration(37)
+    for row in module.CLOSED_CLASS_ROWS:
+        features = row.get("features") or {}
+        assert module._meaning(row) == Decompiler._key(                     # noqa: SLF001
+            row["role"], row.get("compiled") or {}, features.get("sort"),
+            features.get("takes_number")), row["form"]
+    from tk2.language.decompile import JOINING_ROLES
+    assert module.JOINING_ROLES == JOINING_ROLES, "the check asks the roles the decompiler asks"
+
+    reader = Decompiler(ClosedClasses(module.CLOSED_CLASS_ROWS, "db/0037 (test)"))
+    assert reader._connective("imply", "antecedent") == ("to", "subordinator")  # noqa: SLF001

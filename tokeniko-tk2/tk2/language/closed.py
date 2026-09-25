@@ -105,6 +105,14 @@ RELATIVE_CLAUSE_DEPS = frozenset({"acl"})
 #: (root `CLAUDE.md`, 2026-09-18; parser-compiler req 21).
 COMPLEMENT_CLAUSE_DEPS = frozenset({"ccomp", "csubj"})
 
+#: **A ROW MAY NAME THE CLAUSE IT IS THE READING FOR** — `features.introduces`, written by `db/0037`.
+#: «I want TO sleep» and «I go TO sleep» are one token, one tag and one relation (`to`, `PART`,
+#: `mark`); only the clause it introduces differs — `xcomp`, a complement, against `advcl`, a purpose
+#: (the Captain, 2026-09-25: *«recognised by SHAPE … no list»*). The shape is the tree's, so it is
+#: read here; that `to` MEANS purpose under an `advcl` is a fact about the word, so it is the row's.
+#: A name and not a roster: which rows carry it, and which clause each names, is the migrations'.
+INTRODUCES = "introduces"
+
 #: UD dependency -> the tkzip ROLE it settles, for markers the table alone cannot disambiguate.
 #: FRAME, and narrow on purpose: every entry is a relation whose UD definition NAMES the role, so
 #: nothing here is a judgement about English — it is a reading of UD's own documentation.
@@ -224,7 +232,7 @@ class ClosedClasses:
     # -- the job ----------------------------------------------------------------------------------
 
     def candidates(self, form: str, upos: str | None = None,
-                   dep: str | None = None) -> tuple[dict, ...]:
+                   dep: str | None = None, head_dep: str | None = None) -> tuple[dict, ...]:
         """Every job UD LEAVES STANDING for this token — the rows `select` settles, or does not.
 
         Narrow by dependency, then by POS, and stop: the survivors come back in the table's own
@@ -236,8 +244,18 @@ class ClosedClasses:
         holds as a particle is a disagreement about labels, not evidence that the form is absent.
         What the tolerance keeps is every row the failed filter could not choose between; whether
         they are ONE reading is `select`'s question, not this one's.
+
+        **A ROW THAT NAMES A CLAUSE (`introduces`) IS A CANDIDATE UNDER THAT CLAUSE AND NO OTHER** —
+        `head_dep` is the relation of the word this token attaches to, which for a `mark` is the
+        clause it introduces. There it outranks the rows that name none: it is the reading the
+        table wrote for exactly this shape. A caller holding no tree never sees it.
         """
         rows = self._by_form.get(form.lower())
+        if not rows:
+            return ()
+        clause = bare(head_dep or "")
+        rows = [r for r in rows
+                if (r.get("features") or {}).get(INTRODUCES) in (None, clause or None)]
         if not rows:
             return ()
         if upos and upos.upper() in CONTENT_POS:
@@ -275,6 +293,9 @@ class ClosedClasses:
         if upos and len(narrowed) > 1:
             classes = UD_POS_TO_WORD_CLASS.get(upos.upper(), ())
             narrowed = [r for r in narrowed if r["word_class"] in classes] or narrowed
+        if len(narrowed) > 1:
+            named = [r for r in narrowed if (r.get("features") or {}).get(INTRODUCES)]
+            narrowed = named or narrowed
         return tuple(narrowed)
 
     def select(self, form: str, upos: str | None = None, dep: str | None = None) -> dict | None:
@@ -333,7 +354,7 @@ class ClosedClasses:
         form = self.match(tokens, at)
         if form is None:
             return None
-        survivors = self.candidates(form, upos, dep)
+        survivors = self.candidates(form, upos, dep, head_dep)
         if not survivors:
             return None
         # The clause first, then the survivors' own agreement — and the complement clause last,
@@ -470,6 +491,16 @@ class ClosedClasses:
             i += found.length
 
     # -- what the table knows about itself --------------------------------------------------------
+
+    def marker_for(self, role: str) -> str | None:
+        """The one form that can MARK this role, or None when the table names none or several.
+
+        A lookup and not a choice: exactly one form in the table can mark a recipient (`to`), so
+        that is the recipient's marker — whether the compiler is storing the one a bare indirect
+        object leaves understood (schema v9) or the decompiler is saying an addressee."""
+        found = {row["form"] for row in self._rows
+                 if role in ((row.get("compiled") or {}).get("roles") or ())}
+        return next(iter(found)) if len(found) == 1 else None
 
     def forms(self) -> tuple[str, ...]:
         return tuple(sorted(self._by_form))

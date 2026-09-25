@@ -212,3 +212,137 @@ have read off the migration file» — the newest one.
 4. «could» loses its past — the compiler takes no theatre from a modal
 5. `_withhold` leaves some words counted as placed («He thinks» when the attitude row is withheld)
 6. an inverted fused question comes back archaic: «Cannot a calculator think?»
+
+## The rulings — 2026-09-25 *(the Captain)*
+
+**G1 — PURPOSE IS AN IMPLICATION, and the controlled subject is read off the complements.**
+
+> *«I eat to prevent my death. But maybe I die even if I eat. The purpose is an implication, the
+> implication can fail. […] this is my evaluation, which can be false or imprecise […] in the case of
+> sleeping my purpose and the implication at time t-1 is true. Not at time t, because maybe there is
+> a dog barking and I can't sleep.»*
+
+The QM proposed an intention (`want`) instead, because a purpose can fail. Refused: **a zip holds
+what the speaker CLAIMS, and a purpose is the speaker's claim that the act leads to the end** —
+fallible like every claim, and the evaluator judges it. And the governing principle:
+
+> *«We should NEVER make exceptions of the rule: semantics in a fixed grid (roles) glued with
+> operators: this grants us computability, on the geometric level.»*
+
+- **purpose = `imply(act, end)`**, the act at t-1 and the end at t; the act is claimed, the end is
+  not (the speaker says he goes, not that he sleeps). Recognised by SHAPE: stanza gives purpose as
+  `advcl` + «to» («go to sleep», «work to earn money», «go to bed to sleep») and a complement as
+  `xcomp` («want to sleep», «told her to go») — no list
+- **the controlled subject**: no complement → the matrix subject («I want to sleep», «I go to
+  sleep»); a complement → that complement («I forced / persuaded / helped / expect HIM to…»,
+  `obj`; «I told / asked HER to go», `iobj` — a bare `iobj` carries the understood «to» of G7).
+  **«promise» is NOT an exception row, and not subject control either** *(the Captain, same day)*:
+  «I promised her to go to the beach» means WE go — her and me — while «I promised her THAT I'd go»
+  is only me. That subtlety is knowledge, **and better, a micro-nn applied to knowledge**: deferred
+  to the micro-nns. Until then the rule applies uniformly and «promise» reads as «her»
+
+**G6 → E3b** (names).
+
+**G7 — the understood marker is STORED, and how it was said is kept.** tk1 did it before tk2
+existed: a bare indirect object gets the marker «to» and records that it came from a bare `iobj`
+(`lib/llc/parser.py:891`; its marker model defaults its origin to «implicit», `lib/core/tk.py:77`).
+The meaning is «to Anna»; the bareness is the surface. The decompiler says it as it was said.
+
+**G9 — an AND under a supposition is supposed, like its halves.** The Captain's reading — both
+conditions must hold, evaluated as a boolean AND — is exactly the zip's; the defect was only the
+AND row carrying `claimed` while its halves carried `supposed`.
+
+**`t-dc-5` — a coordination plus a CAUSAL discourse adverb is the adverb's join, which REPLACES the
+«and».** A class, not a word: the adverb table's `discourse` rows already carry the join. «A and
+therefore B» claims A, B and A → B; the converse is not claimed, because two things true together is
+not an equivalence. Benched on a handful of sentences before building.
+
+**The zero relative — a bench** before any rule. Stanza marks the clause (`acl:relcl`) but not the
+antecedent's role inside it; the basic UD it produces has no gap, the enhanced UD that would is not
+produced. Candidates: WordNet's verb frames, the antecedent's supersense.
+
+## The zero relative — the bench *(1st Officier, 09-25; `tools/relative_gap_bench.py`)*
+
+113 hand-labelled zero relatives, each with its reason in English (64 object · 28 time · 7 place · 6
+manner · 3 reason · 5 other), in seven groups — transitive, intransitive, **the same verb both ways**
+(«the song I sang» / «the night I sang»), **time/place nouns as OBJECTS** («the place I love»),
+minimal pairs, stranded-marker controls, embedded gaps. 107 reach the withheld shape. Two scores,
+never averaged: *binary* (object vs any adverbial — where req 8 bites) and *role*.
+
+| candidate | binary right / wrong / abstain | precision | coverage |
+|---|---|---|---|
+| primary-sense verb frames, strict | 62 / 13 / 32 | 82.7% | 70% |
+| supersense of the antecedent, strict | 35 / 24 / 48 | 59.3% | 55% |
+| **frames and supersense must AGREE** | **55 / 2 / 50** | **96.5%** | **53%** |
+| any-sense frames | 69 / 38 / 0 | 64.5% | 100% — nearly every verb is transitive in SOME sense |
+| stanza's `obl:tmod` on the antecedent | 9 / 2 / 96 | 81.8% | 10% — a misparse's guess |
+| «no object ⇒ object gap» | 63 / 44 / 0 | 58.9% | 100% |
+| withhold (today) | 0 / 0 / 107 | — | 0% |
+
+**No single signal separates them.** Agreement is the only candidate near trust: its adverbial
+answers 16 of 16, its object answers 32 right and 2 wrong — both the same blind spot: «time» is
+`noun.event` in WordNet and «way» is `noun.attribute`; **WordNet has no class for manner at all**.
+Where agreement abstains is exactly the hard half: the same-verb pairs (14 of 28) and time/place
+nouns as objects (15 of 19) stay withheld. Stanza offers nothing more — no gap node in the
+constituency tree, no enhanced UD.
+
+**Found:** a PASSIVE relative («the day she was born», `nsubj:pass`) cannot have an object gap —
+the object was promoted to subject. That is tree SHAPE, frame, and it removes the «born» errors
+from every candidate · WordNet splits valency across senses (`cook.v.01` intransitive, `cook.v.02`
+transitive), so any primary-sense rule inherits the resource's sense order · the supersense reader
+takes WordNet's first class and does not abstain when it is of two minds.
+
+**For the Captain:** agreement at 96.5% / 53% — or withhold as today. The two known wrongs are both
+«the time/way …», which real traffic weights far more heavily than this set does.
+
+**RULED (the Captain, 09-25) — agreement, plus two:**
+1. the gap's role is written only when the verb frames and the antecedent's supersense AGREE; any
+   disagreement withholds, as today
+2. a PASSIVE relative never has an object gap — tree shape, frame
+3. two curation rows for the blind spots, `time` → time and `way` → manner — knowledge (the
+   `db/0019` `happy` precedent). **Cost stated: rows for exactly the bench's two wrongs is tuning on
+   the test**, so ~20 FRESH sentences (time · way · moment · reason · place heads), written after the
+   rows exist, are the held-out check — trusted only if they hold
+
+The supersense reader keeps taking WordNet's first class here: abstaining on «two minds» would mute
+nearly every time/place noun, and the agreement already guards the first-class guess.
+
+## G1 · G7 · G9 · «and therefore» — built the same day *(1st Officier)*
+
+- **G1** — `advcl` + «to» compiles to `imply(act, end)`: the act claimed, the end unclaimed, the join
+  claimed; a row may name the clause relation it introduces (`features.introduces: advcl`) and wins
+  there. The purpose join replaces its act in earlier joins like a `conj`, so «X because Y» and
+  «Because Y, X» are one tree (`t-ws-1`'s bracketing). Controlled subject: no `obj`/`iobj` → the
+  matrix subject; exactly one → it; both → abstain. **Time: the format cannot say «t-1 relative to
+  its partner»** — the order lives only in IMPLY's operand order; nothing invented
+- **`db/0037`** (closed classes v20): the purpose `to` row (`asserts: antecedent`, a fourth value —
+  `matrix` would have made a purpose an attitude), and **two rows that were WRONG CLAIMS corrected**:
+  «in order to» and «so that» both claimed the end, with the arrow reversed
+- **G7 — schema v9**: one field, `Box.marker_implicit`. A bare `iobj` (an attitude's bare addressee
+  too) stores the table's recipient marker and says it back bare. `q-7` now differs only by G6
+- **G9** — a join whose outer clause is supposed is supposed; «If I go and you stay, I am happy»
+  round-trips. Cost: «If you go to sleep, I stay» is refused (supposed, a purpose and an «if» leave
+  the same zip)
+- **«and therefore»** — benched on eight sentences, then built: an IMPLY adverb replaces the «and»,
+  the same operator is absorbed, a different one abstains. **The tree ratchet's exception list is
+  EMPTY** — every compiled drill zip is a tree
+
+| | drill | fixpoint | of 71 whole | UD gate |
+|---|---|---|---|---|
+| before | 67 · 4 · 16 | 74 · 13 · 0 | 64 · 7 · 0 | 34 · 0 · 11 |
+| after | 65 · **6** · 16 | **76 · 11 · 0** | **65 · 6 · 0** | identical |
+
+**The two new DISAGREED are the drill disagreeing with a RULING** — `t-ws-1` hand-compiles «go to
+sleep» as the idiom (no «go»), `aw-6` as the refused intention with the arrow reversed. **The
+Captain, 09-25: tests follow decisions and never dictate them; both are amended at E1e** — «option
+a, but amend the drill at e1e».
+
+**And the costs the QM raised, refused as costs** *(the Captain)*: «To be honest, I left» — *with the
+purpose of being honest*; «I woke up to find…» — *my purpose is to find*. Both are purpose, and the
+reading is right. *(For the record, the QM's counterexample: «He woke up to find his house on fire».)*
+
+**Found, not fixed:** «so» as a coordinator still claims its consequence with the arrow reversed,
+as «in order to» did · «and so»: the adverb «so» matches the coordinator row and is lost in silence ·
+«Because I think, I am» comes back think + ccomp (G8's family) · «I asked Anna where she lives»
+(reported): Anna unplaced, the attitude lost · «Go to sleep!» — a purpose under an imperative is
+refused.

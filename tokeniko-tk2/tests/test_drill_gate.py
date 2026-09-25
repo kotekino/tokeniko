@@ -355,13 +355,12 @@ def test_every_compiled_drill_zip_is_a_TREE():
     A prefix row is not a parent: it is the row's own scope chain, and several stacked on one row
     («not every cat…») is the format's normal shape (req 35).
 
-    **One named entry, and the list may only go DOWN:**
-
-      `t-dc-5`   «Osaka is where you live and it is ALSO the name…» — the discourse adverb's join
-                 (`_connect`) names two rows the coordination has already joined. Not fixed with
-                 G2 because it is a design question, not a slip: «A and THEREFORE B» asserts the
-                 implication as well as the conjunction, so declining the second join would lose a
-                 meaning, and keeping both is A twice. For the QM and the Captain.
+    **The list went to ZERO on 2026-09-25, and it may only stay there.** Its one entry was `t-dc-5`,
+    «Osaka is where you live and it is ALSO the name…» — the discourse adverb's join (`_connect`)
+    named two rows the coordination had already joined. The Captain ruled it the same day: a
+    coordination plus a CAUSAL discourse adverb is the adverb's join, which REPLACES the «and»
+    («A and therefore B» claims A, B and A → B); an adverb repeating the coordination's operator
+    («and also») adds nothing and builds nothing.
     """
     from collections import Counter
 
@@ -386,4 +385,4 @@ def test_every_compiled_drill_zip_is_a_TREE():
         if shared:
             dags[case.id] = shared
 
-    assert sorted(dags) == ["t-dc-5"], f"compiled zips that are not trees: {dags}"
+    assert sorted(dags) == [], f"compiled zips that are not trees: {dags}"

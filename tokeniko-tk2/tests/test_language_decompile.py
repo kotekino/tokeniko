@@ -983,3 +983,168 @@ def test_a_restriction_whose_phrase_is_NEVER_SAID_is_named(decompiler):
 
     assert out.text == "Anna sleeps."
     assert any(why.startswith("content row r0:") for why in out.unsaid), out.unsaid
+
+
+# ------------------------------------------------------------------------------------------------
+# G1 — a purpose, said back: «V₁ to V₂» (the Captain, 2026-09-25; `db/0037`)
+# ------------------------------------------------------------------------------------------------
+
+
+def _purpose(sleeper="me.n"):
+    return Zip(rows=[
+        row("r0", "go.v", agent="me.n"),
+        row("r1", "sleep.v", truth=None, agent=sleeper),
+        JoinRow(name="j0", operator=Operator.IMPLY, operands=["r0", "r1"], truth=1.0)])
+
+
+def test_a_PURPOSE_is_said_as_its_act_TO_its_bare_end(spoken):
+    """The act claimed and first, the end unclaimed and bare; its subject is the act's, so English
+    leaves it unsaid — and «to» is the table's voice for the meaning, not a word of this module's."""
+    out = spoken.decompile(_purpose())
+
+    assert out.text == "I go to sleep."
+    assert out.whole
+
+
+def test_a_purpose_whose_SLEEPER_is_not_the_one_its_act_controls_is_REFUSED(spoken):
+    """«I go (for you) to sleep» has no form here, and saying «I go to sleep» would make ME the
+    sleeper — a different claim. Refused, never approximated."""
+    out = spoken.decompile(_purpose(sleeper="you.n"))
+
+    assert out.text == ""
+    assert any("controls" in why for why in out.refused)
+
+
+def test_an_IMPERATIVE_is_never_the_clause_a_subordinator_marks(spoken):
+    """«Go to sleep!» compiles to a want over the act and a claimed purpose over two unclaimed rows —
+    which reads, by the halves' truth, as «if». Said that way it came out «If go, you sleep»; an
+    imperative is a clause of its own and no subordinator marks one, so the join is refused."""
+    zip_ = Zip(rows=[
+        AttitudeRow(name="p0", scopes="r0", holder=Box(head="me.n"), verb="want.v"),
+        row("r0", "go.v", truth=None, agent="you.n"),
+        row("r1", "sleep.v", truth=None, agent="you.n"),
+        JoinRow(name="j0", operator=Operator.IMPLY, operands=["r0", "r1"], truth=1.0)])
+    out = spoken.decompile(zip_)
+
+    assert "If" not in out.text
+    assert any("imperative" in why for why in out.refused)
+
+
+@pytest.mark.parametrize("text", ["I go to sleep because I'm tired.",
+                                  "Because I'm tired, I go to sleep.",
+                                  "I went to bed to sleep.",
+                                  "Everyone works to earn money."])
+def test_a_purpose_comes_back_as_the_zip_it_went_out_as(text):
+    """`t-ws-1` and its neighbours, the round trip itself: sentence → zip → sentence → zip, the two
+    zips identical. The ARROW is asserted apart — the act first — because that is the meaning."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+
+    assert canonical(second) == canonical(first), out.text
+    for zip_ in (first, second):
+        purpose = next(r for r in zip_.rows if r.kind == "join"
+                       and all(zip_.row(o).kind == "content" for o in r.operands)
+                       and zip_.row(r.operands[1]).truth is None)
+        assert zip_.row(purpose.operands[0]).truth == 1.0, "the act leads, claimed"
+
+
+# ------------------------------------------------------------------------------------------------
+# G7 — an understood marker is said as it was said (schema v9)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_an_UNDERSTOOD_marker_is_not_spoken_and_the_bare_box_stands_before_the_object(spoken):
+    """«I gave Anna a book» — the box carries «to» as its meaning and says it was not written, so it
+    comes back bare and in the bare position; a written «to» comes back written, after the object."""
+    def gave(**recipient):
+        return Zip(rows=[row(predicate="give.v", agent="me.n",
+                             recipient=Box(head="anna.n", **recipient),
+                             patient=Box(head="book.n", determination=Determination.INDEFINITE))])
+
+    assert spoken.decompile(gave(marker="to", marker_implicit=True)).text == "I give anna a book."
+    assert spoken.decompile(gave(marker="to")).text == "I give a book to anna."
+
+
+def test_an_attitude_s_UNDERSTOOD_addressee_is_said_bare(spoken):
+    """«I asked Anna where…» — «asked TO Anna» dissolves the attitude on the way back (`q-7`)."""
+    zip_ = Zip(rows=[
+        AttitudeRow(name="p0", scopes="r1", holder=Box(head="me.n"), verb="ask.v",
+                    addressee=Box(head="anna.n", marker="to", marker_implicit=True)),
+        row("r1", "live.v", patient="anna.n", location=Box(head=Open()))])
+
+    assert spoken.decompile(zip_).text.startswith("I ask anna where")
+
+
+# ------------------------------------------------------------------------------------------------
+# G9 — a join supposed with its halves is keyed by its operator's one reading
+# ------------------------------------------------------------------------------------------------
+
+
+def _if_both(operator):
+    return Zip(rows=[
+        row("r0", "go.v", truth=None, agent="me.n"),
+        row("r1", "stay.v", truth=None, agent="you.n"),
+        row("r2", truth=None, experiencer="me.n", complement="happy.a"),
+        JoinRow(name="j1", operator=operator, operands=["r0", "r1"], truth=None),
+        JoinRow(name="j0", operator=Operator.IMPLY, operands=["j1", "r2"], truth=1.0)])
+
+
+def test_a_SUPPOSED_and_is_said_and(spoken):
+    """«If I go and you stay, I am happy» was SILENT: the AND keyed `neither`, which no form has."""
+    assert spoken.decompile(_if_both(Operator.AND)).text == "If I go and you stay, I am happy."
+
+
+def test_a_SUPPOSED_implication_is_refused_because_because_and_if_are_one_zip_there(spoken):
+    """Supposed with its halves, «because» and «if» leave the same truth slots — the table has both
+    readings of IMPLY, so nothing here can say which it was."""
+    out = spoken.decompile(_if_both(Operator.IMPLY))
+    assert any("2 readings of imply" in why for why in out.refused)
+
+
+def test_the_G9_witness_comes_back_as_the_zip_it_went_out_as():
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider("If I go and you stay, I am happy."),
+                              DRILL_CONTEXT).zip
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+
+    assert out.text == "If I go and you stay, I am happy."
+    assert canonical(second) == canonical(first)
+
+
+@pytest.mark.parametrize("text", ["It rained and consequently the river flooded.",
+                                  "He studied and thus he passed.",
+                                  "I sing and also I dance."])
+def test_AND_plus_a_discourse_adverb_comes_back_as_the_zip_it_went_out_as(text):
+    """The bench of 2026-09-25, round-tripped: the causal ones come back «Because A, B» — the same
+    implication with both halves claimed — and «and also» comes back «and»."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+
+    assert len([r for r in first.rows if r.kind == "join"]) == 1, "one join, never two"
+    assert canonical(second) == canonical(first), out.text

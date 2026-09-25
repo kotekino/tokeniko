@@ -81,6 +81,7 @@ from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
+from tk2.language.compile import ANTECEDENT, ASSERTS_ANTECEDENT, MATRIX, RELATION_FILLS_ROLE
 from tk2.language.closed import (
     FOLLOWING_NEGATION,
     FUSED_QUANTIFIER,
@@ -151,6 +152,18 @@ BEFORE, AT, AFTER = -1.0, 0.0, 1.0
 
 CLAIMED = 1.0
 DENIED = 0.0
+
+#: The roles a joining word is said in, and the clause structure each one is: a coordinator
+#: between two clauses, a subordinator in front of the one it marks. Frame: which WORD carries a
+#: meaning in each is the rows'.
+JOINING_ROLES = ("coordinator", "subordinator")
+#: The job of the word that makes a clause an INFINITIVE — «TO sleep» — whose verb is bare and
+#: whose subject is somebody else's. A role name of the table's, as the two above are.
+INFINITIVE = "infinitive_marker"
+
+#: The boxes a matrix's COMPLEMENTS fill — `obj` and `iobj`, the relations the Captain's control
+#: rule names (2026-09-25), read through the compiler's own map so the two directions cannot part.
+CONTROLLING = frozenset({RELATION_FILLS_ROLE["obj"], RELATION_FILLS_ROLE["iobj"]})
 
 
 @dataclass
@@ -234,6 +247,10 @@ class _Reading:
     when: float = AT
     #: WHICH ROLE the speaker foregrounded (req 27) — the voice the sentence was heard in.
     topic: object = None
+    #: content row -> the head its subject must be, for a row said as a BARE INFINITIVE — the end
+    #: of a purpose, whose subject its partner controls and English leaves unsaid (`db/0037`).
+    #: Pushed and popped around the one join that says it, like `gap`.
+    bare: dict = field(default_factory=dict)
 
 
 class Decompiler:
@@ -584,6 +601,11 @@ class Decompiler:
             rd.folded.add(row.name)
 
     @staticmethod
+    def _said_marked(box: Box) -> bool:
+        """Is this box's marker SAID? — a box may carry one the sentence only understood."""
+        return bool(box.marker) and not box.marker_implicit
+
+    @staticmethod
     def _bare(box: Box) -> bool:
         """A box that holds a variable and says nothing else about it."""
         return (box.marker is None and box.quantity is None and box.count is None
@@ -847,6 +869,9 @@ class Decompiler:
         `db/0010` ruled that the difference is exactly this (req 38). So the key is read off the zip
         and the form comes from the table.
         """
+        if not any(operand in rd.folded for operand in row.operands) \
+                and self._asserts(row, rd) == ASSERTS_ANTECEDENT:
+            return self._purpose(row, rd)
         halves = [None if operand in rd.folded else self._render(operand, rd, embedded=True)
                   for operand in row.operands]
         alive = [half for half in halves if half is not None and half.text.strip()]
@@ -861,29 +886,127 @@ class Decompiler:
             # a row the zip only SUPPOSES.
             survivor = next(operand for operand, half in zip(row.operands, halves)
                             if half is not None and half.text.strip())
-            if getattr(rd.rows.get(survivor), "truth", None) is None:
+            # *A row said as a bare infinitive does not stand alone* — «to see the Ligurian sea» is
+            # the end of a purpose, and its partner is what claims (`_purpose`).
+            if getattr(rd.rows.get(survivor), "truth", None) is None and survivor not in rd.bare:
                 rd.out.refused.append(f"{row.name}: its unclaimed half would stand alone as a claim")
                 return None
             return alive[0]
 
         asserts = self._asserts(row, rd)
+        if asserts == "neither" and row.truth is None:
+            # **A JOIN SUPPOSED WITH ITS HALVES** (G9) — «If I go AND you stay, …». Its halves
+            # claim exactly what it does, which is the `both` of a claimed join one level down, and
+            # the truth slot cannot tell that from a supposed `neither`. So it is said only where
+            # the operator has ONE of the two in the table — «and» has no `neither` — and refused
+            # where it has both: a supposed «because» and a supposed «if» are one zip.
+            readings = [key for key in ("both", "neither")
+                        if self._connective(row.operator.value, key)[0] is not None]
+            if len(readings) != 1:
+                rd.out.refused.append(f"{row.name}: supposed with its halves, and the table has "
+                                      f"{len(readings)} readings of {row.operator.value} for that")
+                return None
+            asserts = readings[0]
         if asserts is None:
             rd.out.unsaid.append(f"{row.name}: halves claimed unevenly, and no connective says that")
             return None
-        form, subordinating = self._connective(row.operator.value, asserts)
+        form, role = self._connective(row.operator.value, asserts)
         if form is None:
             rd.out.unsaid.append(f"{row.name}: no form in the table for {row.operator.value} "
                                  f"asserting {asserts}")
             return None
-        if subordinating:
+        if role != "coordinator" and any(half.mark == "!" for half in alive):
+            # «If go, you sleep» — an imperative is a clause of its own; no subordinator marks one,
+            # and a zip whose shape reads that way has lost which half was wanted.
+            rd.out.refused.append(f"{row.name}: an imperative cannot be the clause a {role} marks")
+            return None
+        if role == "subordinator":
             # «Because it rained, I stayed home» — the marked half is the FIRST operand, which is the
             # antecedent for every implication in the table and is order-free for the rest.
             return _Said(f"{form} {alive[0].text}, {alive[1].text}", alive[1].mark,
                          asks=alive[0].asks)
         return _Said(f"{alive[0].text} {form} {alive[1].text}", alive[1].mark, asks=alive[0].asks)
 
+    def _purpose(self, row, rd: _Reading) -> _Said | None:
+        """`imply(act, end)` with the act claimed and the end not — «I go TO SLEEP» (`db/0037`).
+
+        **THE INVERSE OF THE COMPILER'S CONTROL, AND NOTHING ELSE.** The end's subject is the one
+        its partner controls — the partner's `obj`/`iobj` if it has one, else its subject — and
+        English leaves it unsaid, so it must BE that one: a purpose whose subject is somebody else
+        («I go for you to sleep») has no form here and is refused, never said with the wrong
+        sleeper. The word comes from the table, which voices the purpose with the infinitive.
+        """
+        form, _role = self._connective(row.operator.value, ASSERTS_ANTECEDENT)
+        if form is None:
+            rd.out.unsaid.append(f"{row.name}: no form in the table says a purpose")
+            return None
+        # **BARE WHEN THE VOICE IS THE INFINITIVE'S OWN WORD** — «to» is the purpose's voice and also
+        # the infinitive marker, so its clause is said the way an infinitive is: no subject, no
+        # tense. A finite voice («so that») would take a clause of its own.
+        bare = any(r["form"] == form and r.get("role") == INFINITIVE
+                   for r in self.table._rows)                           # noqa: SLF001
+        act_name, end_name = row.operands
+        controller = None
+        if bare:
+            act_row = self._matrix_of(act_name, rd)
+            controller = self._controller(act_row) if act_row is not None else None
+            if controller is None:
+                rd.out.refused.append(f"{row.name}: nothing in its act controls the purpose")
+                return None
+        act = self._render(act_name, rd, embedded=True)
+        if act is None or not act.text.strip():
+            return None
+        ends = self._contents_under(end_name, rd) if bare else set()
+        for name in ends:
+            rd.bare[name] = controller
+        try:
+            end = self._render(end_name, rd, embedded=True)
+        finally:
+            for name in ends:
+                rd.bare.pop(name, None)
+        if end is None or not end.text.strip():
+            rd.out.unsaid.append(f"{row.name}: the end of the purpose could not be said")
+            return None
+        return _Said(f"{act.text} {form} {end.text}", act.mark, asks=act.asks)
+
+    def _matrix_of(self, name: str, rd: _Reading):
+        """The content row a join stands for when everything else in it was folded into a phrase —
+        «the old man» is a join of the man's row and the adjective's. None when two rows remain."""
+        row = rd.rows.get(name)
+        if row is None or row.kind == "content":
+            return row
+        if row.kind != "join":
+            return None
+        left = [operand for operand in row.operands if operand not in rd.folded]
+        return self._matrix_of(left[0], rd) if len(left) == 1 else None
+
+    def _contents_under(self, name: str, rd: _Reading) -> set[str]:
+        """Every content row a join spells out, through its joins and never into a phrase."""
+        row = rd.rows.get(name)
+        if row is None or name in rd.folded:
+            return set()
+        if row.kind == "content":
+            return {name}
+        if row.kind == "join":
+            return {found for operand in row.operands for found in self._contents_under(operand, rd)}
+        return set()
+
+    @staticmethod
+    def _controller(row) -> object | None:
+        """Who controls a purpose this row is the act of — the compiler's rule read backwards: the
+        one complement said bare after the verb, else the subject. Two complements name none."""
+        subject = next((role for role in SUBJECT_ORDER if role in row.boxes), None)
+        complements = [role for role in row.boxes
+                       if role in CONTROLLING and role is not subject
+                       and not Decompiler._said_marked(row.boxes[role])]
+        if len(complements) > 1:
+            return None
+        chosen = complements[0] if complements else subject
+        return row.boxes[chosen].head if chosen is not None else None
+
     def _asserts(self, row, rd: _Reading) -> str | None:
-        """What this join's halves claim, as the table spells it: `both` · `neither` · `matrix`."""
+        """What this join's halves claim, as the table spells it: `both` · `neither` ·
+        `antecedent` — the last a purpose's (`db/0037`): the act, first, claimed; the end not."""
         claims = []
         for operand in row.operands:
             half = rd.rows.get(operand)
@@ -894,30 +1017,38 @@ class Decompiler:
             return "both"
         if claims == ["empty", "empty"]:
             return "neither"
+        if claims == ["claimed", "empty"] and row.operator is Operator.IMPLY \
+                and row.truth == CLAIMED:
+            return ASSERTS_ANTECEDENT
         return None
 
-    def _connective(self, operator: str, asserts: str) -> tuple[str | None, bool]:
-        """The word for an operator-and-assertion, and whether it SUBORDINATES.
+    def _connective(self, operator: str, asserts: str) -> tuple[str | None, str | None]:
+        """The word for an operator-and-assertion, and the ROLE it is said in — which is the clause
+        structure: `JOINING_ROLES`.
 
         A coordinator and a subordinator carrying the same meaning are two clause structures for one
         thought, and which structure is used is frame; but the WORD is the table's, so a meaning with
-        a coordinator and a subordinator both flagged `spoken` is curation contradicting itself and
-        is reported rather than resolved here.
+        two roles both flagged `spoken` is curation contradicting itself and is reported rather than
+        resolved here.
+
+        **A PURPOSE'S ANTECEDENT IS ITS MATRIX** (`db/0037`), and that is part of its meaning: the
+        first operand is said as the main clause, so the rows asked are the ones whose antecedent is
+        the matrix. `db/0037`'s check asks the same question.
         """
-        found = [(role, self._spoken.get(self._key(role, {"kind": "join", "operator": operator,
-                                                          "asserts": asserts})))
-                 for role in ("coordinator", "subordinator")]
+        meaning = {"kind": "join", "operator": operator, "asserts": asserts}
+        if asserts == ASSERTS_ANTECEDENT:
+            meaning[ANTECEDENT] = MATRIX
+        found = [(role, self._spoken.get(self._key(role, meaning))) for role in JOINING_ROLES]
         voiced = [(role, form) for role, form in found if form is not None]
         if len(voiced) == 1:
-            return voiced[0][1], voiced[0][0] == "subordinator"
+            return voiced[0][1], voiced[0][0]
         if len(voiced) > 1:
-            return None, False
-        single = [(role, self.forms_for(role, kind="join", operator=operator, asserts=asserts))
-                  for role in ("coordinator", "subordinator")]
+            return None, None
+        single = [(role, self.forms_for(role, **meaning)) for role in JOINING_ROLES]
         lone = [(role, forms) for role, forms in single if len(forms) == 1]
         if len(lone) == 1:
-            return next(iter(lone[0][1])), lone[0][0] == "subordinator"
-        return None, False
+            return next(iter(lone[0][1])), lone[0][0]
+        return None, None
 
     # -- the attitude --------------------------------------------------------------------------------
 
@@ -979,9 +1110,7 @@ class Decompiler:
         be found, and `roles` is the column that knows: exactly one form in the table can mark a
         recipient, which is why this is a lookup rather than a choice.
         """
-        found = {row["form"] for row in self.table._rows                  # noqa: SLF001
-                 if role in ((row.get("compiled") or {}).get("roles") or ())}
-        return next(iter(found)) if len(found) == 1 else ""
+        return self.table.marker_for(role) or ""
 
     def _complementizer(self, body: _Said) -> str:
         """`that`, except before a clause that already opens with its own wh-word.
@@ -1030,6 +1159,8 @@ class Decompiler:
                 embedded: bool, asks: bool = False, imperative: bool = False,
                 adverb: str = "") -> _Said | None:
         """One content row to one clause, or None when it cannot be said without lying."""
+        if row.name in rd.bare and not imperative:
+            return self._infinitive(row, rd, negated or bool(modal) or bool(adverb))
         boxes = dict(row.boxes)
         asked = isinstance(row.truth, Open)
 
@@ -1222,7 +1353,7 @@ class Decompiler:
         after = []
         for marked in (False, True):
             for role in (*OBJECT_ORDER, *CIRCUMSTANCE_ORDER):
-                if role not in boxes or bool(boxes[role].marker) is not marked:
+                if role not in boxes or self._said_marked(boxes[role]) is not marked:
                     continue
                 said = self._phrase(boxes.pop(role), rd,
                                     predicative=(role is Role.COMPLEMENT
@@ -1259,6 +1390,28 @@ class Decompiler:
             return None
         return _Said(said, "?" if (asked or wh is not None) and not embedded else ".",
                      asks=wh is not None)
+
+    def _infinitive(self, row: ContentRow, rd: _Reading, scoped: bool) -> _Said | None:
+        """The end of a purpose as English says it: the bare verb and everything after it, and no
+        subject — «(to) SEE THE LIGURIAN SEA». The subject is the controller's, so the box must hold
+        exactly that one; anything else would be spoken as the controller doing it.
+
+        The imperative's shape, borrowed whole: it is the other clause English says bare.
+        """
+        if scoped:
+            rd.out.unsaid.append(f"{row.name}: a purpose under its own negation or modality is not "
+                                 f"said yet")
+            return None
+        boxes = dict(row.boxes)
+        subject = next((role for role in SUBJECT_ORDER if role in boxes), None)
+        if subject is not None:
+            if boxes[subject].head != rd.bare[row.name]:
+                rd.out.refused.append(f"{row.name}: the purpose's subject is not the one its act "
+                                      f"controls, and «for X to» is not built")
+                return None
+            boxes.pop(subject)
+        return self._clause(row.model_copy(update={"boxes": boxes, "truth": CLAIMED}), rd,
+                            negated=False, modal="", embedded=True, imperative=True)
 
     def _lemma(self, row: ContentRow, rd: _Reading) -> str | None:
         if row.predicate is None:
@@ -1455,8 +1608,10 @@ class Decompiler:
                negation: str = "", predicative: bool = False) -> str:
         """Marker · determiner · count · adjectives · head · marked phrases. English's own order."""
         words = []
-        if box.marker:
-            words.append(box.marker)                  # req 65: the preposition actually used
+        if self._said_marked(box):
+            # req 65: the preposition actually used — and one the sentence only UNDERSTOOD is not
+            # said (schema v9): «I gave Anna a book» comes back bare, as it came in.
+            words.append(box.marker)
         # **A POSSESSOR AND AN ARTICLE CANNOT SHARE THE DETERMINER SLOT** *(2026-09-24, G3)*. «the
         # result of perception» carries both — `relation` AND `definite` — and the clitic spoke the
         # possessor where the article goes: «perception's result», which compiles back without the
@@ -1524,7 +1679,8 @@ class Decompiler:
             negation = self._negation_owed(name, rd)
             if negation is None:
                 return ""                              # the caller refuses; it is owed this word
-            marker = box.marker or restriction.marker
+            said = box if self._said_marked(box) else restriction
+            marker = said.marker if self._said_marked(said) else None
             return " ".join(word for word in (marker, negation, fused, *adjectives, *tails)
                             if word)
         head = self._head(restriction, rd, case)
@@ -1561,6 +1717,7 @@ class Decompiler:
 
         merged = restriction.model_copy(update={
             "marker": box.marker or restriction.marker,
+            "marker_implicit": box.marker_implicit if box.marker else restriction.marker_implicit,
             "count": box.count if box.count is not None else restriction.count,
         })
         negation = self._negation_owed(name, rd)

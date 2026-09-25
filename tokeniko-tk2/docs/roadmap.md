@@ -19,6 +19,8 @@
       suite was slow by DEFECT: `Migration.load` re-ran the chain, now memoised (186s → 0.2s). Root
       `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
 - [ ] **⚑ sweep E0 → E3 for test material leaking into the BL** — formal order included
+- [ ] **amend the drill to the rulings it now disagrees with** — `t-ws-1`, `aw-6` (purpose is IMPLY,
+      09-25); the drill-gate ratchet stays red on them until then. Record `parser-compiler/202609241130_…`
 - [ ] **the third kingdom** — frame · knowledge · **evidence**; evidence keeps the ledger properties
       but never runs in the app
 - [ ] `dictionary_bar` out of the body; only `bar_version` + `bar_fingerprint` stay, as provenance
@@ -164,14 +166,19 @@
 - [x] **⚑ MODAL SCOPE — seven wrong claims, none left** *(09-24)* — an adverb scopes by its order
       against «not» (frame); where «not» falls after an auxiliary is per word (`db/0036`); «may
       not» withholds its clause. Record `202609241130_…`
+- [x] **⚑ G1 · G7 · G9 · «and therefore»** *(09-25)* — purpose is `imply(act, end)` (`db/0037`), the
+      understood «to» is stored (schema v9), a supposed AND is supposed, a causal adverb replaces the
+      «and». Every drill zip is a TREE. Read-whole 64 → 65 of 71. Record `202609241130_…`
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
 - [ ] **⚑ THE FIXPOINT IS BLIND TO SCOPE** *(09-24)* — `canonical` sorts the rows, so □¬ and ¬□
       compare equal; an instrument defect. Record `202609241130_…`
-- [ ] **the fixpoint's 7 remaining — G1 · G6–G9 and `t-ws-1`'s bracketing** — five want the Captain
-      (G1 · G6 · G7 · G9 · the zero relative's valency), plus `t-dc-5`'s double join (a design ruling) and
-      two bookkeeping defects and «So» lost in silence. Record `202609241130_…`
+- [ ] **the zero relative — RULED 09-25** — frames and supersense must AGREE (96.5% on a 113-case
+      bench), a passive has no object gap, rows for `time`·`way` + a held-out check
+- [ ] **the fixpoint's 6 remaining** — G8 (a bench against the 65 FIXED first) and what G6 (E3b)
+      and first-leg misparses leave. Plus two bookkeeping defects, «So» / «and so» lost in silence,
+      and «so» claiming its consequence backwards. Record `202609241130_…`
 - [ ] **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
       (`tools/confidence_bench.py`); 5 negatives only, and the round trip still measures the
       DECOMPILER. Bookkeeping kept, scalar EMPTY. **Waits on the 11 above**
@@ -201,6 +208,8 @@
 - [ ] **⚑ which one? — the first instance** — «Paris, France» or «Paris, Ontario»: the first case
       where curation cannot finish AND the answer moves over time
 - [ ] **what a name is in a zip** — type centroid = SEMANTIC, uid = IDENTITY, never merged
+      · **G6** *(moved from E3, 09-25)*: nothing in a zip says a head is a name, so «marie» loses
+      its capital and stanza reads «to marie» as an infinitive — `q-1`, and part of `q-7` · `aw-6`
 - [ ] **the markers' third reading** — «went with Anna» is comitative because Anna is a PERSON, with
       no rule about Anna anywhere. E3b's acceptance test, and the drill gate's red `aw-19`
 - [ ] **anaphora** *(moved from E3, the Captain 09-20)* — «she» has its features since v4; what is
@@ -221,6 +230,7 @@
 general is the failure mode «one abstraction, many instances» is most exposed to.*
 - [ ] ~~the lib~~ · ~~instance registry + structural fence~~ — **BUILT IN E3b**
 - [ ] instance breadth: station calibration · evaluator ordering · then the sites that need an organ
+      · «I promised her TO go» = WE go: control beyond the complement rule *(09-25, `202609241130_…`)*
 - [ ] reward plumbing (intellectual + heart families) — arrives with E7 and E8
 
 ## E6 — the mind (rules + brain)

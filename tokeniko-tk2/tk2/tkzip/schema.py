@@ -122,7 +122,20 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 #
 # So: a binder with no `quantity` introduces and restricts a variable and claims no force. The
 # `determination` the speaker DID state rides on the restriction, as it always has.
-SCHEMA_VERSION = 8
+#
+# **v9, 2026-09-25 — AN UNDERSTOOD MARKER IS STORED, AND SO IS THE FACT THAT NOBODY SAID IT.** «I
+# gave ANNA a book» and «I gave a book TO ANNA» are one thought — Anna receives — and the Captain
+# ruled that the zip says so: a bare indirect object carries the marker English leaves out, the one
+# the table gives the recipient (G7; tk1 did it before tk2 existed, `lib/llc/parser.py:891`, its
+# marker's origin defaulting to «implicit», `lib/core/tk.py:77`). *The meaning is «to Anna»; the
+# bareness is the surface.* And the surface is kept, because the decompiler must say it as it was
+# said: «I asked TO Anna where…» dissolves the attitude it came from.
+#
+# ONE FIELD, `Box.marker_implicit`, and nowhere else: the marker lives on the box, so what is known
+# about how it was said lives beside it. The alternative — leave `marker` empty and let a reader
+# infer «to» from the role — would make every reader know that a recipient's marker is understood,
+# which is a fact about English in code, and would leave «Anna» and «to Anna» two different zips.
+SCHEMA_VERSION = 9
 
 
 # --------------------------------------------------------------------------------------------------
@@ -390,6 +403,12 @@ class Box(BaseModel):
     # Without it «I walk TO the station» and «I walk TOWARD the station» are the same zip, and they
     # do not mean the same thing. v1 carries markers for exactly this reason and says so.
     marker: str | None = None
+
+    #: v9. True when `marker` was UNDERSTOOD rather than said — «I gave ANNA a book» carries `to`,
+    #: the recipient's marker from the table, because the meaning is «to Anna». EMPTY when the
+    #: marker was written, or there is none: only the unusual case costs a stored field. Surface,
+    #: like `topicality`: it enters no arithmetic, and the decompiler reads it to say the box bare.
+    marker_implicit: bool | None = None
 
     # Degree rides what it modifies rather than earning a box (req 23): «very tall» attaches to the
     # complement, «very slowly» to the manner. It is an intensifier on another part, not a part.

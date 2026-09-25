@@ -241,3 +241,26 @@ def test_no_closed_class_row_carries_a_number_the_format_refuses():
                if (row.get("features") or {}).get("number") not in legal]
 
     assert not illegal, f"{illegal} would be written into an `Open` the schema refuses"
+
+
+# ------------------------------------------------------------------------------------------------
+# v9 — an understood marker is stored, and so is the fact that nobody said it (G7, 2026-09-25)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_v9_an_UNDERSTOOD_marker_is_the_marker_plus_one_flag_on_the_box():
+    """«I gave ANNA a book» means «to Anna» — the marker is stored — and was said bare, which is
+    surface the decompiler needs. One optional field, on the box the marker already lives on."""
+    assert SCHEMA_VERSION == 9
+    understood = Box(head="anna.n", marker="to", marker_implicit=True)
+    said = Box(head="anna.n", marker="to")
+
+    assert understood.marker == said.marker, "one meaning"
+    assert understood != said, "two surfaces, and the zip keeps them apart"
+    assert "marker_implicit" in Box.model_fields
+    assert not {"marker_implicit"} & (set(Pov.model_fields) | set(ContentRow.model_fields))
+
+
+def test_v9_a_WRITTEN_marker_costs_no_stored_field():
+    stored = Box(head="anna.n", marker="to").model_dump(exclude_none=True, exclude_defaults=True)
+    assert set(stored) == {"head", "marker"}
