@@ -53,7 +53,15 @@ not tuned after it):
     d2 the constituency tree: does the relative SBAR carry a WH node or an empty element? (a gap
        marker, if the model were trained with traces) — reported, not a rule
 
-Baselines, for scale: **N** «no object ⇒ object gap» (the rule G5 refused) and **W** withhold (today).
+Baselines, for scale: **N** «no object ⇒ object gap» (the rule G5 refused) and **W** withhold (G5).
+
+**AFTER THE RULING** *(the Captain, 2026-09-25 — c1, plus the passive, plus `time`/`way` rows)*:
+
+- **S — the station as built**, end to end: the sentence compiled by the real `Compiler`, and the
+  box of the relative's row that holds the antecedent's variable read back (`patient` → object,
+  `location` → place). Withheld is an abstention.
+- **H — the held-out group**, the ruling's cost clause: fresh zero relatives written after
+  `db/0038` existed, scored APART and never pooled with the 107.
 """
 
 from __future__ import annotations
@@ -69,6 +77,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from nltk.corpus import wordnet as wn  # noqa: E402
 
+from tk2.dictionary.frames import (  # noqa: E402
+    canonical_frames, object_frames, verb_senses,
+)
 from tk2.dictionary.supersense import supersense_for  # noqa: E402
 from tk2.language.skeleton import StanzaSkeletons  # noqa: E402
 
@@ -262,49 +273,70 @@ CASES = (
          "we walked those miles — an extent; arguably a cognate object, labelled measure"),
 )
 
+# --- H: THE HELD-OUT CHECK — the ruling's cost clause (the Captain, 2026-09-25) ------------------
+# «Rows for exactly the bench's two wrongs is tuning on the test», so `db/0038`'s `time`/`way` rows
+# are trusted only if THESE hold. Written by the 1st Officier AFTER the rows and the code existed,
+# before either was run on them, and nothing was tuned after seeing them. Heads: time · moment ·
+# way · reason · place, as adverbial gaps AND as objects. Scored apart, never pooled with the above.
+HELD_OUT = (
+    # time
+    Case("h01", "H", "The time she arrived was late.", "time", "time",
+         "she arrived at that time"),
+    Case("h02", "H", "I forgot the time the train leaves.", "time", "time",
+         "the train leaves at that time; nothing is left"),
+    Case("h03", "H", "We talked about the time you fainted.", "time", "time",
+         "you fainted at that time"),
+    Case("h04", "H", "The time I spent here was good.", "time", "object",
+         "I spent the time — the time is what was spent"),
+    Case("h05", "H", "I need the time you promised.", "time", "object",
+         "you promised the time — the time is what was promised"),
+    # moment
+    Case("h06", "H", "The moment she smiled, I knew.", "moment", "time",
+         "she smiled at that moment; the NP is itself the matrix's temporal"),
+    Case("h07", "H", "I remember the moment we met.", "moment", "time",
+         "we met at that moment; «meet» with a plural subject and nobody met"),
+    Case("h08", "H", "I missed the moment he described.", "moment", "object",
+         "he described the moment"),
+    Case("h09", "H", "This is the moment I dreaded.", "moment", "object",
+         "I dreaded the moment"),
+    # way
+    Case("h10", "H", "I love the way you think.", "way", "manner", "you think in that way"),
+    Case("h11", "H", "The way they talk is strange.", "way", "manner", "they talk in that way"),
+    Case("h12", "H", "I hate the way it ends.", "way", "manner", "it ends in that way"),
+    Case("h13", "H", "The way we took was long.", "way", "object",
+         "we took the way (the route) — the way is what was taken"),
+    Case("h14", "H", "The way you suggested is faster.", "way", "object",
+         "you suggested the way (the route or the method) — what was suggested"),
+    # reason
+    Case("h15", "H", "The reason she smiled is a secret.", "reason", "reason",
+         "she smiled for that reason"),
+    Case("h16", "H", "I understand the reason you worried.", "reason", "reason",
+         "you worried for that reason"),
+    Case("h17", "H", "The reason he offered was weak.", "reason", "object",
+         "he offered the reason"),
+    Case("h18", "H", "The reason you stated was false.", "reason", "object",
+         "you stated the reason"),
+    # place
+    Case("h19", "H", "I found the place she hides.", "place", "place",
+         "she hides in that place; nothing named is hidden"),
+    Case("h20", "H", "The place we met was a cafe.", "place", "place", "we met at that place"),
+    Case("h21", "H", "The place you recommended was full.", "place", "object",
+         "you recommended the place"),
+    Case("h22", "H", "I finally saw the place he described.", "place", "object",
+         "he described the place"),
+    Case("h23", "H", "The place they work is noisy.", "place", "place",
+         "they work in that place"),
+)
+
 
 # ---------------------------------------------------------------------------------------------
 # a — the verb frames
 # ---------------------------------------------------------------------------------------------
 
-def _canonical_frames() -> dict[int, str]:
-    """WordNet's 35 frame strings with the verb slot as `----`, read off single-word lemmas."""
-    found: dict[int, str] = {}
-    for synset in wn.all_synsets("v"):
-        for lemma in synset.lemmas():
-            name = lemma.name()
-            if "_" in name:
-                continue
-            for number, text in zip(lemma.frame_ids(), lemma.frame_strings()):
-                if number not in found:
-                    found[number] = " ".join("----" + t[len(name):] if t.startswith(name) else t
-                                             for t in text.split())
-        if len(found) >= 35:
-            break
-    return found
-
-
-FRAMES = _canonical_frames()
-
-
-def _takes_object(frame: str) -> bool:
-    words = frame.split()
-    slot = next(i for i, w in enumerate(words) if w.startswith("----"))
-    return slot + 1 < len(words) and words[slot + 1] in ("something", "somebody")
-
-
-OBJECT_FRAMES = frozenset(n for n, s in FRAMES.items() if _takes_object(s))
-
-
-def _lemma_frames(synset, verb: str) -> set[int]:
-    for lemma in synset.lemmas():
-        if lemma.name().lower() == verb:
-            return set(lemma.frame_ids())
-    return set(synset.frame_ids())
-
-
-def verb_senses(verb: str) -> list[set[int]]:
-    return [_lemma_frames(s, verb) for s in wn.synsets(verb, "v")]
+# The readers are the STATION's (`tk2.dictionary.frames`, since the ruling of 2026-09-25 built
+# them in): one implementation, so what this bench measured is what the station runs.
+FRAMES = canonical_frames()
+OBJECT_FRAMES = object_frames()
 
 
 def a1(verb, _noun):
@@ -414,11 +446,15 @@ class Parsed:
     verb_children: tuple = ()
     sbar: str = ""
     answers: dict = field(default_factory=dict)
+    skeleton: object = None
+    #: the station's whole zip for the sentence — complete (nothing unplaced) or not
+    complete: bool | None = None
 
 
 def parse(provider, case: Case) -> Parsed:
     out = Parsed(case)
     skeleton = provider(case.text)[0]
+    out.skeleton = skeleton
     relcls = [w for w in skeleton if w.dep == "acl:relcl"
               and skeleton[w.head].text.lower() == case.antecedent.lower()]
     if not relcls:
@@ -474,6 +510,34 @@ def baseline_w(_verb, _noun):
     return None
 
 
+# ---------------------------------------------------------------------------------------------
+# S — the station as built (`Compiler._zero_gap`, `db/0038`), end to end
+# ---------------------------------------------------------------------------------------------
+
+#: A tkzip box, read back as the bench's gold vocabulary. Anything else is reported by its own name
+#: and scores wrong.
+BOX_AS_GOLD = {"patient": "object", "time": "time", "location": "place", "manner": "manner"}
+STATION = "S the station (built)"
+
+
+def station_answer(compiler, parsed: Parsed):
+    """Compile the sentence and read which box of the relative's row holds the antecedent's
+    variable — None when the clause was withheld. Sets `parsed.complete` as a side record."""
+    out = compiler.compile(parsed.skeleton)
+    parsed.complete = not out.zip.unplaced
+    binders = {r.binds: r for r in out.zip.rows if r.kind == "quantifier"}
+    for row in out.zip.rows:
+        if row.kind != "content" or row.predicate != f"{parsed.verb}.v":
+            continue
+        for role, box in row.boxes.items():
+            name = getattr(box.head, "name", None)
+            binder = binders.get(name) if name else None
+            if binder is not None and binder.restriction is not None \
+                    and binder.restriction.head == f"{parsed.antecedent_lemma}.n":
+                return BOX_AS_GOLD.get(role.value, role.value)
+    return None
+
+
 LEXICAL = {"a1 primary-permissive": a1, "a2 primary-strict": a2, "a3 any-permissive": a3,
            "a4 any-strict": a4, "b1 supersense strict": b1, "b2 supersense full": b2,
            "c1 agreement": c1, "c2 a decides, b overrides": c2, "c3 a4 then b1": c3,
@@ -524,15 +588,21 @@ def main() -> int:
     ap.add_argument("--json", help="write the per-case results here")
     args = ap.parse_args()
 
+    from tk2.language import standing_closed_classes
+    from tk2.language.compile import Compiler
+
     provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
     snlp = provider.pipeline().tokenizer.snlp
     parsed = [parse(provider, case) for case in CASES]
-    for row in parsed:
+    held = [parse(provider, case) for case in HELD_OUT]
+    for row in [*parsed, *held]:
         row.sbar = sbar_of(snlp, row.case)
         if row.verb:
             for name, signal in LEXICAL.items():
                 row.answers[name] = signal(row.verb, row.antecedent_lemma)
             row.answers["d1 antecedent tmod"] = d1(row)
+            row.answers[STATION] = station_answer(compiler, row)
 
     print(f"object frames (derived from the strings): {sorted(OBJECT_FRAMES)}")
     print(f"cases: {len(CASES)}  by gold: {dict(Counter(c.gold for c in CASES))}")
@@ -550,7 +620,7 @@ def main() -> int:
           f"{dict(Counter(binary(r.case.gold) for r in scored))}")
     print(f"\n{'candidate':30s} | {'BINARY  right wrong abst':38s} | ROLE  right wrong abst")
     wrongs = {}
-    for name in [*LEXICAL, "d1 antecedent tmod"]:
+    for name in [*LEXICAL, "d1 antecedent tmod", STATION]:
         tally, wrong = score(scored, name)
         wrongs[name] = wrong
         print(f"{name:30s} | {fmt(tally['binary'], n):38s} | {fmt(tally['role'], n)}")
@@ -588,6 +658,8 @@ def main() -> int:
         print(f"  {verb:10s} primary={primary}  a1={a1(verb, '')} a2={a2(verb, '')} "
               f"a3={a3(verb, '')} a4={a4(verb, '')}  senses={len(senses)}")
 
+    report_held_out(held)
+
     if args.cases:
         print()
         for r in parsed:
@@ -601,8 +673,36 @@ def main() -> int:
             {"key": r.case.key, "group": r.case.group, "text": r.case.text, "gold": r.case.gold,
              "why": r.case.why, "shape": r.shape, "verb": r.verb, "antecedent": r.antecedent_lemma,
              "antecedent_dep": r.antecedent_dep, "children": r.verb_children, "sbar": r.sbar,
-             "answers": r.answers} for r in parsed], indent=1))
+             "answers": r.answers, "complete": r.complete} for r in [*parsed, *held]],
+            indent=1))
     return 0
+
+
+def report_held_out(held: list[Parsed]) -> None:
+    """The ruling's cost clause, scored APART: a held-out set is worth nothing pooled."""
+    print("\n" + "=" * 96)
+    print("THE HELD-OUT CHECK — written after `db/0038` existed, never tuned on (the ruling's cost)")
+    print("=" * 96)
+    scored = [r for r in held if r.shape == "withheld"]
+    for row in held:
+        if row.shape != "withheld":
+            print(f"  not scored  {row.case.key} {row.case.text!r}: {row.shape}")
+    n = len(scored)
+    print(f"  scored: {n} of {len(held)}   gold binary: "
+          f"{dict(Counter(binary(r.case.gold) for r in scored))}")
+    print(f"\n  {'candidate':30s} | {'BINARY  right wrong abst':38s} | ROLE  right wrong abst")
+    for name in [*LEXICAL, "d1 antecedent tmod", STATION]:
+        tally, _wrong = score(scored, name)
+        print(f"  {name:30s} | {fmt(tally['binary'], n):38s} | {fmt(tally['role'], n)}")
+    print("\n  per case — the station as built:")
+    for r in held:
+        said = r.answers.get(STATION)
+        verdict = ("withheld" if said is None else "RIGHT" if said == r.case.gold
+                   else "WRONG ROLE" if binary(said) == binary(r.case.gold) else "WRONG")
+        whole = "" if r.complete is None else ("  zip complete" if r.complete else "  zip partial")
+        print(f"    {r.case.key} {r.case.text!r:44s} {r.verb}/{r.antecedent_lemma:7s} "
+              f"gold={r.case.gold:7s} said={str(said):8s} {verdict}{whole}")
+        print(f"         why: {r.case.why}")
 
 
 if __name__ == "__main__":

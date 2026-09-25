@@ -25,8 +25,10 @@ larger than its format.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from typing import Callable
 
 from tk2.dictionary import keys as keymod
+from tk2.dictionary.frames import primary_takes_object
 from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
 from tk2.language.closed import AMBIGUOUS, FOLLOWING_NEGATION, INSIDE, OUTSIDE, ClosedClasses
 from tk2.language.markers import MarkerSelector
@@ -358,8 +360,12 @@ class Compiler:
     def __init__(self, table: ClosedClasses, selector: MarkerSelector | None = None,
                  adverbs: AdverbKinds | None = None, subjects: SubjectRoles | None = None,
                  strengths: AttitudeStrengths | None = None,
-                 readings: UdReadings | None = None) -> None:
+                 readings: UdReadings | None = None,
+                 takes_object: Callable[[str], bool | None] = primary_takes_object) -> None:
         self.table = table
+        #: Whether a verb's primary sense takes an object, as WordNet's frames state it — half of
+        #: the zero relative's agreement (`_zero_gap`). An argument for `selector`'s reason.
+        self.takes_object = takes_object
         #: Where a UD label does not mean for us what it names, as rows (`db/0032`). A vocative is
         #: not content, an `xcomp` opens no row, and only a `NOUN` states a number the speaker
         #: chose. **A miss is an ANSWER**: everything else is read at face value, which is frame.
@@ -1900,13 +1906,13 @@ class Compiler:
             no pronoun, no subject        the gap IS the subject — «the cat sleeping on the mat»
             a stranded marker             «the house I live IN» — the marker's own rule, read as if
                                           the antecedent were its nominal
+            subject said, no object       the object or an adverbial, and the TREE cannot tell
+                                          «the fish the cat ate» from «the day I slept» — the
+                                          verb's frames and the antecedent's class decide it, when
+                                          they agree (`_zero_gap`, the Captain 2026-09-25)
 
-        **WHAT IT DOES NOT DECIDE, AND WHY NOT.** A zero relative with its subject said and no
-        object — «the fish the cat ate», «minds you trust» — has the object gap only if the verb
-        TAKES an object: «the day I slept» has the same tree and an adverbial gap. The tree cannot
-        tell them apart; the verb's valency can, and valency is knowledge the station does not hold.
-        So it abstains rather than make the day the thing slept. With both subject and object said
-        the gap is an adverbial, and nothing in the tree says which one.
+        **WHAT IT DOES NOT DECIDE, AND WHY NOT.** With both subject and object said the gap is an
+        adverbial, and nothing in the tree says which one.
         """
         copular = self._is_copular_root(head, skeleton, marks) or head.upos not in ("VERB", "AUX")
         relatives = [w for w in skeleton
@@ -1941,10 +1947,72 @@ class Compiler:
             if role is None:
                 return None, None, None, f"the stranded «{match.form}» settles no role"
             return role, match.form, None, ""
+        if any(c.bare_dep in OBJECT_DEPS - {"obj"} for c in children):
+            # **A CLAUSAL COMPLEMENT IS WHERE THE GAP MAY BE.** «The man I think you met», «the book
+            # I want to read»: the antecedent is the object of the EMBEDDED verb, and the verb the
+            # relative hangs off already has its object — the clause. The tree does not say which
+            # level the gap is at, so the agreement below is never asked: read as `think`'s object,
+            # the man went into a row the attitude then dissolved, and a zip that had lost him
+            # called itself whole.
+            return None, None, None, ("a zero relative with a clausal complement: the gap may be "
+                                      "inside it, and the tree does not say")
         if not any(c.bare_dep == "obj" for c in children):
-            return None, None, None, ("a zero relative with its subject said: the gap is the "
-                                      "object or an adverbial, and only the verb's valency tells")
+            role, why = self._zero_gap(head, target, children)
+            return role, None, None, why
         return None, None, None, "a zero relative with subject and object said: an adverbial gap"
+
+    def _zero_gap(self, head: Word, target: Word, children: list[Word]) -> tuple[Role | None, str]:
+        """A zero relative with its subject said and no object — «the fish the cat ate», «the day I
+        slept» — and the role of its gap, or None and why.
+
+        **TWO SIGNALS, AND THEY MUST AGREE** *(the Captain, 2026-09-25)*. Neither separates the two
+        alone (`tools/relative_gap_bench.py`): the verb's frames say whether it TAKES an object
+        (82.7% on the bench), the antecedent's class whether it names a CIRCUMSTANCE (59.3%) —
+        and where both speak and agree, 96.5%. So:
+
+            the verb takes an object,  the antecedent names nothing      the object
+            the verb takes none,       the antecedent names a kind       the kind's box
+            anything else                                                withheld, as before
+
+        The kind is `db/0038`'s rows, read on the antecedent through `MarkerSelector` — the same
+        runner that tells «at noon» from «at the door». A kind that names no tkzip box («the
+        reason he left»: a reason is a join) is heard, so it still disagrees with an object frame,
+        and is then withheld.
+
+        **A PASSIVE RELATIVE HAS NO OBJECT GAP** — «the day she was born»: the object was promoted
+        to the subject, so the gap is an adverbial or nothing. That is the tree's shape, frame; and
+        it outranks the frames, which describe the ACTIVE verb («bear» takes an object).
+        """
+        passive = any(c.bare_dep in SUBJECT_DEPS and c.dep.endswith(":pass") for c in children)
+        rules = self.readings.adverbial_gap(head.dep)
+        # The selector classifies ONE word here, the antecedent, so it stands both where a marked
+        # nominal would and where the head a `lemma` rule reads would.
+        kind = self.selector.settle(rules, nominal_lemma=target.lemma, nominal_upos=target.upos,
+                                    head_lemma=target.lemma,
+                                    head_upos=target.upos) if rules else None
+        if passive:
+            verdict = "adverbial" if kind is not None else None
+            why = (f"a passive relative has no object gap, and «{target.text}» names no "
+                   f"circumstance")
+        else:
+            transitive = self.takes_object(head.lemma)
+            if transitive is True and kind is None:
+                return RELATION_FILLS_ROLE["obj"], ""
+            verdict = "adverbial" if transitive is False and kind is not None else None
+            if transitive is None:
+                why = f"the resource holds no frames for «{head.lemma}»"
+            elif transitive:
+                why = (f"«{head.lemma}» takes an object and «{target.text}» names a "
+                       f"{kind.role}: the two disagree")
+            else:
+                why = (f"«{head.lemma}» takes no object and «{target.text}» names no "
+                       f"circumstance: the two disagree")
+        if verdict is None:
+            return None, f"a zero relative with its subject said — {why}"
+        if kind.role not in {role.value for role in Role}:
+            return None, (f"a zero relative with its subject said — «{target.text}» names a "
+                          f"{kind.role}, and tkzip has no box for one")
+        return Role(kind.role), ""
 
     def _clause_of(self, skeleton: Skeleton, index: int) -> int:
         """The head of the clause a token sits in — its nearest ancestor that opens one, by the same

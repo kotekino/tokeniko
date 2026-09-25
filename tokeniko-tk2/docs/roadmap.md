@@ -169,13 +169,15 @@
 - [x] **⚑ G1 · G7 · G9 · «and therefore»** *(09-25)* — purpose is `imply(act, end)` (`db/0037`), the
       understood «to» is stored (schema v9), a supposed AND is supposed, a causal adverb replaces the
       «and». Every drill zip is a TREE. Read-whole 64 → 65 of 71. Record `202609241130_…`
+- [x] **⚑ the zero relative — the gap's role when frames and supersense AGREE** *(09-25)* — `db/0038`;
+      held-out 23 fresh cases: 7 right, 0 wrong. Read-whole 66 of 72. Record `202609241130_…`
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
 - [ ] **⚑ THE FIXPOINT IS BLIND TO SCOPE** *(09-24)* — `canonical` sorts the rows, so □¬ and ¬□
       compare equal; an instrument defect. Record `202609241130_…`
-- [ ] **the zero relative — RULED 09-25** — frames and supersense must AGREE (96.5% on a 113-case
-      bench), a passive has no object gap, rows for `time`·`way` + a held-out check
+- [ ] **⚑ «I remember the day I slept» is a WRONG COMPLETE ZIP** *(09-25)* — stanza's `obl:tmod` on the
+      matrix; the withheld clause used to hide it. Seven bench cases. Record `202609241130_…`
 - [ ] **the fixpoint's 6 remaining** — G8 (a bench against the 65 FIXED first) and what G6 (E3b)
       and first-leg misparses leave. Plus two bookkeeping defects, «So» / «and so» lost in silence,
       and «so» claiming its consequence backwards. Record `202609241130_…`

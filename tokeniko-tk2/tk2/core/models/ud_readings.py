@@ -21,6 +21,10 @@ what differs, a miss is an ANSWER rather than an absence, and the ordinary readi
                                            determiner jobs, `compound:prt` only the verb particle
                                            (`db/0034`). A SET: the ranking it once carried in code
                                            was deleted, and a tie nobody settles abstains
+    adverbial_gap         default NONE   — no rule, so every zero relative whose gap the tree leaves
+                                           unnamed is withheld. `acl:relcl` names which circumstance
+                                           its antecedent is — «the DAY I slept» a time — in
+                                           `MarkerSelector`'s rule vocabulary (`db/0038`)
 
 **WHY EACH OF THESE IS A ROW AND NOT A SET IN CODE** — E3's frame/knowledge audit, 2026-09-22
 (`docs/parser-compiler/202609220930_the-frame-knowledge-audit.md`). Each was a frozenset whose

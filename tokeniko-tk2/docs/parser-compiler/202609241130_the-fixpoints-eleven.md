@@ -346,3 +346,36 @@ as «in order to» did · «and so»: the adverb «so» matches the coordinator 
 «Because I think, I am» comes back think + ccomp (G8's family) · «I asked Anna where she lives»
 (reported): Anna unplaced, the attitude lost · «Go to sleep!» — a purpose under an imperative is
 refused.
+
+## The zero relative — built *(1st Officier, 09-25)*
+
+**The held-out check HOLDS: 23 fresh cases (time · moment · way · reason · place, 13 adverbial and
+10 objects), written after the rows existed, nothing tuned after — 7 right, 0 wrong, 16 withheld.**
+Without the rows, plain agreement made one wrong zip there («I love the way you think» →
+`think(patient=way)`): the rows prevented a wrong zip in data they had never seen. On the original
+107 the station as built answers **54 right, 0 wrong** (50.5% coverage).
+
+- **`db/0038`** (UD readings v3) — one row, `acl:relcl`, answering a fifth question,
+  `adverbial_gap`: `lemma time → time` · `lemma way → manner` · `noun.time → time` · `noun.location →
+  location` · `noun.motive → reason` (heard, no box — so «the reason I asked» withholds instead of
+  writing `ask(patient=reason)`). **No default rule: silence is the object half of the agreement.**
+  Run by `MarkerSelector`, the runner that tells «at noon» from «at the door»
+- the agreement is the benched one (permissive primary-sense frames — what the Captain ruled on);
+  a PASSIVE lets the antecedent's kind decide alone; a clause whose verb has a `ccomp`/`xcomp` is
+  withheld (tree shape — «the man I think you met» wrote the gap into `think`)
+- the frame readers live in `tk2/dictionary/frames.py`; the bench imports them from there
+
+Fixpoint read-whole **65 of 71 → 66 of 72** («If I tell you something that you do not know, you learn
+it» re-enters, FIXED). Drill and UD gate identical.
+
+**⚑ Found — and it is a wrong complete zip, reproduced by the QM.** «I remember the day I slept»
+compiles `remember(experiencer=me, time=day)` + `sleep(agent=me, time=day)`, nothing unplaced. The
+relative clause is now right; the MATRIX is stanza's `obl:tmod` misparse («remember» at a time,
+instead of remembering the day). It was always misread — but the withheld clause used to leave the
+zip partial, so it never claimed to be whole. Seven bench cases share it; no held-out case.
+
+**Also found:** a stative subject («I have the tools you need» — `need` is `verb.stative`, so «you»
+takes the patient) fills the box the object gap needs, and the clause is withheld · an agentless
+passive is said as an active: «The day she was born» → «The day that she bore» (the decompiler, old)
+· «I» lowercased inside a relative clause · the drill's «If I tell you something…» row has no
+`know.v` (E1e) · `test_migrations` is DB-bound at ~40 minutes.

@@ -827,24 +827,136 @@ def test_an_OBJECT_relative_puts_the_antecedent_in_the_OBJECT_box(compiler):
     assert out.coverage == 1.0 and out.zip.unplaced == []
 
 
-def test_a_ZERO_relative_with_its_subject_said_is_WITHHELD_not_guessed(compiler):
+def test_a_ZERO_relative_whose_verb_takes_an_object_and_whose_head_names_nothing_is_the_OBJECT(
+        compiler):
     """«I like the fish the cat ate» — no pronoun, so no relation names the gap, and the TREE is the
-    same as «I remember the day I slept»: a subject, a verb, no object. The first gap is the object
-    and the second an adverbial; only the verb's VALENCY separates them, and valency is knowledge
-    the station does not hold. Reading «no object» as «the object gap» would make the day the thing
-    slept.
-
-    So the clause is withheld and its words go back to `unplaced` — a truthful partial zip, never a
-    wrong complete one. *The QM's brief expected the overt zip here; this is the frame-or-knowledge
-    stop it asked for, and the day the valency is a row, this test changes.*
-    """
+    same as «the day I slept». G5 withheld it; the Captain's ruling of 2026-09-25 reads it when two
+    signals AGREE: `eat` has an object frame in its primary sense, and «fish» names no
+    circumstance (`db/0038`). The fish is what was eaten, and the cat is still the eater."""
     out = compiler.compile(FISH_ZERO)
+    eating = next(r for r in rows_of(out, "content") if r.predicate == "eat.v")
+    role, _box, binder = _bound(out, eating)
 
-    assert not [r for r in rows_of(out, "content") if r.predicate == "eat.v"], "no guessed row"
-    assert main_row(out).boxes[Role.PATIENT].head == "fish.n", "no binder minted for nothing"
-    assert not rows_of(out, "quantifier")
-    assert set(out.zip.unplaced) == {"the", "cat", "ate"}, "and the zip SAYS what it did not read"
-    assert any("valency" in why for why in out.abstained)
+    assert role is Role.PATIENT and binder.restriction.head == "fish.n"
+    assert eating.boxes[Role.AGENT].head == "cat.n"
+    assert out.coverage == 1.0 and out.zip.unplaced == []
+
+
+DAY_SLEPT = skeleton_from_conllu("The day I slept was cold.", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "day", "day", "NOUN", "6", "nsubj"),
+    ("3", "I", "I", "PRON", "4", "nsubj"),
+    ("4", "slept", "sleep", "VERB", "2", "acl:relcl"),
+    ("5", "was", "be", "AUX", "6", "cop"),
+    ("6", "cold", "cold", "ADJ", "0", "root"),
+    ("7", ".", ".", "PUNCT", "6", "punct"),
+])
+
+DAY_BORN = skeleton_from_conllu("The day she was born was sunny.", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "day", "day", "NOUN", "7", "nsubj"),
+    ("3", "she", "she", "PRON", "5", "nsubj:pass"),
+    ("4", "was", "be", "AUX", "5", "aux:pass"),
+    ("5", "born", "bear", "VERB", "2", "acl:relcl"),
+    ("6", "was", "be", "AUX", "7", "cop"),
+    ("7", "sunny", "sunny", "ADJ", "0", "root"),
+    ("8", ".", ".", "PUNCT", "7", "punct"),
+])
+
+TIME_ATE = skeleton_from_conllu("I miss the time we ate together.", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "miss", "miss", "VERB", "0", "root"),
+    ("3", "the", "the", "DET", "4", "det"),
+    ("4", "time", "time", "NOUN", "2", "obj"),
+    ("5", "we", "we", "PRON", "6", "nsubj"),
+    ("6", "ate", "eat", "VERB", "4", "acl:relcl"),
+    ("7", "together", "together", "ADV", "6", "advmod"),
+    ("8", ".", ".", "PUNCT", "2", "punct"),
+])
+
+REASON_LEFT = skeleton_from_conllu("The reason he left is clear.", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "reason", "reason", "NOUN", "6", "nsubj"),
+    ("3", "he", "he", "PRON", "4", "nsubj"),
+    ("4", "left", "leave", "VERB", "2", "acl:relcl"),
+    ("5", "is", "be", "AUX", "6", "cop"),
+    ("6", "clear", "clear", "ADJ", "0", "root"),
+    ("7", ".", ".", "PUNCT", "6", "punct"),
+])
+
+MAN_THINK = skeleton_from_conllu("The man I think you met is here.", [
+    ("1", "The", "the", "DET", "2", "det"),
+    ("2", "man", "man", "NOUN", "8", "nsubj"),
+    ("3", "I", "I", "PRON", "4", "nsubj"),
+    ("4", "think", "think", "VERB", "2", "acl:relcl"),
+    ("5", "you", "you", "PRON", "6", "nsubj"),
+    ("6", "met", "meet", "VERB", "4", "ccomp"),
+    ("7", "is", "be", "AUX", "8", "cop"),
+    ("8", "here", "here", "ADV", "0", "root"),
+    ("9", ".", ".", "PUNCT", "8", "punct"),
+])
+
+
+def test_a_ZERO_relative_whose_verb_takes_none_and_whose_head_names_a_time_is_the_TIME(compiler):
+    """«The day I slept» — `sleep` has no object frame, «day» is `noun.time`: the two agree, and the
+    day is WHEN I slept, in the box a time phrase fills. Never `sleep(patient = day)`."""
+    out = compiler.compile(DAY_SLEPT)
+    sleeping = next(r for r in rows_of(out, "content") if r.predicate == "sleep.v")
+    role, box, binder = _bound(out, sleeping)
+
+    assert role is Role.TIME and box.marker is None and binder.restriction.head == "day.n"
+    assert Role.PATIENT not in sleeping.boxes
+    assert out.zip.unplaced == []
+
+
+def test_a_PASSIVE_relative_has_no_object_gap_whatever_the_verb_frames_say(compiler):
+    """«The day she was born» — `bear` takes an object, so the frames alone would say object and
+    disagree with «day». But the object was promoted to the subject: a passive relative's gap is an
+    adverbial or nothing. The tree's shape outranks a frame that describes the active verb."""
+    out = compiler.compile(DAY_BORN)
+    bearing = next(r for r in rows_of(out, "content") if r.predicate == "bear.v")
+    role, _box, _binder = _bound(out, bearing)
+
+    assert role is Role.TIME
+    assert not isinstance(bearing.boxes[Role.PATIENT].head, Var), "she is the one born, not the day"
+
+
+def test_a_ZERO_relative_the_two_signals_DISAGREE_on_is_withheld_as_before(compiler):
+    """Any disagreement withholds, exactly as G5 did — «I miss the time we ate together»: `eat`
+    takes an object and «time» names a time (the `db/0038` row: WordNet files it `noun.event`).
+    And a kind that names no box — «the reason he left»: tkzip says a reason with a join — is
+    heard, and withheld."""
+    for skeleton, words, why in (
+            (TIME_ATE, {"we", "ate", "together"}, "disagree"),
+            (REASON_LEFT, {"he", "left"}, "no box")):
+        out = compiler.compile(skeleton)
+        assert not [r for r in rows_of(out, "content") if r.predicate in ("eat.v", "leave.v")]
+        assert not rows_of(out, "quantifier"), "no binder minted for nothing"
+        assert set(out.zip.unplaced) == words
+        assert any(why in reason for reason in out.abstained), out.abstained
+
+
+def test_a_ZERO_relative_over_a_CLAUSAL_complement_is_withheld(compiler):
+    """«The man I think you met» — the man is the object of the MEETING, and `think` already has its
+    object, the clause. Read as `think`'s object he went into a row the attitude dissolved, and a
+    zip that had lost him called itself whole. The tree does not say at which level the gap is."""
+    out = compiler.compile(MAN_THINK)
+
+    assert not [r for r in rows_of(out, "content") if r.predicate == "meet.v"]
+    assert {"I", "think", "you", "met"} <= set(out.zip.unplaced)
+    assert any("clausal complement" in why for why in out.abstained)
+
+
+def test_the_two_curation_rows_answer_what_the_RESOURCE_misfiles():
+    """`db/0038`'s check asks its question with WordNet's answers as recorded when the rows were
+    written, so the migration never loads the resource. This is the other half: the record is
+    still what WordNet says — or the rows are answering a question nobody asks any more."""
+    from tk2.dictionary.supersense import supersense_for
+    from tk2.migrations import discover
+
+    rows = next(m for m in discover() if m.number == 38).load().CURATED
+    for row in rows:
+        assert supersense_for(row["lemma"], "NOUN") == row["resource_says"], row["lemma"]
 
 
 def test_a_relative_on_a_QUANTIFIED_phrase_puts_the_variable_where_the_pronoun_stands(compiler):

@@ -29,6 +29,11 @@ DEFAULTS: dict[str, Any] = {
     #: 37 relations and the closed classes 27 roles, and most pairs never meet (`db/0034`). A SET,
     #: stored sorted: nothing in its order is a preference, and nothing reads one.
     "admits_roles": None,
+    #: A zero relative's gap, where the TREE leaves it unnamed — «the day I slept»: which circumstance
+    #: box does the antecedent name? A selector over the ANTECEDENT, in `MarkerSelector`'s rule
+    #: vocabulary; `None` is NO RULE, and then no antecedent names one and every such gap withholds,
+    #: which is what the station did before `db/0038`.
+    "adverbial_gap": None,
 }
 
 
@@ -85,6 +90,19 @@ class UdReadings:
             if admits is not None:
                 return frozenset(admits)
         return DEFAULTS["admits_roles"]
+
+    def adverbial_gap(self, dep: str) -> dict | None:
+        """The rules naming which circumstance a relative clause's antecedent is, under this
+        relation — `{"selector": [...]}` for `MarkerSelector`, or None if nobody wrote any.
+
+        The full label first, then the bare one, as `admits_roles` reads it.
+        """
+        for label in (dep, dep.split(":")[0]):
+            row = self._by_label.get(("relation", label))
+            rules = (row.get("reads") or {}).get("adverbial_gap") if row else None
+            if rules is not None:
+                return rules
+        return DEFAULTS["adverbial_gap"]
 
     def states_number(self, upos: str) -> bool:
         """Did the speaker CHOOSE this word's number? «cats» yes; «Marie» no (schema v6)."""
