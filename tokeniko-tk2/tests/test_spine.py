@@ -62,11 +62,20 @@ def test_the_STATION_compiles_a_sentence_and_says_it_back():
     No stanza: the skeleton is written by hand, which is the boundary `skeleton_from_conllu` exists
     for. This is the whole station in one assertion — if compile or decompile is broken anywhere
     structural, the text will not come back.
+
+    **AND NO WORDNET** (E1e.8.1): the compiler's two readers of the resource — the marker
+    selector's supersense probes and the zero relative's `takes_object` — are injected, stating
+    what WordNet says of the one verb here, exactly as the section suites' seams allow.
     """
     from tk2.language import standing_closed_classes
     from tk2.language.compile import Compiler
     from tk2.language.decompile import Decompiler
+    from tk2.language.markers import MarkerSelector
     from tk2.language.skeleton import skeleton_from_conllu
+
+    said = {("sleep", "VERB"): "verb.body", ("cat", "NOUN"): "noun.animal"}
+    selector = MarkerSelector(supersense=lambda lemma, upos: said.get((lemma, (upos or "").upper())),
+                              derived=lambda adjective: None)
 
     skeleton = skeleton_from_conllu("The cat sleeps.", [
         ("1", "The", "the", "DET", "2", "det"),      # the determiner hangs off the NOUN
@@ -75,7 +84,8 @@ def test_the_STATION_compiles_a_sentence_and_says_it_back():
         ("4", ".", ".", "PUNCT", "3", "punct"),
     ])
     table = standing_closed_classes()
-    zip_ = Compiler(table).compile(skeleton).zip
+    zip_ = Compiler(table, selector=selector,
+                    takes_object=lambda lemma: {"sleep": False}.get(lemma)).compile(skeleton).zip
 
     assert zip_.rows and zip_.rows[0].predicate == "sleep.v"
     assert Decompiler(table).decompile(zip_).text == "The cat sleeps."

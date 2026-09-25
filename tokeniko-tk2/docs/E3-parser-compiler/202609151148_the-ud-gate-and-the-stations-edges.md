@@ -1,5 +1,7 @@
 # parser/compiler — THE UD GATE, AND WHERE THE STATION ENDS, 2026-09-15 11:48
 
+*Roadmap: `E3` scope · `E3.5.1`*
+
 *E3's opening session. Three rulings by the Captain, each of which moves something the conception
 notes of 2026-08-23 had left in a weaker shape. Requirements 2 and 3 are amended by this note.*
 

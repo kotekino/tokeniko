@@ -9,6 +9,13 @@ These journeys are **E9's no-regression ratchet material** (the Captain, 2026-09
 Run from `tokeniko-tk2/`:  PYTHONPATH=. ../.venv/bin/python tools/journey_ledger_build.py
 """
 import sys, re, json, pathlib
+
+# **DISABLED UNTIL E1e.9 IS RULED** (2026-09-26). The connection below reaches tk1's `tokeniko_mem`
+# with a raw `MongoClient`, around the guard every other tk2 door goes through. How tk2 reads tk1's
+# evidence is E1e.9's question; the code below is kept intact for the answer.
+raise SystemExit("journey_ledger_build.py is disabled until E1e.9 (how tk2 reads tk1 evidence) "
+                 "is ruled: it opens tk1's tokeniko_mem through a raw MongoClient, around the guard.")
+
 sys.path.insert(0,'.')
 from collections import defaultdict
 from pymongo import MongoClient

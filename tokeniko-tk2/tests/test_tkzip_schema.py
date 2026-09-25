@@ -251,7 +251,7 @@ def test_no_closed_class_row_carries_a_number_the_format_refuses():
 def test_v9_an_UNDERSTOOD_marker_is_the_marker_plus_one_flag_on_the_box():
     """«I gave ANNA a book» means «to Anna» — the marker is stored — and was said bare, which is
     surface the decompiler needs. One optional field, on the box the marker already lives on."""
-    assert SCHEMA_VERSION == 9
+    assert SCHEMA_VERSION >= 9
     understood = Box(head="anna.n", marker="to", marker_implicit=True)
     said = Box(head="anna.n", marker="to")
 
@@ -264,3 +264,24 @@ def test_v9_an_UNDERSTOOD_marker_is_the_marker_plus_one_flag_on_the_box():
 def test_v9_a_WRITTEN_marker_costs_no_stored_field():
     stored = Box(head="anna.n", marker="to").model_dump(exclude_none=True, exclude_defaults=True)
     assert set(stored) == {"head", "marker"}
+
+
+# ------------------------------------------------------------------------------------------------
+# v10 — a deictic unknown remembers which deictic it was (E3.2.1.5, 2026-09-26)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_v10_a_DEICTIC_open_is_described_and_is_not_the_bare_one():
+    """«She lives HERE» and «Where does she live?» were one zip. The referential adverb's row
+    features ride on the OPEN, as a pronoun's do since v4."""
+    assert SCHEMA_VERSION == 10
+    here = Open(deixis="place", distance="proximal")
+
+    assert here.described, "the sentence pointed at it"
+    assert here != Open(), "a deictic and an asked slot are two zips"
+    assert here != Open(deixis="place", distance="distal"), "«here» is not «there»"
+    assert {"deixis", "distance"} <= set(Open.model_fields)
+
+
+def test_v10_an_undescribed_open_costs_no_stored_field():
+    assert Open().model_dump(exclude_none=True) == {}

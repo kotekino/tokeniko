@@ -5,7 +5,7 @@ hand-made zips on both sides. **That is not a convenience.** A gate nobody has s
 nobody can trust, and the whole reason this one exists is that the drill and the UD gate had never
 been able to disagree with each other for a day while a wrong role sat in every copular sentence.
 
-The one test that actually parses carries `@pytest.mark.skeleton`, like the rest of the few that do.
+The few tests that actually parse carry `@pytest.mark.skeleton`, like every other test that does.
 """
 
 import pytest
@@ -273,6 +273,7 @@ def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():
         "a value against a value is not a disagreement about whether anything was asked")
 
 
+@pytest.mark.skeleton
 def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
     """**THE RATCHET.** Three disagreements on 2026-09-18, in three families — and the point of the
     list is that every entry is named, dated and attributable. The count may only go DOWN.
@@ -345,6 +346,7 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
         f"the drill gate's disagreements moved: {sorted(disagreed)}")
 
 
+@pytest.mark.skeleton
 def test_every_compiled_drill_zip_is_a_TREE():
     """**THE SECOND RATCHET — A SENTENCE IS A TREE** (the compiler's own 09-20 rule, G2 2026-09-24).
     Over every zip the station compiles from the drill corpus, no row may be an operand of more than

@@ -1,7 +1,8 @@
 """THE DECOMPILER — requirement 9, and the properties it exists to have.
 
 **Pure.** These build zips by hand and read the sentence back, so no parser is involved; the
-RECOMPILE half of the contract is `tools/roundtrip.py`, which needs stanza and is measured there.
+RECOMPILE half of the contract is `tools/roundtrip.py`, which needs stanza and is measured there. The
+few round trips pinned here call stanza too, and carry `@pytest.mark.skeleton`.
 
 What is pinned here is the discipline rather than the prose: where the rows can say a meaning, it is
 said; where they cannot, it is recorded; and where saying it wrong would change what the sentence
@@ -465,6 +466,7 @@ def test_EVERY_adverb_curation_gave_a_voice_can_be_REACHED(decompiler):
         "two flagged adverbs share a meaning and one of them will never be spoken")
 
 
+@pytest.mark.skeleton
 def test_the_fixpoint_s_t_md_2_comes_back_as_the_zip_it_went_out_as():
     """**THE ROUND TRIP ITSELF** — the one the fixpoint scored SILENT until `db/0035`. Sentence to
     zip to sentence to zip, and the two zips must be IDENTICAL: the negation still outside the
@@ -488,6 +490,7 @@ def test_the_fixpoint_s_t_md_2_comes_back_as_the_zip_it_went_out_as():
     assert canonical(second) == canonical(first)
 
 
+@pytest.mark.skeleton
 @pytest.mark.parametrize("text, scope, back", [
     ("A calculator cannot think.", ["negation", "modality"], "A calculator cannot think."),
     ("A calculator need not think.", ["negation", "modality"],
@@ -1054,6 +1057,7 @@ def test_an_IMPERATIVE_is_never_the_clause_a_subordinator_marks(spoken):
     assert any("imperative" in why for why in out.refused)
 
 
+@pytest.mark.skeleton
 @pytest.mark.parametrize("text", ["I go to sleep because I'm tired.",
                                   "Because I'm tired, I go to sleep.",
                                   "I went to bed to sleep.",
@@ -1134,6 +1138,7 @@ def test_a_SUPPOSED_implication_is_refused_because_because_and_if_are_one_zip_th
     assert any("2 readings of imply" in why for why in out.refused)
 
 
+@pytest.mark.skeleton
 def test_the_G9_witness_comes_back_as_the_zip_it_went_out_as():
     from tk2.language import StanzaSkeletons, standing_closed_classes
     from tk2.language.compile import Compiler
@@ -1152,6 +1157,7 @@ def test_the_G9_witness_comes_back_as_the_zip_it_went_out_as():
     assert canonical(second) == canonical(first)
 
 
+@pytest.mark.skeleton
 @pytest.mark.parametrize("text", ["It rained and consequently the river flooded.",
                                   "He studied and thus he passed.",
                                   "I sing and also I dance."])
@@ -1172,3 +1178,36 @@ def test_AND_plus_a_discourse_adverb_comes_back_as_the_zip_it_went_out_as(text):
 
     assert len([r for r in first.rows if r.kind == "join"]) == 1, "one join, never two"
     assert canonical(second) == canonical(first), out.text
+
+
+# ------------------------------------------------------------------------------------------------
+# E3.2.1.5 — a deictic adverb is said back, never asked (schema v10)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_a_DEICTIC_open_is_said_as_its_word_and_the_clause_stays_a_statement(decompiler):
+    """The rows answer by feature, as they do for a pronoun: `place` · `distal` is «there»."""
+    zip_ = Zip(rows=[row(predicate="live.v",
+                         agent=Box(head=Open(person=3, number="sg", gender="f")),
+                         location=Box(head=Open(deixis="place", distance="distal")))])
+    assert decompiler.decompile(zip_).text == "She lives there."
+
+
+@pytest.mark.skeleton
+@pytest.mark.parametrize("text", ["She lives here.", "She lives there.",
+                                  "She lives now.", "She lives then."])
+def test_a_DEICTIC_adverb_comes_back_as_the_zip_it_went_out_as(text):
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+
+    assert out.text == text
+    assert canonical(second) == canonical(first)

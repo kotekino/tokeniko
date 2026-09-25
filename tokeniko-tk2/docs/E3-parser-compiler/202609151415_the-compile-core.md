@@ -1,5 +1,7 @@
 # parser/compiler — THE COMPILE CORE, 2026-09-15 14:15
 
+*Roadmap: `E3.2` · `E3.2.4`*
+
 *A skeleton in, a zip out. **18 of 25 UD cases compile at 100% coverage, mean 89.5%** — and the
 seven partials are all one known gap: a sentence needing more than one content row.*
 

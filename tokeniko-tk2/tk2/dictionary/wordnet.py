@@ -168,6 +168,22 @@ def folded_synsets(word: str) -> tuple:
     return tuple(s for s in wn.synsets(word) if word in _folded(s))
 
 
+# ------------------------------------------------------------------------------------------------
+# the raw readings — for the station's readers of a synset (E3.2.7.1)
+# ------------------------------------------------------------------------------------------------
+
+
+def synsets(word: str, pos: str | None = None) -> list:
+    """WordNet's readings of `word`, in the resource's own sense order — what `supersense` and
+    `frames` read. The door is here so that nltk still enters tk2 through one file."""
+    return wn.synsets(word, pos)
+
+
+def all_synsets(pos: str | None = None):
+    """Every synset of one part of speech, as nltk walks them."""
+    return wn.all_synsets(pos)
+
+
 def is_name_only(word: str) -> bool:
     """THE REFUSAL: the resource knows this spelling only as a NAME, never as a word.
 

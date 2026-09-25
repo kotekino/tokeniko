@@ -387,6 +387,7 @@ def test_a_frame_with_NO_recipient_still_raises_its_attitude(compiler):
     assert knowing.boxes[Role.EXPERIENCER].head == "captain", "and «you» is still the outer listener"
 
 
+@pytest.mark.skeleton
 def test_the_TENSE_reaches_the_ZIP_and_it_reaches_it_PER_CLAUSE(compiler):
     """**The station was compiling `tense_aspect` words to NOTHING** — marked covered, dropped — so
     «I walked to the station» and «I walk to the station» were one zip (tkzip req 25). It is read

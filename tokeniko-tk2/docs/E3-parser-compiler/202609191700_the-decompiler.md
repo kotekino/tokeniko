@@ -1,5 +1,7 @@
 # parser/compiler — THE DECOMPILER, AND THE TEST THAT CAME WITH ITS NAME, 2026-09-19 17:00
 
+*Roadmap: `E3.3`*
+
 *E3 task 3. The Captain renamed it before a line was written — «I would call it DECOMPILER, mimicking
 the compiler/decompiler of computer languages» — and the name settled the acceptance test, the output
 contract and one standing confusion in the same sentence.*

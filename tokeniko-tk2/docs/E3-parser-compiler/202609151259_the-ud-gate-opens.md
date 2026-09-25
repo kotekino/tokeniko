@@ -1,5 +1,7 @@
 # parser/compiler — THE UD GATE OPENS, 2026-09-15 12:59
 
+*Roadmap: `E3.5.1.1`*
+
 *The first scoring run. 25 cases over 16 of UD's 37 relations: **16 answered · 0 wrong · 9
 abstained**, and stanza agrees with UD's own published parse on 9 of the 12 sentences UD annotated
 in full.*

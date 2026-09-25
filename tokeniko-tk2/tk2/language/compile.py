@@ -36,7 +36,7 @@ from tk2.language.strength import IMPERATIVE, AttitudeStrengths, standing_attitu
 from tk2.language.subjects import SubjectRoles, standing_subject_roles
 from tk2.language.ud_readings import UdReadings, standing_ud_readings
 from tk2.language.skeleton import UD_POS, Skeleton, Word
-from tk2.language.utterance import NO_CONTEXT, SAYING_VERBS, Context
+from tk2.language.utterance import NO_CONTEXT, Context
 from tk2.tkzip.schema import (
     DomainRow,
     THEATRE_EPOCH,
@@ -582,12 +582,14 @@ class Compiler:
         the answer must be a person, which is a restriction and therefore content.
 
         The features are the row's own, copied and not interpreted: `person` · `number` · `gender`
-        for a pronoun, `sort` for an interrogative. Anything the row does not carry stays empty, and
-        a bare `Open` is what it always was — an unknown nobody described, which is exactly the
-        unexpressed agent of «the hammer is made of titanium».
+        for a pronoun, `sort` for an interrogative, `deixis` · `distance` for a referential adverb
+        (schema v10: «she lives HERE» is not «where does she live?»). Anything the row does not
+        carry stays empty, and a bare `Open` is what it always was — an unknown nobody described,
+        which is exactly the unexpressed agent of «the hammer is made of titanium».
         """
         features = (match.features or {}) if match is not None else {}
-        return Open(**{name: features.get(name) for name in ("person", "number", "gender", "sort")},
+        return Open(**{name: features.get(name) for name in ("person", "number", "gender", "sort",
+                                                              "deixis", "distance")},
                     **extra)
 
     def _is_copular_root(self, head: Word, skeleton: Skeleton, marks: dict) -> bool:
@@ -986,8 +988,8 @@ class Compiler:
                 # speaker typed it cannot change what is asserted. So the rule is the RELATION's,
                 # and `ccomp` is the relation UD defines as a clausal complement whose own truth the
                 # matrix does not settle. Claiming less than the speaker did is half-said and legal;
-                # claiming more is the sin (req 8). One fewer reader of `SAYING_VERBS`, which E3's
-                # frame/knowledge audit wants gone.
+                # claiming more is the sin (req 8). `_contexts` rotates a quoted one by this same
+                # test (E3.2.1.4).
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, None,
                                dissolved)
                 continue
@@ -1670,8 +1672,8 @@ class Compiler:
 
         **BEING AN ATTITUDE IS STILL REQUIRED, IT IS SIMPLY NOT SUFFICIENT** — a rotation needs a
         holder, and only an attitude has one. So the test is the conjunction: the clause is one
-        `_relate` would raise an attitude over (a `matrix` joiner, or a bare `ccomp` under a saying
-        verb), AND it is quoted. A conditional still does not rotate.
+        `_relate` would raise an attitude over (a `matrix` joiner, or a bare `ccomp` under a readable
+        verb, whichever verb it is), AND it is quoted. A conditional still does not rotate.
 
         The holder and addressee are read from the SKELETON rather than from the compiled row,
         because the rows do not exist yet. That is a small duplication of `_role_of`'s job and it is
@@ -1692,10 +1694,11 @@ class Compiler:
             if outer is None:
                 continue
             joiner = self._joiner(skeleton, head, marks)
+            # **THE SAME TEST `_relate` RAISES THE ATTITUDE BY, AND NO VERB LIST** (E3.2.1.4,
+            # 2026-09-26): «John exclaimed to Marie "You are late"» rotates exactly as «said» does.
             attitude = (joiner is not None
                         and joiner.compiled.get("asserts") == ASSERTS_MATRIX) or (
-                head.bare_dep == "ccomp" and self._readable(outer)
-                and self._key(outer) in SAYING_VERBS)
+                head.bare_dep == "ccomp" and self._readable(outer))
             if not (attitude and self._is_quoted(skeleton, head)):
                 continue
             # The context THIS clause's own participants are read under is its enclosing clause's,
@@ -2595,14 +2598,12 @@ class Compiler:
                 # the addressee for person 2 (req 20). Reported speech is read under the outer
                 # context, because the reporter already moved the pronouns into his own frame.
                 who = context.for_person(match.features.get("person"))
-                # **AN UNRESOLVED PRONOUN KEEPS ITS OWN WORD, AND OPEN IS NOT THE PLACE FOR IT.**
-                # A third person is ANAPHORA — it points back into the discourse, which `recent` will
-                # answer and does not yet (req 7) — so the station cannot say WHO. But it can say
-                # WHAT WAS SAID, and «he» is a key like any other: the drill writes `he.n` in exactly
-                # this box (`nha-1`, `dere-1`). Emitting OPEN instead threw the word away, made «he
-                # thinks» and «she thinks» the same zip, and left the decompiler with a box it could
-                # only speak as a question — which is what an OPEN slot MEANS (req 2), and this is
-                # not one: nobody is asking who he is.
+                # **AN UNRESOLVED PRONOUN IS AN OPEN THAT REMEMBERS ITS WORD** (schema v4). A third
+                # person is ANAPHORA — it points back into the discourse, which `recent` will answer
+                # and does not yet (req 7) — so the station cannot say WHO. But it can say WHAT WAS
+                # SAID: `_unknown` copies the row's person · number · gender, so «he thinks» and
+                # «she thinks» stay two zips, and the decompiler says the pronoun back rather than
+                # asking. A deictic adverb («here», «then») is the same case (schema v10).
                 # **NO DETERMINATION.** A pronoun is definite, but what it resolves TO is a person,
                 # and a person takes no article — «the marie» is what came back when the pronoun's
                 # own definiteness was copied onto the name it stood for. The drill writes these

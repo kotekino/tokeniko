@@ -31,7 +31,7 @@ rebuild, and it is named here rather than done quietly.
 
 from __future__ import annotations
 
-from nltk.corpus import wordnet as wn
+from tk2.dictionary import wordnet as wn
 
 #: WordNet's 26 noun lexicographer files, published. FRAME: the resource defines the set, and a name
 #: outside it means the corpus is not the one this was written against.

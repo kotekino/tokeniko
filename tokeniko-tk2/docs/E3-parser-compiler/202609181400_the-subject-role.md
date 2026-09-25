@@ -1,5 +1,7 @@
 # parser/compiler — THE SUBJECT'S ROLE, AND THE DRILL CORRECTED, 2026-09-18 14:00
 
+*Roadmap: `E3.2.16`*
+
 *Ten of the drill gate's twelve disagreements were one question: `nsubj` is a POSITION, and its role
 depends on what is predicated of it. «The cat CHASED» is an agent, «I LOVE» an experiencer, «God
 EXISTS» a patient. The station wrote `agent` for every subject and its own comment deferred the

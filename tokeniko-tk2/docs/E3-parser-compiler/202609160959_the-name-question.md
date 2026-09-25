@@ -1,5 +1,7 @@
 # parser/compiler — THE NAME QUESTION, REOPENED AND WIDENED, 2026-09-16 09:59
 
+*Roadmap: `E3b` (opened by it)*
+
 *The ambiguous markers closed with two errors, and both were «Anna». I parked them as «the
 named-individual hole, which has its answer waiting». **The Captain refused the parking** and widened
 the scope in the same breath:*

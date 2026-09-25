@@ -27,7 +27,7 @@ from __future__ import annotations
 
 from functools import cache
 
-from nltk.corpus import wordnet as wn
+from tk2.dictionary import wordnet as wn
 
 #: WordNet's frame strings number 35. FRAME: the resource publishes them, and a corpus with a
 #: different count is not the one this was written against.

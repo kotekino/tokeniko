@@ -135,7 +135,12 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # about how it was said lives beside it. The alternative — leave `marker` empty and let a reader
 # infer «to» from the role — would make every reader know that a recipient's marker is understood,
 # which is a fact about English in code, and would leave «Anna» and «to Anna» two different zips.
-SCHEMA_VERSION = 9
+#
+# **v10, 2026-09-26 — A DEICTIC UNKNOWN REMEMBERS WHICH DEICTIC IT WAS** (E3.2.1.5). «She lives
+# HERE» compiled to an undescribed `Open` location, the same zip as «where does she live?», and the
+# decompiler said it back as the question. `Open.deixis` · `Open.distance` carry the referential
+# adverb's own row features — `place|time`, `proximal|distal` — exactly as v4 carries a pronoun's.
+SCHEMA_VERSION = 10
 
 
 # --------------------------------------------------------------------------------------------------
@@ -215,11 +220,16 @@ class Open(BaseModel):
     person: int | None = None
     number: Number | None = None
     gender: str | None = None
+    #: v10. A referential adverb's deictic centre — «here» is `place` · `proximal`, «then» `time` ·
+    #: `distal`. Resolved by context like a pronoun, and said back as the same word, never asked.
+    deixis: str | None = None
+    distance: str | None = None
 
     @property
     def described(self) -> bool:
         """Did the sentence say anything about it at all? A bare OPEN is an unknown nobody named."""
-        return any(v is not None for v in (self.sort, self.person, self.number, self.gender))
+        return any(v is not None for v in (self.sort, self.person, self.number, self.gender,
+                                           self.deixis, self.distance))
 
 
 class Var(BaseModel):
@@ -266,8 +276,9 @@ class Ref(BaseModel):
 
 
 class Role(str, Enum):
-    """The seventeen boxes. FRAME: fixed, exhaustive, and a miss is a bug to be fixed by redesigning
-    the frame — never a migration (req 18, the Captain's ruling of 2026-09-11).
+    """The eighteen boxes. FRAME: fixed, exhaustive, and a miss is a bug to be fixed by redesigning
+    the frame — never a migration (req 18, the Captain's ruling of 2026-09-11). `direction` is the
+    eighteenth, forced by the drill («He looked up»).
 
     Cut from VerbNet (29 thematic roles over 429 classes), PropBank (112,917 annotated sentences) and
     FrameNet (1,221 frames), then cross-checked against the Captain's own first draft — which already
@@ -376,7 +387,7 @@ class Box(BaseModel):
 
     `head` is req 26's `noun`, renamed for what it actually holds: a `manner` box holds an adverb and
     a `complement` box holds an adjective, so `noun` would be a name doing the wrong job for two of
-    the seventeen. Same field, clearer name.
+    the eighteen. Same field, clearer name.
     """
 
     model_config = ConfigDict(extra="forbid")

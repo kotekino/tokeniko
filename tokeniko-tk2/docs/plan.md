@@ -603,6 +603,19 @@ runtime, so it is app knowledge.
    *During E3, minimal tests only: «we build too much machinery on the tests, while they are
    something to apply to something closed, not ongoing with decisions pending».*
 
+`E1e.6.1` **the drill amended to the rulings it disagrees with** — `t-ws-1`, `aw-6` (purpose is
+   IMPLY, 09-25). Until then the drill-gate ratchet is KNOWINGLY red on them, by ruling.
+`E1e.6.2` *(found 09-25)* the drill's «If I tell you something…» row has no `know.v`.
+`E1e.9` *(the course check, 2026-09-26)* **a tool read the biography around the guard** —
+   `tools/journey_ledger_build.py` opened tk1's `tokeniko_mem.tkzipdebug` with a raw client, the only
+   one of ten database-opening tools that skipped `guard_db_name`. Read-only in intent is not the
+   protection the guard gives. **Disabled on 09-26** (it refuses to run); its door is `E3b.3.2`'s
+   ruling.
+`E1e.10` *(the course check, 2026-09-26 — for the Captain)* **a held-out check for every exception row a
+   gate justified** — `db/0019` (happy), `db/0025` (look, die) and `db/0038` (time, way) each add rows
+   for the very cases that score them; only `db/0038` was checked on cases written afterwards (23 fresh:
+   7 right, 0 wrong). Proposed as a standing rule.
+
 ### `E1e.8` AND THE PACING RULE, WHICH IS THE OTHER HALF
 
 > *«I would like the development of these foundational points (dictionary, tkzip) to be agile and
@@ -616,6 +629,13 @@ under the hand, the one gate that answers the open question. ~~The full suite ru
 commit gate~~ — **SUPERSEDED 2026-09-22**: the gate is the broad-short test plus the section, and the
 full suite runs only on deploy, on the body (root `CLAUDE.md`, «THE TEST GATE — three clauses»). A green full suite is a precondition of
 asking for the commit, not a checkpoint between edits.
+
+**The gate's own contract, found leaking** *(the course check, 2026-09-26)*:
+`E1e.8.1` the spine reached WordNet (compile → `_subject_role` → markers → supersense), though its
+   rule says nothing in it may; the `Compiler`'s injectable readers are now stubbed there.
+`E1e.8.2` sixteen tests called stanza without the `skeleton` marker, so `-m "not skeleton"` did not
+   isolate them; marked.
+`E1e.8.3` `test_migrations` is DB-bound at ~40 minutes and sits inside the datatier's section gate.
 
 ## E2 — The format *(tkzip v2)* — ✅ **COMPLETE 2026-09-14**
 
@@ -734,26 +754,30 @@ it).
    refused once already for tkzip's typed `other`.
 `E3.1` **Skeleton adapter** — stanza behind the lib boundary, swappable (req 2); the torch-load patch
    and model-loading quirks contained in the adapter.
-`E3.2` *(sub-items: E3.2.1–E3.2.16 and their children)* **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an
+   `E3.1.1` *(the course check, 2026-09-26)* **the provider is declared and pinned** — stanza,
+   spacy-stanza and torch were in no `pyproject.toml` group, so «stanza agrees 9 of 12» could not be
+   reproduced. A `station` optional group now pins the installed versions; recording the provider's
+   version IN a zip is `E3.10`.
+`E3.2` *(sub-items: E3.2.1–E3.2.17 and their children)* **The compile core** — roles filled from the skeleton + anchors (the resolver migrates — it's an
    asset); sense slots left OPEN; context-as-argument for anaphora/ellipsis/fragments (req 7);
    partial zips with open variables (req 8).
-   **HALF DONE 2026-09-15** (`tk2/language/compile.py`, record
+   `E3.2.4` **HALF DONE 2026-09-15** (`tk2/language/compile.py`, record
    `docs/E3-parser-compiler/202609151415_the-compile-core.md`): one content row, both halves of the
    mapping, quantifier binders with their restriction, possessors inside the record, senses OPEN —
    **18 of 25 UD cases whole, mean coverage 89.5%**. The frame caught a design error on the way: a
    `QuantifierRow`'s `restriction` is a Box, so a binder cannot be emitted on meeting «every».
-   ~~**WHAT REMAINS IS ONE FEATURE: MANY ROWS.**~~ **DONE 2026-09-15** (record
+   `E3.2.5` ~~**WHAT REMAINS IS ONE FEATURE: MANY ROWS.**~~ **DONE 2026-09-15** (record
    `202609151505_many-rows.md`): one content row per clause, related by joins, attitudes and shared
    variables — **20 of 25 whole, mean 95.8%**. The three-way distinction of req 38 is produced from
    a real parse: «if» leaves both halves EMPTY, «because» claims both, «and» is the third, one
    operator set and no relation field. It needed **closed classes v4** (`db/0010`) first, because
    «if» and «because» carried IDENTICAL rows and nothing in the dependency tree separates them
    either — the assertion status is knowledge about the word.
-   ~~**WHAT REMAINS:** the wh-word's box~~ **DONE 2026-09-15** (`db/0011`, record
+   `E3.2.6` ~~**WHAT REMAINS:** the wh-word's box~~ **DONE 2026-09-15** (`db/0011`, record
    `202609151555_the-wh-words.md`): five kinds, and three of them are not boxes — `whether` opens
    the TRUTH, `whose` a FIELD, and **`why` an ANTECEDENT**, because req 37 left no cause box to
    open and the shape was already in the format. **21 of 25 whole, mean 96.8%.**
-   ~~**WHAT REMAINS:** the thirteen ambiguous markers~~ **DONE 2026-09-16** (`db/0012`, record
+   `E3.2.7` ~~**WHAT REMAINS:** the thirteen ambiguous markers~~ **DONE 2026-09-16** (`db/0012`, record
    `202609160929_the-ambiguous-markers.md`): **22 of 25 whole, mean 98.4%; the UD gate answers 19
    of 25 with 0 WRONG.** `db/0008` predicted head-verb GEOMETRY and it was benched and lost — «is a
    pool a place?» is a hypernymy question, and the dictionary chapter ruled a month ago that cosine
@@ -768,24 +792,28 @@ it).
    `noun.time`) and «with Anna» twice — **the named-individual hole**, parked with its own answer
    waiting. **NAMED DEBT:** the supersense is read LIVE from WordNet and is therefore outside the
    base's build fingerprint; its home is a `lexname` on `SenseVectorDoc`, which is a rebuild.
+   **→ `E3.2.7.1`** *(2026-09-26, the course check)*: the debt GREW — three live readers
+   (`supersense_of`, `derived_supersense`, `primary_takes_object`), and two of them imported nltk
+   around its one door (`tk2/dictionary/wordnet.py`). Routed through the door; the `lexname`, frame
+   and attribute supersense onto `SenseVectorDoc` stay owed at the next sealed rebuild.
    **WHAT REMAINS, as the completed gate now names it** *(2026-09-16)*:
-   - ~~**`amod`**~~ **DONE 2026-09-16** (record `202609161215_the-attributive-adjective.md`). The
+   - `E3.2.9` ~~**`amod`**~~ **DONE 2026-09-16** (record `202609161215_the-attributive-adjective.md`). The
      shape was not designed here — req 70 ruled it and the drill hand-compiled it at E2: the
      adjective is a second row with NO predicate, its subject is the PATIENT, and **the binder
      scopes the JOIN** because the variable lives in both rows. **An adjective forces a binder even
      with no quantifier word**, because a row saying `patient=body.n, complement=human.a` claims
      that BODIES are human. Ratchet **23/25 at 98.9%**, frontier **7/18 at 80.8%**, gate **31
      answered · 0 WRONG**.
-     **AND IT FOUND A SLIP**: the copular subject is the **PATIENT**, not the `topic` the compile
+     `E3.2.10` **AND IT FOUND A SLIP**: the copular subject is the **PATIENT**, not the `topic` the compile
      core wrote. `topic` here is SUBJECT MATTER («a lecture ON physics»); the drill uses it for that
      alone, three times, and hand-compiles the copular row as patient + complement 43 times.
-   - ~~**⚑ THE TWO GATES HAVE NEVER MET**~~ **BUILT 2026-09-16** — `tools/drill_gate.py`, req 18,
+   - `E3.5.2` ~~**⚑ THE TWO GATES HAVE NEVER MET**~~ **BUILT 2026-09-16** — `tools/drill_gate.py`, req 18,
      record `202609161502_the-two-gates-meet.md`. It scores AGREEMENT and not equality, because most
      of the drill needs features E3 has not built and an equality check would fail all 78 and teach
      nothing. **It crashed the compiler before it could score anything** — a `SPACE` token outside
      UD's seventeen (the Captain's «[de dicto]» annotations leave whitespace) and two rows called
      `m0`, which no UD sentence can produce because none carries both a modal and an attributive
-     adjective. **Then six disagreements, now four**: two curation errors fixed by `db/0015`, one
+     adjective. **Then six disagreements, now four**: two curation errors fixed by `db/0015` (`E3.2.14`), one
      E3b, and **three witnesses of ONE open question**. 38 agreed · 4 DISAGREED · 91 of 126 rows
      paired, held as a ratchet by a `skeleton`-marked test.
      **WIDENED TWICE ON 2026-09-17**, both times because the drill's new quotation block walked past
@@ -799,7 +827,7 @@ it).
      *An instrument built to catch one defect was shaped by it.* **47 agreed · 15 DISAGREED**, and
      11 of the 15 were always there. **50 agreed · 12 DISAGREED · 101 of 128 roles** once the
      rotation and the truth slot were fixed the same morning.
-   - **⚑ THE SUBJECT'S ROLE DEPENDS ON WHAT IS PREDICATED OF IT** — TEN of the drill gate's twelve
+   - `E3.2.16` **⚑ THE SUBJECT'S ROLE DEPENDS ON WHAT IS PREDICATED OF IT** — TEN of the drill gate's twelve
      disagreements are one question, and it is the one `RELATION_FILLS_ROLE`'s own comment defers:
      «God exists» is a PATIENT · «the cat is hungry» an EXPERIENCER · «Sue is a teacher» a patient.
      *«Which one it is depends on the VERB, that is a head-verb question the geometry answers, and a
@@ -822,7 +850,7 @@ it).
      trust you» `iobj`, which UD reserves for a double-object clause, and the station now
      abstains on that mislabel rather than inventing a recipient (the `q-5` precedent). The
      first cut was too strict and the gate said so at once: a QUOTATION is a second object.
-   - ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
+   - `E3.2.8` ~~**content ADVERBS**~~ **DONE 2026-09-16** (`db/0013` + `db/0014`, record
      `202609161251_the-adverbs.md`). Requirement 23 split adverbs four ways at E2 and nothing said
      WHICH is which. **The resource cannot say**: WordNet has ONE adverb class (`adv.all`) and
      adverbs have NO hypernyms, so the supersense instrument that settled the markers gives nothing
@@ -835,12 +863,14 @@ it).
      desynchronise the sealed base. The cost he named (two tables) is paid by making only the ROSTER
      second: `compiled` here is the closed classes' own vocabulary.
      **THE CLASH CHECK PAID FOR ITSELF ON THE FIRST RUN** — 11 forms were already in the closed
-     classes and **10 were already compiled CORRECTLY** there. The other two became `db/0014`, which
+     classes and **10 were already compiled CORRECTLY** there. The other two became `db/0014` (`E3.2.8.1`), which
      is FREE because the exclusion set is a set of FORMS: 268 before, 268 after.
-     Frontier **9/18 at 82.2%**, ratchet unmoved, gate **31 answered · 0 WRONG**.
-   - **`flat` / `list`** — one name across several tokens; E3b by another route.
-   - **`xcomp`** — deliberately not a clause, and what it IS instead has never been ruled.
-   - ~~**`nummod`**~~ **DONE 2026-09-16.** The box's own `count` field (req 26), and the three
+     Frontier **9/18 at 82.2%**, ratchet unmoved, gate **31 answered · 0 WRONG**. `E3.2.8.2`: the
+     dirty-check gained a fourth field — which table filtered D's vocabulary is now recorded.
+   - **`flat` / `list`** — one name across several tokens; E3b by another route. *(No E3 id: → `E3b.6`.)*
+   - ~~**`xcomp`** — deliberately not a clause, and what it IS instead has never been ruled.~~
+     **RULED 09-22 at `E3.8.1`** (`db/0032`: `xcomp` opens no row); control is built at `E3.3.2.1`.
+   - `E3.2.11` ~~**`nummod`**~~ **DONE 2026-09-16.** The box's own `count` field (req 26), and the three
      fields are ORTHOGONAL — «the three cats» is definite AND counted — so a numeral raises no binder
      and changes no scope. Frontier **10/19 at 83.2%**, gate **32 answered · 0 WRONG**.
      **⚑ AND IT NAMED A RULING THE CAPTAIN OWES.** «Sam ate 3 sheep» compiles whole; «Sam spent
@@ -850,29 +880,35 @@ it).
      for exactly that reason. tk1 solved it with **`word2number`, which is present in this venv and
      is NOT in `pyproject.toml`** — and every dependency there was admitted by the Captain with a
      stated reason, so admitting a fifth is his and not the compiler's.
-     **ADMITTED THE SAME DAY**, on `nltk`'s terms: one door (`compile.numeral_value`), local import,
+     `E3.2.11.1` **ADMITTED THE SAME DAY**, on `nltk`'s terms: one door (`compile.numeral_value`), local import,
      failure is an abstention and never a crash. The library is checked rather than trusted — it
      returns **0** for some strings that are not numerals, so a zero no word in the phrase asked for
      is refused. *The corpus case arrived abstaining and answered within the hour, and it is kept:
      a corpus that holds only what already works is a corpus that cannot report a gap.*
      Frontier **11/19 at 84.5%**, gate **33 answered · 0 WRONG**.
-   - **`appos`** — one individual under two descriptions; unruled, and it leans on E3b.
-   - ~~**embedded questions**~~ **DONE 2026-09-16.** **A wh-word has THREE readings and R5's binary
+   - **`appos`** — one individual under two descriptions; unruled, and it leans on E3b. *(No E3 id: → `E3b.6`.)*
+   - `E3.2.12` ~~**embedded questions**~~ **DONE 2026-09-16.** **A wh-word has THREE readings and R5's binary
      test conflated the last pair**: root → interrogative (opens a slot, the utterance asks) · a
      noun-modifying clause → relative (BINDS an antecedent, opens nothing) · a complement clause →
      free relative (opens a slot, and the utterance does NOT ask). R5 answered the MOOD question
      rightly and was then read as «therefore relative». **UD marks the difference and nothing else
      does** — `acl:relcl` modifies a noun; an embedded question is a clausal complement.
-     **AND IT FOUND A TRUTH ERROR, which is the worst kind**: «if you know WHO DID IT, tell me»
+     `E3.2.12.1` **AND IT FOUND A TRUTH ERROR, which is the worst kind**: «if you know WHO DID IT, tell me»
      CLAIMED that somebody did it. The `ccomp`'s AND asserted its operand while the other half of
      the same conditional was explicitly not claimed — so unassertion now propagates into an
      enclosed clause. The heads are walked in sentence order, so an enclosing clause has always
      spoken first and no second pass is needed.
-     **Plus one honesty repair**: `if` was in the abstention list of a sentence whose IMPLY it had
+     `E3.2.13` **Plus one honesty repair**: `if` was in the abstention list of a sentence whose IMPLY it had
      built, because the per-clause walk meets a joiner before `_relate` runs. A report that cries
      wolf is worse than no report.
      **Ratchet 24/25 at 99.4%** — a new high — gate **33 answered · 0 WRONG**.
    Context-as-argument is untouched; nothing has needed it yet.
+   `E3.2.17` *(the course check, 2026-09-26)* **the compile core's SHAPE** — one ~2,650-line class
+   whose passes (`_relate` → `_ask` → `_question` → `_imperative` → `_modify` → `_control` →
+   `_connect` → `_withhold` …) mutate shared rows in place; the recurring bookkeeping defects
+   (`E3.3.2.4.1`, `E3.3.2.10.6`) are its cost. **At E3's close**: one state object, one module per
+   pass, each declaring what it reads and writes. Comments that drifted from the code were corrected
+   on 09-26; the rule is that code carries the current contract and the notes carry the history.
 `E3.2.1` *(was task 2b)* **⚑ THE PERSON AXIS — deixis, and the rotation under a point of view** *(the Captain asked
    2026-09-16; the answer was that tk2 had no plan and no note, and he ruled it E3 SCOPE the same
    day)*. Record: `docs/E3-parser-compiler/202609161349_the-person-axis.md`, requirement 20.
@@ -936,7 +972,7 @@ it).
       **2b IS COMPLETE.** *The drill still has no hand-compiled quotation — that is the Captain's to
       write, and the two gates now exist to disagree about it when he does.*
 
-      **AND IT DID, THE NEXT MORNING.** Nine hand-compiled quotations landed 2026-09-17 on his
+      `E3.2.1.1` **AND IT DID, THE NEXT MORNING.** Nine hand-compiled quotations landed 2026-09-17 on his
       green light (`q-1` … `q-9`, drill 78 → 87, amended in the bar doc), and they found the
       ROTATION INVERTED — record `202609170533_the-quotation-block.md`:
 
@@ -974,7 +1010,7 @@ it).
       for that very token held `me.n`). `q-4` `q-7` `q-9` resolved; `q-2`'s rotation is right and
       what remains of it is the subject-role question.
 
-      **⚑ AND THE TRUTH SLOT UNDER AN ATTITUDE — RULED 2026-09-17: the rows KEEP their truth.** The
+      `E3.2.1.2` **⚑ AND THE TRUTH SLOT UNDER AN ATTITUDE — RULED 2026-09-17: the rows KEEP their truth.** The
       station emptied the truth slot of anything under an attitude (`quoted_under`, and the `ccomp`
       path). **The drill never has**: `dere-1` carries a cat at truth 1.0 under «he thinks», `dere-3`
       a marriage under «he wants», `aw-11` a hungry cat under two nested attitudes. The PREFIX is
@@ -994,6 +1030,25 @@ it).
    *It touches E3b: «John» and «Marie» must become individuals before a rotation can NAME its
    target. The mechanisms are separable — a «you» can rotate to «the person addressed» without
    knowing who that is — but a rotation that cannot name its target is half an answer.*
+
+   **The ids under `E3.2.1`:** `E3.2.1.1` the rotation inverted (above) · `E3.2.1.2` the truth slot
+   under an attitude (above) · `E3.2.1.3` a `mark` under a reporting verb opens a POV, not a join —
+   built with `db/0010`'s `asserts: matrix`, ticked 09-18 · and two found by the course check
+   (2026-09-26, record `202609260900_the-course-check.md`):
+   - `E3.2.1.4` **⚑ TRUTH ERROR — the in-sentence rotation still read `SAYING_VERBS`.** `_contexts`
+     rotated a bare quoted `ccomp` only under nine listed verbs, so «John EXCLAIMED to Marie "You are
+     late"» made the LISTENER late and «John SCREAMED "I am late"» the narrator. `_relate`
+     had dropped the list on 09-20; `_contexts` now asks the same question — quoted, and a bare
+     `ccomp` of a readable clause — and no verb. The cross-sentence FRAME keeps the list until E4's
+     geometry (req 55), and `E3.8`'s audit row, which said the list was reached only across a
+     sentence, was false.
+   - `E3.2.1.5` **⚑ TRUTH ERROR — «She lives HERE» compiled as «Where does she live?».** The rows
+     carry `deixis` and `distance`; `_unknown` copied only person · number · gender · sort, so a
+     place deictic became a bare `Open` — the thing to solve for. The minimum fix follows schema v4's
+     own rule (an `Open` REMEMBERS what was said of it): v10 gives `Open` `deixis` + `distance`, and
+     the decompiler says the word back and never asks. **Open for the Captain**: whether «here/now»
+     should instead resolve from the CONTEXT, as «I/you» do (and «there/then» become anaphora,
+     `E3b.8`).
 
 `E3.2.2` *(was task 2c)* **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
    2b — and it is NOT a person-axis task, which is why it has a number of its own)*. «Is the cat
@@ -1025,7 +1080,7 @@ it).
    · unstated): on the old station it flags `t-mo-1` «Do you exist?», on the new one it does not —
    and it found `aw-21`, the imperative, at once (`E3.2.3`).
    **TWO ROW DEFECTS FOUND ON THE BENCH, both curation (db), not yet fixed:**
-   - **`whether` never opens its truth.** Its row reads it as a JOIN (`imply`, `asserts: neither`),
+   - `E3.2.2.1` **`whether` never opens its truth.** Its row reads it as a JOIN (`imply`, `asserts: neither`),
      so «I wonder whether the cat is hungry» is a conditional and req 14's subordinate polar never
      fires. `if` has the same second life: «I asked IF the cat is hungry» is an embedded question,
      and the tree separates it from a conditional (`ccomp` against `advcl`).
@@ -1034,7 +1089,7 @@ it).
      the TREE picks (`COMPLEMENT_CLAUSE_DEPS` — a `mark` on `ccomp`/`csubj` asks, on `advcl`
      supposes), and an asking clause relates to its matrix as `that`'s does: an attitude, the
      wondering claimed, the content OPEN.
-   - **`or` asserts BOTH halves** (`db/0010`): «The cat is hungry or tired» claims both. **And `nor`
+   - `E3.2.15` **`or` asserts BOTH halves** (`db/0010`): «The cat is hungry or tired» claims both. **And `nor`
      is worse**: «neither hungry nor tired» claimed both halves AND that neither holds — a zip that
      contradicts itself. **RULED 2026-09-18 (the Captain, (b))**: both become `asserts: neither`, the
      shape `if` has — the halves stated, the join claimed (`db/0017`). The drill's one disjunction,
@@ -1044,7 +1099,7 @@ it).
      yet, so `t-ws-7` enters the gate's ratchet as a named family: **free choice under a modal**.
      *Side findings, recorded not touched: «EITHER … or» and «NEITHER … nor» raise a stray quantifier
      row from the first word, and «Either … or» loses the second verb's predicate.*
-     **FREE CHOICE, BUILT THE SAME DAY (the Captain: «free choice first»).** An OR whose halves are
+     `E3.2.15.1` **FREE CHOICE, BUILT THE SAME DAY (the Captain: «free choice first»).** An OR whose halves are
      BOTH under a possibility modal claims its halves — unless the disjunction is itself supposed
      («IF you can have tea or you can have coffee…»). Structural: the modality rows and the join are
      already in the zip. *Free choice is cancellable* («…but I don't know which»); that exception is
@@ -1071,13 +1126,13 @@ it).
    «Suppose the cat is hungry» (`aw-20`): E2 collapses it into the speaker's own supposition; the
    station now reads *I want you to suppose it*. Which imperatives collapse is per-verb («Remember
    that I love you» does not) — knowledge, and the attitude-verb question of req 55.
-   **BOTH ANSWERED 2026-09-19 — reqs 23 and 24.** (1) **Knowledge**, in rows with a counted default —
+   `E3.2.3.1` **BOTH ANSWERED 2026-09-19 — reqs 23 and 24.** (1) **Knowledge**, in rows with a counted default —
    *«the heart can influence the base value, staying on the knowledge, but let's see when we do the
    heart»*. (2) **Do not collapse**; `aw-20` stands as a named divergence until req 55 is opened.
-   **AND THE GATE WAS WIDENED BEFORE EITHER WAS BUILT**, on his «widen the gate now, then docs
+   `E3.5.2.1` **AND THE GATE WAS WIDENED BEFORE EITHER WAS BUILT**, on his «widen the gate now, then docs
    first»: `strength` lives on a prefix row, and the gate compared CONTENT rows only — 89 prefix rows
    and 50 joins were outside the instrument, so the number would have been unmeasurable. The
-   widening found `aw-21`'s empty strength, as intended, and **a coin toss nobody was looking for**:
+   widening found `aw-21`'s empty strength, as intended, and **a coin toss nobody was looking for** (`E3.2.16.1`):
    NLTK stores a synset's pointers in a `set`, so `derived_supersense`'s `attributes()[0]` made «the
    cat is dead» an experiencer in one process and a patient in the next — the cause of the 09-18 test
    that would not reproduce. The reader now abstains when the resource is of two minds, which costs
@@ -1119,15 +1174,16 @@ it).
    **THAT NEEDED AN INSTRUMENT THE DRILL COMPARISON CANNOT BE.** `tools/roundtrip.py --fixpoint`:
    sentence → zip → sentence → zip, the two zips IDENTICAL, normalising only what the format says
    carries no meaning (row names, `and`-chain nesting, `unplaced`) and reporting the sentences the
-   compiler read WHOLE apart from the rest. **24 → 59 of 87; 50 of the 69 read whole.**
+   compiler read WHOLE apart from the rest. **24 → 59 of 87; 50 of the 69 read whole** *(then; the
+   latest is **76 · 11 · 0, read-whole 66 of 72**, `E3.3.11`)*.
    *Built*: the joins · the quantifiers and their variables · the whole prefix · the questions in
    three shapes · the person axis backwards · agreement · the existential · the expletive · the
    passive. *And five of the defects it found were the COMPILER's* — the tense (req 25), the voice
-   (req 26), a clause left as a claim after becoming an attitude, a bare `ccomp` read as a
+   (req 26) (both `E3.3.3`), a clause left as a claim after becoming an attitude, a bare `ccomp` read as a
    conjunction unless the verb was in `SAYING_VERBS`, and a zip that came out a DAG where a sentence
-   is a tree. Knowledge: `db/0023` (v12 — the features a form is CHOSEN by, and «although» loses the
+   is a tree (`E3.3.4`). Knowledge: `db/0023` (v12 — the features a form is CHOSEN by, and «although» loses the
    `spoken` flag it should never have had), `db/0024` (862 past/participle rows, two resources),
-   `db/0025` (`look` → agent, `die` → patient).
+   `db/0025` (`look` → agent, `die` → patient — `E3.2.16.2`).
    Record `202609201100_the-station-against-itself.md`.
 
 `E3.3.1` *(was task 3b)* **⚑ THE OPEN SLOT CANNOT SAY WHAT IS KNOWN ABOUT THE UNKNOWN** *(2026-09-20, req 27 — THE
@@ -1136,17 +1192,57 @@ it).
    nothing else. Partly bought back by keeping an unresolved pronoun's own key, which is what the
    drill writes — but that stand-in abstains on the wrong grounds («In Italy, HE is married» sees
    *Italy* as an antecedent) and it is not the field.
+   **DONE 2026-09-20** — schema v4, `sort` · `person` · `number` · `gender` (`db/0026`); and tkzip
+   req 73 rewritten: there are no frozen schemas in a blueprint.
 
 `E3.3.2` *(was task 3c)* **The fixpoint's remaining — READ 2026-09-24, and it was ten mechanisms, not the 19 named here.**
-   Read case by case: G1–G10 in four families, seven cases with more than one cause, and THREE TRUTH
-   ERRORS the fixpoint could not see (G5's overwritten subject, adverb scope, auxiliary scope — the
-   seven wrong modal claims). Fixed 09-24/25: G2 · G3 · G4 · G5 · G10 · modal scope · G1 · G7 · G9 ·
-   «and therefore» (`db/0034`–`db/0037`, schema v9); G6 → E3b. **Open: the zero relative (ruled 09-25,
-   building), the fixpoint's blindness to SCOPE (an instrument defect), G8 (a bench first), and the
-   bookkeeping defects found on the way.** Read-whole: 50 of 69 → **65 of 71**.
-   Record `202609241130_the-fixpoints-eleven.md`.
+   Read case by case: ten mechanisms (`E3.3.2.1` – `E3.3.2.10`) in four families, seven cases with
+   more than one cause, and THREE TRUTH ERRORS the fixpoint could not see (`E3.3.2.5`'s overwritten
+   subject, adverb scope and auxiliary scope — `E3.3.2.10.1`'s seven wrong modal claims). Fixed
+   09-24/25: `E3.3.2.1` · `E3.3.2.2` · `E3.3.2.3` · `E3.3.2.4` · `E3.3.2.5` · `E3.3.2.7` · `E3.3.2.9` ·
+   `E3.3.2.10` · `E3.3.2.10.1` · `E3.3.2.2.1` · `E3.3.2.5.1`
+   (`db/0034`–`db/0038`, schema v9); `E3.3.2.6` → `E3b.6.1`. **Open**: `E3.3.2.8` (correct English
+   the provider misreads — a bench against the 66 FIXED first), `E3.3.2.4.1 – .2` (bookkeeping),
+   `E3.3.2.10.2` («So» lost in silence), `E3.3.2.1.1` («so» backwards), and the side findings
+   numbered on 09-26 below. Read-whole: 50 of 69 → **66 of 72**.
+   Record `202609241130_the-fixpoints-eleven.md` — its header table maps every label it was written
+   with to its id.
+
+   **THE REST OF `E3.3`, BY ID** — one line each; the reasoning is in the record named.
+   - `E3.3.3` the tense and the voice · `E3.3.3.1` schema v5, the theatre per row — `202609201100_…`
+   - `E3.3.4` a zip came out a DAG where a sentence is a tree — `202609201100_…`
+   - `E3.3.4.1` *(open, 09-26, for the Captain)* **the format enforces less than the ratchets test** —
+     `Zip._check_names_and_scopes` does not check that every `Var` is bound, that no row is the
+     operand of two joins, that a `Ref` stays out of holder · addressee · restriction · domain boxes,
+     or that joins do not cycle. Cheap structural invariants belong to the format (frame); if the
+     brain may build DAGs, a `sentence`-only check the station asserts. `202609260900_…`
+   - `E3.3.5` `fused_quantifier` · `E3.3.5.1` a quantifier's voice follows its noun's number ·
+     `E3.3.5.2` schema v7, a number is `sg`·`pl`·`either` — `202609210900_…`
+   - `E3.3.6` schema v6's compiler half, `Box.number` · `E3.3.6.1` the existential copula agrees
+   - `E3.3.7` SILENT 1 → 3 and 69 → 67 were one fact, and the instrument's
+   - `E3.3.8` «All that glitters» · `E3.3.8.1` schema v8, the relative clause's compiler half ·
+     `E3.3.8.2` its decompiler half
+   - `E3.3.9` «An animal is.» was the matcher eating a noun — `202609221200_…`
+   - `E3.3.10` `as far as` — `202609221300_…`
+   - `E3.3.11` the fixpoint sees scope · `E3.3.11.1` · `E3.3.11.2` · `E3.3.11.3` … `E3.3.11.8` its findings, `.1` and `.2` truth errors
+     (the neg-raising reading is the Captain's) — `202609241130_…`
+   - `E3.3.12` «I remember the day I slept» is a wrong complete zip — `202609241130_…`
+   - `E3.3.13` five small things recorded rather than fixed
+   - **numbered 2026-09-26** (found on 09-24/25, listed in `202609241130_…` without ids):
+     `E3.3.2.12` the compiler never produces an expletive · `E3.3.2.13` relative-clause agreement ·
+     `E3.3.2.1.2` a purpose under an imperative is refused · `E3.3.2.7.1` «I asked Anna where she
+     lives» loses Anna and the attitude · `E3.3.2.5.1.1` a stative subject blocks the object gap ·
+     `E3.3.2.5.1.2` an agentless passive said as an active («the day that she bore») ·
+     `E3.3.2.5.1.3` «I» lowercased in a relative clause · and, one level up from `E3.3.2.10.1`
+     where they were found: `E3.3.2.10.3` `closed_forms` reads every version · `E3.3.2.10.4`
+     «can't» → «ca» · `E3.3.2.10.5` «could» loses its past · `E3.3.2.10.6` `_withhold` leaves words
+     placed · `E3.3.2.10.7` an inverted fused question comes back archaic
+
 `E3.4` **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
+   **MEASURED AND DEFERRED 2026-09-20** — no band is decisive (`tools/confidence_bench.py`), five
+   negatives only, and the round trip still measures the DECOMPILER. Bookkeeping kept, the scalar
+   EMPTY. Waits on `E3.3.2`.
 `E3.5` *(sub-items: E3.5.1 (the UD gate, E3.5.1.1–.3) · E3.5.2 (the drill gate, E3.5.2.1))* **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
    fashion by tooling. **TICKED 2026-09-20, and it was already met** — the honest finding when the
    task was picked up. `tests/test_drill.py` scores the declared bar (≥90% no-abstention · 100%
@@ -1166,7 +1262,9 @@ it).
    strangers'. And stanza is chosen precisely because it TARGETS this standard — «close enough» is
    a measurement owed relation by relation, not an assumption carried.*
 
-   **DONE 2026-09-16** (record `202609161050_the-gate-reaches-every-relation.md`). Two changes, and
+   `E3.5.1.1` **OPENED 2026-09-15** — `tools/ud_gate.py`, nine defects nobody would have read off the
+   code (record `202609151259_the-ud-gate-opens.md`).
+   `E3.5.1.2 · E3.5.1.3` **DONE 2026-09-16** (record `202609161050_the-gate-reaches-every-relation.md`). Two changes, and
    the first had to come before the second:
    - **THE GATE SCORES THE ZIP, NOT THE TABLE.** It was measuring half a station — its own docstring
      said «roles that come from a relation are not its job yet» — and the relations still unreached
@@ -1212,7 +1310,7 @@ it).
    2 of 20 wrong.** Each half fails in exactly one way: R ranks CONCENTRATION and falls to a sibling
    of a sibling; D reads the definition's GRAMMAR (`mark.v` is rank 1 for three unrelated senses,
    each glossed «marked by»).
-   **RULED AND BUILT IN PLACE OF A NUMBER, the same day.** The first proposal — «R is trusted,
+   `E3.6.1` **RULED AND BUILT IN PLACE OF A NUMBER, the same day.** The first proposal — «R is trusted,
    D abstains» — was approved and then WITHDRAWN on one more measurement: «R placed it» and «R
    STATES that edge» are different claims, and all six relational failures are the SIBLING
    FALLBACK, so that rule would have carried six wrong trusts in twenty. The three-way rule the
@@ -1225,8 +1323,9 @@ it).
    (dictionary req 12), so declaring them there would have pulled the senses under test into the
    base as dimensions and invalidated the build they were measured on. Bench
    `tools/placement_bench.py`; record `docs/E1-dictionary/202609191500_the-placement-floor.md`.
-`E3.7` **The unplaced sense** — 3.1% of senses are placed by neither half, and the station ABSTAINS on
-   them. The count is in the manifest, so it is predictable rather than surprising.
+`E3.7` ~~**The unplaced sense**~~ **→ MOVED to `E4.3.1`** *(2026-09-26)*: which sense a word has is not
+   the station's (req 11 — the sense slot is emitted OPEN), so an unplaced sense is met where senses
+   are bound.
 `E3.8` *(sub-items: E3.8.1 · E3.8.2)* **⚑ THE FRAME/KNOWLEDGE AUDIT — the epic's closing act** *(the Captain, 2026-09-16, and the first
    of these)*. *«At the end of E3 we should go through everything we have done and double check if
    something we consider frame should be moved in the knowledge kingdom.»* Walk every set this epic
@@ -1247,7 +1346,7 @@ it).
    | `UD_DEP_SETTLES_ROLE` (`closed.py`) | *defensible as frame* — every entry is a relation whose UD definition NAMES the role. But the READING is ours, so it is argued, not assumed |
    | `DEPS_THAT_COMPILE_TO_NOTHING` (`compile.py`) | **MOVES (09-22).** «A vocative is addressing, not content» is an E2 ruling and a ruling is a row. **One element, which is the tell**: a one-member set is never a set, it is a decision with brackets round it |
    | ~~`ADVERB_DEPS`~~ **CLEARED 09-22** | with `SUBJECT_DEPS` · `OBJECT_DEPS` · `NOMINAL_DEPS` · `COORDINATE_DEPS` · `EMBEDDING_DEPS` · `RELATIVE_CLAUSE_DEPS` · `COMPLEMENT_CLAUSE_DEPS`: each member is a relation whose UD definition already NAMES the structural kind, so the reading is transcription. **Frame by the 2026-09-18 ruling** — «reading the tree's SHAPE, its relations, is frame» — which had never been applied to this list |
-   | **`SAYING_VERBS`** (`utterance.py`) | added 2026-09-16 and listed here in the SAME COMMIT. Nine verb keys in a frozenset, and **req 55 already rules the replacement**: *«attitude verbs are open, so the classification is nearest-anchor geometry over a small anchor set and never misses the verb nobody thought of»* — E4 owns that geometry. Reached only ACROSS a sentence boundary; the in-sentence path asks the joiner's own `asserts: matrix` row, which is curation doing it properly |
+   | **`SAYING_VERBS`** (`utterance.py`) | *(09-26: the last sentence of this row was FALSE — `_contexts` read the list in-sentence too; `E3.2.1.4` removed that reader, and the cross-sentence frame is now the only one.)* Added 2026-09-16 and listed here in the SAME COMMIT. Nine verb keys in a frozenset, and **req 55 already rules the replacement**: *«attitude verbs are open, so the classification is nearest-anchor geometry over a small anchor set and never misses the verb nobody thought of»* — E4 owns that geometry. Reached only ACROSS a sentence boundary; the in-sentence path asks the joiner's own `asserts: matrix` row, which is curation doing it properly |
    | `POS_LETTER`, `UD_POS_TO_WORDNET`, `NOUN/VERB_SUPERSENSES` | *defensible as frame* — correspondences between two published closed vocabularies, and the supersense inventory is checked against the corpus every run |
 
    **NEW ENTRANTS, 2026-09-20 → 22** — the two days that added a role, three features and two schema
@@ -1271,13 +1370,19 @@ it).
    result worth keeping: a candidate list is a thing that rots, and `db/0018` had answered one
    of them weeks ago without anybody striking it off.
 
-   **Done when** every row of that table has a ruling and a home, and the ones that moved are a
-   migration.
+   `E3.8.3` *(open, 09-26 — the course check)* **the audit, re-run at E3's REAL close.** It ran
+   mid-epic, and ten constants arrived after it: `DOMAIN_MARKER = "as"` (a one-member set — the
+   audit's own tell), `CONTENT_POS`, `CONTROLLING`, `JOINING_ROLES`, `INFINITIVE`,
+   `FOLLOWING_NEGATION`, `INTRODUCES`, `ASSERTS_ANTECEDENT`, `PARTICIPANTS`, `FRAME_COUNT`. The root
+   rule says «at the end of every epic», and the end has not come yet.
 
 **Done when:** the drill bar passes through the real lib (parse AND render), **every UD relation and
 POS tag is read consistently against UD's own examples**, clean input costs one parse, confidence
 orders the drill's failures sensibly, **a placement is judged by a floor fitted to placements**, and
 **a pronoun under a point of view resolves to that POV's participants** (`E3.2.1`).
+**⚑ STALE — see `E3.12`** *(2026-09-26)*: `E3.6` ruled there is no placement floor, `E3.4` deferred
+confidence, and `E3.3` runs «until 100% equivalent», which English's long tail never reaches. The
+exit is re-declared in numbers, before the run, by the Captain.
 
 *NOT owed by this epic: named individuals. A proper noun reaching a box with an identity is **E3b**,
 opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which is req 8 working.*
@@ -1312,6 +1417,41 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    France, I ate well» (LOCATION) are identical on every fact the parse gives, so the station
    abstains and `aw-17` stays red honestly rather than green on a rule that would invent domains
    everywhere else. Record `202609221100_the-domain.md`.
+
+`E3.10 … E3.13 · E2.3.1` **THE COURSE CHECK — an outside reading of E0 → E3** *(2026-09-26)*. A
+   read-only review from a cloud session, at `68403e8`, against the plan, the requirements and the
+   vision; every claim re-verified here before it was adopted. What it found in code already has its
+   id under its source (`E3.2.1.4` · `E3.2.1.5` · `E3.2.7.1` · `E3.2.17` · `E3.1.1` · `E3.3.4.1` ·
+   `E3.8.3` · `E1e.8.1 – .3` · `E1e.9` · `E3b.3.2`); what had no source in E3 is here. Record
+   `docs/E3-parser-compiler/202609260900_the-course-check.md`.
+`E3.10` **⚑ a compiled zip cannot say what compiled it** *(data-modeling req 7)* — `Compiled` and
+   `Zip` carry `schema_version` alone: no station version, no knowledge versions (closed classes v20,
+   UD readings v3 … — `ClosedClasses.source` exists and is dropped), no provider or model version.
+   Req 7: *«`derived_by` carries the STATION VERSION, so a station later found buggy has its zips
+   findable and re-parseable.»* Needed before the first zip is STORED (PS1 / E6), not before.
+   **For the Captain**: on the zip, or on the document (schema req 59 argues the document).
+`E3.11` **the station reads its knowledge from migration FILES** — every `Compiler` default calls
+   `standing_*()` with no db, i.e. the newest migration module, «(not applied)»; nothing reads the
+   body or the r-cache. Sandbox-era and deliberate, so every E3 measurement is against the file
+   version. At PS1 / E10 the station's tables come through the r-cache (body req 4, live pickup), and
+   the gates print the file version beside the body's applied one.
+`E3.12` **⚑ E3'S EXIT, DECLARED IN NUMBERS BEFORE THE RUN** *(for the Captain)*. The «Done when» below
+   is stale (`E3.6` refused the floor, `E3.4` is deferred) and `E3.3` runs «until 100% equivalent»:
+   every fix now surfaces 2–5 findings, so an exit defined that way never arrives, while E3b, E4
+   and PS1 wait and the seams the evaluator would expose stay hidden. The review's proposal, to be
+   ruled rather than adopted: 0 known truth errors on the corpora · UD gate 0 WRONG · drill-gate
+   DISAGREED only in named families · a fixpoint read-whole floor · `E3.8.3` done — and the long
+   tail under ONE id that runs beside E4. Perhaps a thin slice (text → zip → stub verdict) before
+   E3b.
+`E3.13` **ten features carried in and never placed** — `carried-in.md` moved them to tk2 and no epic
+   owns them: vocabulary growth (the vision's *«learn by guessing … at low trust»*), KB growing
+   outward, ingestion-time differentia, trust-ledger digests and consumers, contrast-as-expectation,
+   the scaffold voice, the `life:*` triggers, the possessive relation. Each goes into an epic, or into
+   «What deliberately stays OUT» with a reason.
+`E2.3.1` *(E2 closed; found at E3)* **two spellings of one attitude** — `ContentRow.pov` (`Pov`, req 45's
+   shorthand) and `AttitudeRow`. The station never builds a `Pov`, the decompiler refuses one, the
+   drill uses it once. The schema's own rule refuses two spellings of one reading. **For the
+   Captain**: retire `Pov` into `AttitudeRow`, or declare a normal form — before E4 compares zips.
 
 ## E3b — The name *(named individuals: recognition, identification, and the first micro-nn)*
 
@@ -1403,6 +1543,13 @@ biography**, and those go to different epics — the Captain's own boundary of 2
    `acacia`). Membership is EVIDENCE with a 28% collision rate, never a test, and that measurement is
    the sharpest argument for `E3b.5`. *(It also needs a cleaning pass: the string `TRUE` is in it, a
    spreadsheet boolean that survived ingestion.)*
+`E3b.3.2` *(the course check, 2026-09-26 — for the Captain)* **THE DOOR TO TK1'S ROWS.** The places table,
+   the names list, the stakeholders (`E3b.3` · `E3b.3.1` · `E3b.4`) and the journeys (`E9.3`) all
+   live in tk1's databases, which the guard refuses even for a read until the `E10.2` cutover. One
+   ruling serves all of them and `E1e.9`: a snapshot exported once from tk1's side and hash-pinned
+   (the `bar_snapshot.json` precedent), or a named read-only door in the datatier with its own
+   whitelist, logged. And «read lazily, never materialized» says which: copied into `tokeniko_tk2`
+   and read lazily, or read in place. Ruled before `E3b.3` starts.
 `E3b.4` **HAVE I MET IT?** — recognition against a names table, which is a different question from
    identification and is the one that carries identity. tk1's preference order is inherited whole:
    the individual scoped to THIS talker's context, else a participant (a real interlocutor with a
@@ -1463,11 +1610,26 @@ minting a candidate — and the marker bench's «with Anna» cases pass.
    floors; D has none, because D never issues a verdict. `space.similarity()` no longer exists —
    `read(a, b)` is the door, and it already names its source, which is what «source named in the
    derivation» was asking for.*
+`E4.3.1` *(was `E3.7`, moved 2026-09-26)* **The unplaced sense** — 3.1% of senses are placed by neither
+   half, and the station ABSTAINS on them. The count is in the manifest, so it is predictable rather
+   than surprising.
 `E4.4` **Chaining** — the forward-chainer migrates and generalizes (fixpoint, corroborate/KB-refute).
 `E4.5` **Budget & ordering** — depth/time caps as db(r) params; depth-stamped insufficient; the
    micro-nn ordering hook (verdict untouched).
 `E4.6` **Stake resolution** — arriving events matched against staked forecasts; the serendipity/
    disillusion verdicts emitted for E7 to consume.
+
+`E4.8` *(the course check, 2026-09-26 — for the Captain)* **⚑ LIMIT B HAS NO OWNER.** The B test
+   («two arbitrary sentences compared») is named once in this plan and in no epic's «Done when».
+   No task builds the role vectors (tkzip req 11), the compound point (req 12), the derived points
+   (req 16) or the compound floor's dual read (req 17); `Zip.geometry_cache` and
+   `tkzip_derived_points` have no writer. Req 11 has been FLAGGED since 09-14 with its premise
+   measured false (D cannot rank; R proposes). Seven schema versions (v3 → v10) were pulled by the
+   round trip and none was measured against COMPARISON — the fixpoint is the only force on the
+   format. To rule: which epic owns the zip's geometry (here, or its own between E3 and E4), and what
+   replaces req 11's premise. A cheap probe meanwhile: declare which schema fields are GEOMETRIC and
+   which SURFACE (`topicality`, `marker_implicit`, `unplaced` are surface), and check that paraphrase
+   pairs meet on the geometric projection.
 
 **Done when:** every drill sentence evaluates against a seed KB with a defensible verdict, and the
 evaluator's answers cite their floor (cell vs cosine vs chain).

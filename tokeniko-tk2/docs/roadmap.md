@@ -24,9 +24,15 @@
       `pytest -m spine` plus the section; the full suite is a DEPLOY condition, on the body. And the
       suite was slow by DEFECT: `Migration.load` re-ran the chain, now memoised (186s → 0.2s). Root
       `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
+- [x] `E1e.8.1 · E1e.8.2` **the gate's contract, leaking** *(09-26)* — the spine no longer reaches WordNet; 16 stanza tests marked `skeleton`
+- [x] `E1e.9` **a tool read the biography around the guard — disabled** *(09-26)*; its door waits on `E3b.3.2`
 - [ ] `E1e.1` **⚑ sweep E0 → E3 for test material leaking into the BL** — formal order included
+- [ ] `E1e.6` **the triage — tests follow decisions** *(09-25)* — on the closed E3: (a) code wrong → code · (b) expectation wrong → test · (c) agree → keep
 - [ ] `E1e.6.1` **amend the drill to the rulings it now disagrees with** — `t-ws-1`, `aw-6` (purpose is IMPLY,
       09-25); the drill-gate ratchet stays red on them until then. Record `E3-parser-compiler/202609241130_…`
+- [ ] `E1e.6.2` the drill's «If I tell you something…» row has no `know.v`
+- [ ] `E1e.10` **a held-out check for every exception row a gate justified** — proposed standing rule *(for the Captain)*
+- [ ] `E1e.8.3` `test_migrations` is DB-bound at ~40 min inside the datatier's section gate
 - [ ] `E1e.7` **the third kingdom** — frame · knowledge · **evidence**; evidence keeps the ledger properties
       but never runs in the app
 - [ ] `E1e.2 · E1e.3` `dictionary_bar` out of the body; only `bar_version` + `bar_fingerprint` stay, as provenance
@@ -98,8 +104,8 @@
       edge is trusted, the sibling fallback and D abstain; 19.4% coverage, 0 wrong trusts
 - [x] `E3.2.1.3` **`mark` under a reporting verb opens a POV**, not a join — built with `db/0010`'s `asserts: matrix`; ticked 09-18
 - [x] `E3.3` **the DECOMPILER** *(renamed from «renderer/scaffold» by the Captain, 09-19, req 9)* — joins ·
-      quantifiers · prefix · questions · the person axis · tense · voice all built; **fixpoint
-      24 → 68 of 87** (58 of the 70 the compiler reads whole). Record `202609201100_…`
+      quantifiers · prefix · questions · the person axis · tense · voice all built; fixpoint 24 → 68
+      of 87 on 09-20, **76 · 11 · 0 and 66 of 72 read whole by 09-25**. Record `202609201100_…`
 - [x] `E3.3.1` **SCHEMA v4 — an OPEN slot says what is known about the unknown** *(the Captain, 09-20, req 27)*
       — `sort`·`person`·`number`·`gender`; three kinds of unknown, no heuristic. `db/0026`. **And
       tkzip req 73 rewritten: there are no frozen schemas in a blueprint**
@@ -179,9 +185,18 @@
       held-out 23 fresh cases: 7 right, 0 wrong. Read-whole 66 of 72. Record `202609241130_…`
 - [x] `E3.3.11` **⚑ the fixpoint sees SCOPE** *(09-25)* — one `sorted()` erased prefix order; each
       target's prefix is now an ordered stack. Nothing was hiding: 76 · 11 · 0. Record `202609241130_…`
+- [x] `E3.2.1.4` **⚑ TRUTH ERROR — quotes rotated only under nine listed verbs** *(09-26, the course check)* — «John
+      exclaimed to Marie "You are late"» made the listener late; `_contexts` now asks what `_relate` asks. Record `202609260900_…`
+- [x] `E3.2.1.5` **⚑ TRUTH ERROR — «She lives here» came back «Where does she live?»** *(09-26)* — schema v10:
+      an `Open` keeps `deixis`·`distance` and is said, never asked. Context-vs-field is the Captain's
+- [x] `E3.2.7.1` **WordNet through its one door** *(09-26)* — `supersense`, `frames` no longer import nltk; the `lexname` rebuild still owed
+- [x] `E3.1.1` **the provider pinned** *(09-26)* — a `station` optional group in `pyproject.toml`
+- [x] `E3.7` → moved to `E4.3.1` *(09-26)*: which sense a word has is not the station's (req 11)
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
+- [ ] `E3.12` **⚑ E3's EXIT, declared in numbers before the run** *(09-26, for the Captain)* — the «Done when»
+      is stale and «100% equivalent» never arrives; the long tail goes under one id beside E4. Record `202609260900_…`
 - [ ] `E3.3.11.1 · .2` **⚑ TWO TRUTH ERRORS: a negation and an attitude** *(09-25)* — «I think that he
       does not sleep» puts ¬ OUTSIDE the thinking; «I do not think that he sleeps» claims both.
       Neg-raising is a reading for the Captain. Record `202609241130_…`
@@ -201,6 +216,16 @@
       fronted ADVERB («Legally,») needs `legally` → `law.n`, a derivation the compiler has no reader
       for and which the decompiler already refuses to say · a NON-fronted `as` («I work as a
       teacher») was never benched, and may be the job rather than the frame
+- [ ] `E3.3.2.* · E3.3.2.10.3 – .7 · E3.3.2.5.1.1 – .3` **the side findings, numbered 09-26** — expletive · agreement ·
+      purpose under an imperative · «asked Anna where» · `closed_forms` · «can't» · «could» · `_withhold` ·
+      archaic question · stative subject · «she bore» · «i». Listed in `plan.md` `E3.3`; record `202609241130_…`
+- [ ] `E2.3.1` **two spellings of one attitude — `Pov` and `AttitudeRow`** *(09-26, for the Captain)* — before E4 compares zips
+- [ ] `E3.3.4.1` **the format enforces less than the ratchets test** *(09-26, for the Captain)* — free variables, tree-ness, `Ref` placement
+- [ ] `E3.10` **a compiled zip cannot say what compiled it** *(09-26, data-modeling req 7)* — before the first zip is stored
+- [ ] `E3.11` **the station reads its knowledge from migration FILES** *(09-26)* — the r-cache at PS1 / E10
+- [ ] `E3.13` **ten carried-in features placed nowhere** *(09-26)* — an epic each, or «stays OUT» with a reason
+- [ ] `E3.2.17` **the compile core's shape** *(09-26)* — one state, one module per pass; at E3's close
+- [ ] `E3.8.3` **the frame/knowledge audit, re-run at E3's real close** *(09-26)* — ten constants arrived after it
 - [ ] `E3.3.13` **FIVE SMALL THINGS RECORDED RATHER THAN FIXED** *(09-21/24)* — none load-bearing, each named
       where it was found: a DEFINITE's relative clause is a presupposition and is kept claimed so
       the brain gets the fact · a quantifier's DOMAIN CARDINALITY is not in the zip, so «Neither is
@@ -217,6 +242,7 @@
       read lazily, never materialized
 - [ ] `E3b.3.1` **the names list, INHERITED — and it cannot be a TEST** — 21,975 rows, **28.1% also place
       names**. Evidence, never a test: it is the measurement that forces the net
+- [ ] `E3b.3.2` **the door to tk1's rows** *(09-26, for the Captain)* — snapshot from tk1's side, or a read-only datatier door; serves `E3b.3`–`.4`, `E9.3`, `E1e.9`
 - [ ] `E3b.4` **have I met it?** — recognition; the mechanism is E3b's, the rows are E9's
 - [ ] `E3b.5.1` **⚑ the MICRO-NN abstraction — brought forward from E5**; built to serve the next line and
       generalized against it, never before it
@@ -235,9 +261,11 @@
 - [ ] `E4.1` verdict shape (pure; truth · status · bindings · derivation)
 - [ ] `E4.2` form kernel (logic floor migrated)
 - [ ] `E4.3` bind-and-ground (one search; dual read; ABSTAIN first-class)
+- [ ] `E4.3.1` the unplaced sense — 3.1% placed by neither half *(was `E3.7`)*
 - [ ] `E4.4` chaining migrated + generalized
 - [ ] `E4.5` budget + micro-nn ordering hook
 - [ ] `E4.6` stake resolution
+- [ ] `E4.8` **⚑ LIMIT B has no owner** *(09-26, for the Captain)* — no task builds the zip's geometry (tkzip reqs 11–17); req 11 flagged since 09-14
 - [ ] `E4.7` ⚑ PROOF SLICE 1: text → zip → verdict, end-to-end on sandbox
 
 ## E5 — the instinct middleware (parallel after E0)

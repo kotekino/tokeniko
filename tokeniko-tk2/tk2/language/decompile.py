@@ -68,6 +68,7 @@ with no heuristic anywhere:
     Open(sort="person")           the sentence ASKED         ->  a question word
     Open(person=3, gender="f")    the sentence DESCRIBED it  ->  «she»
     Open()                        nobody described it        ->  the passive leaves it out
+    Open(deixis="place", ...)     the sentence POINTED       ->  «here», never «where» (v10)
 
 *What is still not said is still recorded: `unsaid` names every row and every element that did not
 reach the text, so the round trip's number can never flatter itself. And the acceptance test grew a
@@ -1559,6 +1560,8 @@ class Decompiler:
         for role, box in boxes.items():
             if not isinstance(box.head, Open) or box.head.person is not None:
                 continue           # a described person is an anaphor; `_head` says it as a pronoun
+            if box.head.deixis is not None:
+                continue           # «here», «then» — a deictic is said back, never asked (v10)
             form = self.the_form("interrogative", kind="open", binds=None, opens="box",
                                  role=role.value)
             if form is not None:
@@ -1832,6 +1835,8 @@ class Decompiler:
             # has resolved and a person the speaker told us three things about, so it is SAID, as
             # the pronoun those three things pick. An undescribed OPEN is a hole, and the clause has
             # already decided what to do with it — ask, or leave it out of a passive.
+            if box.head.deixis is not None:
+                return self._deictic(box.head, rd)
             if box.head.person is not None:
                 form = self._same_person(
                     {"person": box.head.person, "number": box.head.number,
@@ -1859,6 +1864,21 @@ class Decompiler:
                 and keys.pos_of(str(box.head)) == "n":
             return self.inflections.of(word, PLURAL)
         return word
+
+    def _deictic(self, unknown: Open, rd: _Reading) -> str:
+        """«here» · «there» · «now» · «then» — the referential adverb whose row carries these
+        features (schema v10, E3.2.1.5). **THE ROWS ANSWER, AS THEY DO FOR A PRONOUN**: the compiler
+        copied `deixis` and `distance` off the word it matched, and this matches them back."""
+        found = {row["form"] for row in self.table._rows          # noqa: SLF001
+                 if row.get("role") == "referential"
+                 and (row.get("features") or {}).get("deixis") == unknown.deixis
+                 and (row.get("features") or {}).get("distance") == unknown.distance
+                 and not (row.get("features") or {}).get("archaic")}
+        if len(found) == 1:
+            return next(iter(found))
+        rd.out.unsaid.append(f"a {unknown.deixis} deictic ({unknown.distance}): "
+                             f"{len(found)} forms fit")
+        return ""
 
     def _possessive(self, box: Box, rd: _Reading) -> str:
         """«my cat» · «Liguria's sea» — the possessor, in the form English gives a possessor.

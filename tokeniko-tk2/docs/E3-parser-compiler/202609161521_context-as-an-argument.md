@@ -1,5 +1,7 @@
 # parser/compiler — CONTEXT AS AN ARGUMENT, AND THE QUOTE THAT ARRIVES TWICE, 2026-09-16 15:21
 
+*Roadmap: `E3.2.1` (its sub-tasks 1 and 2)*
+
 *E3 task 2b.1 and 2b.2. **Requirement 7 was written when the chapter was conceived and has been
 unbuilt ever since** — «nothing has needed it yet» is in the plan in those words. Two things need it
 now, and they are different things.*

@@ -1708,6 +1708,74 @@ def test_a_holder_the_station_cannot_name_is_SOMEBODY_not_the_narrator(compiler)
     assert isinstance(late.boxes[Role.PATIENT].head, Open), "somebody — never `me.n`"
 
 
+# **A QUOTE ROTATES WHATEVER VERB FRAMES IT** (E3.2.1.4): the rotation reads the same test `_relate`
+# raises the attitude by — a bare quoted `ccomp` of a readable verb — and no list of saying verbs.
+
+JOHN_EXCLAIMED_TO_MARIE = skeleton_from_conllu('John exclaimed to Marie " You are late "', [
+    ("1", "John", "john", "PROPN", "2", "nsubj"),
+    ("2", "exclaimed", "exclaim", "VERB", "0", "root"),
+    ("3", "to", "to", "ADP", "4", "case"),
+    ("4", "Marie", "marie", "PROPN", "2", "obl"),
+    ("5", '"', '"', "PUNCT", "8", "punct"),
+    ("6", "You", "you", "PRON", "8", "nsubj"),
+    ("7", "are", "be", "AUX", "8", "cop"),
+    ("8", "late", "late", "ADJ", "2", "ccomp"),
+    ("9", '"', '"', "PUNCT", "8", "punct"),
+])
+
+JOHN_SCREAMED = skeleton_from_conllu('John screamed " I am late "', [
+    ("1", "John", "john", "PROPN", "2", "nsubj"),
+    ("2", "screamed", "scream", "VERB", "0", "root"),
+    ("3", '"', '"', "PUNCT", "6", "punct"),
+    ("4", "I", "I", "PRON", "6", "nsubj"),
+    ("5", "am", "be", "AUX", "6", "cop"),
+    ("6", "late", "late", "ADJ", "2", "ccomp"),
+    ("7", '"', '"', "PUNCT", "6", "punct"),
+])
+
+
+@pytest.mark.parametrize("skeleton, who", [(JOHN_EXCLAIMED_TO_MARIE, "marie.n"),
+                                           (JOHN_SCREAMED, "john.n")])
+def test_a_QUOTE_rotates_under_ANY_verb_not_only_a_saying_one(compiler, skeleton, who):
+    """«John exclaimed to Marie "You are late"» — the «you» is Marie; «John screamed "I am late"» —
+    the «I» is John. Neither verb was on the saying list, and both clauses were already attitudes."""
+    out = compiler.compile(skeleton, _speech())
+    late = next(r for r in out.zip.rows if r.kind == "content"
+                and getattr(r.boxes.get(Role.COMPLEMENT), "head", None) == "late.a")
+    assert late.boxes[Role.PATIENT].head == who
+
+
+# **A DEICTIC ADVERB IS AN OPEN THAT REMEMBERS WHICH ONE IT WAS** (E3.2.1.5, schema v10): «She
+# lives here» compiled to the same undescribed OPEN as «Where does she live?», and came back as it.
+
+
+def _she_lives(adverb):
+    return skeleton_from_conllu(f"She lives {adverb} .", [
+        ("1", "She", "she", "PRON", "2", "nsubj"),
+        ("2", "lives", "live", "VERB", "0", "root"),
+        ("3", adverb, adverb, "ADV", "2", "advmod"),
+        ("4", ".", ".", "PUNCT", "2", "punct"),
+    ])
+
+
+@pytest.mark.parametrize("adverb, role, deixis, distance", [
+    ("here", Role.LOCATION, "place", "proximal"),
+    ("there", Role.LOCATION, "place", "distal"),
+    ("now", Role.TIME, "time", "proximal"),
+    ("then", Role.TIME, "time", "distal"),
+])
+def test_a_DEICTIC_adverb_is_an_open_that_remembers_it_and_is_said_back(compiler, adverb, role,
+                                                                        deixis, distance):
+    from tk2.language.decompile import Decompiler
+
+    out = compiler.compile(_she_lives(adverb))
+    lives = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "live.v")
+    assert lives.boxes[role].head == Open(deixis=deixis, distance=distance)
+
+    said = Decompiler().decompile(out.zip)
+    assert said.text == f"She lives {adverb}.", "a statement — never «Where/When does she live?»"
+
+
 # ------------------------------------------------------------------------------------------------
 # a disjunction claims the disjunction — `db/0017`, the Captain's ruling (b), 2026-09-18
 # ------------------------------------------------------------------------------------------------
@@ -2051,6 +2119,7 @@ def test_a_QUANTIFIED_phrase_carries_its_number_on_the_RESTRICTION(compiler):
     assert binder.restriction.head == "cat.n" and binder.restriction.number == "pl"
 
 
+@pytest.mark.skeleton
 def test_a_RELATIVE_clause_on_a_referring_phrase_BINDS_its_variable():
     """«The cat that sleeps is happy» is ONE cat described twice, and req 36 says a shared variable
     is how a zip says «the same one». There was no binder to share, so this branch minted a variable
@@ -2087,6 +2156,7 @@ def test_a_RELATIVE_clause_on_a_referring_phrase_BINDS_its_variable():
     assert used == {binder.binds}, f"{used - {binder.binds}} are bound by nothing"
 
 
+@pytest.mark.skeleton
 def test_no_drill_sentence_compiles_to_a_FREE_VARIABLE():
     """A variable nothing binds is not a rendering problem — it is a MALFORMED ZIP, and the
     decompiler is right to refuse it. This walks the whole corpus because the defect above reached

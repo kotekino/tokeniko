@@ -16,6 +16,10 @@
 > | the fixpoint's scope blindness | `E3.3.11` *(open)* | | «I remember the day I slept» | `E3.3.12` *(open)* |
 > | two bookkeeping defects | `E3.3.2.4.1` · `.4.2` *(open)* | | «So» lost in silence | `E3.3.2.10.2` *(open)* |
 > | «so» claims backwards | `E3.3.2.1.1` *(open)* | | drill amendments | `E1e.6.1` |
+> | *numbered 2026-09-26 (the course check):* the expletive never produced | `E3.3.2.12` | | relative-clause agreement | `E3.3.2.13` |
+> | modal-scope build's side findings | `E3.3.2.10.3 – .7` *(one level up from `E3.3.2.10.1`)* | | purpose under an imperative | `E3.3.2.1.2` |
+> | «I asked Anna where she lives» | `E3.3.2.7.1` | | the zero relative's side findings | `E3.3.2.5.1.1 – .3` |
+> | the drill's missing `know.v` | `E1e.6.2` | | `test_migrations` ~40 min | `E1e.8.3` |
 
 *2026-09-24. The 1st Officier's reading of the 11 sentences the compiler reads WHOLE and the round
 trip does not bring back (fixpoint 69 · 17 MOVED · 1 SILENT; of 73 read whole, 62 · 10 · 1). No code
@@ -54,9 +58,9 @@ cases that are FIXED today.
    the row has more than one box. «You learn from every mind that you trust.» Reproduced by the QM.
 2. **The truth error** of G5 — reproduced by the QM: `r1 eat.v(agent=y2)`, truth 1.0, the cat absent,
    `unplaced: []`; decompiled «I like the fishes. The fishes ate.»
-3. The compiler never produces an expletive («It rains» → agent pronoun), so the decompiler's
+3. `E3.3.2.12` The compiler never produces an expletive («It rains» → agent pronoun), so the decompiler's
    expletive branch cannot round-trip anywhere.
-4. Minor: relative-clause agreement («fishes that eats»); «every fish» took restriction number pl.
+4. `E3.3.2.13` Minor: relative-clause agreement («fishes that eats»); «every fish» took restriction number pl.
 
 **`t-ng-4`**, which left the population on 09-24: its lost «some is not» is an ELLIPSIS the compiler
 left open (noun and predicate both); the decompiler refuses the half correctly. G1's cousin, and
@@ -142,9 +146,9 @@ do not know…», «…only from minds that you trust» — all come back as sai
    «also», «therefore») joins two rows the coordination already joined. Declining the second join
    loses «A and THEREFORE B»'s implication; keeping both names A twice. The ratchet's one named
    exception, and the list may only shrink
-2. **every UNCLAIMED row reports a false loss** — `_clause` logs «held at None and a hedge is not
+2. `E3.3.2.4.1` **every UNCLAIMED row reports a false loss** — `_clause` logs «held at None and a hedge is not
    built yet» because `None not in (CLAIMED, DENIED)`, so every conditional calls itself not whole
-3. **an empty object phrase is dropped quietly** — the reason is recorded, the clause said without it
+3. `E3.3.2.4.2` **an empty object phrase is dropped quietly** — the reason is recorded, the clause said without it
 
 ## G10 — «not necessarily», fixed the same day *(1st Officier)*
 
@@ -177,7 +181,7 @@ Refused rather than half-said: ¬□¬ · a negated modality beside a second mod
    always inside: «must not» □¬, but «need not» ¬□, «cannot» ¬◇, «may not» ambiguous. «A calculator
    cannot think» compiles to a bare `think` with `cannot` unplaced — the opposite claim, recorded
    only as a word left over. **A per-word fact is knowledge**: rows, for the Captain to rule
-3. **«So» with no row before it is lost in silence** — the join is never built and nothing enters
+3. `E3.3.2.10.2` **«So» with no row before it is lost in silence** — the join is never built and nothing enters
    `unplaced` or `abstained`; the loss G4 closed for relative clauses, in the compiler
 
 ## Modal scope — both compiler errors fixed, and a third found *(1st Officier, 09-24)*
@@ -218,17 +222,17 @@ the_exclusion_set` pinned the set to `db/0001`'s where its own docstring says «
 have read off the migration file» — the newest one.
 
 **Found, not fixed:**
-1. **⚑ THE FIXPOINT IS BLIND TO SCOPE** — `tools/roundtrip.canonical` sorts the rows, so □¬ and ¬□
+1. `E3.3.11` **⚑ THE FIXPOINT IS BLIND TO SCOPE** — `tools/roundtrip.canonical` sorts the rows, so □¬ and ¬□
    compare EQUAL. Every scope claim the fixpoint has ever passed is unverified by it; the `t-md-2`
    test and the new ones assert the prefix order separately. An INSTRUMENT defect
-2. `policy_source.closed_forms(db)` reads the forms of EVERY version, so a form once added stays in
+2. `E3.3.2.10.3` `policy_source.closed_forms(db)` reads the forms of EVERY version, so a form once added stays in
    the live exclusion set for ever, even after a later version removes it
-3. «can't» → «ca» + «n't»; «ca» is not a row, so it compiles to a bare ¬ — weaker than the claim,
+3. `E3.3.2.10.4` «can't» → «ca» + «n't»; «ca» is not a row, so it compiles to a bare ¬ — weaker than the claim,
    and entailed by it; a «ca» row is NOT inert (WordNet has `ca`: calcium, California). «won't» likely
    the same
-4. «could» loses its past — the compiler takes no theatre from a modal
-5. `_withhold` leaves some words counted as placed («He thinks» when the attitude row is withheld)
-6. an inverted fused question comes back archaic: «Cannot a calculator think?»
+4. `E3.3.2.10.5` «could» loses its past — the compiler takes no theatre from a modal
+5. `E3.3.2.10.6` `_withhold` leaves some words counted as placed («He thinks» when the attitude row is withheld)
+6. `E3.3.2.10.7` an inverted fused question comes back archaic: «Cannot a calculator think?»
 
 ## The rulings — 2026-09-25 *(the Captain)*
 
@@ -358,11 +362,11 @@ a, but amend the drill at e1e».
 purpose of being honest*; «I woke up to find…» — *my purpose is to find*. Both are purpose, and the
 reading is right. *(For the record, the QM's counterexample: «He woke up to find his house on fire».)*
 
-**Found, not fixed:** «so» as a coordinator still claims its consequence with the arrow reversed,
-as «in order to» did · «and so»: the adverb «so» matches the coordinator row and is lost in silence ·
-«Because I think, I am» comes back think + ccomp (G8's family) · «I asked Anna where she lives»
+**Found, not fixed:** `E3.3.2.1.1` «so» as a coordinator still claims its consequence with the arrow reversed,
+as «in order to» did · `E3.3.2.10.2` «and so»: the adverb «so» matches the coordinator row and is lost in silence ·
+`E3.3.2.8` «Because I think, I am» comes back think + ccomp (G8's family) · `E3.3.2.7.1` «I asked Anna where she lives»
 (reported): Anna unplaced, the attitude lost · «Go to sleep!» — a purpose under an imperative is
-refused.
+refused *(`E3.3.2.1.2` «Go to sleep!»)*.
 
 ## The zero relative — built *(1st Officier, 09-25)*
 
@@ -391,11 +395,11 @@ relative clause is now right; the MATRIX is stanza's `obl:tmod` misparse («reme
 instead of remembering the day). It was always misread — but the withheld clause used to leave the
 zip partial, so it never claimed to be whole. Seven bench cases share it; no held-out case.
 
-**Also found:** a stative subject («I have the tools you need» — `need` is `verb.stative`, so «you»
-takes the patient) fills the box the object gap needs, and the clause is withheld · an agentless
+**Also found:** `E3.3.2.5.1.1` a stative subject («I have the tools you need» — `need` is `verb.stative`, so «you»
+takes the patient) fills the box the object gap needs, and the clause is withheld · `E3.3.2.5.1.2` an agentless
 passive is said as an active: «The day she was born» → «The day that she bore» (the decompiler, old)
-· «I» lowercased inside a relative clause · the drill's «If I tell you something…» row has no
-`know.v` (E1e) · `test_migrations` is DB-bound at ~40 minutes.
+· `E3.3.2.5.1.3` «I» lowercased inside a relative clause · `E1e.6.2` the drill's «If I tell you something…» row has no
+`know.v` (E1e) · `E1e.8.3` `test_migrations` is DB-bound at ~40 minutes.
 
 ## `E3.3.11` — the fixpoint sees scope *(1st Officier, 09-25)*
 
