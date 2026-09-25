@@ -595,6 +595,13 @@ runtime, so it is app knowledge.
    being directly comparable. E9-shaped, not a free edit.
 5. **The doctrine line** in `tk2/core/models/__init__.py` calls policy, bar and closed classes one
    thing («CURATION (logic)»). It is three things now, and the comment says two.
+6. **THE TRIAGE — tests follow decisions** *(the Captain, 2026-09-25)*. «Tests are here to test what
+   we decided to do and check if the code does. They don't dictate anything.» Run the tests on the
+   closed E3 and sort every disagreement: **(a)** expectation true, result disagrees → change the
+   CODE · **(b)** expectation false → change the TEST · **(c)** they agree → keep both. Known (b):
+   the drill's `t-ws-1` and `aw-6` hand-compile the purpose reading the 09-25 ruling replaced.
+   *During E3, minimal tests only: «we build too much machinery on the tests, while they are
+   something to apply to something closed, not ongoing with decisions pending».*
 
 ### AND THE PACING RULE, WHICH IS THE OTHER HALF
 
@@ -605,8 +612,9 @@ runtime, so it is app knowledge.
 > itself), tests are performed at the final commit/push, not during the intermediate steps.»*
 
 **Concretely:** during development, run only the subset that STEERS the next decision — the file
-under the hand, the one gate that answers the open question. **The full suite runs once, at the
-commit gate**, and that is when its result is reported. A green full suite is a precondition of
+under the hand, the one gate that answers the open question. ~~The full suite runs once, at the
+commit gate~~ — **SUPERSEDED 2026-09-22**: the gate is the broad-short test plus the section, and the
+full suite runs only on deploy, on the body (root `CLAUDE.md`, «THE TEST GATE — three clauses»). A green full suite is a precondition of
 asking for the commit, not a checkpoint between edits.
 
 ## E2 — The format *(tkzip v2)* — ✅ **COMPLETE 2026-09-14**
@@ -1129,12 +1137,14 @@ it).
    drill writes — but that stand-in abstains on the wrong grounds («In Italy, HE is married» sees
    *Italy* as an antecedent) and it is not the field.
 
-3c. **The fixpoint's remaining 19** — the decompiler's own, on sentences the compiler read whole.
-   Named: a conjunct with an elided subject («the cat is dead and alive»), `only`, the free-choice
-   `or` asserting both, the attitude strengths and the hedged truth (both need the compiler to read
-   them first), an unmarked domain («legally» is an adverb derived from `law.n` and the table holds
-   no derivation), and the operators English does not mark — `conv`, `eq`, `nimply` have no row, and
-   adding one changes the PARSE side too.
+3c. **The fixpoint's remaining — READ 2026-09-24, and it was ten mechanisms, not the 19 named here.**
+   Read case by case: G1–G10 in four families, seven cases with more than one cause, and THREE TRUTH
+   ERRORS the fixpoint could not see (G5's overwritten subject, adverb scope, auxiliary scope — the
+   seven wrong modal claims). Fixed 09-24/25: G2 · G3 · G4 · G5 · G10 · modal scope · G1 · G7 · G9 ·
+   «and therefore» (`db/0034`–`db/0037`, schema v9); G6 → E3b. **Open: the zero relative (ruled 09-25,
+   building), the fixpoint's blindness to SCOPE (an instrument defect), G8 (a bench first), and the
+   bookkeeping defects found on the way.** Read-whole: 50 of 69 → **65 of 71**.
+   Record `202609241130_the-fixpoints-eleven.md`.
 4. **The confidence scalar** — coverage + repairs bookkeeping (free), self-round-trip
    escalation-only (reqs 4, 6); calibration instance stubbed for E5.
 5. **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
