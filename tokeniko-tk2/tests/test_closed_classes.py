@@ -366,3 +366,57 @@ def test_the_0037_check_asks_the_question_the_LOOKUP_asks():
 
     reader = Decompiler(ClosedClasses(module.CLOSED_CLASS_ROWS, "db/0037 (test)"))
     assert reader._connective("imply", "antecedent") == ("to", "subordinator")  # noqa: SLF001
+
+
+# ------------------------------------------------------------------------------------------------
+# `db/0039` — «only» says that nothing else does; «as long as» claims neither half (`E3.12.5.9.12`)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_0039_moves_ONE_closed_class_meaning_and_no_form():
+    """Ruling 6: «as long as» claims neither half, as «if» does. The six focus particles went to the
+    adverb kinds, so the exclusion set — D's vocabulary filter — does not move."""
+    module, before = migration(39), migration(37)
+    was = [r for r in before.CLOSED_CLASS_ROWS if r["version"] == 20]
+
+    assert set(module.CLOSED_CLASS_FORMS) == set(before.CLOSED_CLASS_FORMS)
+    assert len(module.CLOSED_CLASS_ROWS) == len(was)
+    moved = [(row["form"], row["compiled"]) for row, old in zip(module.CLOSED_CLASS_ROWS, was)
+             if row["compiled"] != old["compiled"]]
+    assert moved == [("as long as", {"kind": "join", "operator": "imply", "asserts": "neither"})]
+
+
+def test_0039_gives_the_six_particles_the_two_meanings_the_ruling_names():
+    """Ruling 4: «exclusive» (only · just · solely · merely), «identifying» (exactly · precisely) —
+    per-word knowledge, one voice each."""
+    module = migration(39)
+    focus = {r["form"]: r for r in module.ADVERB_KIND_ROWS if r["kind"] == module.FOCUS}
+
+    assert {f for f, r in focus.items() if r["compiled"]["focus"] == module.EXCLUSIVE} == \
+        {"only", "just", "solely", "merely"}
+    assert {f for f, r in focus.items() if r["compiled"]["focus"] == module.IDENTIFYING} == \
+        {"exactly", "precisely"}
+    assert sorted(f for f, r in focus.items() if r["spoken"]) == ["exactly", "only"]
+    assert not set(focus) & {r["form"] for r in module.CLOSED_CLASS_ROWS}, "never in both rosters"
+
+
+def test_the_0039_check_REFUSES_a_particle_in_both_rosters(monkeypatch):
+    module = migration(39)
+    rows = [*module.CLOSED_CLASS_ROWS, {**module.CLOSED_CLASS_ROWS[0], "form": "only"}]
+    monkeypatch.setattr(module, "CLOSED_CLASS_ROWS", rows)
+
+    with pytest.raises(ValueError):
+        module._check()                                                     # noqa: SLF001
+
+
+def test_the_0039_check_asks_the_question_the_LOOKUP_asks():
+    """The decompiler composes «only if» from the exclusive's voice — keyed as the migration keys it."""
+    from tk2.language.adverbs import AdverbKinds
+    from tk2.language.decompile import Decompiler
+
+    module = migration(39)
+    for row in module.ADVERB_KIND_ROWS:
+        assert module._meaning(row) == Decompiler._key(None, row["compiled"]), row["form"]  # noqa: SLF001
+    reader = Decompiler(adverbs=AdverbKinds(module.ADVERB_KIND_ROWS, "db/0039 (test)"))
+    assert reader.the_adverb(kind="focus", focus="exclusive") == "only"
+    assert reader.the_adverb(kind="focus", focus="identifying") == "exactly"

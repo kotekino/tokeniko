@@ -28,6 +28,7 @@
 - [x] `E1e.9` **a tool read the biography around the guard — disabled** *(09-26)*; its door waits on `E3b.3.2`
 - [x] `E1e.6.1` **the drill amended to the purpose ruling** *(09-26, brought forward by the Captain)* — `t-ws-1`, `aw-6` agree;
       drill gate 65 · 6 · 16 → 67 · 4 · 16, the ratchet green. Bar doc `E2-tkzip/202609140917_…` AMENDMENTS
+- [x] `E1e.6.4` **the drill amended to «only»'s rulings** *(09-26)* — `only-6`, `t-ws-3`, `only-4`; drill 63 · 4 · 20
 - [ ] `E1e.1` **⚑ sweep E0 → E3 for test material leaking into the BL** — formal order included
 - [ ] `E1e.6` **the triage — tests follow decisions** *(09-25)* — on the closed E3: (a) code wrong → code · (b) expectation wrong → test · (c) agree → keep
 - [ ] `E1e.6.2` the drill's «If I tell you something…» row has no `know.v`
@@ -203,8 +204,24 @@
       fixpoint 74 · 9 · 4 · drill 64 · 4 · 19 · UD 32 · 0 · 13, all toward honesty. Record `202609261100_…`
 - [x] `E3.12.5.1` · `E3.12.5.2` · `E3.12.5.3` · `E3.12.5.8` · `E3.12.5.5` · `E3.12.5.6` · `E3.12.5.7` **the rulings on withholding, built; the ratchets RE-BASED** *(09-26)* —
       fixpoint 74 · 9 · 1 + WITHHELD 3 (64/70) · drill 64 · 4 · 19 · UD 32 · 0 · 13. Record `202609261100_…`
+- [x] `E3.12.5.9.12` **the six rulings on «only» and the conditionals** *(the Captain, 09-26)* — record `202609261500_…`
+- [x] `E3.12.5.9.2` · `E3.12.5.9.3` · `E3.12.5.9.4` · `E3.12.5.9.5` · `E3.12.5.9.6` · `E3.12.5.9.7` · `E3.12.5.9.10` **«only» and the conditionals, built** *(09-26)* —
+      «only if» → CONV · «iff» → EQ · «unless» ¬R → G · «when» IMPLY · `db/0039` (not applied). Drill 62 · 6 · 19, read-whole 63/69
+- [x] `E3.12.5.9.3.1` · `E3.12.5.9.13` **focus words that abstain (`db/0040`), the orphan withheld** *(09-26)* — «strictly if» withheld; fixpoint 74 · 9 · 0 + WITHHELD 4
 - [ ] `E3.12.1.1` **the drill gate AGREES with `dere-4`, which carries `E3.3.11.2`'s contradiction** — the gate cannot certify «0 wrong claims»
-- [ ] `E3.12.5.9` **`only-5` «If and only if it rains, I stay home» is SILENT** — an orphaned unclaimed row *(for the Captain)*
+- [ ] `E3.12.5.9` **⚑ «If and only if» was NEVER compiled as an EQUIVALENCE** — no row for it: read as «if» (IMPLY, one way), «only»
+      cut; the converse lost in silence since the start. NOT a row per phrase: «only» carries the NECESSARY condition
+      (the converse), «if» the sufficient one, «and» conjoins them — composed, IMPLY ∧ CONV = EQ
+- [ ] `E3.12.5.9.14` «lest» — AND, both claimed (a wrong claim, pre-existing)
+- [ ] `E3.12.5.9.15` «I did not swim, nor did I run» → a double negation
+- [ ] `E3.12.5.9.16` «just in case» would compose to CONV
+- [ ] `E3.12.5.9.17` «the only cat» — «only» as an attributive row
+- [ ] `E3.12.5.9.18` «wherever»'s row asserts both halves
+- [ ] `E3.12.5.9.19` the decompiler refuses a folded conjunction under a supposition
+- [ ] `E3.12.5.9.11` «only because» — exclusivity is not truth-functional
+- [ ] `E3.12.5.9.8` «if and only if» has two trees, by comma
+- [ ] `E3.12.5.9.9` a pre-verbal «only» — the tree does not give the associate
+- [ ] `E1e.6.3` the drill gate AGREED with IMPLY where the drill says EQ — the join was never compared *(was `E3.12.5.9.1`, moved: the gates are E1e's)*
 - [ ] `E3.12.5.10` «if and only if» over-withheld — the cut word is in the joining words
 - [ ] `E3.12.5.11` «because»'s antecedent withheld though claimed on its own («I love» in `t-of-1`)
 - [ ] `E3.12.5.12` not built: a definite binder as upward · stacked parity · a joining word as an operator

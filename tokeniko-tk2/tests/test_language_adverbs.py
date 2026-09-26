@@ -212,3 +212,43 @@ def test_the_check_asks_the_question_the_LOOKUP_asks():
                              modality="necessity") == "necessarily"
     assert reader.the_adverb(kind="prefix", element="modality", modality="possibility") is None, \
         "eleven possibility adverbs and no flag: a choice, and not one made in code"
+
+
+# ------------------------------------------------------------------------------------------------
+# 5 — a focus word whose meaning is not settled says ABSTAIN (`db/0040`, `E3.12.5.9.3.1`)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_v5_adds_the_three_unsettled_focus_words_and_moves_nothing_else():
+    """The Captain's ruling: keep the manner default; each focus word met gets its own row, and
+    where the meaning is not settled the row says ABSTAIN — «even», «strictly», «simply»."""
+    v4 = [r for r in migration(39).ADVERB_KIND_ROWS if r["version"] == 4]
+    module = migration(40)
+    v5 = module.ADVERB_KIND_ROWS
+
+    assert [{k: v for k, v in r.items() if k != "version"} for r in v5[:len(v4)]] == \
+        [{k: v for k, v in r.items() if k != "version"} for r in v4]
+    added = v5[len(v4):]
+    assert {r["form"] for r in added} == {"even", "strictly", "simply"}
+    assert all(r["kind"] == "focus" and r["compiled"] == {"kind": "abstain"} and not r["spoken"]
+               for r in added)
+
+
+def test_an_ABSTAIN_row_is_read_as_what_it_says():
+    """The reader hands the row back as it is — the kind says what the word IS, the meaning what
+    the station may do with it — and a miss is still the manner default."""
+    kinds = AdverbKinds(migration(40).ADVERB_KIND_ROWS, "db/0040 (test)")
+
+    assert kinds.read("strictly").kind == "focus"
+    assert kinds.read("strictly").compiled["kind"] == "abstain"
+    assert kinds.read("quickly").is_default
+
+
+def test_the_0040_check_REFUSES_a_voiced_abstention(monkeypatch):
+    module = migration(40)
+    rows = [dict(r) for r in module.ADVERB_KIND_ROWS]
+    rows[-1]["spoken"] = True
+    monkeypatch.setattr(module, "ADVERB_KIND_ROWS", rows)
+
+    with pytest.raises(ValueError):
+        module._check()                                                     # noqa: SLF001

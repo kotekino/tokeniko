@@ -1272,3 +1272,98 @@ def test_a_DEMONSTRATIVE_comes_back_as_the_zip_it_went_out_as(text):
 
     assert out.text == text
     assert canonical(second) == canonical(first)
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.12.5.9` — «only» and the conditionals, said back COMPOSED (the Captain, 2026-09-26)
+# ------------------------------------------------------------------------------------------------
+
+
+def _conditional(operator, rain_negated=False):
+    rows = [row("r0", "rain.v", truth=None, agent=Open(person=3, number="sg", gender="n")),
+            row("r1", "stay.v", truth=None, agent="me.n", manner="home.r"),
+            JoinRow(name="j0", operator=operator, operands=["r0", "r1"], truth=1.0)]
+    if rain_negated:
+        rows.insert(0, NegationRow(name="p0", scopes="r0"))
+    return Zip(rows=rows)
+
+
+def test_CONV_is_said_ONLY_IF_with_the_operands_in_their_order(spoken):
+    """CONV(R, S) is S → R, and no row says «only if»: the voice of a supposed implication and the
+    voice of the exclusive (`db/0039`) compose it, as the compiler composed it."""
+    out = spoken.decompile(_conditional(Operator.CONV))
+
+    assert out.text == "Only if it rains, I stay home."
+    assert not out.refused
+
+
+def test_EQ_is_said_IF_AND_ONLY_IF(spoken):
+    """EQ = IMPLY ∧ CONV over the one pair — «if» and «only if», joined by the voice of «and»."""
+    out = spoken.decompile(_conditional(Operator.EQ))
+
+    assert out.text == "If and only if it rains, I stay home."
+    assert not out.refused
+
+
+def test_a_negated_condition_is_said_IF_NOT_and_needs_no_UNLESS(spoken):
+    """«unless» compiles to ¬R → G (`E3.12.5.9.4`); said back as «if … not», it is the same zip."""
+    out = spoken.decompile(_conditional(Operator.IMPLY, rain_negated=True))
+
+    assert out.text == "If it does not rain, I stay home."
+
+
+def _only_cats(truth=1.0, member_head="cat.n"):
+    cats = Box(head="cat.n", number="pl")
+    return Zip(rows=[
+        QuantifierRow(name="q0", scopes="j0", binds="x0", quantity=Quantity.UNIVERSAL,
+                      restriction=Box(head=Open())),
+        row("r0", "eat.v", truth=truth, agent=cats, patient="fish.n"),
+        row("r0_frame", "eat.v", truth=None, agent=Var(name="x0"), patient="fish.n"),
+        row("r0_associate", truth=None, patient=Var(name="x0"),
+            complement=Box(head=member_head, number="pl")),
+        JoinRow(name="j0", operator=Operator.IMPLY, operands=["r0_frame", "r0_associate"],
+                truth=truth),
+        JoinRow(name="j1", operator=Operator.AND, operands=["r0", "j0"], truth=truth)])
+
+
+def test_ONLY_on_a_phrase_is_said_before_the_phrase_and_says_all_four_rows(spoken):
+    """The compiler's exclusive shape — the claim, and ∀x (frame(x) → x is the associate) — is what
+    «only cats» MEANS, so it is said as that and every row counts as spoken."""
+    out = spoken.decompile(_only_cats())
+
+    assert out.text == "Only cats eat fish."
+    assert out.whole, (out.unsaid, out.refused)
+
+
+def test_a_shape_that_is_NOT_the_exclusive_one_is_not_said_as_only(spoken):
+    """The identity names somebody else than the claim's phrase: that is not «only cats», and saying
+    it so would be a different thought. Recognised on the whole shape or not at all."""
+    out = spoken.decompile(_only_cats(member_head="dog.n"))
+
+    assert "only" not in out.text.lower()
+
+
+@pytest.mark.skeleton
+@pytest.mark.parametrize("text", ["I stay home only if it rains.",
+                                  "If and only if it rains, I stay home.",
+                                  "I stay home exactly when it rains.",
+                                  "Unless it rains, I go out.",
+                                  "I stay home provided that it rains.",
+                                  "Only cats eat fish.",
+                                  "Only John came."])
+def test_only_and_the_conditionals_come_back_as_the_zip_they_went_out_as(text):
+    """The fixpoint on `E3.12.5.9`'s shapes: sentence → zip → sentence → zip, the zips identical."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+
+    assert not first.unplaced, first.unplaced
+    assert canonical(second) == canonical(first), out.text

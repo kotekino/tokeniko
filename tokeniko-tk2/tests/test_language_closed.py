@@ -368,3 +368,30 @@ def test_a_reader_with_NO_TREE_never_sees_a_row_that_names_a_clause(table):
     assert table.select("to", "PART", "mark")["compiled"] == {"kind": "structure"}
     assert all((r.get("features") or {}).get("introduces") is None
                for r in table.candidates("to", "PART", "mark"))
+
+
+# ------------------------------------------------------------------------------------------------
+# a wh-word at the front of an ADVERBIAL clause is its joiner — `E3.12.5.9.5`
+# ------------------------------------------------------------------------------------------------
+
+
+def test_WHEN_under_an_advcl_is_the_subordinator_and_a_question_everywhere_else(table):
+    """stanza tags «when» `advmod` in «I stay home WHEN it rains», never `mark`, and the walk read it
+    as a question word. Under an `advcl` it can be neither a question nor a relative — the clause
+    is a circumstance and modifies no noun — so the tree picks the conjunction row."""
+    adverb = dict(upos="ADV", dep="advmod")
+
+    joining = table.read(["when"], 0, **adverb, head_dep="advcl", in_root_clause=False)
+    assert joining.role == "subordinator" and joining.kind == "join"
+    assert table.read(["when"], 0, **adverb, head_dep="root", in_root_clause=True).role == \
+        "interrogative", "«When do you sleep?» still asks"
+    assert table.read(["when"], 0, **adverb, head_dep="acl:relcl",
+                      in_root_clause=False).role == "relative"
+
+
+def test_a_wh_word_whose_subordinator_row_opens_a_POINT_OF_VIEW_is_not_made_a_joiner(table):
+    """«where»'s subordinator row asserts its `matrix`, which the compiler routes to an ATTITUDE
+    (`db/0037`) — and a wh-word at the front of an adverbial clause opens no point of view."""
+    read = table.read(["where"], 0, "ADV", "advmod", head_dep="advcl", in_root_clause=False)
+
+    assert read is None or read.role != "subordinator"

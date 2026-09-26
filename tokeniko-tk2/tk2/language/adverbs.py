@@ -31,6 +31,20 @@ EVALUATIVE = "evaluative"
 DISCOURSE = "discourse"
 CIRCUMSTANTIAL = "circumstantial"
 
+#: **THE FIFTH KIND, A FOCUS PARTICLE** (`db/0039`, the Captain's `E3.12.5.9.12`): «only», «exactly».
+#: None of the four says it — it restricts WHICH thing satisfies the frame, and which thing that is
+#: the tree says (the particle's head, its ASSOCIATE). `compiled.focus` names the meaning, and what
+#: the meaning does to a clause or a phrase is the compiler's logic.
+FOCUS = "focus"
+#: The two meanings a focus row may carry: the associate is NECESSARY («only»), or necessary AND
+#: sufficient («exactly»). Names and not a roster — which word means which is the rows'.
+EXCLUSIVE, IDENTIFYING = "exclusive", "identifying"
+
+#: **THE MEANING «ABSTAIN»** (`db/0040`): a row whose `compiled.kind` says it tells the station that
+#: nothing about the word may be written down — its meaning is not settled. The word is left
+#: unplaced, the reason recorded. A name in the vocabulary both rosters share, not a roster.
+ABSTAIN = "abstain"
+
 #: What an adverb is when no row says otherwise — and it is a MEASURED default, not a shrug.
 MANNER = "manner"
 

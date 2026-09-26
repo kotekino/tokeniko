@@ -82,7 +82,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
-from tk2.language.adverbs import AdverbKinds, standing_adverb_kinds
+from tk2.language.adverbs import EXCLUSIVE, FOCUS, AdverbKinds, standing_adverb_kinds
 from tk2.language.compile import ANTECEDENT, ASSERTS_ANTECEDENT, MATRIX, RELATION_FILLS_ROLE
 from tk2.language.closed import (
     FOLLOWING_NEGATION,
@@ -265,6 +265,9 @@ class _Reading:
     #: of a purpose, whose subject its partner controls and English leaves unsaid (`db/0037`).
     #: Pushed and popped around the one join that says it, like `gap`.
     bare: dict = field(default_factory=dict)
+    #: id(box) -> (the focus particle, the rows its phrase stands for) — «ONLY cats eat fish»: the
+    #: phrase whose ∀-and-identity rows `_focused` folded back into it (`db/0039`).
+    focus: dict = field(default_factory=dict)
 
 
 class Decompiler:
@@ -577,7 +580,57 @@ class Decompiler:
                 rd.consumed.add(row.scopes)
                 rd.linking.add(row.name)
         self._fold(zip_, rd)
+        self._focused(zip_, rd)
         return rd
+
+    def _focused(self, zip_: Zip, rd: _Reading) -> None:
+        """«ONLY cats eat fish» — the compiler's exclusive shape (`Compiler._exclusive_phrase`), read
+        back into the one phrase it came from:
+
+            AND(P, j)   j = IMPLY(frame, associate), ∀x scoping j with nothing to restrict it
+            frame       P with exactly one box holding x, and nothing else different
+            associate   x is B — and B is what P's box held
+
+        That is «only B» said in P's box, and nothing else: the frame and the identity are what
+        «only» MEANS (`db/0039`), so saying P with the particle says all four rows. Recognised on the
+        whole shape and on nothing less — a partial match is a different thought and is left to be
+        said, or refused, row by row.
+        """
+        only = self.the_adverb(kind=FOCUS, focus=EXCLUSIVE)
+        if only is None:
+            return
+        for whole in zip_.rows:
+            if whole.kind != "join" or whole.operator is not Operator.AND:
+                continue
+            claim, rule = (rd.rows.get(name) for name in whole.operands)
+            if getattr(claim, "kind", None) != "content" or getattr(rule, "kind", None) != "join" \
+                    or rule.operator is not Operator.IMPLY or rule.truth != claim.truth:
+                continue
+            frame, member = (rd.rows.get(name) for name in rule.operands)
+            binders = rd.prefix.get(rule.name, [])
+            if getattr(frame, "kind", None) != "content" or getattr(member, "kind", None) != "content" \
+                    or len(binders) != 1 or binders[0].kind != "quantifier" \
+                    or binders[0].quantity is not Quantity.UNIVERSAL \
+                    or not isinstance(binders[0].restriction.head, Open) \
+                    or binders[0].restriction.head.described \
+                    or frame.truth is not None or member.truth is not None \
+                    or rd.prefix.get(frame.name) or rd.prefix.get(member.name):
+                continue
+            var = Var(name=binders[0].binds)
+            differ = [role for role in {*claim.boxes, *frame.boxes}
+                      if claim.boxes.get(role) != frame.boxes.get(role)]
+            if len(differ) != 1 or frame.predicate != claim.predicate:
+                continue
+            role = differ[0]
+            said, stood = claim.boxes.get(role), frame.boxes.get(role)
+            if said is None or stood is None or stood.head != var \
+                    or set(member.boxes) != {Role.PATIENT, Role.COMPLEMENT} \
+                    or member.predicate is not None \
+                    or member.boxes[Role.PATIENT].head != var \
+                    or member.boxes[Role.COMPLEMENT].head != said.head:
+                continue
+            rd.focus[id(said)] = (only, {rule.name, frame.name, member.name})
+            rd.folded.add(rule.name)
 
     def _fold(self, zip_: Zip, rd: _Reading) -> None:
         """Put back inside the noun phrase what the compiler distributed out of it.
@@ -924,6 +977,8 @@ class Decompiler:
         if asserts is None:
             rd.out.unsaid.append(f"{row.name}: halves claimed unevenly, and no connective says that")
             return None
+        if row.operator in (Operator.CONV, Operator.EQ) and asserts == "neither":
+            return self._focused_conditional(row, alive, rd)
         form, role = self._connective(row.operator.value, asserts)
         if form is None:
             rd.out.unsaid.append(f"{row.name}: no form in the table for {row.operator.value} "
@@ -940,6 +995,37 @@ class Decompiler:
             return _Said(f"{form} {alive[0].text}, {alive[1].text}", alive[1].mark,
                          asks=alive[0].asks)
         return _Said(f"{alive[0].text} {form} {alive[1].text}", alive[1].mark, asks=alive[0].asks)
+
+    def _focused_conditional(self, row, alive: list, rd: _Reading) -> _Said | None:
+        """`CONV` and `EQ` over two supposed halves, said the way the compiler COMPOSED them
+        (`Compiler._compose`, the Captain's `E3.12.5.9.12`): no row says «only if», so none is looked
+        for. The words are the rows' — the voice of a supposed implication («if»), the voice of the
+        exclusive focus («only», `db/0039`), the voice of «and» — and how they combine is the logic
+        read backwards, which is frame:
+
+            CONV(R, S)   «ONLY IF R, S»         the condition necessary, in the operands' order
+            EQ(R, S)     «IF AND ONLY IF R, S»  IMPLY ∧ CONV over the one pair
+
+        *EQ could also be «exactly if» (the identifying voice); the compiler reads both into one
+        zip, and «if and only if» is the spelling that is the composition itself.*
+        """
+        form, role = self._connective(Operator.IMPLY.value, "neither")
+        only = self.the_adverb(kind=FOCUS, focus=EXCLUSIVE)
+        if form is None or role != "subordinator" or only is None:
+            rd.out.unsaid.append(f"{row.name}: no voice composes a {row.operator.value} — the "
+                                 f"conditional's or the exclusive's is missing")
+            return None
+        if any(half.mark == "!" for half in alive):
+            rd.out.refused.append(f"{row.name}: an imperative cannot be the clause a {role} marks")
+            return None
+        lead = f"{only} {form}"
+        if row.operator is Operator.EQ:
+            conjunction, conjoins = self._connective(Operator.AND.value, "both")
+            if conjunction is None or conjoins != "coordinator":
+                rd.out.unsaid.append(f"{row.name}: no coordinator composes «{form}» with «{lead}»")
+                return None
+            lead = f"{form} {conjunction} {lead}"
+        return _Said(f"{lead} {alive[0].text}, {alive[1].text}", alive[1].mark, asks=alive[0].asks)
 
     def _purpose(self, row, rd: _Reading) -> _Said | None:
         """`imply(act, end)` with the act claimed and the end not — «I go TO SLEEP» (`db/0037`).
@@ -1614,7 +1700,21 @@ class Decompiler:
 
     def _phrase(self, box: Box, rd: _Reading, case: str = ACCUSATIVE,
                 predicative: bool = False) -> str:
-        """A box as a phrase: its marker, its determiner, its head — in that order, which is frame."""
+        """A box as a phrase: its marker, its determiner, its head — in that order, which is frame.
+
+        **A FOCUSED PHRASE TAKES ITS PARTICLE IN FRONT** — «ONLY cats», «ONLY from minds» — and says,
+        with it, the rows `_focused` folded into it; they reach the text exactly when it does."""
+        focus = rd.focus.get(id(box))
+        said = self._phrase_said(box, rd, case, predicative)
+        if focus is None or not said:
+            return said
+        particle, rows = focus
+        rd.spoken.update(rows)
+        return f"{particle} {said}"
+
+    def _phrase_said(self, box: Box, rd: _Reading, case: str = ACCUSATIVE,
+                     predicative: bool = False) -> str:
+        """`_phrase`, without the focus particle."""
         if isinstance(box.head, Var):
             return self._variable(box, rd, case)
         head = self._head(box, rd, case)

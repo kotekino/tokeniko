@@ -359,7 +359,8 @@ class ClosedClasses:
             return None
         # The clause first, then the survivors' own agreement — and the complement clause last,
         # because a `mark` on a complement asks whatever the rest would have said.
-        row = (self._by_clause(form, survivors, head_dep, in_root_clause)
+        row = (self._by_adverbial(form, survivors, dep, head_dep)
+               or self._by_clause(form, survivors, head_dep, in_root_clause)
                or self._settled(survivors))
         row = self._by_complement(form, dep, head_dep) or row
         if row is None:
@@ -403,6 +404,37 @@ class ClosedClasses:
             return None
         return next((r for r in self._by_form[form]
                      if (r.get("compiled") or {}).get("opens") == "truth"), None)
+
+    def _by_adverbial(self, form: str, survivors: Sequence[dict], dep: str | None,
+                      head_dep: str | None) -> dict | None:
+        """The JOINING reading of a wh-word that introduces an ADVERBIAL clause — else None.
+
+        **«WHEN» NEVER REACHED ITS CONJUNCTION ROW** (`E3.12.5.9.5`). stanza, like UD's English
+        treebanks, labels the wh-word at the front of an adverbial clause `advmod` of the clause's
+        verb — «I stay home WHEN it rains» — and never `mark`. So the walk read it as a question
+        word, opened a time box nobody asked about, and the clause was ANDed on with both halves
+        claimed: «I stay home and it rains (at some time)».
+
+        **THE CLAUSE SAYS WHICH READING, AS IT DOES FOR `_by_complement`.** A wh-word under
+        `advmod` of an `advcl` cannot be asking — the clause is a circumstance of another, not a
+        question — and it cannot be relative, since it modifies no noun: it is what relates the
+        clause to its matrix, which is a subordinator's job. The rows hold that reading; the tree
+        picks it. Frame: the tree's shape, and no word is named here.
+
+        Only where every survivor is a wh-reading (the tie `_by_clause` would otherwise settle) and
+        the form has a subordinator row that builds a JOIN: a subordinator row asserting its
+        `matrix` is routed to an attitude by the compiler (`db/0037`), and a wh-word at the front of
+        an adverbial clause opens no point of view.
+        """
+        if bare(dep or "") != "advmod" or bare(head_dep or "") != "advcl":
+            return None
+        trio = ("interrogative", "relative", "free_relative")
+        if not survivors or not all(r["role"] in trio for r in survivors):
+            return None
+        return next((r for r in self._by_form[form]
+                     if r["role"] == "subordinator"
+                     and (r.get("compiled") or {}).get("kind") == "join"
+                     and (r.get("compiled") or {}).get("asserts") != "matrix"), None)
 
     def _by_clause(self, form: str, survivors: Sequence[dict], head_dep: str | None,
                    in_root_clause: bool | None) -> dict | None:

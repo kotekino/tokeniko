@@ -197,9 +197,15 @@ case("only-3", "Smoking only causes cancer.", "cluster:only",
 
 case("only-4", "I stayed home only because it rained.", "cluster:only",
      Zip(rows=[c("r", "rain.v"), c("s", "stay.v", agent=n("me.n"), location=n("home.n", marker="at")),
-               j("jn", Operator.EQ, "r", "s")]),
-     "pass", "«only because» = the biconditional. The Captain's test: «…but I'd have stayed anyway» "
-             "is coherent after «because» and contradictory after «only because».",
+               j("jn", Operator.IMPLY, "r", "s")],
+         unplaced=["only"]),
+     "partial", "AMENDED 2026-09-26 (E1e.6.4, the Captain's E3.12.5.9.12 ruling 2): «only because» "
+                "is NOT truth-functional — with both halves claimed, IMPLY, CONV and EQ are all "
+                "true, so the EQ this row held said nothing the because-join does not. The zip "
+                "holds the because-join, both halves claimed, and «only» RECORDED LOST in "
+                "`unplaced` until the exclusivity has a home. Was: EQ(r, s), pass. The Captain's "
+                "test stands as the reason it is lost: «…but I'd have stayed anyway» is coherent "
+                "after «because» and contradictory after «only because».",
      distinct_from=("only-5",))
 
 case("only-5", "If and only if it rains, I stay home.", "cluster:only",
@@ -211,10 +217,17 @@ case("only-5", "If and only if it rains, I stay home.", "cluster:only",
 
 case("only-6", "Only cats eat fish.", "cluster:only",
      Zip(rows=[all_of("bX", "X", n("eater.n"), scopes="jn"),
-               c("e", "eat.v", agent=V("X"), patient=generic("fish.n")),
-               c("x", patient=V("X"), complement=generic("cat.n")),
-               j("jn", Operator.IMPLY, "e", "x")]),
-     "pass", "restriction on a binder: ∀X(eats-fish(X) → cat(X))")
+               c("p", "eat.v", agent=generic("cat.n"), patient=generic("fish.n")),
+               c("e", "eat.v", truth=None, agent=V("X"), patient=generic("fish.n")),
+               c("x", truth=None, patient=V("X"), complement=generic("cat.n")),
+               j("jn", Operator.IMPLY, "e", "x"),
+               j("ja", Operator.AND, "p", "jn")]),
+     "pass", "restriction on a binder: ∀X(eats-fish(X) → cat(X)). AMENDED 2026-09-26 (E1e.6.4, "
+             "req 38 and the Captain's E3.12.5.9.12 ruling 1): the two halves of the implication "
+             "are UNCLAIMED — stated under the binder, supposed by the conditional, never asserted "
+             "on their own; held at 1.0 they said ∀X eats-fish(X). And the PREJACENT is added, "
+             "claimed: on a noun «only X P» keeps P(X) — a presupposition, as the definite's "
+             "relative clause keeps its fact (E3.3.13) — conjoined with the rule")
 
 
 # ================================================================================================
@@ -391,11 +404,13 @@ case("t-ws-2", "I live in Asia because Japan is in Asia.", "traffic:wrong-struct
 
 case("t-ws-3", "A person is wrong when he says false.", "traffic:wrong-structure",
      Zip(rows=[all_of("bP", "P", generic("person.n"), scopes="jn"),
-               c("sf", "say.v", agent=V("P"), patient=generic("falsehood.n")),
-               c("wr", patient=V("P"), complement=n("wrong.a")),
+               c("sf", "say.v", truth=None, agent=V("P"), patient=generic("falsehood.n")),
+               c("wr", truth=None, patient=V("P"), complement=n("wrong.a")),
                j("jn", Operator.IMPLY, "sf", "wr")]),
      "pass", "«when» is a generic conditional here, not a time — and the drill says so because the "
-             "time box stays EMPTY while IMPLY carries it")
+             "time box stays EMPTY while IMPLY carries it. AMENDED 2026-09-26 (E1e.6.4, req 38): "
+             "the halves of the quantified implication are UNCLAIMED — held at 1.0 they asserted "
+             "that every person says a falsehood and every person is wrong")
 
 case("t-ws-4", "Clouds can produce rain but not every cloud produces rain.", "traffic:wrong-structure",
      Zip(rows=[all_of("bC", "C", generic("cloud.n"), scopes="pr"),

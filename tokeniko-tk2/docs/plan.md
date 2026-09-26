@@ -608,6 +608,10 @@ runtime, so it is app knowledge.
    purpose part only; both agree, drill gate 67 · 4 · 16, the ratchet green. Recorded in the bar doc's
    AMENDMENTS (`E2-tkzip/202609140917_the-drill-bar.md`).
 `E1e.6.2` *(found 09-25)* the drill's «If I tell you something…» row has no `know.v`.
+`E1e.6.3` *(found 2026-09-26 at `E3.12.5.9`)* the drill gate AGREED with a one-way IMPLY where the
+   drill holds EQ — a join's operator is never compared.
+`E1e.6.4` *(found 2026-09-26 at `E3.12.5.9`)* the drill's `c()` claims the halves of a quantified
+   implication (`only-6`, `t-ws-3`); `only-4` encodes «only because» as EQ, which `E3.12.5.9.12` (2) overrides.
 `E1e.9` *(the course check, 2026-09-26)* **a tool read the biography around the guard** —
    `tools/journey_ledger_build.py` opened tk1's `tokeniko_mem.tkzipdebug` with a raw client, the only
    one of ten database-opening tools that skipped `guard_db_name`. Read-only in intent is not the
@@ -1415,8 +1419,9 @@ asked; the exit is:
 1. **no known wrong claim and no known silent loss** — on the drill, the UD gate,
    the fixpoint corpus and the fresh set (`E3.12.2`);
 2. **the ratchets, never below** *(re-based 09-26 by `E3.12.5`, when false claims became abstentions)*:
-   drill agreed ≥ 64 · fixpoint FIXED ≥ 74 with SILENT = 0 (a withheld sentence is WITHHELD, not
-   SILENT) · read-whole ≥ 64 of 70 · UD gate answered ≥ 32 with WRONG = 0;
+   drill agreed ≥ 63 · fixpoint FIXED ≥ 74 with SILENT = 0 (a withheld sentence is WITHHELD, not
+   SILENT) · read-whole ≥ 63 of 69 · UD gate answered ≥ 32 with WRONG = 0 *(again 09-26 by
+   `E3.12.5.9`: «only» unplaced, `t-ws-3` withheld — both honest)*;
 3. **`E3.8.3`** — the frame/knowledge audit, re-run;
 4. and then every open quality item moves to **`E3c`** (`E3.12.3`), so E3 can CLOSE.
 
@@ -1507,7 +1512,33 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    withholds · `E3.12.5.3` both positions downward · `E3.12.5.8` amended · the exit's ratchets RE-BASED
    to the honest numbers.
    **Built the same day**: fixpoint 74 · 9 · 1 + WITHHELD 3 (64 of 70) · drill 64 · 4 · 19 · UD
-   32 · 0 · 13. Found: `E3.12.5.9` `only-5` SILENT — an orphaned unclaimed row (for the Captain) ·
+   32 · 0 · 13. Found: `E3.12.5.9` ⚑ «if and only if» was never compiled as an EQUIVALENCE — no row
+   for it, so «if» made a one-way IMPLY with «only» cut, the converse lost in silence since the start (the
+   Captain: «IMPLY and CONV together — how can this be left in this condition?»). **Not a row
+   per phrase** — «it rains only if I stay home», «strictly if», «only if it rains, I stay home» say it
+   too: the information is COMPOSED, «only» the necessary condition (the converse), «if» the
+   sufficient one, «and» their conjunction — IMPLY ∧ CONV = EQ. The drill gate agreeing with it is
+   `E1e.6.3` (the gates are E1e's) ·
+   **BENCHED the same day** (`202609261500_only-and-the-conditionals.md`): the hypothesis PARTLY holds —
+   «only» is one meaning, but it REPLACES the direction rather than adding the converse. Found:
+   `E3.12.5.9.2` every «only if» compiles the reverse claim · `E3.12.5.9.3` the focus particles fall to
+   the manner default · `E3.12.5.9.4` «unless» polarity never read · `E3.12.5.9.5` «when» never reaches
+   its conjunction row · `E3.12.5.9.6` multi-word joiners keyed at the first token · `E3.12.5.9.7` two
+   manner adverbs collide · `E3.12.5.9.8` iff's two trees · `E3.12.5.9.9` pre-verbal «only» ·
+   `E3.12.5.9.10` «as long as» asserts both · `E3.12.5.9.11` «only because». `E3.12.5.9.12` **RULED** —
+   «only» on a noun keeps P(X) claimed, on a condition not · joins are truth-functional, the rest
+   recorded · «only if» → CONV, «iff» → EQ · the exclusive/identifying meaning is rows, the associate
+   rule is logic · the manner default stays in its measured population · «as long as» claims neither ·
+   **BUILT the same day** — `.4` «unless» · `.5` «when» · `.2` `.3` «only» (`db/0039`, a `focus` kind; «only if»
+   → CONV, «if and only if» → EQ, a noun associate → ∀) · `.6` `.10` multi-word joiners · `.7` the box
+   collision; STOP on ruling 5 (its premise false). Found `E3.12.5.9.13` the orphan again (`t-ws-3`) ·
+   `E3.12.5.9.14` «lest» · `E3.12.5.9.15` «nor» after «not» · `E3.12.5.9.16` «just in case» ·
+   `E3.12.5.9.17` «the only cat» · `E3.12.5.9.18` «wherever» · `E3.12.5.9.19` a folded conjunction
+   under a supposition · `E3.12.5.9.3.1` ruling 5's premise false (the default measured on ALL
+   adverbs) · `E3.12.5.9.1` → `E1e.6.3` ·
+   **Ruled and built**: `E3.12.5.9.3.1` each focus word its own row, «abstain» where unsettled
+   (`db/0040`) · `E3.12.5.9.13` the orphan withheld with its partner · `E1e.6.4` the drill amended.
+   Fixpoint 74 · 9 · 0 + WITHHELD 4 (63/69), drill 63 · 4 · 20, UD 32 · 0 · 13 ·
    `E3.12.5.10` «if and only if» over-withheld · `E3.12.5.11` «because»'s antecedent over-withheld ·
    `E3.12.5.12` three downward cases not built.
    `E3.12.2` **the fresh set** — 100 sentences sampled from the UD English EWT treebank (strangers'

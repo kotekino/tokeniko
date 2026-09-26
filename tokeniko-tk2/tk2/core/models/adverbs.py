@@ -58,6 +58,8 @@ class AdverbKindDoc(LogicDocument, Timestamped):
     #:   `evaluative`     — «luckily», «sadly»: the speaker's attitude to the claim. A prefix element.
     #:   `discourse`      — «however», «therefore»: it relates two ROWS, so it is a join.
     #:   `circumstantial` — «yesterday», «abroad»: it fills a box, and `compiled.roles` says which.
+    #:   `focus`          — «only», «exactly» (`db/0039`): which thing satisfies the frame, the
+    #:                      particle's associate; `compiled.focus` names the meaning.
     kind: str = Field(min_length=1)
 
     #: What it compiles to, in **`ClosedClassDoc.compiled`'s own vocabulary** — that identity is what

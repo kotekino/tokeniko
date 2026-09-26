@@ -1254,10 +1254,12 @@ def test_the_FRONTIER_half_is_where_the_work_is(compiler):
     mean = sum(s.coverage for s in scored) / len(scored)
 
     assert len(scored) >= 20, "a relation may gain a case; the frontier grows and the ratchet does not"
-    assert full >= 11, f"{full} of {len(scored)} whole; 11 were on 2026-09-16"
+    # Re-based 2026-09-26, 11 → 10 and 0.78 → 0.77, E3.12.5.9.7 (the Captain's re-base): «left
+    # early in the morning» — «early» was counted placed with the time box taken; it is unplaced now.
+    assert full >= 10, f"{full} of {len(scored)} whole; 10 were on 2026-09-26 (11 on 2026-09-16)"
     # Re-based 2026-09-26, 0.84 → 0.78, E3.12.5 — the Captain re-based the exit's ratchets: the two
     # «muffin man» sentences claimed a content never said and are withheld but for the saying.
-    assert mean >= 0.78, f"mean {mean:.1%}; it was 78.4% on 2026-09-26 (84.6% on 2026-09-16)"
+    assert mean >= 0.77, f"mean {mean:.1%}; it was 77.8% on 2026-09-26 (84.6% on 2026-09-16)"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -1348,12 +1350,20 @@ def test_the_adjective_conjunction_TAKES_THE_ROW_S_PLACE_in_the_clause_join(comp
 
 
 def test_a_circumstantial_adverb_fills_its_own_box(compiler):
-    """«left EARLY in the morning» — `early` is a TIME, and it is its own filler: there is no nominal
-    under it, so the head is the adverb's own key."""
-    out = compiled(compiler, "The guy , John said , left early in the morning")
-    row = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "leave.v")
+    """«She left EARLY» — `early` is a TIME, and it is its own filler: there is no nominal under
+    it, so the head is the adverb's own key.
 
-    assert row.boxes[Role.TIME].head in ("early.r", "morning.n")
+    *It was pinned on «…left early in the morning» until `E3.12.5.9.7`, where the box is TAKEN —
+    and «early» was counted as placed while nothing in the zip held it.*"""
+    out = compiler.compile(skeleton_from_conllu("She left early.", [
+        ("1", "She", "she", "PRON", "2", "nsubj"),
+        ("2", "left", "leave", "VERB", "0", "root"),
+        ("3", "early", "early", "ADV", "2", "advmod"),
+        ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    row = main_row(out)
+
+    assert row.boxes[Role.TIME].head == "early.r"
     assert out.coverage == 1.0
 
 
@@ -1361,12 +1371,17 @@ def test_a_MARKED_nominal_outranks_a_bare_adverb_for_the_same_box(compiler):
     """«left EARLY in the MORNING» has two time expressions and one time box. The speaker CHOSE the
     marker on «in the morning», so it is the stronger evidence — and placing adverbs in token order
     let `early` take the box and pushed `morning` out, which is the same coverage and the worse
-    reading. Adverbs are therefore placed after the nominals of their clause."""
+    reading. Adverbs are therefore placed after the nominals of their clause.
+
+    **AND THE LOSER IS UNPLACED, NOT COUNTED** (`E3.12.5.9.7`, 2026-09-26). One box holds one
+    phrase: `early` reached no part of the zip, and until then `placement` said it had — a silent
+    loss. It is in `unplaced` now, and `abstained` says why."""
     out = compiled(compiler, "The guy , John said , left early in the morning")
     row = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "leave.v")
 
     assert row.boxes[Role.TIME].head == "morning.n", "the marked one won"
-    assert out.unplaced == (), "and the adverb is still accounted for"
+    assert out.unplaced == ("early",), "and the adverb it displaced is visible, not counted"
+    assert any(line.startswith("early: a second time") for line in out.abstained)
 
 
 def test_a_referential_adverb_fills_a_box_with_an_OPEN_head(compiler):
@@ -2021,7 +2036,11 @@ def test_an_AMBIGUOUS_may_not_withholds_the_clause_rather_than_toss_a_coin(compi
 
 def test_a_withheld_ANTECEDENT_takes_its_conditional_with_it(compiler):
     """Why withheld and not merely unclaimed: «if you may not go, I stay» with the clause kept and
-    its modal dropped would still claim IMPLY(go, stay) — a conditional the speaker never said."""
+    its modal dropped would still claim IMPLY(go, stay) — a conditional the speaker never said.
+
+    **AND THE CONSEQUENT GOES TOO** (`E3.12.5.9.13`, the Captain 2026-09-26). «I stay» was left
+    stated, unclaimed and joined to nothing — a row that claims nothing and that no form can say.
+    This test pinned that residue until the ruling; it is withheld with its antecedent now."""
     out = compiler.compile(skeleton_from_conllu("If you may not go , I stay .", [
         ("1", "If", "if", "SCONJ", "5", "mark"),
         ("2", "you", "you", "PRON", "5", "nsubj"),
@@ -2035,8 +2054,9 @@ def test_a_withheld_ANTECEDENT_takes_its_conditional_with_it(compiler):
     ]))
 
     assert not [r for r in out.zip.rows if r.kind == "join"]
-    assert [r.predicate for r in out.zip.rows if r.kind == "content"] == ["stay.v"]
-    assert main_row(out).truth is None, "«I stay» was only ever supposed"
+    assert not [r for r in out.zip.rows if getattr(r, "predicate", None)], "nothing stranded"
+    assert {"If", "may", "not", "go", "I", "stay"} <= set(out.unplaced)
+    assert any("stated and unclaimed" in why for why in out.abstained)
 
 
 def test_a_modal_row_with_NO_scope_withholds_rather_than_defaults(compiler):
@@ -3019,3 +3039,353 @@ def test_a_universal_BEFORE_a_negation_is_withheld_like_may_not(compiler):
     assert [r.kind for r in settled.zip.rows if r.kind in ("negation", "quantifier")] == \
         ["negation", "quantifier"]
     assert settled.unplaced == ()
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.12.5.9` — «only» and the conditionals (the Captain's rulings `E3.12.5.9.12`, 2026-09-26)
+#
+# The trees are stanza's own, copied from the bench (`202609261500_only-and-the-conditionals.md`).
+# ------------------------------------------------------------------------------------------------
+
+
+def _tree(text, rows):
+    return skeleton_from_conllu(text, rows)
+
+
+def _named(out, predicate):
+    return next(r for r in out.zip.rows if getattr(r, "predicate", None) == predicate)
+
+
+def _the_join(out):
+    joins = [r for r in out.zip.rows if r.kind == "join"]
+    assert len(joins) == 1, joins
+    return joins[0]
+
+
+def _only_if(particle="only"):
+    """«I stay home ONLY if it rains.» — the particle hangs off the conditional clause's head."""
+    return _tree(f"I stay home {particle} if it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", particle, particle, "ADV", "7", "advmod"),
+        ("5", "if", "if", "SCONJ", "7", "mark"), ("6", "it", "it", "PRON", "7", "nsubj"),
+        ("7", "rains", "rain", "VERB", "2", "advcl"), ("8", ".", ".", "PUNCT", "2", "punct"),
+    ])
+
+
+def test_UNLESS_negates_the_clause_it_introduces(compiler):
+    """`E3.12.5.9.4` — «Unless it rains, I go out» is ¬R → G. The row has said `polarity: negative`
+    since v1, and nothing read it: the station compiled «if it rains, I go»."""
+    out = compiler.compile(_tree("Unless it rains, I go out.", [
+        ("1", "Unless", "unless", "SCONJ", "3", "mark"), ("2", "it", "it", "PRON", "3", "nsubj"),
+        ("3", "rains", "rain", "VERB", "6", "advcl"), ("4", ",", ",", "PUNCT", "6", "punct"),
+        ("5", "I", "i", "PRON", "6", "nsubj"), ("6", "go", "go", "VERB", "0", "root"),
+        ("7", "out", "out", "ADV", "6", "advmod"), ("8", ".", ".", "PUNCT", "6", "punct"),
+    ]))
+    rain, go, join = _named(out, "rain.v"), _named(out, "go.v"), _the_join(out)
+
+    assert join.operator is Operator.IMPLY and join.operands == [rain.name, go.name]
+    assert [r.scopes for r in out.zip.rows if r.kind == "negation"] == [rain.name], \
+        "the negation is on the rain, and on nothing else"
+    assert (rain.truth, go.truth) == (None, None), "a condition claims neither half"
+
+
+def test_NOR_carries_its_negation_in_its_operator_and_gets_no_second_one(compiler):
+    """«nor» also says `polarity: negative` — and its operator is already ¬(a ∨ b). Reading the
+    polarity again would negate the second clause twice (`NEGATED_OPERATORS`)."""
+    out = compiler.compile(_tree("I did not swim, nor did I run.", [
+        ("1", "I", "i", "PRON", "4", "nsubj"), ("2", "did", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "swim", "swim", "VERB", "0", "root"),
+        ("5", ",", ",", "PUNCT", "9", "punct"), ("6", "nor", "nor", "CCONJ", "9", "cc"),
+        ("7", "did", "do", "AUX", "9", "aux"), ("8", "I", "i", "PRON", "9", "nsubj"),
+        ("9", "run", "run", "VERB", "4", "conj"), ("10", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    run = _named(out, "run.v")
+
+    assert _the_join(out).operator is Operator.NOR
+    assert not [r for r in out.zip.rows if r.kind == "negation" and r.scopes == run.name]
+
+
+def test_WHEN_heading_an_adverbial_clause_is_its_JOINER_and_claims_what_both_readings_entail(
+        compiler):
+    """`E3.12.5.9.5` — stanza tags «when» `advmod`, never `mark`, so its conjunction row was never
+    reached: the clause was ANDed on, both halves claimed, and a time box opened nobody asked about.
+    Under an `advcl` the tree says it is the subordinator (`ClosedClasses._by_adverbial`). The row
+    says it is `ambiguous` — generic ∀t or episodic — and only the implication BOTH readings entail
+    is claimed; the rest is recorded, not dropped (`E3.12.5.9.12` (2))."""
+    out = compiler.compile(_tree("I stay home when it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "when", "when", "ADV", "6", "advmod"),
+        ("5", "it", "it", "PRON", "6", "nsubj"), ("6", "rains", "rain", "VERB", "2", "advcl"),
+        ("7", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    rain, stay, join = _named(out, "rain.v"), _named(out, "stay.v"), _the_join(out)
+
+    assert join.operator is Operator.IMPLY and join.operands == [rain.name, stay.name]
+    assert (rain.truth, stay.truth) == (None, None)
+    assert Role.TIME not in rain.boxes, "nobody asked when"
+    assert out.placement[3] == "join" and out.unplaced == ()
+    assert any(line.startswith("«when»: generic") for line in out.abstained)
+
+
+def test_ONLY_IF_replaces_the_direction_and_keeps_the_row_order(compiler):
+    """`E3.12.5.9.2` — «I stay home only if it rains» is S → R: CONV over the operands «if» would
+    have had (row order carries scope — the Captain's normal form, (3)), and neither half claimed:
+    «only if» does not claim «if» (1). It compiled IMPLY(R, S), the reverse claim, with «only» in a
+    manner box."""
+    out = compiler.compile(_only_if())
+    rain, stay, join = _named(out, "rain.v"), _named(out, "stay.v"), _the_join(out)
+
+    assert join.operator is Operator.CONV and join.operands == [rain.name, stay.name]
+    assert (rain.truth, stay.truth) == (None, None)
+    assert Role.MANNER not in rain.boxes, "«only» is not a manner of raining"
+    assert out.placement[3] == "focus" and out.unplaced == ()
+
+
+def test_JUST_IF_is_the_same_exclusive_meaning_as_ONLY_IF(compiler):
+    """One meaning, four words (`db/0039`) — the station reads the row, never the word."""
+    assert _the_join(compiler.compile(_only_if("just"))).operator is Operator.CONV
+
+
+def test_the_associate_is_the_clause_the_particle_hangs_off_whichever_it_is(compiler):
+    """«It rains only if I STAY HOME» — the condition is the staying: CONV(stay, rain), rain → stay.
+    And «home» is placed: the manner box it shared with «only» (`E3.12.5.9.7`) is its own again."""
+    out = compiler.compile(_tree("It rains only if I stay home.", [
+        ("1", "It", "it", "PRON", "2", "nsubj"), ("2", "rains", "rain", "VERB", "0", "root"),
+        ("3", "only", "only", "ADV", "6", "advmod"), ("4", "if", "if", "SCONJ", "6", "mark"),
+        ("5", "I", "i", "PRON", "6", "nsubj"), ("6", "stay", "stay", "VERB", "2", "advcl"),
+        ("7", "home", "home", "ADV", "6", "advmod"), ("8", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    rain, stay, join = _named(out, "rain.v"), _named(out, "stay.v"), _the_join(out)
+
+    assert join.operator is Operator.CONV and join.operands == [stay.name, rain.name]
+    assert stay.boxes[Role.MANNER].head == "home.r" and out.unplaced == ()
+
+
+def test_IF_AND_ONLY_IF_is_EQ_in_both_of_stanzas_trees(compiler):
+    """`E3.12.5.9.8` — without commas «only» is `conj` of the first «if»; with them, `advmod` of the
+    second, and the clause itself is misread as a `conj`. The four words between the two markers
+    are the same in both, and «if» ∧ «only if» over one pair is EQ (ruling 3) — no row for the
+    phrase. It was over-withheld (`E3.12.5.10`) and misread as a lone IMPLY."""
+    plain = compiler.compile(_tree("If and only if it rains, I stay home.", [
+        ("1", "If", "if", "SCONJ", "6", "mark"), ("2", "and", "and", "CCONJ", "3", "cc"),
+        ("3", "only", "only", "ADV", "1", "conj"), ("4", "if", "if", "SCONJ", "6", "mark"),
+        ("5", "it", "it", "PRON", "6", "nsubj"), ("6", "rains", "rain", "VERB", "9", "advcl"),
+        ("7", ",", ",", "PUNCT", "9", "punct"), ("8", "I", "i", "PRON", "9", "nsubj"),
+        ("9", "stay", "stay", "VERB", "0", "root"), ("10", "home", "home", "ADV", "9", "advmod"),
+        ("11", ".", ".", "PUNCT", "9", "punct"),
+    ]))
+    commas = compiler.compile(_tree("I stay home if, and only if, it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "if", "if", "SCONJ", "11", "mark"),
+        ("5", ",", ",", "PUNCT", "4", "punct"), ("6", "and", "and", "CCONJ", "11", "cc"),
+        ("7", "only", "only", "ADV", "8", "advmod"), ("8", "if", "if", "SCONJ", "11", "mark"),
+        ("9", ",", ",", "PUNCT", "8", "punct"), ("10", "it", "it", "PRON", "11", "nsubj"),
+        ("11", "rains", "rain", "VERB", "2", "conj"), ("12", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    for out in (plain, commas):
+        rain, stay, join = _named(out, "rain.v"), _named(out, "stay.v"), _the_join(out)
+        assert join.operator is Operator.EQ and join.operands == [rain.name, stay.name]
+        assert (rain.truth, stay.truth) == (None, None) and join.truth == 1.0
+        assert out.unplaced == () and not out.abstained
+
+
+def test_EXACTLY_WHEN_is_identifying_necessary_and_sufficient(compiler):
+    """«exactly» is the identifying meaning (`db/0039`): the condition necessary AND sufficient."""
+    out = compiler.compile(_tree("I stay home exactly when it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "exactly", "exactly", "ADV", "7", "advmod"),
+        ("5", "when", "when", "ADV", "7", "advmod"), ("6", "it", "it", "PRON", "7", "nsubj"),
+        ("7", "rains", "rain", "VERB", "2", "advcl"), ("8", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    assert _the_join(out).operator is Operator.EQ and out.unplaced == ()
+
+
+def _only_cats():
+    return _tree("Only cats eat fish.", [
+        ("1", "Only", "only", "ADV", "2", "advmod"), ("2", "cats", "cat", "NOUN", "3", "nsubj"),
+        ("3", "eat", "eat", "VERB", "0", "root"), ("4", "fish", "fish", "NOUN", "3", "obj"),
+        ("5", ".", ".", "PUNCT", "3", "punct"),
+    ])
+
+
+def test_ONLY_on_a_NOUN_keeps_the_claim_and_adds_that_nothing_else_does(compiler):
+    """`E3.12.5.9.3` — «Only cats eat fish»: the drill's `only-6` shape, ∀x (eat(x, fish) → x is a
+    cat), with the frame the antecedent and «is the associate» the consequent — AND the prejacent
+    kept claimed (ruling 1: on a noun it is a presupposition). It compiled «cats eat fish» with
+    «only» as a manner of eating."""
+    out = compiler.compile(_only_cats())
+    rows = {r.name: r for r in out.zip.rows}
+    claim = next(r for r in out.zip.rows if r.kind == "content" and r.truth == 1.0)
+    whole = next(r for r in out.zip.rows if r.kind == "join" and r.operator is Operator.AND)
+    rule = rows[whole.operands[1]]
+    frame, member = (rows[name] for name in rule.operands)
+    binder = next(r for r in out.zip.rows if r.kind == "quantifier")
+
+    assert claim.predicate == "eat.v" and claim.boxes[Role.AGENT].head == "cat.n", "the prejacent"
+    assert whole.operands[0] == claim.name and whole.truth == 1.0
+    assert rule.operator is Operator.IMPLY and rule.truth == 1.0
+    assert binder.quantity is Quantity.UNIVERSAL and binder.scopes == rule.name
+    var = Var(name=binder.binds)
+    assert frame.predicate == "eat.v" and frame.boxes[Role.AGENT].head == var
+    assert frame.boxes[Role.PATIENT] == claim.boxes[Role.PATIENT], "the frame, the associate out"
+    assert member.boxes[Role.PATIENT].head == var
+    assert member.boxes[Role.COMPLEMENT].head == "cat.n", "…is the associate"
+    assert (frame.truth, member.truth) == (None, None)
+    assert Role.MANNER not in claim.boxes and out.unplaced == ()
+
+
+def test_a_PRE_VERBAL_only_is_unplaced_and_the_claim_it_presupposes_stays(compiler):
+    """`E3.12.5.9.9` — «Cats only eat fish»: the tree hangs «only» off the verb whatever the focus,
+    so the associate is not given. Left unplaced; «cats eat fish» is entailed by every reading."""
+    out = compiler.compile(_tree("Cats only eat fish.", [
+        ("1", "Cats", "cat", "NOUN", "3", "nsubj"), ("2", "only", "only", "ADV", "3", "advmod"),
+        ("3", "eat", "eat", "VERB", "0", "root"), ("4", "fish", "fish", "NOUN", "3", "obj"),
+        ("5", ".", ".", "PUNCT", "3", "punct"),
+    ]))
+    assert out.unplaced == ("only",)
+    assert main_row(out).truth == 1.0 and Role.MANNER not in main_row(out).boxes
+    assert any("E3.12.5.9.9" in line for line in out.abstained)
+
+
+def test_a_PRE_VERBAL_only_with_a_CONDITIONAL_in_its_reach_withholds_the_clause(compiler):
+    """«I only stay home if it rains» — «only if» (S → R) or «only stay home» (R → S): neither
+    direction is entailed, and «if it rains, I stay home» claimed alone would be one of them."""
+    out = compiler.compile(_tree("I only stay home if it rains.", [
+        ("1", "I", "i", "PRON", "3", "nsubj"), ("2", "only", "only", "ADV", "3", "advmod"),
+        ("3", "stay", "stay", "VERB", "0", "root"), ("4", "home", "home", "ADV", "3", "advmod"),
+        ("5", "if", "if", "SCONJ", "7", "mark"), ("6", "it", "it", "PRON", "7", "nsubj"),
+        ("7", "rains", "rain", "VERB", "3", "advcl"), ("8", ".", ".", "PUNCT", "3", "punct"),
+    ]))
+    assert not [r for r in out.zip.rows if r.kind == "join" or getattr(r, "predicate", None)]
+    assert {"only", "stay", "if", "rains"} <= set(out.unplaced)
+
+
+def test_ONLY_BECAUSE_is_recorded_lost_never_silent(compiler):
+    """`E3.12.5.9.11` — with both halves claimed, «only because» is not a truth function (ruling 2):
+    «only» is left UNPLACED, where the zip says so, and never placed as a manner."""
+    out = compiler.compile(_tree("I stayed home only because it rained.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stayed", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "only", "only", "ADV", "7", "advmod"),
+        ("5", "because", "because", "SCONJ", "7", "mark"), ("6", "it", "it", "PRON", "7", "nsubj"),
+        ("7", "rained", "rain", "VERB", "2", "advcl"), ("8", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    assert "only" in out.unplaced
+    assert any("E3.12.5.9.11" in line for line in out.abstained)
+    assert all(Role.MANNER not in r.boxes or r.boxes[Role.MANNER].head != "only.r"
+               for r in out.zip.rows if r.kind == "content")
+
+
+def test_PROVIDED_THAT_is_a_joining_word_and_not_a_verb_of_providing(compiler):
+    """`E3.12.5.9.6` — stanza reads «provided» as a VERB heading an `advcl` with the condition as
+    its `ccomp`, and the station built «I provide that it rains», all claimed. The table reads it
+    as a subordinator, and the tree agrees: it governs the clause it introduces."""
+    out = compiler.compile(_tree("I stay home provided that it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "provided", "provide", "VERB", "2", "advcl"),
+        ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "it", "it", "PRON", "7", "nsubj"),
+        ("7", "rains", "rain", "VERB", "4", "ccomp"), ("8", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    rain, stay, join = _named(out, "rain.v"), _named(out, "stay.v"), _the_join(out)
+
+    assert join.operator is Operator.IMPLY and join.operands == [rain.name, stay.name]
+    assert (rain.truth, stay.truth) == (None, None)
+    assert not [r for r in out.zip.rows if r.kind == "attitude"], "nobody provides anything"
+    assert out.placement[3] == out.placement[4] == "join" and out.unplaced == ()
+
+
+def test_AS_LONG_AS_is_found_by_its_span_and_claims_neither_half(compiler):
+    """`E3.12.5.9.6` + `E3.12.5.9.10` — the clause's `mark` is the LAST «as» and the table's match
+    starts at the first, so the joiner was never found and the clause was ANDed on, both claimed.
+    Found by the span now; and `db/0039` makes it claim neither half, as «if» does (ruling 6)."""
+    out = compiler.compile(_tree("I stay home as long as it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "as", "as", "ADV", "5", "advmod"),
+        ("5", "long", "long", "ADV", "2", "advmod"), ("6", "as", "as", "SCONJ", "8", "mark"),
+        ("7", "it", "it", "PRON", "8", "nsubj"), ("8", "rains", "rain", "VERB", "5", "advcl"),
+        ("9", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    rain, stay, join = _named(out, "rain.v"), _named(out, "stay.v"), _the_join(out)
+
+    assert join.operator is Operator.IMPLY and join.operands == [rain.name, stay.name]
+    assert (rain.truth, stay.truth) == (None, None)
+    assert out.unplaced == ()
+
+
+def test_a_SECOND_manner_adverb_is_unplaced_not_counted(compiler):
+    """`E3.12.5.9.7` — one manner box, two adverbs: the second was counted as placed and was
+    nowhere in the zip. It is unplaced now, and the zip says so."""
+    out = compiler.compile(_tree("I stay home quietly.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "quietly", "quietly", "ADV", "2", "advmod"),
+        ("5", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    assert main_row(out).boxes[Role.MANNER].head == "home.r"
+    assert out.unplaced == ("quietly",) and 3 not in out.placement
+
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.12.5.9.13` — the orphan · `E3.12.5.9.3.1` — a focus word whose meaning is not settled
+# ------------------------------------------------------------------------------------------------
+
+
+def test_a_row_a_withholding_leaves_STRANDED_is_withheld_too(compiler):
+    """«A person is wrong when he says false» — the antecedent is withheld (the cut «false» widens
+    it), and the consequent was left supposed by a conditional that no longer existed: SILENT at
+    the fixpoint. Withheld with it, the sentence is WITHHELD and says why."""
+    out = compiler.compile(_tree("A person is wrong when he says false.", [
+        ("1", "A", "a", "DET", "2", "det"), ("2", "person", "person", "NOUN", "4", "nsubj"),
+        ("3", "is", "be", "AUX", "4", "cop"), ("4", "wrong", "wrong", "ADJ", "0", "root"),
+        ("5", "when", "when", "ADV", "7", "advmod"), ("6", "he", "he", "PRON", "7", "nsubj"),
+        ("7", "says", "say", "VERB", "4", "advcl"), ("8", "false", "false", "ADJ", "7", "xcomp"),
+        ("9", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    assert all(r.kind == "content" and not r.boxes and not r.predicate for r in out.zip.rows)
+    assert {"person", "wrong", "says"} <= set(out.unplaced)
+
+
+def test_a_RELATIVE_clause_is_held_by_its_variable_and_is_not_stranded(compiler):
+    """An unclaimed row with no name pointing at it is not always stranded: a quantifier's
+    restriction is held by the variable it shares — «every cat THAT SLEEPS is happy»."""
+    out = compiler.compile(EVERY_CAT)
+    assert [r.predicate for r in out.zip.rows if r.kind == "content"][0] == "sleep.v"
+    assert out.unplaced == ()
+
+
+def _strictly_if():
+    return _tree("I stay home strictly if it rains.", [
+        ("1", "I", "i", "PRON", "2", "nsubj"), ("2", "stay", "stay", "VERB", "0", "root"),
+        ("3", "home", "home", "ADV", "2", "advmod"), ("4", "strictly", "strictly", "ADV", "2", "advmod"),
+        ("5", "if", "if", "SCONJ", "7", "mark"), ("6", "it", "it", "PRON", "7", "nsubj"),
+        ("7", "rains", "rain", "VERB", "2", "advcl"), ("8", ".", ".", "PUNCT", "2", "punct"),
+    ])
+
+
+def test_STRICTLY_IF_is_no_longer_claimed_forward(compiler):
+    """`E3.12.5.9.3.1` — «strictly» has a row that says ABSTAIN (`db/0040`): it may be «only if».
+    Stanza hangs it off the matrix, with the condition in its reach, so the forward implication is
+    not entailed and nothing is claimed — it was «if it rains, I stay home», a wrong claim."""
+    out = compiler.compile(_strictly_if())
+    assert not [r for r in out.zip.rows if r.kind == "join"]
+    assert {"strictly", "if", "rains", "stay"} <= set(out.unplaced)
+
+
+def test_an_ABSTAINING_particle_over_its_CONDITION_withholds_the_conditional(compiler):
+    """The same word hung off the condition itself — the shape «only if» has — is withheld too: the
+    row gives no direction to compose."""
+    out = compiler.compile(_only_if("strictly"))
+    assert not [r for r in out.zip.rows if r.kind == "join"]
+    assert "strictly" in out.unplaced
+
+
+def test_EVEN_on_a_noun_is_unplaced_and_the_claim_stays(compiler):
+    """«Even cats eat fish» claims that cats do; the rest is not a truth function. «even» is left
+    unplaced, never a manner of eating."""
+    out = compiler.compile(_tree("Even cats eat fish.", [
+        ("1", "Even", "even", "ADV", "2", "advmod"), ("2", "cats", "cat", "NOUN", "3", "nsubj"),
+        ("3", "eat", "eat", "VERB", "0", "root"), ("4", "fish", "fish", "NOUN", "3", "obj"),
+        ("5", ".", ".", "PUNCT", "3", "punct"),
+    ]))
+    assert out.unplaced == ("Even",) and main_row(out).truth == 1.0
+    assert Role.MANNER not in main_row(out).boxes
+    assert any("not settled" in why for why in out.abstained)
