@@ -325,11 +325,16 @@ def test_a_word_the_station_cannot_place_is_VISIBLE(compiler):
     sleeps» until relative clauses compiled, then «if you know who did it» until embedded questions
     did. It is now `xcomp`, which is not a gap but a RULING — «you like TO SWIM» is one predication
     and nobody asserts that you swim — so what the zip reports is that the ruling has no compiled
-    consequence yet."""
-    out = compiled(compiler, "he says that you like to swim")
+    consequence yet.
+
+    *And it moved a third time, 2026-09-26, off «he says that you like to swim»: E3.12.5 (1) withholds
+    its content — a word cut from under «says» changes what was said — so its xcomp no longer shows
+    in a partial reading. «We expect them to change their minds» is the same `xcomp` in a claimed
+    clause, where the cut only weakens the claim and the partial reading stands.*"""
+    out = compiled(compiler, "We expect them to change their minds")
 
     assert out.unplaced, "the xcomp's own verb is not a row, and the zip says so"
-    assert set(out.unplaced) <= set(case("he says that you like to swim").skeleton.tokens)
+    assert set(out.unplaced) <= set(case("We expect them to change their minds").skeleton.tokens)
     assert out.zip.unplaced == list(out.unplaced)
     assert 0.0 < out.coverage < 1.0, "partial, and honestly so"
 
@@ -517,6 +522,18 @@ GLITTERS = skeleton_from_conllu("All that glitters is not gold.", [
     ("7", ".", ".", "PUNCT", "6", "punct"),
 ])
 
+#: The same phrase with the negation FIRST — the order that settles ¬∀ (E3.12.5 (5)): «All … is
+#: NOT gold» is withheld as ambiguous, so the structure below is pinned on the reading that is not.
+NOT_ALL_GLITTERS = skeleton_from_conllu("Not all that glitters is gold.", [
+    ("1", "Not", "not", "PART", "2", "advmod"),
+    ("2", "all", "all", "DET", "6", "nsubj"),
+    ("3", "that", "that", "PRON", "4", "nsubj"),
+    ("4", "glitters", "glitter", "VERB", "2", "acl:relcl"),
+    ("5", "is", "be", "AUX", "6", "cop"),
+    ("6", "gold", "gold", "NOUN", "0", "root"),
+    ("7", ".", ".", "PUNCT", "6", "punct"),
+])
+
 #: «Nobody knows the answer.» — a quantifier that is its own phrase LEXICALLY.
 NOBODY = skeleton_from_conllu("Nobody knows the answer.", [
     ("1", "Nobody", "nobody", "PRON", "2", "nsubj"),
@@ -630,8 +647,12 @@ def test_a_bare_quantifier_binds_ITSELF_and_the_relative_clause_restricts_it(com
     nominaliser and needs none. The universal binds the glitterer, the negation and the binder both
     scope the predication, and the clause that says what the variable ranges over SHARES that
     variable (req 36) rather than joining it or being dropped.
+
+    *Pinned on «NOT all that glitters is gold» since 2026-09-26: the proverb's own order is withheld
+    as ambiguous (E3.12.5 (5), `test_a_universal_BEFORE_a_negation_is_withheld_like_may_not`), and
+    the structure is the same one with the negation where it settles the scope.*
     """
-    out = compiler.compile(GLITTERS)
+    out = compiler.compile(NOT_ALL_GLITTERS)
     binder = rows_of(out, "quantifier")[0]
     negation = rows_of(out, "negation")[0]
     glittering = next(r for r in rows_of(out, "content") if r.predicate == "glitter.v")
@@ -654,6 +675,7 @@ def test_a_bare_quantifier_binds_ITSELF_and_the_relative_clause_restricts_it(com
     assert glittering.boxes[gap].head == bound, "one variable in two rows — no orphan"
     assert binder.scopes == gold.name and negation.scopes == gold.name, (
         "both prefix elements scope the predication; their ORDER is the two readings (req 35)")
+    assert out.zip.rows.index(negation) < out.zip.rows.index(binder), "¬∀, the order said"
     assert glittering.truth is None, (
         "a restriction is STATED, not claimed — the sentence does not say that anything glitters")
     assert gold.truth == 1.0
@@ -1214,7 +1236,9 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
 
     assert len(scored) == 25
     assert full >= 23, f"{full} of {len(scored)} whole; 23 were on 2026-09-16"
-    assert mean >= 0.98, f"mean {mean:.1%}; it was 98.9% on 2026-09-16"
+    # Re-based 2026-09-26, 0.98 → 0.97, E3.12.5 — the Captain re-based the exit's ratchets: «he says
+    # that you like to swim» claimed a false content and is now withheld but for «he says».
+    assert mean >= 0.97, f"mean {mean:.1%}; it was 97.1% on 2026-09-26 (98.9% on 2026-09-16)"
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
@@ -1231,7 +1255,9 @@ def test_the_FRONTIER_half_is_where_the_work_is(compiler):
 
     assert len(scored) >= 20, "a relation may gain a case; the frontier grows and the ratchet does not"
     assert full >= 11, f"{full} of {len(scored)} whole; 11 were on 2026-09-16"
-    assert mean >= 0.84, f"mean {mean:.1%}; it was 84.6% on 2026-09-16"
+    # Re-based 2026-09-26, 0.84 → 0.78, E3.12.5 — the Captain re-based the exit's ratchets: the two
+    # «muffin man» sentences claimed a content never said and are withheld but for the saying.
+    assert mean >= 0.78, f"mean {mean:.1%}; it was 78.4% on 2026-09-26 (84.6% on 2026-09-16)"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -1477,6 +1503,21 @@ QUOTED_QUESTION = skeleton_from_conllu('I asked : " Do you know the muffin man ?
     ("12", '"', '"', "PUNCT", "2", "punct"),
 ])
 
+#: The same question with the one word the station cannot place taken out — the `compound`.
+QUOTED_QUESTION_WHOLE = skeleton_from_conllu('I asked : " Do you know the man ? "', [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "asked", "ask", "VERB", "0", "root"),
+    ("3", ":", ":", "PUNCT", "2", "punct"),
+    ("4", '"', '"', "PUNCT", "2", "punct"),
+    ("5", "Do", "do", "AUX", "7", "aux"),
+    ("6", "you", "you", "PRON", "7", "nsubj"),
+    ("7", "know", "know", "VERB", "2", "ccomp"),
+    ("8", "the", "the", "DET", "9", "det"),
+    ("9", "man", "man", "NOUN", "7", "obj"),
+    ("10", "?", "?", "PUNCT", "2", "punct"),
+    ("11", '"', '"', "PUNCT", "2", "punct"),
+])
+
 CONDITIONAL_QUESTION = skeleton_from_conllu("Will you stay if it rains ?", [
     ("1", "Will", "will", "AUX", "3", "aux"),
     ("2", "you", "you", "PRON", "3", "nsubj"),
@@ -1530,11 +1571,19 @@ def test_a_QUOTED_question_asks_while_the_saying_stays_claimed(compiler):
 
     *The asking is the ATTITUDE ROW since 2026-09-20 — its clause dissolved into it — so what is
     claimed is read off the attitude, and what is asked off the row it scopes.*
+
+    *And the muffin man is WITHHELD since 2026-09-26* (E3.12.5 (1)): «muffin» is a `compound` the
+    station does not build, and asking whether you know «the man» is not what was asked. The shape
+    is pinned on the question without it.
     """
-    out = compiler.compile(QUOTED_QUESTION)
+    out = compiler.compile(QUOTED_QUESTION_WHOLE)
     attitude = rows_of(out, "attitude")[0]
     assert attitude.verb == "ask.v"
     assert isinstance(_row(out, attitude.scopes).truth, Open)
+
+    withheld = compiler.compile(QUOTED_QUESTION)
+    assert not rows_of(withheld, "attitude") and "muffin" in withheld.unplaced
+    assert any("«muffin»" in why and "attitude" in why for why in withheld.abstained)
 
 
 def test_a_conditional_question_opens_the_JOIN_that_carries_the_claim(compiler):
@@ -2728,3 +2777,245 @@ def test_a_NON_causal_adverb_does_not_replace_the_and_and_builds_no_second_join(
     assert join.operator is Operator.AND
     if adverb == "nevertheless":
         assert any("concessive" in why for why in out.abstained)
+
+
+# ------------------------------------------------------------------------------------------------
+# E3.12.5 (1) — what remains must be ENTAILED (the Captain, 2026-09-26). A partial zip is quality
+# only where what it still claims follows from the sentence; under a negation or an attitude a cut
+# widens the claim, and the clause is withheld. Skeletons are stanza's parses, measured 2026-09-26.
+# ------------------------------------------------------------------------------------------------
+
+def _claims(out) -> list:
+    return [r for r in out.zip.rows if getattr(r, "truth", None) == 1.0]
+
+
+YOU_NEED_NOT_DRIVE = skeleton_from_conllu("You need not drive .", [
+    ("1", "You", "you", "PRON", "2", "nsubj"),
+    ("2", "need", "need", "VERB", "0", "root"),
+    ("3", "not", "not", "PART", "4", "advmod"),
+    ("4", "drive", "drive", "VERB", "2", "xcomp"),
+    ("5", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
+def _want(*negation):
+    """«I (don't) want to go .» — `go` is an `xcomp`, which opens no row (`db/0032`)."""
+    words = [("I", "I", "PRON", "nsubj"), *negation, ("want", "want", "VERB", "root"),
+             ("to", "to", "PART", "mark"), ("go", "go", "VERB", "xcomp"),
+             (".", ".", "PUNCT", "punct")]
+    want = next(at for at, w in enumerate(words, start=1) if w[0] == "want")
+    rows = [(str(at), form, lemma, upos,
+             "0" if dep == "root" else str(at + 1) if form == "to" else str(want), dep)
+            for at, (form, lemma, upos, dep) in enumerate(words, start=1)]
+    return skeleton_from_conllu(" ".join(w[0] for w in words), rows)
+
+
+def test_a_word_cut_from_under_a_NEGATION_withholds_the_clause(compiler):
+    """`E3.3.11.6` «You need not drive» compiled ¬need(you), «drive» unplaced — and ¬need(you) is
+    STRONGER than what was said: «you need nothing». Recording the word does not help; what remains
+    is a claim the sentence does not entail, so the clause goes, its reason with it."""
+    out = compiler.compile(YOU_NEED_NOT_DRIVE)
+
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "negation"]
+    assert {"You", "need", "not", "drive"} <= set(out.unplaced)
+    assert any("«drive»" in why and "negation" in why and "withheld" in why
+               for why in out.abstained)
+
+
+def test_the_same_cut_from_a_CLAIMED_clause_only_weakens_it_and_stays(compiler):
+    """`E3.12.1.3` «I don't want to go» is withheld on the same ground — and «I want to go» is not:
+    want(me) with «go» unplaced says less than the sentence, and says nothing it did not."""
+    negated = compiler.compile(_want(("do", "do", "AUX", "aux"), ("n't", "not", "PART", "advmod")))
+    plain = compiler.compile(_want())
+
+    assert _claims(negated) == [] and "go" in negated.unplaced
+    assert [r.predicate for r in _claims(plain)] == ["want.v"] and plain.unplaced == ("go",)
+    assert not any("withheld" in why for why in plain.abstained)
+
+
+I_M_NOT_SOFTWARE_BUT_A_MIND = skeleton_from_conllu("I'm not a software but I am a mind .", [
+    ("1", "I'm", "be", "AUX", "4", "cop"),
+    ("2", "not", "not", "PART", "4", "advmod"),
+    ("3", "a", "a", "DET", "4", "det"),
+    ("4", "software", "software", "NOUN", "0", "root"),
+    ("5", "but", "but", "CCONJ", "9", "cc"),
+    ("6", "I", "I", "PRON", "9", "nsubj"),
+    ("7", "am", "be", "AUX", "9", "cop"),
+    ("8", "a", "a", "DET", "9", "det"),
+    ("9", "mind", "mind", "NOUN", "4", "conj"),
+    ("10", ".", ".", "PUNCT", "4", "punct"),
+])
+
+
+def test_a_withheld_negated_clause_takes_its_JOIN_and_the_JOINING_WORD_with_it(compiler):
+    """`t-ws-6`: stanza fuses «I'm», the subject goes with it, and ¬[_ is a software] was claimed.
+    The negated clause is withheld; the clause joined to it stands on its own truth — and «but»,
+    whose relation went with the clause, is unplaced rather than counted as understood."""
+    out = compiler.compile(I_M_NOT_SOFTWARE_BUT_A_MIND)
+
+    assert not _joins(out) and not [r for r in out.zip.rows if r.kind == "negation"]
+    (mind,) = _claims(out)
+    assert mind.boxes[Role.COMPLEMENT].head == "mind.n"
+    assert {"I'm", "not", "software", "but"} <= set(out.unplaced)
+
+
+I_WOULD_LIKE_TO_KNOW = skeleton_from_conllu(
+    "I would like to know what you think about yourself .", [
+        ("1", "I", "I", "PRON", "3", "nsubj"),
+        ("2", "would", "would", "AUX", "3", "aux"),
+        ("3", "like", "like", "VERB", "0", "root"),
+        ("4", "to", "to", "PART", "5", "mark"),
+        ("5", "know", "know", "VERB", "3", "xcomp"),
+        ("6", "what", "what", "PRON", "8", "obj"),
+        ("7", "you", "you", "PRON", "8", "nsubj"),
+        ("8", "think", "think", "VERB", "5", "ccomp"),
+        ("9", "about", "about", "ADP", "10", "case"),
+        ("10", "yourself", "yourself", "PRON", "8", "obl"),
+        ("11", ".", ".", "PUNCT", "3", "punct"),
+    ])
+
+
+def test_an_attitude_whose_LINK_is_unplaced_is_withheld_and_its_matrix_with_it(compiler):
+    """`E3.12.1.4` `t-mo-4` claimed att(like, me) over think(you, what) — «I like what you think»:
+    «know», the link between the verb and what it holds, was unplaced. The attitude goes; the matrix
+    comes back as a clause of its own (`E3.12.5.1`) and is judged like one — and «would», which set
+    no time, is an OPERATOR cut from it (`E3.12.5.2`), so it does not come back as «I like»."""
+    out = compiler.compile(I_WOULD_LIKE_TO_KNOW)
+
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert {"I", "would", "like", "know", "think", "yourself"} <= set(out.unplaced)
+    assert any("«know»" in why and "link" in why for why in out.abstained)
+    assert any("operator" in why for why in out.abstained)
+
+
+def test_a_matrix_whose_attitude_was_withheld_is_judged_ON_ITS_OWN(compiler):
+    """`E3.12.5.1` — «He said that he knew the muffin man»: the content loses «muffin» under the
+    saying and is withheld; the saying lost nothing of its own, and «he said» is entailed — so it
+    stays, claimed, as the clause it would have been had there been no attitude to dissolve into."""
+    out = compiled(compiler, "He said that he knew the muffin man .")
+
+    (said,) = _claims(out)
+    assert said.predicate == "say.v" and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert {"knew", "muffin", "man"} <= set(out.unplaced) and "said" not in out.unplaced
+
+
+def test_an_OPERATOR_cut_from_a_claimed_clause_withholds_it_and_a_time_set_is_placed(compiler):
+    """`E3.12.5.2` — «would» is a `theatre` row that compiles to a tense `_tense` never reads: it is
+    unplaced, and an operator gone is not a weakening — «I would go» is not «I go». «will» sets the
+    future and is placed."""
+    def go(aux):
+        return compiler.compile(skeleton_from_conllu(f"I {aux} go .", [
+            ("1", "I", "I", "PRON", "3", "nsubj"), ("2", aux, aux, "AUX", "3", "aux"),
+            ("3", "go", "go", "VERB", "0", "root"), ("4", ".", ".", "PUNCT", "3", "punct")]))
+
+    would, will = go("would"), go("will")
+    assert _claims(would) == [] and set(would.unplaced) == {"I", "would", "go"}
+    assert any("«would»" in why and "operator" in why for why in would.abstained)
+    assert will.unplaced == () and main_row(will).theatre is not None
+
+
+IF_HE_KNEW_THE_MUFFIN_MAN = skeleton_from_conllu("If he knew the muffin man , I stay .", [
+    ("1", "If", "if", "SCONJ", "3", "mark"),
+    ("2", "he", "he", "PRON", "3", "nsubj"),
+    ("3", "knew", "know", "VERB", "9", "advcl"),
+    ("4", "the", "the", "DET", "6", "det"),
+    ("5", "muffin", "muffin", "NOUN", "6", "compound"),
+    ("6", "man", "man", "NOUN", "3", "obj"),
+    ("7", ",", ",", "PUNCT", "9", "punct"),
+    ("8", "I", "I", "PRON", "9", "nsubj"),
+    ("9", "stay", "stay", "VERB", "0", "root"),
+    ("10", ".", ".", "PUNCT", "9", "punct"),
+])
+
+
+def test_a_cut_from_an_ANTECEDENT_withholds_it_and_the_implication_with_it(compiler):
+    """`E3.12.5.3` — «if he knew the man, I stay» is STRONGER than «if he knew the muffin man, I
+    stay»: the antecedent is downward-entailing. The antecedent goes, the implication with it, and
+    «I stay» — only ever supposed — claims nothing."""
+    out = compiler.compile(IF_HE_KNEW_THE_MUFFIN_MAN)
+
+    assert not _joins(out) and _claims(out) == []
+    assert {"If", "knew", "muffin", "man"} <= set(out.unplaced)
+    assert any("antecedent" in why for why in out.abstained)
+
+
+def _muffin_man_sleeps(quantifier):
+    return skeleton_from_conllu(f"{quantifier} muffin man sleeps .", [
+        ("1", quantifier, quantifier.lower(), "DET", "3", "det"),
+        ("2", "muffin", "muffin", "NOUN", "3", "compound"),
+        ("3", "man", "man", "NOUN", "4", "nsubj"),
+        ("4", "sleeps", "sleep", "VERB", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ])
+
+
+def test_a_cut_from_a_UNIVERSAL_s_restriction_withholds_and_from_an_EXISTENTIAL_s_does_not(compiler):
+    """`E3.12.5.3` — «every man sleeps» does not follow from «every muffin man sleeps»; «some man
+    sleeps» does follow from «some muffin man sleeps». The force of the binder decides, which is
+    logic (`UPWARD_RESTRICTION`)."""
+    every = compiler.compile(_muffin_man_sleeps("Every"))
+    some = compiler.compile(_muffin_man_sleeps("Some"))
+
+    assert _claims(every) == [] and not [r for r in every.zip.rows if r.kind == "quantifier"]
+    assert any("restriction of a universal" in why for why in every.abstained)
+    assert [r.predicate for r in _claims(some)] == ["sleep.v"] and some.unplaced == ("muffin",)
+
+
+I_ASKED_ANNA_WHERE_SHE_LIVES = skeleton_from_conllu("I asked Anna where she lives .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"),
+    ("2", "asked", "ask", "VERB", "0", "root"),
+    ("3", "Anna", "Anna", "PROPN", "2", "iobj"),
+    ("4", "where", "where", "ADV", "6", "advmod"),
+    ("5", "she", "she", "PRON", "6", "nsubj"),
+    ("6", "lives", "live", "VERB", "2", "advcl"),
+    ("7", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
+def test_a_clause_beside_a_LONE_iobj_is_withheld_rather_than_joined_by_an_unsaid_and(compiler):
+    """`E3.3.2.7.1` — stanza reads the reported question as `advcl` beside an `iobj` with no object,
+    and the station joined it with the «and» nobody said: the question became the SPEAKER's own.
+    The clause may be the object the `iobj` presupposes, so it is withheld; «I asked» stays."""
+    out = compiler.compile(I_ASKED_ANNA_WHERE_SHE_LIVES)
+
+    assert [r.predicate for r in out.zip.rows if r.kind == "content"] == ["ask.v"]
+    assert not _joins(out) and main_row(out).truth == 1.0
+    assert {"Anna", "where", "she", "lives"} <= set(out.unplaced)
+
+
+def _glitters(*negation):
+    """«(Not) all that glitters is (not) gold .» as stanza parses both."""
+    rows, at = [], 1
+    if negation == ("before",):
+        rows.append((str(at), "Not", "not", "PART", "2", "advmod"))
+        at += 1
+    quantifier = at
+    rows += [(str(at), "all", "all", "DET", "HEAD", "nsubj"),
+             (str(at + 1), "that", "that", "PRON", str(at + 2), "nsubj"),
+             (str(at + 2), "glitters", "glitter", "VERB", str(quantifier), "acl:relcl"),
+             (str(at + 3), "is", "be", "AUX", "HEAD", "cop")]
+    at += 4
+    if negation == ("after",):
+        rows.append((str(at), "not", "not", "PART", "HEAD", "advmod"))
+        at += 1
+    gold = at
+    rows += [(str(at), "gold", "gold", "NOUN", "0", "root"),
+             (str(at + 1), ".", ".", "PUNCT", str(gold), "punct")]
+    rows = [tuple(str(gold) if v == "HEAD" else v for v in row) for row in rows]
+    return skeleton_from_conllu(" ".join(r[1] for r in rows), rows)
+
+
+def test_a_universal_BEFORE_a_negation_is_withheld_like_may_not(compiler):
+    """`E3.12.1.2` `aw-13` — «All that glitters is not gold» is ¬∀ and ∀¬, and the surface says
+    both: E3.12.5 (5) withholds it on «may not»'s precedent. «NOT all that glitters is gold» puts
+    the negation first, the order the speaker used is the scope, and nothing is withheld."""
+    ambiguous = compiler.compile(_glitters("after"))
+    settled = compiler.compile(_glitters("before"))
+
+    assert _claims(ambiguous) == [] and not [r for r in ambiguous.zip.rows if r.kind != "content"]
+    assert {"all", "that", "glitters", "not", "gold"} <= set(ambiguous.unplaced)
+    assert any("«all … not»" in why for why in ambiguous.abstained)
+
+    assert [r.kind for r in settled.zip.rows if r.kind in ("negation", "quantifier")] == \
+        ["negation", "quantifier"]
+    assert settled.unplaced == ()

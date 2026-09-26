@@ -48,7 +48,9 @@ def test_the_gate_answers_what_it_can_and_the_number_is_held(scored):
     saying something about itself."""
     answered = sum(1 for _, verdict, _, _ in scored if verdict == ANSWERED)
 
-    assert answered >= 33, f"the gate answered {answered} of {len(CASES)}; 33 on 2026-09-16"
+    # Re-based 2026-09-26, 33 → 32, E3.12.5 — the Captain re-based the exit's ratchets: the two
+    # «muffin man» sentences claimed a content never said, and now abstain.
+    assert answered >= 32, f"the gate answered {answered} of {len(CASES)}; 32 on 2026-09-26"
 
 
 def test_every_abstention_says_WHY(scored):

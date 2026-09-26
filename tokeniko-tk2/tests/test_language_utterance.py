@@ -31,6 +31,16 @@ def compiled(compiler, text):
     return compiler.compile(case(text).skeleton)
 
 
+def _without(skeleton, text):
+    """The same parse with one word taken out and every head renumbered around it."""
+    gone = next(w.index for w in skeleton if w.text == text)
+    at = {w.index: n for n, w in enumerate(w for w in skeleton if w.index != gone)}
+    rows = [(str(at[w.index] + 1), w.text, w.lemma, w.upos,
+             "0" if w.is_root else str(at[w.head] + 1), w.dep)
+            for w in skeleton if w.index != gone]
+    return skeleton_from_conllu(" ".join(r[1] for r in rows), rows)
+
+
 # ------------------------------------------------------------------------------------------------
 # 2b.1 — context as an ARGUMENT
 # ------------------------------------------------------------------------------------------------
@@ -292,19 +302,22 @@ def test_QUOTED_speech_rotates_and_stanza_is_what_says_which(compiler):
     from tk2.language.skeleton import StanzaSkeletons
 
     provider = StanzaSkeletons()
-    for sentence in ('Bob told me "I trust you".',
-                     'Bob told me \u201cI trust you\u201d.'):
+    for sentence in ('Bob told me "I am tired".',
+                     'Bob told me \u201cI am tired\u201d.'):
         out = compiler.compile(provider(sentence)[0],
                                context=Context(speaker="kotekino", addressee="captain"))
-        trusting = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "trust.v")
-        # `trust` is cognition, so its subject is an experiencer (req 22) — WHO it is is the point here
-        assert trusting.boxes[Role.EXPERIENCER].head == "bob.n", f"«I» is Bob in {sentence!r}"
-        # **AND THE QUOTED «you» HAS NO BOX, ON PURPOSE.** Stanza labels the only object of «trust»
-        # `iobj`, which UD reserves for a clause that also has a direct object — so the station
-        # abstains rather than inventing a recipient (req 22, `q-2`). The rotation above is what this
-        # test is for, and it is unaffected: a provider's mislabel costs a role, never a person.
-        assert any("iobj" in reason for reason in out.abstained), \
-            f"the lone `iobj` is abstained, not read, in {sentence!r}"
+        tired = next(r for r in out.zip.rows if r.kind == "content"
+                     and r.boxes.get(Role.COMPLEMENT) and r.boxes[Role.COMPLEMENT].head == "tired.a")
+        assert tired.boxes[Role.EXPERIENCER].head == "bob.n", f"«I» is Bob in {sentence!r}"
+
+    # **`q-2`'s own «I trust you» is WITHHELD since 2026-09-26** (E3.12.5 (1)). Stanza labels the
+    # only object of «trust» `iobj`, which UD reserves for a clause that also has a direct object,
+    # so the station abstains on it (req 22) — and a word cut from under the saying changes what Bob
+    # SAID: «Bob told me "I trust"». So the rotation is pinned on a quote with nothing cut from it.
+    out = compiler.compile(provider('Bob told me "I trust you".')[0],
+                           context=Context(speaker="kotekino", addressee="captain"))
+    assert any("iobj" in reason for reason in out.abstained)
+    assert not [r for r in out.zip.rows if r.kind == "attitude"] and "you" in out.unplaced
 
 def test_a_CONDITIONAL_does_not_rotate(compiler):
     """Only an ATTITUDE rotates. «if you know who did it» is still the outer speaker's «you» — the
@@ -420,9 +433,21 @@ def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
     Both forms must produce the same shape: `ccomp` is `ccomp` whether or not there are quotation
     marks. **What differs is what the holder DID** (the truth-slot ruling, 2026-09-17): he SAID the
     first and ASKED the second, so the first is stated and the second is OPEN (req 21).
+
+    *Without the muffin since 2026-09-26*: «muffin» is a `compound` the station does not build, and
+    cut from under the saying it changes what was said (E3.12.5 (1)) — both UD sentences now keep
+    the saying and WITHHOLD what was said (`E3.12.5.1`), and the shape is pinned on them with that
+    one word taken out.
     """
-    marked = compiled(compiler, "He said that he knew the muffin man .")
-    bare = compiled(compiler, 'I asked : " Do you know the muffin man ? "')
+    for text in ("He said that he knew the muffin man .", 'I asked : " Do you know the muffin man ? "'):
+        withheld = compiled(compiler, text)
+        assert not [r for r in withheld.zip.rows if r.kind == "attitude"]
+        assert any("«muffin»" in why for why in withheld.abstained)
+
+    marked = compiler.compile(_without(case("He said that he knew the muffin man .").skeleton,
+                                       "muffin"))
+    bare = compiler.compile(_without(case('I asked : " Do you know the muffin man ? "').skeleton,
+                                     "muffin"))
 
     for out in (marked, bare):
         attitude = next(r for r in out.zip.rows if r.kind == "attitude")

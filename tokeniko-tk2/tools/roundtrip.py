@@ -27,7 +27,6 @@ counted apart from the sentences that came back changed.
 
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
@@ -38,7 +37,7 @@ from tk2.language import standing_closed_classes  # noqa: E402
 from tk2.language.compile import Compiler  # noqa: E402
 from tk2.language.decompile import Decompiler  # noqa: E402
 from tk2.language.utterance import compile_utterance  # noqa: E402
-from tools.drill_gate import DISAGREED, DRILL_CONTEXT, PREFIX_KINDS, compare  # noqa: E402
+from tools.drill_gate import DISAGREED, DRILL_CONTEXT, PREFIX_KINDS, compare, spoken  # noqa: E402
 
 
 def fixpoint(argv, args) -> int:
@@ -74,12 +73,10 @@ def fixpoint(argv, args) -> int:
     print(f"  closed classes    {len(table)} rows, v{table.version} — {table.source}")
     print(f"  the corpus        {len(CASES)} sentences\n")
 
-    same = changed = silent = 0
+    same = changed = silent = withheld = 0
     whole_same = whole_changed = whole_silent = 0
     for case in CASES:
-        # The drill annotates a few of its sentences — «… [de dicto]» — and the bracket is a note to
-        # the reader, not words anybody said. Compiling it makes a second sentence out of nothing.
-        sentence = re.sub(r"\s*\[[^\]]*\]\s*$", "", case.sentence).strip()
+        sentence = spoken(case.sentence)
         skeletons = provider(sentence)
         if not skeletons:
             silent += 1
@@ -90,6 +87,15 @@ def fixpoint(argv, args) -> int:
         # never held is not something the decompiler dropped, so the two populations are reported
         # apart — the same discipline the UD gate uses for its ratchet and its frontier.
         covered = not first.unplaced
+        if _wholly_withheld(first):
+            # **A SENTENCE THE STATION WITHHELD WHOLE IS NOT SILENT** (`E3.12.5.5`). Its zip claims
+            # nothing and says so — every word in `unplaced`, every reason in `abstained` — so the
+            # decompiler has nothing to say and says nothing. SILENT keeps its meaning: a zip that
+            # HELD something and came back as nothing, the loss with no record.
+            withheld += 1
+            if args.all:
+                print(f"  {case.id:8} WITHHELD « {sentence[:62]} »")
+            continue
         out = decompiler.decompile(first)
         if not out.text.strip():
             # **SILENCE IS THE WORST OUTCOME AND IT USED TO BE THE QUIETEST.** A MOVED case says
@@ -121,6 +127,8 @@ def fixpoint(argv, args) -> int:
     print(f"\n  FIXED           {same} of {len(CASES)} — the zip came back exactly as it went out")
     print(f"  MOVED           {changed} — the decompiler dropped or changed something the zip held")
     print(f"  SILENT          {silent} — the decompiler said nothing at all")
+    print(f"  WITHHELD        {withheld} — the station claimed nothing and said why: an honest "
+          f"abstention, not a round trip")
     print(f"\n  OF THE SENTENCES THE COMPILER READ WHOLE — no word left unplaced:")
     print(f"  FIXED           {whole_same} of {whole_same + whole_changed + whole_silent}")
     print(f"  MOVED           {whole_changed} — and these are the decompiler's own, because the "
@@ -130,6 +138,13 @@ def fixpoint(argv, args) -> int:
           f"whole")
     # Silence is a failure too — it was not, and that is half of why it stayed invisible.
     return 1 if (changed or silent) else 0
+
+
+def _wholly_withheld(zip_) -> bool:
+    """Did the station withhold the whole sentence — no row holding anything, every word unplaced?
+    That is the shape `Compiler.compile` gives a sentence nothing was understood of."""
+    empty = all(row.kind == "content" and not row.predicate and not row.boxes for row in zip_.rows)
+    return empty and bool(zip_.unplaced)
 
 
 #: The operators that are ASSOCIATIVE and COMMUTATIVE, so that `and(and(a,b),c)` and `and(a,and(b,c))`

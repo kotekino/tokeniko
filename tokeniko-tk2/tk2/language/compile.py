@@ -158,6 +158,41 @@ ROW_PREFIXES = {"clause": "r", "modifier": "m", "binder": "q", "join": "j", "pre
 #: its placement `box` would make the trace say the preposition filled the role.
 CLOSED_KIND_PLACES = {"box": "marker"}
 
+#: **WHICH ARGUMENT PLACES PRESERVE TRUTH UPWARD** — monotonicity, which is LOGIC and the one
+#: kingdom the frame-or-knowledge rule exempts (E3.12.5 (1), `E3.12.5.3`). An operand marked False
+#: is one where a weaker operand makes a STRONGER whole: the antecedent of an implication, the
+#: negated half of `nimply`. `nand` and `nor` are downward in both, and `xor` and `eq` are neither —
+#: absent, and so never upward. `imply` and `nimply` read `[antecedent, consequent]`, `_relate`'s
+#: order; `conv` is `imply` read the other way (`b → a`).
+UPWARD_OPERANDS: dict[Operator, tuple[bool, bool]] = {
+    Operator.AND: (True, True),
+    Operator.OR: (True, True),
+    Operator.IMPLY: (False, True),
+    Operator.NIMPLY: (True, False),
+    Operator.CONV: (True, False),
+    Operator.NCONV: (False, True),
+}
+
+#: **A QUANTIFIER'S TWO ARGUMENTS, BY ITS FORCE** — logic again. «Some black cat sleeps» entails
+#: «some cat sleeps», and «every black cat sleeps» does not entail «every cat sleeps»: the universal
+#: is downward in what it ranges over and upward in what it says; `negative` (¬∃) is downward in
+#: both, `negated_universal` (¬∀) the mirror of ∀. A binder with no force — a definite description,
+#: schema v8 — quantifies nothing and is read as it was before.
+UPWARD_RESTRICTION = frozenset({Quantity.EXISTENTIAL, Quantity.NEGATED_UNIVERSAL})
+UPWARD_SCOPE = frozenset({Quantity.UNIVERSAL, Quantity.EXISTENTIAL})
+
+
+def _is_operator(compiled: dict) -> bool:
+    """Does a closed-class row compile to an OPERATOR — something the zip holds OVER a row rather
+    than IN one of its boxes (`E3.12.5.2`)? Read off the row's own `compiled`: a PREFIX element
+    (negation · modality · attitude · domain), a BINDER, or a TIME the row states. The two kinds are
+    the table's names for the two ways a row reaches the prefix (tkzip req 35), not a roster of
+    words; an ambiguous row is one if any of its readings is."""
+    if compiled.get("kind") == "ambiguous":
+        return any(_is_operator(candidate) for candidate in compiled.get("candidates") or ())
+    return compiled.get("kind") in ("prefix", "quantifier") \
+        or bool(compiled.get("tense") or compiled.get("aspect"))
+
 def numeral_value(lemma: str, text: str = "") -> int | None:
     """A numeral's VALUE, or None when this station cannot read it.
 
@@ -414,7 +449,7 @@ class Compiler:
         defaulted: list[str] = []
         prefix_rows: list = []
         modifiers: list = []   # (var, adjective key, its binder, the row it belongs to)
-        adverb_joins: list = []   # (row, operator, pragmatic) — a discourse adverb needs two rows
+        adverb_joins: list = []   # (row, operator, pragmatic, word) — a discourse adverb needs two
         content: dict[int, ContentRow] = {}
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
@@ -438,18 +473,35 @@ class Compiler:
         dissolved: set[str] = set()
         withheld: list[int] = []      # relative clauses whose gap no machinery could place
         coordinated: dict = {}        # a `conj` clause's row -> the join its coordination built
+        built_from: dict[str, set[int]] = {}   # a join -> the words that built it (`_withhold`)
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained,
-                             dissolved, withheld, coordinated)
+                             dissolved, withheld, coordinated, built_from)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
         self._question(skeleton, heads, owner, content, joins, asked)
         self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
         extra += self._modify(modifiers, joins, content)
         self._control(skeleton, heads, content, marks, covered, prefix_rows, joins, abstained)
-        self._connect(adverb_joins, content, joins, abstained, coordinated)
-        if withheld or unscoped:
-            prefix_rows, content, extra, joins = self._withhold(
-                skeleton, heads, withheld, content, prefix_rows, extra, joins, covered,
-                {h: {i for i, o in owner.items() if o == h} for h in unscoped})
+        self._connect(adverb_joins, content, joins, abstained, coordinated, built_from)
+
+        # **WHAT REMAINS MUST BE ENTAILED** (E3.12.5 (1), the Captain 2026-09-26) — and whether it
+        # is depends on what withholding already took, so the two alternate until neither moves:
+        # a clause withheld under an attitude takes the attitude with it, which can leave the
+        # matrix's own losses under a negation of its own.
+        words_of = {h.index: {i for i, o in owner.items() if o == h.index} for h in heads}
+        taken: set[int] = set()
+        pending = set(unscoped)
+        while True:
+            if withheld or pending:
+                prefix_rows, content, extra, joins = self._withhold(
+                    skeleton, heads, withheld, content, prefix_rows, extra, joins, covered,
+                    {h: words_of[h] for h in pending}, words_of, built_from)
+                taken |= pending
+                withheld = []
+                self._orphaned(skeleton, heads, content, prefix_rows, joins, dissolved)
+            pending = self._unentailed(skeleton, heads, content, prefix_rows, joins, dissolved,
+                                       covered, abstained, marks, owner) - taken
+            if not pending:
+                break
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
@@ -461,8 +513,7 @@ class Compiler:
         # **UNLESS SOMETHING STILL NAMES IT.** «Anna thinks that Bob believes that X» dissolves Bob's
         # clause into an attitude, and Anna's attitude scopes that same row — a prefix element nests
         # over a MATRIX and cannot nest over nothing. A row anybody points at stays.
-        named = {row.scopes for row in prefix_rows if getattr(row, "scopes", None)}
-        named |= {operand for join in joins for operand in join.operands}
+        named = self._named(prefix_rows, joins)
         rows = [*prefix_rows,
                 *(row for row in content.values()
                   if row.name not in dissolved or row.name in named),
@@ -685,7 +736,10 @@ class Compiler:
             word = skeleton[index]
             if word.bare_dep not in NOMINAL_DEPS or index in marks:
                 continue
-            role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
+            # **A LOOK AHEAD, AND IT REPORTS NOTHING** (`E3.12.5.7`): every word asked here is asked
+            # again by the clause walk, which is where an abstention belongs — reporting it here too
+            # wrote «Anna: `iobj` with no direct object» twice.
+            role = self._role_of(word, skeleton, marks, copular, defaulted)
             if role is not None:
                 wanted.setdefault(role, []).append(index)
 
@@ -708,7 +762,7 @@ class Compiler:
                 continue
             # **CONTESTED, AND THE FRONTED ONE YIELDS.** Two phrases wanting one box is the only
             # evidence in the tree that one of them is not about the event at all.
-            role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
+            role = self._role_of(word, skeleton, marks, copular, defaulted)
             if fronted and role is not None and len(wanted.get(role, ())) > 1:
                 found.add(index)
         return found
@@ -839,6 +893,9 @@ class Compiler:
 
         if not self._scope(scoped, prefix_rows, abstained) and unscoped is not None:
             unscoped.append(head.index)
+        elif self._universal_meets_negation(scoped, mine, marks, covered, abstained) \
+                and unscoped is not None:
+            unscoped.append(head.index)
 
         for word, _box in unresolved:
             if word.index not in covered:
@@ -856,8 +913,50 @@ class Compiler:
             boxes[recipient] = boxes[recipient].model_copy(
                 update={"marker": understood, "marker_implicit": True})
 
-        return ContentRow(name=name, predicate=predicate, theatre=self._theatre(skeleton, head),
+        # **A TENSE WORD THAT SET NO TIME WAS NOT PLACED** (E3.12.1.4). «would»'s row says it
+        # compiles to a tense, and it was counted as read while `_tense` found nothing in it to
+        # read — «I would like to know …» lost its «would» with `unplaced` empty. Where the clause
+        # came out with no theatre, what such a row promised never reached the zip. A CARRIER —
+        # «does», «has», whose row names no tense because the inflection holds it — is not this
+        # case: what it carries is the parse's to give, and its row promised nothing.
+        theatre = self._theatre(skeleton, head)
+        if theatre is None:
+            for index in mine:
+                if covered.label(index) == "theatre" and marks.get(index) is not None \
+                        and marks[index].compiled.get("tense"):
+                    covered.discard(index)
+
+        return ContentRow(name=name, predicate=predicate, theatre=theatre,
                           predicate_sense=Open() if predicate else None, boxes=boxes)
+
+    def _universal_meets_negation(self, scoped: list[_Scoped], mine: set[int], marks: dict,
+                                  covered: Placements, abstained: list) -> bool:
+        """**«ALL … NOT» IS THE «MAY NOT» OF THE QUANTIFIERS** (E3.12.5 (5), the Captain 2026-09-26).
+
+        «All that glitters is not gold» is ¬∀ — not all of it is — and ∀¬ — none of it is — and the
+        surface says both: the universal stands before the negation in either reading. `_scope`'s
+        precedent decides it: a scope the sentence does not state is not one the station assumes,
+        and neither reading is true under the other. So the clause is withheld whole.
+
+        Only where the universal comes FIRST: «NOT ALL that glitters is gold» puts the negation
+        before it, and the order the speaker used is the scope (req 35). Only a UNIVERSAL — the
+        ruling's case, and the one whose two readings are the two the drill holds (`aw-13`,
+        `aw-14`). The quantifier is found as a word of this clause the table reads as one, and it
+        must have been PLACED — a binder that was never raised scopes nothing.
+        """
+        negations = [item.index for item in scoped if item.negation or item.own]
+        if not negations:
+            return False
+        universals = [index for index in mine
+                      if index in covered and marks.get(index) is not None
+                      and marks[index].kind == "quantifier"
+                      and marks[index].compiled.get("quantity") == Quantity.UNIVERSAL.value]
+        if not universals or min(universals) > max(negations):
+            return False
+        word = marks[min(universals)].form
+        abstained.append(f"«{word} … not»: the universal and the negation scope both ways and "
+                         f"nothing here says which — the clause is withheld")
+        return True
 
     def _scope(self, scoped: list[_Scoped], prefix_rows: list, abstained: list) -> bool:
         """**WHICH OF A CLAUSE'S NEGATIONS AND MODALITIES SCOPES OVER WHICH** — the prefix order is
@@ -931,7 +1030,8 @@ class Compiler:
     def _relate(self, skeleton: Skeleton, heads: list[Word], content: dict[int, ContentRow],
                 marks: dict, covered: Placements, prefix_rows: list, abstained: list,
                 dissolved: set, withheld: list | None = None,
-                coordinated: dict | None = None) -> list[JoinRow]:
+                coordinated: dict | None = None,
+                built_from: dict | None = None) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -993,6 +1093,21 @@ class Compiler:
                 # test (E3.2.1.4).
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, None,
                                dissolved)
+                continue
+
+            if joiner is None and head.bare_dep != "conj" and self._lone_iobj(skeleton, outer):
+                # **A LONE `iobj` SAYS AN OBJECT WENT MISSING, AND THIS CLAUSE MAY BE IT**
+                # (E3.3.2.7.1). «I asked Anna where she lives» parses the question as `advcl` beside
+                # an `iobj` with no object — UD's `iobj` presupposes one, and the unmarked clause is
+                # the only candidate. Joining it by the «and» nobody said made the reported question
+                # the speaker's own. Reading it as the object instead would be compensating for the
+                # provider (`_role_of`'s `q-2` argument), so it is withheld: «I asked» stays, and
+                # is entailed.
+                abstained.append(f"«{head.text}»: a clause no word relates to «{outer.text}», whose "
+                                 f"`iobj` is missing its object — it may be that object, and is "
+                                 f"withheld")
+                if withheld is not None:
+                    withheld.append(head.index)
                 continue
 
             operator = (joiner.compiled.get("operator") if joiner else None) or "and"
@@ -1081,9 +1196,11 @@ class Compiler:
             if head.bare_dep == "conj" and coordinated is not None:
                 coordinated[inner.name] = fresh
             if joiner is not None:
-                covered.update(range(joiner_index(skeleton, head, joiner),
-                                     joiner_index(skeleton, head, joiner) + joiner.length),
-                               label="join")
+                words = range(joiner_index(skeleton, head, joiner),
+                              joiner_index(skeleton, head, joiner) + joiner.length)
+                covered.update(words, label="join")
+                if built_from is not None:
+                    built_from[fresh.name] = set(words)
 
         # Now every join has spoken. What no join left unasserted, the speaker claimed.
         for row in content.values():
@@ -1283,7 +1400,7 @@ class Compiler:
                 join.truth = None
 
     def _connect(self, adverb_joins: list, content: dict, joins: list, abstained: list,
-                 coordinated: dict | None = None) -> None:
+                 coordinated: dict | None = None, built_from: dict | None = None) -> None:
         """A DISCOURSE adverb relates two ROWS, so it can only be built once both exist.
 
         «He was tired. Therefore he left.» — `therefore` is an IMPLY between the row it sits in and
@@ -1297,7 +1414,8 @@ class Compiler:
         operand would be the silently-complete nearest fit.
         """
         order = [row.name for row in content.values()]
-        for owner, operator, pragmatic in adverb_joins:
+        built_from = built_from if built_from is not None else {}
+        for owner, operator, pragmatic, word in adverb_joins:
             coordination = (coordinated or {}).get(owner)
             if coordination is not None:
                 # **«AND THEREFORE» IS THE ADVERB'S JOIN, AND IT REPLACES THE «AND»** (t-dc-5, the
@@ -1316,6 +1434,7 @@ class Compiler:
                 #     the loss is named rather than written as a second parent
                 if Operator(operator) is Operator.IMPLY:
                     coordination.operator = Operator.IMPLY
+                    built_from.setdefault(coordination.name, set()).add(word)
                 elif Operator(operator) is not coordination.operator:
                     abstained.append(f"a {operator} connective inside a {coordination.operator.value} "
                                      f"coordination — one join cannot be both, and the "
@@ -1331,6 +1450,7 @@ class Compiler:
             join = JoinRow(name=f"j{len(joins)}", operator=Operator(operator),
                            operands=[order[position - 1], owner], truth=CLAIMED)
             joins.append(join)
+            built_from[join.name] = {word}
             if pragmatic:
                 # Parked by name, exactly as `db/0008` parked the concessive prepositions: the
                 # defeated expectation is not truth-functional and the figurative layer will want
@@ -1385,7 +1505,8 @@ class Compiler:
             return set()
 
         if compiled.get("kind") == "join" and compiled.get("operator"):
-            adverb_joins.append((scopes, compiled["operator"], compiled.get("pragmatic")))
+            adverb_joins.append((scopes, compiled["operator"], compiled.get("pragmatic"),
+                                 word.index))
             return taken
 
         return set()
@@ -2031,7 +2152,9 @@ class Compiler:
 
     def _withhold(self, skeleton: Skeleton, heads: list[Word], withheld: list[int],
                   content: dict, prefix_rows: list, extra: list, joins: list,
-                  covered: Placements, own: dict[int, set[int]] | None = None):
+                  covered: Placements, own: dict[int, set[int]] | None = None,
+                  words_of: dict[int, set[int]] | None = None,
+                  built_from: dict[str, set[int]] | None = None):
         """Take a relative clause whose gap could not be placed OUT of the zip, and give its words
         back to `unplaced` — and a clause whose modal scope no row decides (`_scope`), which goes
         with its OWN words only: `own` maps its head to them, and a clause inside it that was joined
@@ -2044,6 +2167,13 @@ class Compiler:
 
         Everything the clause owns goes with it: the clauses inside it, the prefix rows scoping any
         of them, the joins naming them, and whatever a dropped binder's variable appears in.
+
+        **AND THE WORDS OF EVERYTHING THAT WENT WITH IT GO BACK TO `unplaced`** *(2026-09-26)*. Only
+        the withheld clause's own words did, so a row dropped ALONGSIDE it kept its words counted as
+        placed: «All that glitters is not gold» withheld the gold clause, the binder went with it,
+        the glittering row went with the binder — and «that glitters» still read as understood. The
+        same for a join whose operand went: «but» and «because» stayed placed after the relation
+        they built was gone. `words_of` gives each clause's words, `built_from` each join's.
         """
         subtree = set()
         for top in withheld:
@@ -2059,7 +2189,8 @@ class Compiler:
         own = own or {}
         for index in subtree | {i for words in own.values() for i in words}:
             covered.discard(index)
-        names = {content[h.index].name for h in heads if h.index in subtree or h.index in own}
+        names = {content[h.index].name for h in heads
+                 if h.index in content and (h.index in subtree or h.index in own)}
         gone_vars: set[str] = set()
 
         def uses(row) -> bool:
@@ -2079,9 +2210,203 @@ class Compiler:
                     changed = True
                     if getattr(row, "binds", None):
                         gone_vars.add(row.binds)
+        for index, row in content.items():
+            if row.name in names:
+                for word in (words_of or {}).get(index, ()):
+                    covered.discard(word)
+        for join in joins:
+            if join.name in names:
+                for word in (built_from or {}).get(join.name, ()):
+                    covered.discard(word)
         keep = (lambda rows: [r for r in rows if r.name not in names])
         return (keep(prefix_rows), {i: r for i, r in content.items() if r.name not in names},
                 keep(extra), keep(joins))
+
+    @staticmethod
+    def _named(prefix_rows: list, joins: list) -> set[str]:
+        """Every row something points at — a prefix row's scope, a join's operand."""
+        named = {row.scopes for row in prefix_rows if getattr(row, "scopes", None)}
+        return named | {operand for join in joins for operand in join.operands}
+
+    def _matrix_of(self, skeleton: Skeleton, heads: list[Word], content: dict,
+                   attitude) -> Word | None:
+        """The clause an attitude row was built FROM — the enclosing clause of the one it scopes,
+        which is where `_relate` read its verb and holder. None for an attitude no clause carries
+        (the imperative's want is the speech act's, not a clause's)."""
+        scoped = next((i for i, row in content.items() if row.name == attitude.scopes), None)
+        if scoped is None:
+            return None
+        return self._enclosing(skeleton, skeleton[scoped], {h.index: None for h in heads})
+
+    def _orphaned(self, skeleton: Skeleton, heads: list[Word], content: dict, prefix_rows: list,
+                  joins: list, dissolved: set) -> None:
+        """A matrix that DISSOLVED into an attitude, whose attitude was then withheld, is a clause
+        of its own again (`E3.3.2.7` / `E3.12.5.1`, the Captain 2026-09-26).
+
+        Its content lived in the attitude row — the verb, the holder, the addressee — so with the
+        attitude gone it comes back as the row it would have been, and is judged like any other: «He
+        said that he knew the muffin man» keeps say(he), because cutting the complement from a
+        claimed clause only weakens it; «I WOULD like to know …» loses it, because «would» is an
+        operator and cutting one is not a weakening (`_unentailed`).
+        """
+        named = self._named(prefix_rows, joins)
+        carried = {matrix.index for attitude in prefix_rows if isinstance(attitude, AttitudeRow)
+                   for matrix in (self._matrix_of(skeleton, heads, content, attitude),)
+                   if matrix is not None}
+        for index, row in content.items():
+            if row.name in dissolved and row.name not in named and index not in carried:
+                dissolved.discard(row.name)
+
+    def _unentailed(self, skeleton: Skeleton, heads: list[Word], content: dict,
+                    prefix_rows: list, joins: list, dissolved: set, covered: Placements,
+                    abstained: list, marks: dict, owner: dict[int, int]) -> set[int]:
+        """The clauses whose partial reading is NOT entailed by the sentence — to be withheld.
+
+        **A PARTIAL ZIP IS QUALITY ONLY IF WHAT IT STILL CLAIMS IS ENTAILED** (E3.12.5 (1), the
+        Captain 2026-09-26); otherwise it is a wrong claim, whatever `unplaced` records. Whether
+        cutting a word out of a clause weakens the claim or changes it is a fact about the clause's
+        POSITION, and the zip already holds the position — what is over it, and where it stands in
+        the joins above it:
+
+            claimed, nothing over it    «I asked Anna …» → ask(me): less was said, and it was said
+            under a NEGATION            ¬need(you, drive) → ¬need(you) is STRONGER: «you need
+                                        nothing». Downward-entailing, so the cut widens the claim
+            under an ATTITUDE           want(me, go) → want(me): the content of the wanting
+                                        changed. Opaque — nothing cut from it is entailed
+            the ANTECEDENT of an IMPLY  «if it rains HARD, I stay» → «if it rains, I stay» is
+                                        stronger (`E3.12.5.3`) — and so for every operand position
+                                        of `UPWARD_OPERANDS` that does not preserve truth upward
+            a quantifier's RESTRICTION  «every BLACK cat sleeps» → «every cat sleeps» (`E3.12.5.3`),
+            or its SCOPE, by its force  read off `UPWARD_RESTRICTION` / `UPWARD_SCOPE`
+
+        A word is LOST to the nearest clause of the zip above it: its own, or — when its own clause
+        was withheld — the one that clause hung off, because «I do not like the fish the cat ate»
+        with the relative gone says the speaker likes no fish. A restriction is found on the TREE:
+        the cut word lies inside the phrase a placed quantifier word binds.
+
+        **AN OPERATOR IS NEVER CUT HONESTLY** (`E3.12.5.2`). A word whose closed-class row compiles
+        to something the zip holds OVER a row — a prefix element, a binder, the row's time — changes
+        the claim when it goes, whatever the position: «I would go» is not «I go». Only the clause
+        that OWNS the word answers for it: a withheld complement's «would» is not its matrix's.
+
+        **AND AN ATTITUDE'S CHAIN.** The row an attitude scopes may sit below its verb through a
+        word that opens no row of its own — «I would like TO KNOW what you think» — and when that
+        link is unplaced the attitude holds a content its verb never took: «I like what you think».
+        The link is found on the tree between the two heads, never by what the word is.
+
+        Conservative by construction: a downward position counts however many others are above it
+        (no parity), and a word under a negation that STRENGTHENS it («not AT ALL») is withheld with
+        the rest. Withholding costs coverage; a widened claim costs a false belief, which is
+        retreated and never edited.
+        """
+        named = self._named(prefix_rows, joins)
+        present = {i for i, row in content.items()
+                   if row.name not in dissolved or row.name in named}
+        parent = {operand: (join, at) for join in joins for at, operand in enumerate(join.operands)}
+        over: dict[str, list] = {}
+        for row in prefix_rows:
+            over.setdefault(row.scopes, []).append(row)
+
+        def position(name: str) -> str | None:
+            """Why this row's claim does NOT survive a cut, or None where it only weakens."""
+            seen = set()
+            while name is not None and name not in seen:
+                seen.add(name)
+                for p in over.get(name, ()):
+                    if isinstance(p, NegationRow):
+                        return "under a negation"
+                    if isinstance(p, AttitudeRow):
+                        return "under an attitude"
+                    if isinstance(p, QuantifierRow) and p.quantity is not None \
+                            and p.quantity not in UPWARD_SCOPE:
+                        return f"in the scope of a {p.quantity.value} quantifier"
+                join, at = parent.get(name, (None, None))
+                if join is None:
+                    return None
+                if not UPWARD_OPERANDS.get(join.operator, (False, False))[at]:
+                    return ("in the antecedent of an implication" if join.operator is Operator.IMPLY
+                            else f"in operand {at + 1} of `{join.operator.value}`, which does not "
+                                 f"preserve truth upward")
+                name = join.name
+            return None
+
+        # The phrases a placed quantifier binds, by the force it binds them with: a determiner's is
+        # the noun it hangs off, a bare quantifier («ALL that glitters») is its own phrase.
+        restricting: dict[int, str] = {}
+        for index, match in marks.items():
+            quantity = match.compiled.get("quantity") if match.kind == "quantifier" else None
+            if quantity is None or index not in covered \
+                    or Quantity(quantity) in UPWARD_RESTRICTION:
+                continue
+            word = skeleton[index]
+            restricting[index if word.bare_dep in NOMINAL_DEPS else word.head] = quantity
+
+        def restricted(index: int) -> str | None:
+            node = skeleton[index]
+            for _ in range(len(skeleton)):
+                if node.index in restricting:
+                    return f"in the restriction of a {restricting[node.index]} quantifier"
+                if node.is_root:
+                    return None
+                node = skeleton[node.head]
+            return None
+
+        def felt(index: int) -> int | None:
+            node = skeleton[index]
+            for _ in range(len(skeleton)):
+                if node.index in present:
+                    return node.index
+                if node.is_root:
+                    return None
+                node = skeleton[node.head]
+            return None
+
+        lost: dict[int, list[tuple[Word, str | None]]] = {}
+        for word in skeleton:
+            if word.index in covered or word.upos in ("PUNCT", "SYM"):
+                continue
+            at = felt(word.index)
+            if at is None:
+                continue
+            match = marks.get(word.index)
+            why = ("OPERATOR" if owner.get(word.index) == at and match is not None
+                   and _is_operator(match.compiled)
+                   else restricted(word.index))
+            lost.setdefault(at, []).append((word, why))
+
+        found: set[int] = set()
+        for index, words in sorted(lost.items()):
+            why = next((why for _, why in words if why), None) or position(content[index].name)
+            if why is None:
+                continue
+            found.add(index)
+            said = " ".join(w.text for w, _ in words)
+            abstained.append(
+                f"«{said}»: an operator cut from its clause changes the claim — the clause is "
+                f"withheld" if why == "OPERATOR" else
+                f"«{said}»: cut from a clause {why}, where the cut widens the claim rather than "
+                f"weakening it — the clause is withheld")
+
+        for attitude in prefix_rows:
+            if not isinstance(attitude, AttitudeRow):
+                continue
+            matrix = self._matrix_of(skeleton, heads, content, attitude)
+            scoped = next((i for i, row in content.items() if row.name == attitude.scopes), None)
+            if matrix is None or scoped is None:
+                continue
+            link, node = [], skeleton[skeleton[scoped].head]
+            for _ in range(len(skeleton)):
+                if node.index == matrix.index or node.is_root:
+                    break
+                if node.index not in covered and node.upos not in ("PUNCT", "SYM"):
+                    link.append(node)
+                node = skeleton[node.head]
+            if link:
+                found.add(scoped)
+                abstained.append(f"«{' '.join(w.text for w in reversed(link))}»: the link between "
+                                 f"«{matrix.text}» and what it holds is unplaced, so the attitude "
+                                 f"would hold a content its verb never took — withheld")
+        return found
 
     # -- the pieces -------------------------------------------------------------------------------
 
@@ -2169,8 +2494,7 @@ class Compiler:
         # double-object clause whose second object is the quotation — the drill gate found this the
         # moment the abstention was too strict, because Anna is the ADDRESSEE the rotation reads
         # (`q-7`, `q-9`).
-        if word.bare_dep == "iobj" and not any(
-                c.bare_dep in OBJECT_DEPS for c in skeleton.children(word.head)):
+        if word.bare_dep == "iobj" and self._lone_iobj(skeleton, skeleton[word.head]):
             if abstained is not None:
                 abstained.append(f"{word.text}: `iobj` with no direct object — UD reserves it for "
                                  f"the double-object clause, so the label is not read")
@@ -2208,6 +2532,14 @@ class Compiler:
             return None
 
         return self._marker_role(word, skeleton, marks, defaulted)
+
+    @staticmethod
+    def _lone_iobj(skeleton: Skeleton, verb: Word) -> bool:
+        """Does this verb carry an `iobj` with no object beside it — a double-object clause missing
+        its other half, which UD's own definition of `iobj` says cannot be?"""
+        children = list(skeleton.children(verb.index))
+        return any(c.bare_dep == "iobj" for c in children) \
+            and not any(c.bare_dep in OBJECT_DEPS for c in children)
 
     def _subject_role(self, head: Word, copular: bool, skeleton: Skeleton | None = None) -> Role:
         """An `nsubj`'s role, from what is predicated of it (req 22) — the rows decide.

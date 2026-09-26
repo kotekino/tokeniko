@@ -34,6 +34,7 @@ it SAYS (`says_what`). Record: `docs/E3-parser-compiler/202609190900_the-gate-se
 """
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -58,6 +59,14 @@ AGREED, DISAGREED, MISSING = "agreed", "DISAGREED", "missing"
 #: compile to what it compiled to before, and leaves only the rotation visible. *The comparison is
 #: against the Captain's convention, stated as the argument req 7 says it must be.*
 DRILL_CONTEXT = Context(speaker="me.n", addressee="you.n")
+
+
+def spoken(sentence: str) -> str:
+    """The words of a drill sentence, without its annotation. The drill annotates a few of them —
+    «… [de dicto]» — and the bracket is a note to the reader, not words anybody said: compiled, it
+    made «[¬∀ — not all of it is]» a second sentence (`E3.12.5.6`). One helper, so this gate and
+    `roundtrip` cannot strip it two ways."""
+    return re.sub(r"\s*\[[^\]]*\]\s*$", "", sentence).strip()
 
 
 def filler(box) -> str:
@@ -464,8 +473,9 @@ def run(argv=None) -> int:
 
     readings = []
     for case in CASES:
+        sentence = spoken(case.sentence)
         try:
-            skeletons = provider(case.sentence)
+            skeletons = provider(sentence)
         except Exception as problem:                      # noqa: BLE001 — a provider stumble is data
             readings.append(Reading(case.case_id if hasattr(case, "case_id") else case.id,
                                     case.sentence, unparsed=str(problem)[:90]))

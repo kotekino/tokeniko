@@ -199,10 +199,16 @@
 - [x] `E3.12.4` **proof slice 1 stays at `E4.7`** *(ruled 09-26)* — the fresh set is the outside check
 - [x] `E3.12.5` **six rulings** *(the Captain, 09-26)* — what remains must be ENTAILED · empty theatre = unstated · an `Open` by number is said · a reversed decompile is a wrong claim · `aw-13` withheld · neg-raising: literal
 - [x] `E3.12.1` **the open list sorted — MEASURED** *(09-26)* — 9 wrong claims · 8 silent losses; undercounted by 6. Table in `202609261100_…`
+- [x] `E3.3.11.6` · `E3.12.1.3` · `E3.12.1.4` · `E3.3.2.7.1` · `E3.12.1.2` **the withholding cases** *(09-26)* — withheld, reason recorded;
+      fixpoint 74 · 9 · 4 · drill 64 · 4 · 19 · UD 32 · 0 · 13, all toward honesty. Record `202609261100_…`
+- [x] `E3.12.5.1` · `E3.12.5.2` · `E3.12.5.3` · `E3.12.5.8` · `E3.12.5.5` · `E3.12.5.6` · `E3.12.5.7` **the rulings on withholding, built; the ratchets RE-BASED** *(09-26)* —
+      fixpoint 74 · 9 · 1 + WITHHELD 3 (64/70) · drill 64 · 4 · 19 · UD 32 · 0 · 13. Record `202609261100_…`
 - [ ] `E3.12.1.1` **the drill gate AGREES with `dere-4`, which carries `E3.3.11.2`'s contradiction** — the gate cannot certify «0 wrong claims»
-- [ ] `E3.12.1.2` `aw-13` «All that glitters is not gold» — ∀¬ claimed where the drill reads ¬∀ *(a ruling: withhold?)*
-- [ ] `E3.12.1.3` negation over a truncated row widens the claim — «I don't want to go» → ¬want(me); `t-ws-6`
-- [ ] `E3.12.1.4` `t-mo-4` «I would like to know what you think…» claims «I like what you think»
+- [ ] `E3.12.5.9` **`only-5` «If and only if it rains, I stay home» is SILENT** — an orphaned unclaimed row *(for the Captain)*
+- [ ] `E3.12.5.10` «if and only if» over-withheld — the cut word is in the joining words
+- [ ] `E3.12.5.11` «because»'s antecedent withheld though claimed on its own («I love» in `t-of-1`)
+- [ ] `E3.12.5.12` not built: a definite binder as upward · stacked parity · a joining word as an operator
+- [ ] `E3.12.5.4` the rule over-withholds by design — any negation, whatever the parity
 - [ ] `E3.12.1.5` the decompiler drops a binder's «not» on a bare noun — «He eats fish that swims», unrecorded
 - [ ] `E3.12.1.6` rows with no predicate or no subject — «Some cats are not», `t-ng-4`
 - [ ] `E3.2.1.6.5` «What is this?» — the demonstrative compiled as a content key, the pointing lost

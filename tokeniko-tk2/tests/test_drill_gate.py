@@ -394,3 +394,25 @@ def test_every_compiled_drill_zip_is_a_TREE():
             dags[case.id] = shared
 
     assert sorted(dags) == [], f"compiled zips that are not trees: {dags}"
+
+
+# ------------------------------------------------------------------------------------------------
+# E3.12.5.5 · E3.12.5.6 — the instruments read a withheld sentence and an annotation honestly
+# ------------------------------------------------------------------------------------------------
+
+def test_an_ANNOTATION_is_not_compiled_as_words_anybody_said():
+    from tools.drill_gate import spoken
+
+    assert spoken("All that glitters is not gold.  [¬∀ — not all of it is]") == \
+        "All that glitters is not gold."
+    assert spoken("The cat sleeps.") == "The cat sleeps."
+
+
+def test_a_WHOLLY_withheld_zip_is_its_own_state_and_not_SILENT():
+    """SILENT is a zip that held something and came back as nothing; a zip that claims nothing and
+    says why is WITHHELD — `aw-13`'s amended shape is exactly one."""
+    from tools.roundtrip import _wholly_withheld
+
+    by_id = {c.id: c for c in CASES}
+    assert _wholly_withheld(by_id["aw-13"].zip) and _wholly_withheld(by_id["aw-14"].zip)
+    assert not _wholly_withheld(by_id["nha-4"].zip), "partial, and still claiming something"

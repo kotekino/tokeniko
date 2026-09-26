@@ -741,15 +741,22 @@ case("aw-12", "Every teacher gave some student a book.", "awkward:three-quantifi
      "pass", "three binders, one matrix, and their ORDER is the reading")
 
 case("aw-13", "All that glitters is not gold.  [¬∀ — not all of it is]", "awkward:scope",
-     Zip(rows=[not_("neg", "g"), all_of("bX", "X", generic("glitterer.n"), scopes="g"),
-               c("g", patient=V("X"), complement=generic("gold.n"))]),
-     "pass", "negation ordered BEFORE the universal", distinct_from=("aw-14",))
+     Zip(rows=[c("r0", truth=None)],
+         unplaced=["All", "that", "glitters", "is", "not", "gold"]),
+     "partial", "WITHHELD (amended 2026-09-26, E3.12.5 (5)): the surface says ¬∀ and ∀¬ alike — the "
+                "universal stands before the negation in both — and on «may not»'s precedent an "
+                "ambiguity is withheld, not decided. Was: negation ordered BEFORE the universal. "
+                "The format still holds this reading; the sentence alone does not choose it. "
+                "No longer `distinct_from` aw-14 (amended 2026-09-26, E3.12.5.8): two withholdings "
+                "of one sentence are one zip, and should be.")
 
 case("aw-14", "All that glitters is not gold.  [∀¬ — none of it is]", "awkward:scope",
-     Zip(rows=[all_of("bX", "X", generic("glitterer.n"), scopes="g"), not_("neg", "g"),
-               c("g", patient=V("X"), complement=generic("gold.n"))]),
-     "pass", "the universal ordered before the negation. v1 had to patch this one combination into "
-             "its quantifier enum (`NEGATED_UNIVERSAL`); a prefix handles the class.")
+     Zip(rows=[c("r0", truth=None)],
+         unplaced=["All", "that", "glitters", "is", "not", "gold"]),
+     "partial", "WITHHELD (amended 2026-09-26, E3.12.5.8 — ruling 5 covers both readings): aw-13's "
+                "sentence, the other reading, and the same ambiguity. Was: the universal ordered "
+                "before the negation — v1 had to patch this one combination into its quantifier "
+                "enum (`NEGATED_UNIVERSAL`); a prefix handles the class, and still can.")
 
 case("aw-15", "In Italy, you may drive in France with a foreign licence.", "awkward:domain",
      Zip(rows=[some_of("bL", "L", n("licence.n"), scopes="jn"),

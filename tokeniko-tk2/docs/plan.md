@@ -1414,8 +1414,9 @@ asked; the exit is:
 **Done when** *(the Captain, 2026-09-26 — declared before the run)*:
 1. **no known wrong claim and no known silent loss** — on the drill, the UD gate,
    the fixpoint corpus and the fresh set (`E3.12.2`);
-2. **the ratchets, never below 09-26**: drill agreed ≥ 67 *(65 when ruled; `E1e.6.1` raised it the same day)* · fixpoint FIXED ≥ 76 with SILENT = 0 ·
-   read-whole ≥ 66 of 72 · UD gate answered ≥ 34 with WRONG = 0;
+2. **the ratchets, never below** *(re-based 09-26 by `E3.12.5`, when false claims became abstentions)*:
+   drill agreed ≥ 64 · fixpoint FIXED ≥ 74 with SILENT = 0 (a withheld sentence is WITHHELD, not
+   SILENT) · read-whole ≥ 64 of 70 · UD gate answered ≥ 32 with WRONG = 0;
 3. **`E3.8.3`** — the frame/knowledge audit, re-run;
 4. and then every open quality item moves to **`E3c`** (`E3.12.3`), so E3 can CLOSE.
 
@@ -1495,6 +1496,20 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    never asked · (4) a decompiler that says the REVERSE is a wrong claim · (5) `aw-13` is withheld,
    the drill amended · (6) «I do not think that he sleeps» compiles literally, ¬think(p); neg-raising
    is per-verb knowledge, later.
+   **The withholding cases BUILT 2026-09-26** — `E3.3.11.6` · `E3.12.1.3` · `E3.12.1.4` · `E3.3.2.7.1`
+   withheld, `E3.12.1.2` (`aw-13`) withheld and the drill amended; gates moved toward honesty
+   (fixpoint 74 · 9 · 4, drill 64 · 4 · 19, UD 32 · 0 · 13). Found: `E3.12.5.1` a dissolved matrix
+   withheld with its attitude · `E3.12.5.2` an unplaced operator in a claimed clause · `E3.12.5.3`
+   two more downward positions · `E3.12.5.4` parity-blind over-withholding · `E3.12.5.5` the fixpoint's
+   WITHHELD column · `E3.12.5.6` the drill gate compiles bracket annotations · `E3.12.5.7` a double
+   `abstained` entry · `E3.12.5.8` `aw-14` now missing. Record `202609261100_the-exit-bar.md`.
+   **Ruled the same day**: `E3.12.5.1` the matrix tested separately · `E3.12.5.2` an unplaced operator
+   withholds · `E3.12.5.3` both positions downward · `E3.12.5.8` amended · the exit's ratchets RE-BASED
+   to the honest numbers.
+   **Built the same day**: fixpoint 74 · 9 · 1 + WITHHELD 3 (64 of 70) · drill 64 · 4 · 19 · UD
+   32 · 0 · 13. Found: `E3.12.5.9` `only-5` SILENT — an orphaned unclaimed row (for the Captain) ·
+   `E3.12.5.10` «if and only if» over-withheld · `E3.12.5.11` «because»'s antecedent over-withheld ·
+   `E3.12.5.12` three downward cases not built.
    `E3.12.2` **the fresh set** — 100 sentences sampled from the UD English EWT treebank (strangers'
    web text, gold parses), drawn and FROZEN before the run, never tuned on. The QM judges every
    complete zip for wrong claims and silent losses; the Captain spot-checks. Each one found is fixed or turned into an
