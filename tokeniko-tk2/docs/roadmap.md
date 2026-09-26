@@ -200,12 +200,20 @@
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] `E3.12.1` **the open list sorted: wrong claim · silent loss · quality** — wrong claims: `E3.3.11.1` · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` (to verify); silent losses: `E3.3.2.10.2` · `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` (to verify)
+- [x] `E3.12.5` **six rulings** *(the Captain, 09-26)* — what remains must be ENTAILED · empty theatre = unstated · an `Open` by number is said · a reversed decompile is a wrong claim · `aw-13` withheld · neg-raising: literal
+- [x] `E3.12.1` **the open list sorted — MEASURED** *(09-26)* — 9 wrong claims · 8 silent losses; undercounted by 6. Table in `202609261100_…`
+- [ ] `E3.12.1.1` **the drill gate AGREES with `dere-4`, which carries `E3.3.11.2`'s contradiction** — the gate cannot certify «0 wrong claims»
+- [ ] `E3.12.1.2` `aw-13` «All that glitters is not gold» — ∀¬ claimed where the drill reads ¬∀ *(a ruling: withhold?)*
+- [ ] `E3.12.1.3` negation over a truncated row widens the claim — «I don't want to go» → ¬want(me); `t-ws-6`
+- [ ] `E3.12.1.4` `t-mo-4` «I would like to know what you think…» claims «I like what you think»
+- [ ] `E3.12.1.5` the decompiler drops a binder's «not» on a bare noun — «He eats fish that swims», unrecorded
+- [ ] `E3.12.1.6` rows with no predicate or no subject — «Some cats are not», `t-ng-4`
+- [ ] `E3.2.1.6.5` «What is this?» — the demonstrative compiled as a content key, the pointing lost
 - [ ] `E3.2.1.6.1` **⚑ «That» as a pronoun is lost in silence** *(09-26)* — «That is a cat» → «A cat is.»; the `relative` row places nothing
 - [ ] `E3.2.1.6.3` «I saw that cat» → «I saw cat» — the demonstrative determiner leaves no trace *(a silent loss if unrecorded)*
 - [ ] `E3.3.11.1` · `E3.3.11.2` **⚑ TWO TRUTH ERRORS: a negation and an attitude** *(09-25)* — «I think that he
       does not sleep» puts ¬ OUTSIDE the thinking; «I do not think that he sleeps» claims both.
-      Neg-raising is a reading for the Captain. Record `202609241130_…`
+      Ruled 09-26 (`E3.12.5`): literal, ¬think(p). Record `202609241130_…`
 - [ ] `E3.3.12` **⚑ «I remember the day I slept» is a WRONG COMPLETE ZIP** *(09-25)* — stanza's `obl:tmod` on the
       matrix; the withheld clause used to hide it. Seven bench cases. Record `202609241130_…`
 - [ ] `E3.12.2` **⚑ the fresh set** — 100 UD-EWT sentences frozen before the run; every complete zip judged for wrong claims and silent losses

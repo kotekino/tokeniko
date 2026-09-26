@@ -1072,6 +1072,9 @@ it).
        trace in the box. A silent loss if nothing records it *(to verify)*.
      - `E3.2.1.6.4` *(found by the QA of `9b0eb7c`)* «What is this?» comes back «Is this what?» — the
        copular wh-question's word order; a quality item.
+       *(09-26, `E3.12.1`: no longer reproduces.)*
+     - `E3.2.1.6.5` «What is this?» compiles the demonstrative as a CONTENT key (`this.n`), not a pointed
+       `Open` — the pointing lost, unrecorded.
 
 `E3.2.2` *(was task 2c)* **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
    2b — and it is NOT a person-axis task, which is why it has a number of its own)*. «Is the cat
@@ -1130,7 +1133,8 @@ it).
      read as one noun phrase, so «can be a software» loses its subject. The same shape with verbs
      parses right («You can have tea or you can have coffee»). Where the provider gives a structure
      we know is wrong the station abstains (the `q-5` precedent), so `t-ws-7` stays in the ratchet,
-     re-labelled a provider defect.
+     re-labelled a provider defect. *(09-26, `E3.12.1`: it does NOT abstain today — a complete zip with two subjectless rows, a
+     wrong claim; see `E3.3.2.8`.)*
 
 `E3.2.3` *(was task 2d)* **⚑ THE IMPERATIVE IS COMPILED AS A CLAIM** *(found 2026-09-18 by the widened drill gate —
    `aw-21`)*. «Close the door!» compiles as «you close the door», stated; the drill (and tkzip req
@@ -1471,11 +1475,26 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    different exit FINITE: a truth error can always be closed, by a fix or by an honest abstention.
    So failures are three kinds with three bars: **a wrong claim** (a complete zip saying what
    was not said) **= 0 known** · **a silent loss** (claims less and does not say so) **= 0
-   known** · **quality** (partial and marked, phrased otherwise, abstained) **a ratchet**. The
+   known** · **quality** (partial and marked with what remains ENTAILED — `E3.12.5` — phrased
+   otherwise, abstained) **a ratchet**. The
    exit is written as E3's «Done when» below. Record `202609261100_the-exit-bar.md`.
-   `E3.12.1` **the open list sorted: wrong claim · silent loss · quality** — provisional, verified before it gates: wrong claims `E3.3.11.1`
-   · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` *(to verify)*; silent losses `E3.3.2.10.2` ·
-   `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` *(to verify)*; quality everything else.
+   `E3.12.1` **the open list sorted: wrong claim · silent loss · quality** — **MEASURED 2026-09-26**:
+   wrong claims `E3.3.11.1` · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` (latent) · `E3.3.2.7.1` ·
+   `E3.3.11.6` · `E3.3.2.8` (twice: «Because I think, I am», `t-ws-7`) · `E3.12.1.4`; silent losses
+   `E3.3.2.10.2` · `E3.2.1.6.1` · `E3.2.1.6.3` · `E3.3.2.10.5` · `E3.3.13` (two of its five) ·
+   `E3.12.1.5` · `E3.12.1.6`; `E3.3.2.4.2` moved to quality. Found outside the list:
+   `E3.12.1.1` the drill gate AGREES with `dere-4`, which carries `E3.3.11.2`'s contradiction ·
+   `E3.12.1.2` `aw-13` claims ∀¬ where the drill reads ¬∀ · `E3.12.1.3` negation over a truncated row
+   («I don't want to go») · `E3.12.1.4` `t-mo-4` «I would like to know…» claims «I like what you
+   think» · `E3.12.1.5` the decompiler drops a binder's «not» on a bare noun, unrecorded ·
+   `E3.12.1.6` rows with no predicate or no subject («Some cats are not»). Full table in
+   `202609261100_the-exit-bar.md`.
+   `E3.12.5` **the six rulings the sort needed** *(the Captain, 2026-09-26)*: (1) a partial zip is quality
+   only if what remains is ENTAILED, else it is a wrong claim and the clause is withheld · (2) an
+   empty theatre means unstated, never «now» · (3) an `Open` described only by number is said back,
+   never asked · (4) a decompiler that says the REVERSE is a wrong claim · (5) `aw-13` is withheld,
+   the drill amended · (6) «I do not think that he sleeps» compiles literally, ¬think(p); neg-raising
+   is per-verb knowledge, later.
    `E3.12.2` **the fresh set** — 100 sentences sampled from the UD English EWT treebank (strangers'
    web text, gold parses), drawn and FROZEN before the run, never tuned on. The QM judges every
    complete zip for wrong claims and silent losses; the Captain spot-checks. Each one found is fixed or turned into an
