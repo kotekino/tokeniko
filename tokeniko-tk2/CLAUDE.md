@@ -73,7 +73,11 @@ The root rule says reconcile before proposing. Concretely, here, that is four ch
 2. **`plan.md`** — does the epic's task list still match what the epic turned out to be? New tasks
    found by the work go in, with their measurement. **Every item has its nested id** (root
    `CLAUDE.md`): a new one takes the next free child of its SOURCE — `E3.3.2.10.1` was found while
-   building `E3.3.2.10` — and the same id appears in `roadmap.md`.
+   building `E3.3.2.10` — and the same id appears in `roadmap.md`. **Every id is written in FULL**
+   in both files — never `E3.3.11.1 · .2` or `– .8`, which a search cannot find. **Past four levels
+   below the epic**, an item may take the next free id one level up, as a sibling of its source,
+   with the origin written beside it: `E3.3.11` (found at `E3.3.2.10.1`, 09-25) and
+   `E3.3.2.10.3` … `.7` (found building `E3.3.2.10.1`, 09-26) are placed that way.
 3. **`landed.md`** — only when an epic CLOSES. Items move there, never copied.
 4. **The chapter** — a ruling or a measurement goes in `docs/<chapter>/` as a dated note, headed
    `*Roadmap: <ids>*`, and the `requirements.md` line it amends says so.

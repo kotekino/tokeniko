@@ -1734,11 +1734,25 @@ JOHN_SCREAMED = skeleton_from_conllu('John screamed " I am late "', [
 ])
 
 
+JOHN_THOUGHT = skeleton_from_conllu('John thought " I am late "', [
+    ("1", "John", "john", "PROPN", "2", "nsubj"),
+    ("2", "thought", "think", "VERB", "0", "root"),
+    ("3", '"', '"', "PUNCT", "6", "punct"),
+    ("4", "I", "I", "PRON", "6", "nsubj"),
+    ("5", "am", "be", "AUX", "6", "cop"),
+    ("6", "late", "late", "ADJ", "2", "ccomp"),
+    ("7", '"', '"', "PUNCT", "6", "punct"),
+])
+
+
 @pytest.mark.parametrize("skeleton, who", [(JOHN_EXCLAIMED_TO_MARIE, "marie.n"),
-                                           (JOHN_SCREAMED, "john.n")])
+                                           (JOHN_SCREAMED, "john.n"),
+                                           (JOHN_THOUGHT, "john.n")])
 def test_a_QUOTE_rotates_under_ANY_verb_not_only_a_saying_one(compiler, skeleton, who):
     """«John exclaimed to Marie "You are late"» — the «you» is Marie; «John screamed "I am late"» —
-    the «I» is John. Neither verb was on the saying list, and both clauses were already attitudes."""
+    the «I» is John. Neither verb was on the saying list, and both clauses were already attitudes.
+    **A quoted THOUGHT rotates too** — «John thought "I am late"» is John's «I»: the marks are the
+    signal, and thinking is not saying."""
     out = compiler.compile(skeleton, _speech())
     late = next(r for r in out.zip.rows if r.kind == "content"
                 and getattr(r.boxes.get(Role.COMPLEMENT), "head", None) == "late.a")
@@ -1774,6 +1788,57 @@ def test_a_DEICTIC_adverb_is_an_open_that_remembers_it_and_is_said_back(compiler
 
     said = Decompiler().decompile(out.zip)
     assert said.text == f"She lives {adverb}.", "a statement — never «Where/When does she live?»"
+
+
+# **A DEMONSTRATIVE IS POINTED AT TOO** (E3.2.1.6): its row carries `distance` and `number` and no
+# `deixis`, so the v10 guard — keyed on `deixis` alone — let «This is good» come back as «Who is
+# good?». A slot the speaker pointed at is said back from the rows, whichever row it was.
+
+
+def _pointed_subject(word, lemma, copula):
+    return skeleton_from_conllu(f"{word} {copula} good .", [
+        ("1", word, lemma, "PRON", "3", "nsubj"),
+        ("2", copula, "be", "AUX", "3", "cop"),
+        ("3", "good", "good", "ADJ", "0", "root"),
+        ("4", ".", ".", "PUNCT", "3", "punct"),
+    ])
+
+
+def _pointed_object(word, lemma):
+    return skeleton_from_conllu(f"She saw {word} .", [
+        ("1", "She", "she", "PRON", "2", "nsubj"),
+        ("2", "saw", "see", "VERB", "0", "root"),
+        ("3", word, lemma, "PRON", "2", "obj"),
+        ("4", ".", ".", "PUNCT", "2", "punct"),
+    ])
+
+
+# «That» is not here, and not by choice: as a PRONOUN it reads as the RELATIVE today and is lost in
+# silence — «That is good» compiles with no subject and nothing unplaced. Reported with E3.2.1.6;
+# the decompiling half of «that» is held by the pure-zip test in `test_language_decompile.py`.
+@pytest.mark.parametrize("word, lemma, copula, distance, number", [
+    ("This", "this", "is", "proximal", "sg"),
+    ("These", "this", "are", "proximal", "pl"),
+    ("Those", "that", "are", "distal", "pl"),
+])
+def test_a_DEMONSTRATIVE_is_an_open_that_remembers_it_and_is_said_back(compiler, word, lemma,
+                                                                       copula, distance, number):
+    from tk2.language.decompile import Decompiler
+
+    pointed = Open(distance=distance, number=number)
+
+    subject = compiler.compile(_pointed_subject(word, lemma, copula))
+    good = next(r for r in subject.zip.rows if r.kind == "content")
+    assert good.boxes[Role.PATIENT].head == pointed
+    said = Decompiler().decompile(subject.zip)
+    assert said.text == f"{word} {copula} good.", "a statement, agreeing — never «Who is good?»"
+
+    obj = compiler.compile(_pointed_object(word.lower(), lemma))
+    saw = next(r for r in obj.zip.rows if getattr(r, "predicate", None) == "see.v")
+    assert saw.boxes[Role.PATIENT].head == pointed
+    said = Decompiler().decompile(obj.zip)
+    # a hand-written skeleton carries no tense, so the clause comes back in the present
+    assert said.text == f"She sees {word.lower()}.", "a statement — never «What does she see?»"
 
 
 # ------------------------------------------------------------------------------------------------

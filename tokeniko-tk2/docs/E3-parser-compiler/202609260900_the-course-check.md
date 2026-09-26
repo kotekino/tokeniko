@@ -72,11 +72,33 @@ not the station's (req 11: the sense slot is emitted OPEN); it is met where sens
 - the ~15 findings `202609241130_…` listed without ids are numbered under their sources there
   (`E3.3.2.12 – .13`, `E3.3.2.1.2`, `E3.3.2.7.1`, `E3.3.2.5.1.1 – .3`, `E3.3.2.10.3 – .7`,
   `E1e.6.2`, `E1e.8.3`). Those found while building `E3.3.2.10.1` sit one level up, as siblings of
-  `E3.3.2.10.2`, with the origin written — the rule's allowance for deep nesting;
+  `E3.3.2.10.2`, with the origin written — the practice `E3.3.11` set on 09-25, written into
+  `tokeniko-tk2/CLAUDE.md` on 09-26 when the QA found no rule said so;
 - ten E3 notes gained their `*Roadmap:*` header;
 - stale text corrected: `E3.3`'s numbers, `E3.3.2`'s «open» list, `E3.3.1`'s missing DONE, `E3.4`'s
   deferral, `E3.8`'s second «Done when», the roadmap's `E3.3` line.
 
-*Not done, and named*: E0–E2's tasks have no dotted ids. They are landed, and the rule's own
+*Not done, and named*: E0–E2's tasks have no dotted ids, and E1's prose still says `T2` · `T2b` ·
+`T3` · `T5` for its own numbered tasks. They are landed, and the rule's own
 «immutable» means a closed epic is not renumbered for the sake of form; an item found under one
 (`E2.3.1`) takes its id from the task number the plan gives it.
+
+## The QA of `282e5a6` *(the same cloud session, the same day — quality only, no design)*
+
+Every built fix did what its id said; no defect introduced; 526 offline tests green, the spine green
+with no WordNet at all. What it found, and what happened:
+
+- **P1, pre-existing — `E3.2.1.6`**: demonstratives came back as questions («This is good» → «Who is
+  good?»), because the v10 guard read `deixis` only. **Fixed**: a POINTED slot (`deixis` or
+  `distance`) is said back from the rows on the features it carries. Building it found
+  `E3.2.1.6.1` («That» as a pronoun lost in silence — an S), `E3.2.1.6.2` («I were happy»),
+  `E3.2.1.6.3` («I saw cat» — to verify).
+- `_unknown` copies `distance` for every row, not only adverbs — **recorded** in the v10 note.
+- ids in shorthand in the roadmap (16 unsearchable) — **written in full**; and the rule now says so
+  (`tokeniko-tk2/CLAUDE.md`, the Captain's OK).
+- siblings one level up with no rule to allow it — **the rule written**, the Captain's OK.
+- E1's `T2` · `T3` · `T5` — **named** above, not renumbered.
+- `spacy` unpinned — **pinned** (3.8.13).
+- a quoted THOUGHT rotates, unrecorded and untested — **pinned by a test**; it is `E3.2.1.1`'s
+  quotation rule under `E3.2.1.4`'s «any verb».
+- `_deictic`'s refusal path untested — **tested**, both halves.

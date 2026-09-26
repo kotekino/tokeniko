@@ -583,9 +583,10 @@ class Compiler:
 
         The features are the row's own, copied and not interpreted: `person` · `number` · `gender`
         for a pronoun, `sort` for an interrogative, `deixis` · `distance` for a referential adverb
-        (schema v10: «she lives HERE» is not «where does she live?»). Anything the row does not
-        carry stays empty, and a bare `Open` is what it always was — an unknown nobody described,
-        which is exactly the unexpressed agent of «the hammer is made of titanium».
+        (schema v10: «she lives HERE» is not «where does she live?») and `distance` · `number` for a
+        demonstrative («I saw THOSE», E3.2.1.6). Anything the row does not carry stays empty, and
+        a bare `Open` is what it always was — an unknown nobody described, which is exactly the
+        unexpressed agent of «the hammer is made of titanium».
         """
         features = (match.features or {}) if match is not None else {}
         return Open(**{name: features.get(name) for name in ("person", "number", "gender", "sort",

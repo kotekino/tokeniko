@@ -319,6 +319,12 @@ def test_the_station_and_the_drill_disagree_only_where_a_question_is_NAMED():
     this is the second time in one day that an abstention turned out to be hiding a defect, after
     `look` and `die` (`db/0025`).*
 
+    **TWO ENTRIES THAT WERE THE DRILL'S, NOT THE STATION'S** (`E1e.6.1`, 2026-09-26). When purpose
+    became `imply(act, end)` with the end unclaimed (the Captain's 09-25 ruling), `t-ws-1` and `aw-6`
+    went red on the instant: the drill hand-compiled «go to sleep» as the idiom and «to see the sea»
+    as an intention with the arrow reversed. Tests follow decisions, so the drill was amended — the
+    purpose part only — and the list came back to these four without a line of the station moving.
+
     **IT RUNS THE TOOL'S OWN PATH**, context and all. A control that compiled sentences differently
     from the instrument it guards would be free to agree while the instrument disagreed — which is
     the exact failure req 18 exists to prevent, one level down.

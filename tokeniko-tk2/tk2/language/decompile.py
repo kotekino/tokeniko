@@ -69,6 +69,7 @@ with no heuristic anywhere:
     Open(person=3, gender="f")    the sentence DESCRIBED it  ->  «she»
     Open()                        nobody described it        ->  the passive leaves it out
     Open(deixis="place", ...)     the sentence POINTED       ->  «here», never «where» (v10)
+    Open(distance="distal", ...)  pointed, with no place     ->  «those», never «what» (E3.2.1.6)
 
 *What is still not said is still recorded: `unsaid` names every row and every element that did not
 reach the text, so the round trip's number can never flatter itself. And the acceptance test grew a
@@ -165,6 +166,18 @@ INFINITIVE = "infinitive_marker"
 #: The boxes a matrix's COMPLEMENTS fill — `obj` and `iobj`, the relations the Captain's control
 #: rule names (2026-09-25), read through the compiler's own map so the two directions cannot part.
 CONTROLLING = frozenset({RELATION_FILLS_ROLE["obj"], RELATION_FILLS_ROLE["iobj"]})
+
+#: The `Open` fields a POINTED-AT unknown is matched back on — the schema's own names, which are
+#: the rows' own feature names (v4, v10). `number` is among them because it is what tells «this»
+#: from «these»; it is not what makes a slot pointed-at, since «they» carries a number too.
+POINTED_FEATURES = ("deixis", "distance", "number")
+
+
+def _pointed(unknown: Open) -> bool:
+    """Did the speaker POINT at it? A deictic centre or a distance is the sentence saying so —
+    «here», «then», «this», «those» — and a slot pointed at is said back, never asked
+    (E3.2.1.5 · E3.2.1.6)."""
+    return unknown.deixis is not None or unknown.distance is not None
 
 
 @dataclass
@@ -1495,6 +1508,10 @@ class Decompiler:
             return {"person": features.get("person"), "number": features.get("number")}
         if isinstance(head, Open) and head.person is not None:
             return {"person": head.person, "number": head.number}
+        if isinstance(head, Open) and _pointed(head) and head.number is not None:
+            # «THESE are mine»: a demonstrative is third person, and its number is the one the
+            # speaker stated — on the unknown, since there is no key to read it from (E3.2.1.6).
+            return {"person": 3, "number": head.number}
         # **THE BOX'S OWN NUMBER FIRST** (schema v6), then a numeral that implies one: «the three
         # cats sleep» agrees plural whether or not anybody wrote `number` down.
         plural = box.number == "pl" or (isinstance(box.count, int) and box.count > 1)
@@ -1560,8 +1577,8 @@ class Decompiler:
         for role, box in boxes.items():
             if not isinstance(box.head, Open) or box.head.person is not None:
                 continue           # a described person is an anaphor; `_head` says it as a pronoun
-            if box.head.deixis is not None:
-                continue           # «here», «then» — a deictic is said back, never asked (v10)
+            if _pointed(box.head):
+                continue           # «here», «those» — a deictic is said back, never asked (v10)
             form = self.the_form("interrogative", kind="open", binds=None, opens="box",
                                  role=role.value)
             if form is not None:
@@ -1835,7 +1852,7 @@ class Decompiler:
             # has resolved and a person the speaker told us three things about, so it is SAID, as
             # the pronoun those three things pick. An undescribed OPEN is a hole, and the clause has
             # already decided what to do with it — ask, or leave it out of a passive.
-            if box.head.deixis is not None:
+            if _pointed(box.head):
                 return self._deictic(box.head, rd)
             if box.head.person is not None:
                 form = self._same_person(
@@ -1866,18 +1883,25 @@ class Decompiler:
         return word
 
     def _deictic(self, unknown: Open, rd: _Reading) -> str:
-        """«here» · «there» · «now» · «then» — the referential adverb whose row carries these
-        features (schema v10, E3.2.1.5). **THE ROWS ANSWER, AS THEY DO FOR A PRONOUN**: the compiler
-        copied `deixis` and `distance` off the word it matched, and this matches them back."""
+        """«here» · «then» · «this» · «those» — the word whose row carries exactly the features the
+        OPEN carries (schema v10, E3.2.1.5 · E3.2.1.6). **THE ROWS ANSWER, AS THEY DO FOR A
+        PRONOUN**: the compiler copied `deixis` · `distance` · `number` off the word it matched, and
+        this matches all three back — so «this» is found by `proximal` · `sg`, and «here» is not,
+        because its row points at a PLACE and the demonstrative's points at nothing in particular.
+
+        *No role is named here.* A referential adverb and a demonstrative are different rows of
+        one kind — an entity the context resolves — and which of them the sentence used is what the
+        features already say. Anything but one form is silence, never the question word: a slot
+        the speaker pointed at was not asked about, whichever word it wanted."""
         found = {row["form"] for row in self.table._rows          # noqa: SLF001
-                 if row.get("role") == "referential"
-                 and (row.get("features") or {}).get("deixis") == unknown.deixis
-                 and (row.get("features") or {}).get("distance") == unknown.distance
+                 if (row.get("compiled") or {}).get("kind") == "entity"
+                 and all((row.get("features") or {}).get(name) == getattr(unknown, name)
+                         for name in POINTED_FEATURES)
                  and not (row.get("features") or {}).get("archaic")}
         if len(found) == 1:
             return next(iter(found))
-        rd.out.unsaid.append(f"a {unknown.deixis} deictic ({unknown.distance}): "
-                             f"{len(found)} forms fit")
+        rd.out.unsaid.append(f"a pointed-at unknown ({unknown.deixis or 'no'} deixis, "
+                             f"{unknown.distance}, {unknown.number}): {len(found)} forms fit")
         return ""
 
     def _possessive(self, box: Box, rd: _Reading) -> str:

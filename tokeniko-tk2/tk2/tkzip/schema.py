@@ -140,6 +140,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # HERE» compiled to an undescribed `Open` location, the same zip as «where does she live?», and the
 # decompiler said it back as the question. `Open.deixis` · `Open.distance` carry the referential
 # adverb's own row features — `place|time`, `proximal|distal` — exactly as v4 carries a pronoun's.
+# `distance` is copied for EVERY row that carries it, not only the referential adverbs: a
+# demonstrative («this», «those») has a `distance` and a `number` and no `deixis`, and it is pointed
+# at all the same — «I saw those» is not «what did I see?» (E3.2.1.6).
 SCHEMA_VERSION = 10
 
 
@@ -222,6 +225,8 @@ class Open(BaseModel):
     gender: str | None = None
     #: v10. A referential adverb's deictic centre — «here» is `place` · `proximal`, «then» `time` ·
     #: `distal`. Resolved by context like a pronoun, and said back as the same word, never asked.
+    #: `distance` is copied from every row that carries it: a demonstrative has one and no
+    #: `deixis` — «those» is `distal` · `pl` — and a slot with either is POINTED AT (E3.2.1.6).
     deixis: str | None = None
     distance: str | None = None
 

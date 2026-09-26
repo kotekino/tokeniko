@@ -604,7 +604,9 @@ runtime, so it is app knowledge.
    something to apply to something closed, not ongoing with decisions pending».*
 
 `E1e.6.1` **the drill amended to the rulings it disagrees with** — `t-ws-1`, `aw-6` (purpose is
-   IMPLY, 09-25). Until then the drill-gate ratchet is KNOWINGLY red on them, by ruling.
+   IMPLY, 09-25). **DONE 2026-09-26**, brought forward by the Captain with E3's exit (`E3.12`): the
+   purpose part only; both agree, drill gate 67 · 4 · 16, the ratchet green. Recorded in the bar doc's
+   AMENDMENTS (`E2-tkzip/202609140917_the-drill-bar.md`).
 `E1e.6.2` *(found 09-25)* the drill's «If I tell you something…» row has no `know.v`.
 `E1e.9` *(the course check, 2026-09-26)* **a tool read the biography around the guard** —
    `tools/journey_ledger_build.py` opened tk1's `tokeniko_mem.tkzipdebug` with a raw client, the only
@@ -1049,6 +1051,25 @@ it).
      the decompiler says the word back and never asks. **Open for the Captain**: whether «here/now»
      should instead resolve from the CONTEXT, as «I/you» do (and «there/then» become anaphora,
      `E3b.8`).
+   - `E3.2.1.6` **⚑ TRUTH ERROR — «This is good» came back «Who is good?»** *(found by the QA of
+     `282e5a6`, 2026-09-26; present before it)*. A demonstrative's row carries `distance` and no
+     `deixis`, so `E3.2.1.5`'s guard did not see it: «I saw those» → «What did I see?». The same
+     rule applies — an `Open` that was DESCRIBED as pointed-at is said back, never asked — keyed on
+     what the rows carry, not on one feature. `_unknown` already copies `distance` for every row;
+     the v10 note now says so. *Also pinned by the QA*: a quoted THOUGHT rotates too («John thought
+     "I am late"» → John), which is `E3.2.1.4`'s «any verb» and the quotation rule of `E3.2.1.1`.
+     **DONE THE SAME DAY**: a slot is POINTED when `deixis` or `distance` is set, and `_deictic` matches
+     the rows on the features the `Open` carries (`deixis` · `distance` · `number` — the schema's own
+     field names), so this · that · these · those · here · there · now · then are said back and a
+     zero or double match is refused into `unsaid`. A pointed plural agrees («These ARE mine»).
+     Found on the way, not fixed:
+     - `E3.2.1.6.1` **⚑ «That» as a PRONOUN is lost in silence** (compiler) — «That is a cat» compiles
+       with no subject and nothing unplaced, and comes back «A cat is.»; «She saw that» loses its
+       object. The PRON reading picks the `relative` row, which outside a relative clause places
+       nothing. An S by `E3.12`'s bar.
+     - `E3.2.1.6.2` «I was happy» decompiles as «I WERE happy» — the first-person past of the copula.
+     - `E3.2.1.6.3` «I saw that cat» comes back «I saw cat» — a demonstrative DETERMINER leaves no
+       trace in the box. An S if nothing records it *(to verify)*.
 
 `E3.2.2` *(was task 2c)* **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
    2b — and it is NOT a person-axis task, which is why it has a number of its own)*. «Is the cat
@@ -1202,7 +1223,7 @@ it).
    09-24/25: `E3.3.2.1` · `E3.3.2.2` · `E3.3.2.3` · `E3.3.2.4` · `E3.3.2.5` · `E3.3.2.7` · `E3.3.2.9` ·
    `E3.3.2.10` · `E3.3.2.10.1` · `E3.3.2.2.1` · `E3.3.2.5.1`
    (`db/0034`–`db/0038`, schema v9); `E3.3.2.6` → `E3b.6.1`. **Open**: `E3.3.2.8` (correct English
-   the provider misreads — a bench against the 66 FIXED first), `E3.3.2.4.1 – .2` (bookkeeping),
+   the provider misreads — a bench against the 66 FIXED first), `E3.3.2.4.1` · `E3.3.2.4.2` (bookkeeping),
    `E3.3.2.10.2` («So» lost in silence), `E3.3.2.1.1` («so» backwards), and the side findings
    numbered on 09-26 below. Read-whole: 50 of 69 → **66 of 72**.
    Record `202609241130_the-fixpoints-eleven.md` — its header table maps every label it was written
@@ -1224,7 +1245,7 @@ it).
      `E3.3.8.2` its decompiler half
    - `E3.3.9` «An animal is.» was the matcher eating a noun — `202609221200_…`
    - `E3.3.10` `as far as` — `202609221300_…`
-   - `E3.3.11` the fixpoint sees scope · `E3.3.11.1` · `E3.3.11.2` · `E3.3.11.3` … `E3.3.11.8` its findings, `.1` and `.2` truth errors
+   - `E3.3.11` the fixpoint sees scope · `E3.3.11.1` · `E3.3.11.2` · `E3.3.11.3` · `E3.3.11.4` · `E3.3.11.5` · `E3.3.11.6` · `E3.3.11.7` · `E3.3.11.8` its findings, `.1` and `.2` truth errors
      (the neg-raising reading is the Captain's) — `202609241130_…`
    - `E3.3.12` «I remember the day I slept» is a wrong complete zip — `202609241130_…`
    - `E3.3.13` five small things recorded rather than fixed
@@ -1243,7 +1264,7 @@ it).
    **MEASURED AND DEFERRED 2026-09-20** — no band is decisive (`tools/confidence_bench.py`), five
    negatives only, and the round trip still measures the DECOMPILER. Bookkeeping kept, the scalar
    EMPTY. Waits on `E3.3.2`.
-`E3.5` *(sub-items: E3.5.1 (the UD gate, E3.5.1.1–.3) · E3.5.2 (the drill gate, E3.5.2.1))* **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
+`E3.5` *(sub-items: E3.5.1 (the UD gate, E3.5.1.1 · E3.5.1.2 · E3.5.1.3) · E3.5.2 (the drill gate, E3.5.2.1))* **The drill, automated** — E2's fifty sentences as the acceptance gate (req 10), run in CI
    fashion by tooling. **TICKED 2026-09-20, and it was already met** — the honest finding when the
    task was picked up. `tests/test_drill.py` scores the declared bar (≥90% no-abstention · 100%
    no-silent-wrong), keeps the FORCED-CHANGE ledger that stops the instrument being satisfied by
@@ -1380,9 +1401,17 @@ it).
 POS tag is read consistently against UD's own examples**, clean input costs one parse, confidence
 orders the drill's failures sensibly, **a placement is judged by a floor fitted to placements**, and
 **a pronoun under a point of view resolves to that POV's participants** (`E3.2.1`).
-**⚑ STALE — see `E3.12`** *(2026-09-26)*: `E3.6` ruled there is no placement floor, `E3.4` deferred
-confidence, and `E3.3` runs «until 100% equivalent», which English's long tail never reaches. The
-exit is re-declared in numbers, before the run, by the Captain.
+**⚑ SUPERSEDED 2026-09-26 by `E3.12`** — `E3.6` ruled there is no placement floor, `E3.4` deferred
+confidence, and «until 100% equivalent» never arrives. The line above is kept as what was first
+asked; the exit is:
+
+**Done when** *(the Captain, 2026-09-26 — declared before the run)*:
+1. **T = 0 and S = 0** — no known wrong claim and no known silent loss, on the drill, the UD gate,
+   the fixpoint corpus and the fresh set (`E3.12.2`);
+2. **the ratchets, never below 09-26**: drill agreed ≥ 67 *(65 when ruled; `E1e.6.1` raised it the same day)* · fixpoint FIXED ≥ 76 with SILENT = 0 ·
+   read-whole ≥ 66 of 72 · UD gate answered ≥ 34 with WRONG = 0;
+3. **`E3.8.3`** — the frame/knowledge audit, re-run;
+4. and then every open Q item moves to **`E3c`** (`E3.12.3`), so E3 can CLOSE.
 
 *NOT owed by this epic: named individuals. A proper noun reaching a box with an identity is **E3b**,
 opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which is req 8 working.*
@@ -1422,7 +1451,7 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    read-only review from a cloud session, at `68403e8`, against the plan, the requirements and the
    vision; every claim re-verified here before it was adopted. What it found in code already has its
    id under its source (`E3.2.1.4` · `E3.2.1.5` · `E3.2.7.1` · `E3.2.17` · `E3.1.1` · `E3.3.4.1` ·
-   `E3.8.3` · `E1e.8.1 – .3` · `E1e.9` · `E3b.3.2`); what had no source in E3 is here. Record
+   `E3.8.3` · `E1e.8.1` · `E1e.8.2` · `E1e.8.3` · `E1e.9` · `E3b.3.2`); what had no source in E3 is here. Record
    `docs/E3-parser-compiler/202609260900_the-course-check.md`.
 `E3.10` **⚑ a compiled zip cannot say what compiled it** *(data-modeling req 7)* — `Compiled` and
    `Zip` carry `schema_version` alone: no station version, no knowledge versions (closed classes v20,
@@ -1435,14 +1464,24 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    body or the r-cache. Sandbox-era and deliberate, so every E3 measurement is against the file
    version. At PS1 / E10 the station's tables come through the r-cache (body req 4, live pickup), and
    the gates print the file version beside the body's applied one.
-`E3.12` **⚑ E3'S EXIT, DECLARED IN NUMBERS BEFORE THE RUN** *(for the Captain)*. The «Done when» below
-   is stale (`E3.6` refused the floor, `E3.4` is deferred) and `E3.3` runs «until 100% equivalent»:
-   every fix now surfaces 2–5 findings, so an exit defined that way never arrives, while E3b, E4
-   and PS1 wait and the seams the evaluator would expose stay hidden. The review's proposal, to be
-   ruled rather than adopted: 0 known truth errors on the corpora · UD gate 0 WRONG · drill-gate
-   DISAGREED only in named families · a fixpoint read-whole floor · `E3.8.3` done — and the long
-   tail under ONE id that runs beside E4. Perhaps a thin slice (text → zip → stub verdict) before
-   E3b.
+`E3.12` **⚑ E3'S EXIT — HONESTY IN FULL, COVERAGE AS A RATCHET** *(RULED by the Captain, 2026-09-26)*.
+   «Until 100% equivalent» never arrives — every fix surfaces 2–5 findings — but req 8 makes a
+   different exit FINITE: a truth error can always be closed, by a fix or by an honest abstention.
+   So failures are three kinds with three bars: **T — a wrong claim** (a complete zip saying what
+   was not said) **= 0 known** · **S — a silent loss** (claims less and does not say so) **= 0
+   known** · **Q — quality** (partial and marked, phrased otherwise, abstained) **a ratchet**. The
+   exit is written as E3's «Done when» below. Record `202609261100_the-exit-bar.md`.
+   `E3.12.1` **the open list sorted T · S · Q** — provisional, verified before it gates: T `E3.3.11.1`
+   · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` *(to verify)*; S `E3.3.2.10.2` ·
+   `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` *(to verify)*; Q everything else.
+   `E3.12.2` **the fresh set** — 100 sentences sampled from the UD English EWT treebank (strangers'
+   web text, gold parses), drawn and FROZEN before the run, never tuned on. The QM judges every
+   complete zip for T and S; the Captain spot-checks. Each T or S found is fixed or turned into an
+   honest abstention; abstentions are counted, never failed.
+   `E3.12.3` **the long tail moves to `E3c`** at E3's close — every open Q item, with `E3.2.17` and
+   `E3.4`, takes its new id there and leaves a pointer.
+   `E3.12.4` **proof slice 1 stays at `E4.7`** — no thin slice before E3b; the fresh set is the
+   outside check a slice would have bought.
 `E3.13` **ten features carried in and never placed** — `carried-in.md` moved them to tk2 and no epic
    owns them: vocabulary growth (the vision's *«learn by guessing … at low trust»*), KB growing
    outward, ingestion-time differentia, trust-ledger digests and consumers, contrast-as-expectation,
@@ -1591,6 +1630,16 @@ or ambiguous name ABSTAINS rather than guessing, the first micro-nn instance ran
 minting a candidate — and the marker bench's «with Anna» cases pass.
 
 ---
+
+## E3c — The station's long tail *(opened 2026-09-26 by the Captain's `E3.12` — runs BESIDE E4)*
+
+**Goal:** coverage and quality of the station, after E3 closed on honesty. Everything here is Q —
+partial and honestly marked, phrased otherwise, or abstained — so none of it can make the evaluator
+believe something false, and none of it blocks E4. The ratchets of E3's exit hold here too: a
+change may never lower them, and a T or S found here is fixed first.
+
+**Tasks:** arrive at E3's close, each open Q item under a new `E3c.n` with a pointer left in E3
+(`E3.12.3`), with `E3.2.17` (the compile core's shape) and `E3.4` (the confidence scalar).
 
 ## E4 — The evaluator
 

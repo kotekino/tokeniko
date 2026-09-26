@@ -44,7 +44,7 @@ dev = ["pytest"]
 # pinned to the versions the gates were measured with. Optional because the station is tested on
 # hand-written skeletons and only `@pytest.mark.skeleton` tests call the real provider. The English
 # models (~400 MB) are stanza resources on disk, not a pip dependency.
-station = ["stanza==1.6.1", "spacy-stanza==1.0.4", "torch==2.12.0"]
+station = ["stanza==1.6.1", "spacy==3.8.13", "spacy-stanza==1.0.4", "torch==2.12.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

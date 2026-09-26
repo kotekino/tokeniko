@@ -372,9 +372,16 @@ case("dere-4", "I don't know who ate the fish.", "cluster:de-re",
 
 case("t-ws-1", "I go to sleep because I'm tired.", "traffic:wrong-structure",
      Zip(rows=[c("t", complement=n("tired.a"), experiencer=n("me.n")),
-               c("s", "sleep.v", agent=n("me.n")),
-               j("jn", Operator.IMPLY, "t", "s")]),
-     "pass", "both halves claimed, joined by IMPLY — «because» with nothing left over")
+               c("g", "go.v", agent=n("me.n")),
+               c("s", "sleep.v", truth=None, agent=n("me.n")),
+               j("pu", Operator.IMPLY, "g", "s"),
+               j("jn", Operator.IMPLY, "t", "pu")]),
+     "pass", "«because» claims both its halves and the IMPLY between them — and the half it explains "
+             "is a PURPOSE: I go, claimed, and that going leads to sleep, the speaker's own fallible "
+             "implication, so the sleep is NOT claimed (a dog may bark). AMENDED 2026-09-26 (E1e.6.1, "
+             "the Captain's 09-25 purpose ruling): hand-compiled as the idiom «sleep», with no «go» "
+             "and the sleep claimed. The «because» wraps the whole purpose, as «Because I'm tired, "
+             "I go to sleep» must: one tree for both orders.")
 
 case("t-ws-2", "I live in Asia because Japan is in Asia.", "traffic:wrong-structure",
      Zip(rows=[c("ja", complement=n("asia.n", marker="in"), patient=n("japan.n")),
@@ -682,16 +689,17 @@ case("aw-5", "I gave my sister a book.", "awkward:draft",
              "entail Anna got a cake.")
 
 case("aw-6", "I went from Rome to Genoa to see the Ligurian sea.", "awkward:draft",
-     Zip(rows=[thinks("want", n("me.n"), scopes="se", verb="want.v"),
-               c("se", "see.v", experiencer=n("me.n"),
-                 topic=Box(head="sea.n", relation="liguria.n", determination=Determination.DEFINITE)),
-               c("go", "go.v", agent=n("me.n"), source=n("rome.n", marker="from"),
+     Zip(rows=[c("go", "go.v", agent=n("me.n"), source=n("rome.n", marker="from"),
                  destination=n("genoa.n", marker="to")),
-               j("jn", Operator.IMPLY, "se", "go")]),
+               c("se", "see.v", truth=None, experiencer=n("me.n"),
+                 topic=Box(head="sea.n", relation="liguria.n", determination=Determination.DEFINITE)),
+               j("jn", Operator.IMPLY, "go", "se")]),
      "pass", "the draft's own row, which encoded purpose TWICE (a `goal` box and an IMPLY). One "
-             "encoding now: the wanting implies the going, and nothing derives that I saw the sea, "
-             "because «see» is true only UNDER the want. Rome and Genoa stay fillers — «Genoa is a "
-             "city you can reason about».")
+             "encoding now: the going implies the seeing — the act claimed, the end NOT, so nothing "
+             "derives that I saw the sea; the implication is mine and may fail. AMENDED 2026-09-26 "
+             "(E1e.6.1, the Captain's 09-25 purpose ruling): hand-compiled as an intention, «I want "
+             "to see» implying the going — the arrow reversed and an attitude the sentence never "
+             "states. Rome and Genoa stay fillers — «Genoa is a city you can reason about».")
 
 case("aw-7", "I build my contraption with my hammer.", "awkward:draft",
      Zip(rows=[c("b", "build.v", agent=n("me.n"),

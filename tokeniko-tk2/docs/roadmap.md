@@ -26,10 +26,10 @@
       `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
 - [x] `E1e.8.1 · E1e.8.2` **the gate's contract, leaking** *(09-26)* — the spine no longer reaches WordNet; 16 stanza tests marked `skeleton`
 - [x] `E1e.9` **a tool read the biography around the guard — disabled** *(09-26)*; its door waits on `E3b.3.2`
+- [x] `E1e.6.1` **the drill amended to the purpose ruling** *(09-26, brought forward by the Captain)* — `t-ws-1`, `aw-6` agree;
+      drill gate 65 · 6 · 16 → 67 · 4 · 16, the ratchet green. Bar doc `E2-tkzip/202609140917_…` AMENDMENTS
 - [ ] `E1e.1` **⚑ sweep E0 → E3 for test material leaking into the BL** — formal order included
 - [ ] `E1e.6` **the triage — tests follow decisions** *(09-25)* — on the closed E3: (a) code wrong → code · (b) expectation wrong → test · (c) agree → keep
-- [ ] `E1e.6.1` **amend the drill to the rulings it now disagrees with** — `t-ws-1`, `aw-6` (purpose is IMPLY,
-      09-25); the drill-gate ratchet stays red on them until then. Record `E3-parser-compiler/202609241130_…`
 - [ ] `E1e.6.2` the drill's «If I tell you something…» row has no `know.v`
 - [ ] `E1e.10` **a held-out check for every exception row a gate justified** — proposed standing rule *(for the Captain)*
 - [ ] `E1e.8.3` `test_migrations` is DB-bound at ~40 min inside the datatier's section gate
@@ -170,7 +170,7 @@
 - [x] `E3.3.2.5` **⚑ the relative gap OVERWROTE the clause's subject, and a crash** *(09-24)* — «the
       fish that the cat ate» claimed the fish ate. The gap now takes its position's role; a gap nobody can
       place WITHHOLDS the clause. Read-whole population 73 → 71, honestly. Record `202609241130_…`
-- [x] `E3.3.2.2 · .3 · .4` **⚑ a sentence is a tree, «the result OF perception», and no relative
+- [x] `E3.3.2.2` · `E3.3.2.3` · `E3.3.2.4` **⚑ a sentence is a tree, «the result OF perception», and no relative
       clause lost in silence** *(09-24)* — a tree ratchet over the drill; a consumed row is said or named in
       `unsaid`. Read-whole FIXED 62 → 63 of 71. Record `202609241130_…`
 - [x] `E3.3.2.10` **⚑ «not necessarily», said at last** *(09-24)* — the decompiler reads the adverb table
@@ -178,7 +178,7 @@
 - [x] `E3.3.2.10.1` **⚑ MODAL SCOPE — seven wrong claims, none left** *(09-24)* — an adverb scopes by its order
       against «not» (frame); where «not» falls after an auxiliary is per word (`db/0036`); «may
       not» withholds its clause. Record `202609241130_…`
-- [x] `E3.3.2.1 · .7 · .9 · E3.3.2.2.1` **⚑ purpose · the understood «to» · a supposed AND · «and
+- [x] `E3.3.2.1` · `E3.3.2.7` · `E3.3.2.9` · `E3.3.2.2.1` **⚑ purpose · the understood «to» · a supposed AND · «and
       therefore»** *(09-25)* — purpose is `imply(act, end)` (`db/0037`), the understood «to» is stored (schema v9), a supposed AND is supposed, a causal adverb replaces the
       «and». Every drill zip is a TREE. Read-whole 64 → 65 of 71. Record `202609241130_…`
 - [x] `E3.3.2.5.1` **⚑ the zero relative — the gap's role when frames and supersense AGREE** *(09-25)* — `db/0038`;
@@ -190,23 +190,33 @@
 - [x] `E3.2.1.5` **⚑ TRUTH ERROR — «She lives here» came back «Where does she live?»** *(09-26)* — schema v10:
       an `Open` keeps `deixis`·`distance` and is said, never asked. Context-vs-field is the Captain's
 - [x] `E3.2.7.1` **WordNet through its one door** *(09-26)* — `supersense`, `frames` no longer import nltk; the `lexname` rebuild still owed
-- [x] `E3.1.1` **the provider pinned** *(09-26)* — a `station` optional group in `pyproject.toml`
+- [x] `E3.2.1.6` **⚑ TRUTH ERROR — «This is good» came back «Who is good?»** *(09-26, the QA)* — a pointed slot is said
+      back from the rows on the features it carries; «These ARE mine»
+- [x] `E3.1.1` **the provider pinned** *(09-26)* — a `station` optional group in `pyproject.toml`, `spacy` included
 - [x] `E3.7` → moved to `E4.3.1` *(09-26)*: which sense a word has is not the station's (req 11)
+- [x] `E3.12` **⚑ E3's EXIT RULED — honesty in full, coverage as a ratchet** *(the Captain, 09-26)* — T (wrong claim) = 0 ·
+      S (silent loss) = 0 · Q ratcheted · `E3.8.3` · then Q moves to `E3c` and E3 closes. Record `202609261100_…`
+- [x] `E3.12.4` **proof slice 1 stays at `E4.7`** *(ruled 09-26)* — the fresh set is the outside check
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] `E3.12` **⚑ E3's EXIT, declared in numbers before the run** *(09-26, for the Captain)* — the «Done when»
-      is stale and «100% equivalent» never arrives; the long tail goes under one id beside E4. Record `202609260900_…`
-- [ ] `E3.3.11.1 · .2` **⚑ TWO TRUTH ERRORS: a negation and an attitude** *(09-25)* — «I think that he
+- [ ] `E3.12.1` **the open list sorted T · S · Q** — T: `E3.3.11.1` · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` (to verify); S: `E3.3.2.10.2` · `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` (to verify)
+- [ ] `E3.2.1.6.1` **⚑ «That» as a pronoun is lost in silence** *(09-26)* — «That is a cat» → «A cat is.»; the `relative` row places nothing
+- [ ] `E3.2.1.6.3` «I saw that cat» → «I saw cat» — the demonstrative determiner leaves no trace *(an S if unrecorded)*
+- [ ] `E3.3.11.1` · `E3.3.11.2` **⚑ TWO TRUTH ERRORS: a negation and an attitude** *(09-25)* — «I think that he
       does not sleep» puts ¬ OUTSIDE the thinking; «I do not think that he sleeps» claims both.
       Neg-raising is a reading for the Captain. Record `202609241130_…`
 - [ ] `E3.3.12` **⚑ «I remember the day I slept» is a WRONG COMPLETE ZIP** *(09-25)* — stanza's `obl:tmod` on the
       matrix; the withheld clause used to hide it. Seven bench cases. Record `202609241130_…`
-- [ ] `E3.3.11.3 – .8` **the scope reading's smaller findings** — the fixpoint blind to a chain's
-      truth (a ruling) · the drill gate blind to prefix order · «by by» · «need not» read as a verb ·
-      no domain before a modal · a modal carries no theatre. Record `202609241130_…`
+- [ ] `E3.12.2` **⚑ the fresh set** — 100 UD-EWT sentences frozen before the run; every complete zip judged for T and S
+- [ ] `E3.8.3` **the frame/knowledge audit, re-run at E3's real close** *(09-26)* — ten constants arrived after it
+- [ ] `E3.12.3` **at E3's close, every open Q item moves to `E3c`** — below this line, Q only, except the T/S `E3.12.1` names inside `E3.3.2`
+- [ ] `E3.2.1.6.2` «I was happy» decompiles as «I were happy» *(09-26)*
+- [ ] `E3.3.11.3` … `E3.3.11.8` **the scope reading's smaller findings** — `E3.3.11.3` the fixpoint blind to a chain's
+      truth (a ruling) · `E3.3.11.4` the drill gate blind to prefix order · `E3.3.11.5` «by by» · `E3.3.11.6` «need not» read as a verb ·
+      `E3.3.11.7` no domain before a modal · `E3.3.11.8` a modal carries no theatre. Record `202609241130_…`
 - [ ] `E3.3.2` **the fixpoint's 6 remaining** — `E3.3.2.8` correct English the provider misreads (a bench
-      against the 66 FIXED first) · `E3.3.2.6` → `E3b.6.1` · first-leg misparses · `E3.3.2.4.1–.2`
+      against the 66 FIXED first) · `E3.3.2.6` → `E3b.6.1` · first-leg misparses · `E3.3.2.4.1` · `E3.3.2.4.2`
       two bookkeeping defects · `E3.3.2.10.2` «So» / «and so» lost in silence · `E3.3.2.1.1` «so»
       claims its consequence backwards. Record `202609241130_…`
 - [ ] `E3.4` **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band is decisive
@@ -216,16 +226,16 @@
       fronted ADVERB («Legally,») needs `legally` → `law.n`, a derivation the compiler has no reader
       for and which the decompiler already refuses to say · a NON-fronted `as` («I work as a
       teacher») was never benched, and may be the job rather than the frame
-- [ ] `E3.3.2.* · E3.3.2.10.3 – .7 · E3.3.2.5.1.1 – .3` **the side findings, numbered 09-26** — expletive · agreement ·
-      purpose under an imperative · «asked Anna where» · `closed_forms` · «can't» · «could» · `_withhold` ·
-      archaic question · stative subject · «she bore» · «i». Listed in `plan.md` `E3.3`; record `202609241130_…`
+- [ ] **the side findings, numbered 09-26** — `E3.3.2.12` expletive · `E3.3.2.13` agreement ·
+      `E3.3.2.1.2` purpose under an imperative · `E3.3.2.7.1` «asked Anna where» · `E3.3.2.10.3` `closed_forms` ·
+      `E3.3.2.10.4` «can't» · `E3.3.2.10.5` «could» · `E3.3.2.10.6` `_withhold` · `E3.3.2.10.7` archaic question ·
+      `E3.3.2.5.1.1` stative subject · `E3.3.2.5.1.2` «she bore» · `E3.3.2.5.1.3` «i». Listed in `plan.md` `E3.3`; record `202609241130_…`
 - [ ] `E2.3.1` **two spellings of one attitude — `Pov` and `AttitudeRow`** *(09-26, for the Captain)* — before E4 compares zips
 - [ ] `E3.3.4.1` **the format enforces less than the ratchets test** *(09-26, for the Captain)* — free variables, tree-ness, `Ref` placement
 - [ ] `E3.10` **a compiled zip cannot say what compiled it** *(09-26, data-modeling req 7)* — before the first zip is stored
 - [ ] `E3.11` **the station reads its knowledge from migration FILES** *(09-26)* — the r-cache at PS1 / E10
 - [ ] `E3.13` **ten carried-in features placed nowhere** *(09-26)* — an epic each, or «stays OUT» with a reason
 - [ ] `E3.2.17` **the compile core's shape** *(09-26)* — one state, one module per pass; at E3's close
-- [ ] `E3.8.3` **the frame/knowledge audit, re-run at E3's real close** *(09-26)* — ten constants arrived after it
 - [ ] `E3.3.13` **FIVE SMALL THINGS RECORDED RATHER THAN FIXED** *(09-21/24)* — none load-bearing, each named
       where it was found: a DEFINITE's relative clause is a presupposition and is kept claimed so
       the brain gets the fact · a quantifier's DOMAIN CARDINALITY is not in the zip, so «Neither is
@@ -233,6 +243,9 @@
       `number: pl`, the same column confusion as `dual` but admissible · a clause-headed phrase
       takes the PLURAL universal on the QM's grammar, not on evidence · discourse «No» (an answer
       particle) has no reading and now goes unplaced — `t-ng-4`, 09-24
+
+## E3c — the station's long tail *(opened 2026-09-26 by `E3.12` — runs beside E4)*
+- [ ] its tasks arrive at E3's close (`E3.12.3`): every open Q item, `E3.2.17`, `E3.4`
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] `E3b.1` **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence

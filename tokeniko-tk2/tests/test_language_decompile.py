@@ -1193,10 +1193,71 @@ def test_a_DEICTIC_open_is_said_as_its_word_and_the_clause_stays_a_statement(dec
     assert decompiler.decompile(zip_).text == "She lives there."
 
 
+@pytest.mark.parametrize("distance, number, said", [
+    ("proximal", "sg", "She sees this."), ("distal", "sg", "She sees that."),
+    ("proximal", "pl", "She sees these."), ("distal", "pl", "She sees those."),
+])
+def test_a_DEMONSTRATIVE_open_is_said_as_its_word_never_asked(decompiler, distance, number, said):
+    """E3.2.1.6: a demonstrative's row carries `distance` and `number` and no `deixis`, and the
+    v10 guard keyed on `deixis` alone — so «I saw those» came back as «What did I see?». The rows
+    answer on all three features: `distal` · `pl` is «those», and no role is named to find it."""
+    zip_ = Zip(rows=[row(predicate="see.v",
+                         agent=Box(head=Open(person=3, number="sg", gender="f")),
+                         patient=Box(head=Open(distance=distance, number=number)))])
+    assert decompiler.decompile(zip_).text == said
+
+
+def test_a_POINTED_open_no_single_row_answers_is_UNSAID_and_never_asked(decompiler):
+    """`_deictic`'s refusal (E3.2.1.6). A pointed-at unknown no row describes — or two rows describe
+    alike — is silence recorded in `unsaid`, and the clause stays a statement: the speaker pointed,
+    so no question word may stand in for the word nobody can choose."""
+    from tk2.language.closed import ClosedClasses
+
+    nowhere = Zip(rows=[row(predicate="see.v",
+                            agent=Box(head=Open(person=3, number="sg", gender="f")),
+                            patient=Box(head=Open(distance="medial", number="sg")))])
+    out = decompiler.decompile(nowhere)
+    assert out.text == "She sees.", out.text
+    assert any("0 forms fit" in line for line in out.unsaid), out.unsaid
+
+    # two rows carrying «this»'s features: the table cannot choose, so nothing is chosen
+    rows = decompiler.table._rows                                 # noqa: SLF001
+    this = next(r for r in rows if r["form"] == "this" and r.get("role") == "demonstrative")
+    twice = Decompiler(table=ClosedClasses(rows + [dict(this, form="yon")]))
+    pointed = Zip(rows=[row(predicate="see.v",
+                            agent=Box(head=Open(person=3, number="sg", gender="f")),
+                            patient=Box(head=Open(distance="proximal", number="sg")))])
+    out = twice.decompile(pointed)
+    assert out.text == "She sees.", out.text
+    assert any("2 forms fit" in line for line in out.unsaid), out.unsaid
+
+
 @pytest.mark.skeleton
 @pytest.mark.parametrize("text", ["She lives here.", "She lives there.",
                                   "She lives now.", "She lives then."])
 def test_a_DEICTIC_adverb_comes_back_as_the_zip_it_went_out_as(text):
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    second = compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip
+
+    assert out.text == text
+    assert canonical(second) == canonical(first)
+
+
+@pytest.mark.skeleton
+@pytest.mark.parametrize("text", ["This is good.", "These are mine.", "I saw those.",
+                                  "I like this."])
+def test_a_DEMONSTRATIVE_comes_back_as_the_zip_it_went_out_as(text):
+    """E3.2.1.6, through stanza: a pointed-at subject or object is said back — and a plural one
+    agrees plural — so the second zip is the first."""
     from tk2.language import StanzaSkeletons, standing_closed_classes
     from tk2.language.compile import Compiler
     from tk2.language.utterance import compile_utterance
