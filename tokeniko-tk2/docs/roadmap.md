@@ -197,9 +197,6 @@
 - [x] `E3.12` **⚑ E3's EXIT RULED — honesty in full, coverage as a ratchet** *(the Captain, 09-26)* — wrong claims = 0 ·
       silent losses = 0 · quality ratcheted · `E3.8.3` · then the quality items move to `E3c` and E3 closes. Record `202609261100_…`
 - [x] `E3.12.4` **proof slice 1 stays at `E4.7`** *(ruled 09-26)* — the fresh set is the outside check
-
-### still open — in the order they are to be done, and nothing waits on anything below it
-
 - [x] `E3.12.5` **six rulings** *(the Captain, 09-26)* — what remains must be ENTAILED · empty theatre = unstated · an `Open` by number is said · a reversed decompile is a wrong claim · `aw-13` withheld · neg-raising: literal
 - [x] `E3.12.1` **the open list sorted — MEASURED** *(09-26)* — 9 wrong claims · 8 silent losses; undercounted by 6. Table in `202609261100_…`
 - [ ] `E3.12.1.1` **the drill gate AGREES with `dere-4`, which carries `E3.3.11.2`'s contradiction** — the gate cannot certify «0 wrong claims»
