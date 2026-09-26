@@ -112,3 +112,9 @@ shorthand ranges survived (`E3b.3`, `E3.10`). `POINTED_FEATURES` noted as a new 
 format's field names, frame. Found: `E3.2.1.6.4` «What is this?» → «Is this what?». And the class
 names T · S · Q were flagged against the third standing law — **renamed the same day, on the
 Captain's yes**: wrong claim · silent loss · quality.
+
+## Closed *(the Captain, 2026-09-26)*
+
+QA 3 of `482cbf8` found no defect: two documentation slips (the exit's first line garbled by the
+rename; the id rule's example as a range), both fixed. Three rounds, nothing but documentation left:
+**the course check is closed.**

@@ -1408,7 +1408,7 @@ confidence, and «until 100% equivalent» never arrives. The line above is kept 
 asked; the exit is:
 
 **Done when** *(the Captain, 2026-09-26 — declared before the run)*:
-1. **no wrong claim and no silent loss** — none known and no known silent loss, on the drill, the UD gate,
+1. **no known wrong claim and no known silent loss** — on the drill, the UD gate,
    the fixpoint corpus and the fresh set (`E3.12.2`);
 2. **the ratchets, never below 09-26**: drill agreed ≥ 67 *(65 when ruled; `E1e.6.1` raised it the same day)* · fixpoint FIXED ≥ 76 with SILENT = 0 ·
    read-whole ≥ 66 of 72 · UD gate answered ≥ 34 with WRONG = 0;

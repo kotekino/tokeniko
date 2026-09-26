@@ -76,8 +76,8 @@ The root rule says reconcile before proposing. Concretely, here, that is four ch
    building `E3.3.2.10` — and the same id appears in `roadmap.md`. **Every id is written in FULL**
    in both files — never `E3.3.11.1 · .2` or `– .8`, which a search cannot find. **Past four levels
    below the epic**, an item may take the next free id at a SHALLOWER level, with its origin written
-   beside it: `E3.3.11` (found at `E3.3.2.10.1`, placed under `E3.3`, 09-25) and `E3.3.2.10.3` …
-   `E3.3.2.10.7` (found building `E3.3.2.10.1`, placed as its siblings, 09-26).
+   beside it: `E3.3.11` (found at `E3.3.2.10.1`, placed under `E3.3`, 09-25) and `E3.3.2.10.3` ·
+   `E3.3.2.10.4` · `E3.3.2.10.5` · `E3.3.2.10.6` · `E3.3.2.10.7` (found building `E3.3.2.10.1`, placed as its siblings, 09-26).
 3. **`landed.md`** — only when an epic CLOSES. Items move there, never copied.
 4. **The chapter** — a ruling or a measurement goes in `docs/<chapter>/` as a dated note, headed
    `*Roadmap: <ids>*`, and the `requirements.md` line it amends says so.
