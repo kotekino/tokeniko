@@ -194,24 +194,25 @@
       back from the rows on the features it carries; «These ARE mine»
 - [x] `E3.1.1` **the provider pinned** *(09-26)* — a `station` optional group in `pyproject.toml`, `spacy` included
 - [x] `E3.7` → moved to `E4.3.1` *(09-26)*: which sense a word has is not the station's (req 11)
-- [x] `E3.12` **⚑ E3's EXIT RULED — honesty in full, coverage as a ratchet** *(the Captain, 09-26)* — T (wrong claim) = 0 ·
-      S (silent loss) = 0 · Q ratcheted · `E3.8.3` · then Q moves to `E3c` and E3 closes. Record `202609261100_…`
+- [x] `E3.12` **⚑ E3's EXIT RULED — honesty in full, coverage as a ratchet** *(the Captain, 09-26)* — wrong claims = 0 ·
+      silent losses = 0 · quality ratcheted · `E3.8.3` · then the quality items move to `E3c` and E3 closes. Record `202609261100_…`
 - [x] `E3.12.4` **proof slice 1 stays at `E4.7`** *(ruled 09-26)* — the fresh set is the outside check
 
 ### still open — in the order they are to be done, and nothing waits on anything below it
 
-- [ ] `E3.12.1` **the open list sorted T · S · Q** — T: `E3.3.11.1` · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` (to verify); S: `E3.3.2.10.2` · `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` (to verify)
+- [ ] `E3.12.1` **the open list sorted: wrong claim · silent loss · quality** — wrong claims: `E3.3.11.1` · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` (to verify); silent losses: `E3.3.2.10.2` · `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` (to verify)
 - [ ] `E3.2.1.6.1` **⚑ «That» as a pronoun is lost in silence** *(09-26)* — «That is a cat» → «A cat is.»; the `relative` row places nothing
-- [ ] `E3.2.1.6.3` «I saw that cat» → «I saw cat» — the demonstrative determiner leaves no trace *(an S if unrecorded)*
+- [ ] `E3.2.1.6.3` «I saw that cat» → «I saw cat» — the demonstrative determiner leaves no trace *(a silent loss if unrecorded)*
 - [ ] `E3.3.11.1` · `E3.3.11.2` **⚑ TWO TRUTH ERRORS: a negation and an attitude** *(09-25)* — «I think that he
       does not sleep» puts ¬ OUTSIDE the thinking; «I do not think that he sleeps» claims both.
       Neg-raising is a reading for the Captain. Record `202609241130_…`
 - [ ] `E3.3.12` **⚑ «I remember the day I slept» is a WRONG COMPLETE ZIP** *(09-25)* — stanza's `obl:tmod` on the
       matrix; the withheld clause used to hide it. Seven bench cases. Record `202609241130_…`
-- [ ] `E3.12.2` **⚑ the fresh set** — 100 UD-EWT sentences frozen before the run; every complete zip judged for T and S
+- [ ] `E3.12.2` **⚑ the fresh set** — 100 UD-EWT sentences frozen before the run; every complete zip judged for wrong claims and silent losses
 - [ ] `E3.8.3` **the frame/knowledge audit, re-run at E3's real close** *(09-26)* — ten constants arrived after it
-- [ ] `E3.12.3` **at E3's close, every open Q item moves to `E3c`** — below this line, Q only, except the T/S `E3.12.1` names inside `E3.3.2`
+- [ ] `E3.12.3` **at E3's close, every open quality item moves to `E3c`** — below this line, quality only, except the wrong claims and silent losses `E3.12.1` names inside `E3.3.2`
 - [ ] `E3.2.1.6.2` «I was happy» decompiles as «I were happy» *(09-26)*
+- [ ] `E3.2.1.6.4` «What is this?» comes back «Is this what?» *(09-26, the QA of `9b0eb7c`)*
 - [ ] `E3.3.11.3` … `E3.3.11.8` **the scope reading's smaller findings** — `E3.3.11.3` the fixpoint blind to a chain's
       truth (a ruling) · `E3.3.11.4` the drill gate blind to prefix order · `E3.3.11.5` «by by» · `E3.3.11.6` «need not» read as a verb ·
       `E3.3.11.7` no domain before a modal · `E3.3.11.8` a modal carries no theatre. Record `202609241130_…`
@@ -245,7 +246,7 @@
       particle) has no reading and now goes unplaced — `t-ng-4`, 09-24
 
 ## E3c — the station's long tail *(opened 2026-09-26 by `E3.12` — runs beside E4)*
-- [ ] its tasks arrive at E3's close (`E3.12.3`): every open Q item, `E3.2.17`, `E3.4`
+- [ ] its tasks arrive at E3's close (`E3.12.3`): every open quality item, `E3.2.17`, `E3.4`
 
 ## E3b — the name *(opened 2026-09-16 — the parked hole, reopened and widened)*
 - [ ] `E3b.1` **is it a name at all?** — stanza vs spaCy NER measured; `PROPN` and casing as weak evidence
@@ -255,7 +256,7 @@
       read lazily, never materialized
 - [ ] `E3b.3.1` **the names list, INHERITED — and it cannot be a TEST** — 21,975 rows, **28.1% also place
       names**. Evidence, never a test: it is the measurement that forces the net
-- [ ] `E3b.3.2` **the door to tk1's rows** *(09-26, for the Captain)* — snapshot from tk1's side, or a read-only datatier door; serves `E3b.3`–`.4`, `E9.3`, `E1e.9`
+- [ ] `E3b.3.2` **the door to tk1's rows** *(09-26, for the Captain)* — snapshot from tk1's side, or a read-only datatier door; serves `E3b.3` · `E3b.3.1` · `E3b.4`, `E9.3`, `E1e.9`
 - [ ] `E3b.4` **have I met it?** — recognition; the mechanism is E3b's, the rows are E9's
 - [ ] `E3b.5.1` **⚑ the MICRO-NN abstraction — brought forward from E5**; built to serve the next line and
       generalized against it, never before it

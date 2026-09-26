@@ -1066,10 +1066,12 @@ it).
      - `E3.2.1.6.1` **⚑ «That» as a PRONOUN is lost in silence** (compiler) — «That is a cat» compiles
        with no subject and nothing unplaced, and comes back «A cat is.»; «She saw that» loses its
        object. The PRON reading picks the `relative` row, which outside a relative clause places
-       nothing. An S by `E3.12`'s bar.
+       nothing. A silent loss by `E3.12`'s bar.
      - `E3.2.1.6.2` «I was happy» decompiles as «I WERE happy» — the first-person past of the copula.
      - `E3.2.1.6.3` «I saw that cat» comes back «I saw cat» — a demonstrative DETERMINER leaves no
-       trace in the box. An S if nothing records it *(to verify)*.
+       trace in the box. A silent loss if nothing records it *(to verify)*.
+     - `E3.2.1.6.4` *(found by the QA of `9b0eb7c`)* «What is this?» comes back «Is this what?» — the
+       copular wh-question's word order; a quality item.
 
 `E3.2.2` *(was task 2c)* **⚑ A POLAR QUESTION NEVER OPENS ITS TRUTH** *(found 2026-09-17, by fixing the truth slot in
    2b — and it is NOT a person-axis task, which is why it has a number of its own)*. «Is the cat
@@ -1406,12 +1408,12 @@ confidence, and «until 100% equivalent» never arrives. The line above is kept 
 asked; the exit is:
 
 **Done when** *(the Captain, 2026-09-26 — declared before the run)*:
-1. **T = 0 and S = 0** — no known wrong claim and no known silent loss, on the drill, the UD gate,
+1. **no wrong claim and no silent loss** — none known and no known silent loss, on the drill, the UD gate,
    the fixpoint corpus and the fresh set (`E3.12.2`);
 2. **the ratchets, never below 09-26**: drill agreed ≥ 67 *(65 when ruled; `E1e.6.1` raised it the same day)* · fixpoint FIXED ≥ 76 with SILENT = 0 ·
    read-whole ≥ 66 of 72 · UD gate answered ≥ 34 with WRONG = 0;
 3. **`E3.8.3`** — the frame/knowledge audit, re-run;
-4. and then every open Q item moves to **`E3c`** (`E3.12.3`), so E3 can CLOSE.
+4. and then every open quality item moves to **`E3c`** (`E3.12.3`), so E3 can CLOSE.
 
 *NOT owed by this epic: named individuals. A proper noun reaching a box with an identity is **E3b**,
 opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which is req 8 working.*
@@ -1447,7 +1449,7 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    abstains and `aw-17` stays red honestly rather than green on a rule that would invent domains
    everywhere else. Record `202609221100_the-domain.md`.
 
-`E3.10 … E3.13 · E2.3.1` **THE COURSE CHECK — an outside reading of E0 → E3** *(2026-09-26)*. A
+`E3.10` · `E3.11` · `E3.12` · `E3.13` · `E2.3.1` **THE COURSE CHECK — an outside reading of E0 → E3** *(2026-09-26)*. A
    read-only review from a cloud session, at `68403e8`, against the plan, the requirements and the
    vision; every claim re-verified here before it was adopted. What it found in code already has its
    id under its source (`E3.2.1.4` · `E3.2.1.5` · `E3.2.7.1` · `E3.2.17` · `E3.1.1` · `E3.3.4.1` ·
@@ -1467,18 +1469,18 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
 `E3.12` **⚑ E3'S EXIT — HONESTY IN FULL, COVERAGE AS A RATCHET** *(RULED by the Captain, 2026-09-26)*.
    «Until 100% equivalent» never arrives — every fix surfaces 2–5 findings — but req 8 makes a
    different exit FINITE: a truth error can always be closed, by a fix or by an honest abstention.
-   So failures are three kinds with three bars: **T — a wrong claim** (a complete zip saying what
-   was not said) **= 0 known** · **S — a silent loss** (claims less and does not say so) **= 0
-   known** · **Q — quality** (partial and marked, phrased otherwise, abstained) **a ratchet**. The
+   So failures are three kinds with three bars: **a wrong claim** (a complete zip saying what
+   was not said) **= 0 known** · **a silent loss** (claims less and does not say so) **= 0
+   known** · **quality** (partial and marked, phrased otherwise, abstained) **a ratchet**. The
    exit is written as E3's «Done when» below. Record `202609261100_the-exit-bar.md`.
-   `E3.12.1` **the open list sorted T · S · Q** — provisional, verified before it gates: T `E3.3.11.1`
-   · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` *(to verify)*; S `E3.3.2.10.2` ·
-   `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` *(to verify)*; Q everything else.
+   `E3.12.1` **the open list sorted: wrong claim · silent loss · quality** — provisional, verified before it gates: wrong claims `E3.3.11.1`
+   · `E3.3.11.2` · `E3.3.12` · `E3.3.2.1.1` · `E3.3.2.7.1` *(to verify)*; silent losses `E3.3.2.10.2` ·
+   `E3.3.2.4.2` · `E3.2.1.6.1` · `E3.2.1.6.3` *(to verify)*; quality everything else.
    `E3.12.2` **the fresh set** — 100 sentences sampled from the UD English EWT treebank (strangers'
    web text, gold parses), drawn and FROZEN before the run, never tuned on. The QM judges every
-   complete zip for T and S; the Captain spot-checks. Each T or S found is fixed or turned into an
+   complete zip for wrong claims and silent losses; the Captain spot-checks. Each one found is fixed or turned into an
    honest abstention; abstentions are counted, never failed.
-   `E3.12.3` **the long tail moves to `E3c`** at E3's close — every open Q item, with `E3.2.17` and
+   `E3.12.3` **the long tail moves to `E3c`** at E3's close — every open quality item, with `E3.2.17` and
    `E3.4`, takes its new id there and leaves a pointer.
    `E3.12.4` **proof slice 1 stays at `E4.7`** — no thin slice before E3b; the fresh set is the
    outside check a slice would have bought.
@@ -1633,12 +1635,12 @@ minting a candidate — and the marker bench's «with Anna» cases pass.
 
 ## E3c — The station's long tail *(opened 2026-09-26 by the Captain's `E3.12` — runs BESIDE E4)*
 
-**Goal:** coverage and quality of the station, after E3 closed on honesty. Everything here is Q —
+**Goal:** coverage and quality of the station, after E3 closed on honesty. Everything here is quality —
 partial and honestly marked, phrased otherwise, or abstained — so none of it can make the evaluator
 believe something false, and none of it blocks E4. The ratchets of E3's exit hold here too: a
-change may never lower them, and a T or S found here is fixed first.
+change may never lower them, and a wrong claim or silent loss found here is fixed first.
 
-**Tasks:** arrive at E3's close, each open Q item under a new `E3c.n` with a pointer left in E3
+**Tasks:** arrive at E3's close, each open quality item under a new `E3c.n` with a pointer left in E3
 (`E3.12.3`), with `E3.2.17` (the compile core's shape) and `E3.4` (the confidence scalar).
 
 ## E4 — The evaluator

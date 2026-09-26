@@ -91,7 +91,7 @@ with no WordNet at all. What it found, and what happened:
 - **P1, pre-existing — `E3.2.1.6`**: demonstratives came back as questions («This is good» → «Who is
   good?»), because the v10 guard read `deixis` only. **Fixed**: a POINTED slot (`deixis` or
   `distance`) is said back from the rows on the features it carries. Building it found
-  `E3.2.1.6.1` («That» as a pronoun lost in silence — an S), `E3.2.1.6.2` («I were happy»),
+  `E3.2.1.6.1` («That» as a pronoun lost in silence — a silent loss), `E3.2.1.6.2` («I were happy»),
   `E3.2.1.6.3` («I saw cat» — to verify).
 - `_unknown` copies `distance` for every row, not only adverbs — **recorded** in the v10 note.
 - ids in shorthand in the roadmap (16 unsearchable) — **written in full**; and the rule now says so
@@ -102,3 +102,13 @@ with no WordNet at all. What it found, and what happened:
 - a quoted THOUGHT rotates, unrecorded and untested — **pinned by a test**; it is `E3.2.1.1`'s
   quotation rule under `E3.2.1.4`'s «any verb».
 - `_deictic`'s refusal path untested — **tested**, both halves.
+
+## The QA of `9b0eb7c` *(the same day)*
+
+Every finding of the first QA closed as recorded; no defect introduced; 535 offline tests green.
+Documentation only: the id rule's own example contradicted it («one level up», yet `E3.3.11` sits
+three up) — the rule now says «a shallower level» — and it used the shorthand it forbids; two
+shorthand ranges survived (`E3b.3`, `E3.10`). `POINTED_FEATURES` noted as a new constant: the
+format's field names, frame. Found: `E3.2.1.6.4` «What is this?» → «Is this what?». And the class
+names T · S · Q were flagged against the third standing law — **renamed the same day, on the
+Captain's yes**: wrong claim · silent loss · quality.
