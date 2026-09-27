@@ -32,7 +32,9 @@ from tk2.dictionary.frames import primary_takes_object
 from tk2.language.adverbs import (
     ABSTAIN, EXCLUSIVE, FOCUS, IDENTIFYING, AdverbKinds, standing_adverb_kinds,
 )
-from tk2.language.closed import AMBIGUOUS, FOLLOWING_NEGATION, INSIDE, OUTSIDE, ClosedClasses
+from tk2.language.closed import (
+    AMBIGUOUS, FOLLOWING_NEGATION, FUSED_QUANTIFIER, INSIDE, OUTSIDE, ClosedClasses,
+)
 from tk2.language.markers import MarkerSelector
 from tk2.language.prior import CONSTANT_TAG, REVERSED_TAG, OpenPriors, standing_open_priors
 from tk2.language.strength import IMPERATIVE, AttitudeStrengths, standing_attitude_strengths
@@ -1067,10 +1069,12 @@ class Compiler:
             word = skeleton[index]
             match = marks.get(index)
             if match is not None and match.kind == "quantifier" \
-                    and word.bare_dep in NOMINAL_DEPS:
+                    and (word.bare_dep in NOMINAL_DEPS or match.role == FUSED_QUANTIFIER):
                 # **THE QUANTIFIER IS THE PHRASE** — «EVERYONE sleeps», «ALL that glitters». It
                 # hangs off the clause by a nominal relation rather than off a noun as a determiner,
-                # so nothing else will ever build its box.
+                # so nothing else will ever build its box. **And a fused one is its own phrase
+                # whatever its relation** (`E3.3.11.2.9`): «he NEVER sleeps» hangs «never» off the
+                # verb as an adverb, and the row says which box its variable fills.
                 self._bare_quantifier(word, match, skeleton, marks, boxes, prefix_rows, covered,
                                       name, copular, defaulted, abstained)
                 continue
@@ -1164,6 +1168,10 @@ class Compiler:
             elif self._universal_meets_negation(scoped, mine, marks, covered, abstained) \
                     and unscoped is not None:
                 unscoped.append(head.index)
+            elif self._binder_after_a_modal(scoped, head, skeleton, mine, marks, covered,
+                                            abstained, boxes, prefix_rows) \
+                    and unscoped is not None:
+                unscoped.append(head.index)
             elif elided is not None and unscoped is not None:
                 abstained.append(elided)
                 unscoped.append(head.index)
@@ -1228,6 +1236,92 @@ class Compiler:
         abstained.append(f"«{word} … not»: the universal and the negation scope both ways and "
                          f"nothing here says which — the clause is withheld")
         return True
+
+    @staticmethod
+    def _binder_after_a_modal(scoped: list[_Scoped], head: Word, skeleton: Skeleton,
+                              mine: set[int], marks: dict, covered: Placements,
+                              abstained: list, boxes: dict | None = None,
+                              prefix_rows: list | None = None) -> bool:
+        """**«CAN NEVER», «MUST NEVER» — THE MODAL'S ROW SAYS WHERE A NEGATIVE BINDER SCOPES**
+        (`E3.3.11.2.9.5`, the Captain 2026-09-27). True when the clause is withheld.
+
+        A binder is ordered by word order like every other prefix element (the literal reading,
+        `E3.12.5` (6)) — but between a modal AUXILIARY and its verb English stands the adverb in the
+        slot the auxiliary fixes, whatever the two mean, exactly as it stands «not» there. That is
+        why `_scope` does not read «must not» off the order and asks the modal's row instead
+        (`db/0036`), and a NEGATIVE binder there asks the same row the same question, because its
+        negation is what scopes: «can never» ¬∃t ◇ (`outside`), «must never» □ ¬∃t (`inside`),
+        «need never» ¬∃t □ (`outside`); «may never» is `ambiguous` and the clause is WITHHELD, as
+        «may not» is. A POSITIVE binder there — «can always», «must sometimes» — carries no negation
+        for the row to place, no row states its scope, and it is withheld until one does.
+
+        Only an ADVERBIAL binder (its relation is not a nominal one): a subject after an inverted
+        auxiliary — «can EVERYONE sleep?» — is read as it was before. And only alone in that slot: a
+        «not» after the same modal is `_scope`'s, and two negations in one auxiliary's slot are not
+        ordered by either rule.
+        """
+        modals = [item for item in scoped if item.auxiliary]
+        if not modals:
+            return False
+        binders = [index for index in sorted(mine)
+                   if index in covered and marks.get(index) is not None
+                   and marks[index].kind == "quantifier"
+                   and marks[index].role == FUSED_QUANTIFIER
+                   and skeleton[index].bare_dep not in NOMINAL_DEPS
+                   and min(item.index for item in modals) < index < head.index]
+        for index in binders:
+            word = marks[index].form
+            modal = max((item for item in modals if item.index < index), key=lambda i: i.index)
+            binder = Compiler._binder_of(covered.label(index), boxes or {}, prefix_rows or [])
+            why = None
+            if binder is None:
+                why = "its binder is not found"
+            elif binder.quantity is not Quantity.NEGATIVE:
+                why = f"a {binder.quantity.value} binder carries no negation for the modal's row " \
+                      f"to place, and no row states its scope"
+            elif modal.own is not None or any(item.negation and item.index > modal.index
+                                              for item in scoped):
+                why = "a «not» in the same auxiliary's slot, and neither rule orders the two"
+            elif modal.following == OUTSIDE:
+                # ¬∃t ◇ — the binder moves ahead of the modality's rows, into the slot they held.
+                # **AND EVERY MOVED ROW TAKES ITS SLOT'S NUMBER**, `_scope`'s rule: the zip is then
+                # the one «he never can sleep» compiles to, name for name — a binder's own variable
+                # is part of what it says, and a different spelling of one scope would not be FIXED.
+                first = min(prefix_rows.index(row) for row in modal.rows)
+                last = prefix_rows.index(binder)
+                numbers = [int(row.name[1:]) for row in prefix_rows[first:last + 1]]
+                prefix_rows.remove(binder)
+                prefix_rows.insert(first, binder)
+                for row, number in zip(prefix_rows[first:last + 1], numbers):
+                    row.name = f"{row.name[0]}{number}"
+                old, new = binder.binds, f"x{numbers[0]}"
+                binder.binds = new
+                for role, box in list(boxes.items()):
+                    if box.head == Var(name=old):
+                        boxes[role] = box.model_copy(update={"head": Var(name=new)})
+                continue
+            elif modal.following == INSIDE:
+                continue                      # □ ¬∃t — word order already is the scope
+            elif modal.following == AMBIGUOUS:
+                why = f"«{modal.form} {word}» scopes the negation both inside the modality and " \
+                      f"outside it"
+            else:
+                why = f"«{modal.form}» carries no `{FOLLOWING_NEGATION}`"
+            abstained.append(f"«{word}» after a modal auxiliary: {why} — the clause is withheld "
+                             f"(E3.3.11.2.9.5)")
+            return True
+        return False
+
+    @staticmethod
+    def _binder_of(label: str, boxes: dict, prefix_rows: list):
+        """The binder a covered quantifier word raised — found through the box its label names."""
+        if not label.startswith("box:"):
+            return None
+        box = boxes.get(Role(label[len("box:"):]))
+        if box is None or not isinstance(box.head, Var):
+            return None
+        return next((row for row in prefix_rows if isinstance(row, QuantifierRow)
+                     and row.binds == box.head.name), None)
 
     @staticmethod
     def _elision(head: Word, scoped: list, skeleton: Skeleton, marks: dict) -> str | None:
@@ -2440,6 +2534,15 @@ class Compiler:
                 abstained.append(f"{word.text}: evaluative — an attitude whose holder is the "
                                  f"speaker, and the prefix wants a holder")
                 return taken
+            return set()
+
+        if compiled.get("kind") == "quantifier" and not compiled.get("quantity"):
+            # **A QUANTIFIER THE FORMAT HOLDS NO QUANTITY FOR** (`db/0043`, `E3.3.11.2.9.2`) —
+            # «rarely», «usually»: a proportion. Unplaced, and as an operator it withholds its
+            # clause (`_unentailed`); the manner default had claimed «he sleeps» for it.
+            abstained.append(f"{word.text}: a quantifier over the {reading.role or 'clause'} whose "
+                             f"proportion no quantity of the format holds — left unplaced "
+                             f"(E3.3.11.2.9.2)")
             return set()
 
         if compiled.get("kind") == ABSTAIN:
@@ -3800,7 +3903,7 @@ class Compiler:
                     if isinstance(p, AttitudeRow):
                         return "under an attitude"
                     if isinstance(p, QuantifierRow) and p.quantity is not None \
-                            and p.quantity not in UPWARD_SCOPE:
+                            and (p.quantity not in UPWARD_SCOPE or p.count is not None):
                         return f"in the scope of a {p.quantity.value} quantifier"
                 join, at = parent.get(name, (None, None))
                 if join is None:
@@ -3817,10 +3920,17 @@ class Compiler:
         restricting: dict[int, str] = {}
         for index, match in marks.items():
             quantity = match.compiled.get("quantity") if match.kind == "quantifier" else None
+            # A COUNT is neither upward nor downward — «twice» is not «at least twice» — so a cut in
+            # what it ranges over is never merely a weakening (`E3.3.11.2.9.4`).
             if quantity is None or index not in covered \
-                    or Quantity(quantity) in UPWARD_RESTRICTION:
+                    or (Quantity(quantity) in UPWARD_RESTRICTION
+                        and (match.features or {}).get("count") is None):
                 continue
             word = skeleton[index]
+            # **AN ADVERBIAL ONE RESTRICTS ITS WHOLE CLAUSE** (`E3.3.11.2.9`), and that is not the
+            # determiner's accident: «ALWAYS» ranges over the clause's times, and any circumstance of
+            # the clause may be what narrows them — «he always sleeps EXCEPT ON SUNDAYS», cut, says
+            # he always sleeps. Read as its own phrase it claimed exactly that.
             restricting[index if word.bare_dep in NOMINAL_DEPS else word.head] = quantity
 
         def restricted(index: int) -> str | None:
@@ -3851,8 +3961,11 @@ class Compiler:
             if at is None:
                 continue
             match = marks.get(word.index)
-            why = ("OPERATOR" if owner.get(word.index) == at and match is not None
-                   and _is_operator(match.compiled)
+            # **THE SECOND ROSTER'S OPERATORS ARE OPERATORS TOO** (`E3.3.11.2.9.2`): «rarely» is an
+            # adverb-kinds row, not a closed-class one, and cut it changes the claim as «seldom» does.
+            compiled = match.compiled if match is not None else self._adverb_meaning(word)
+            why = ("OPERATOR" if owner.get(word.index) == at and compiled is not None
+                   and _is_operator(compiled)
                    else restricted(word.index))
             lost.setdefault(at, []).append((word, why))
 
@@ -3913,6 +4026,13 @@ class Compiler:
                                  f"would hold a content its verb never took — withheld")
                 self._cut_with_the_link(skeleton, matrix, matrix_row, link, owner, covered, marks)
         return found
+
+    def _adverb_meaning(self, word: Word) -> dict | None:
+        """What the adverb kinds say this word compiles to — None where they hold no row for it (the
+        manner default is no operator, and no meaning a row wrote)."""
+        if word.upos != "ADV" or not self.adverbs.holds(word.lemma):
+            return None
+        return self.adverbs.read(word.lemma, word.dep).compiled
 
     @staticmethod
     def _described_definitely(matrix: Word, row: ContentRow, content: dict, prefix_rows: list,
@@ -4232,13 +4352,15 @@ class Compiler:
                 determination = Determination(match.compiled["determination"])
                 covered.add(child.index, "determination")
             elif kind == "quantifier" and match.compiled.get("quantity") \
-                    and child.bare_dep not in NOMINAL_DEPS:
+                    and child.bare_dep not in NOMINAL_DEPS and match.role != FUSED_QUANTIFIER:
                 # **A QUANTIFIER RESTRICTS THIS PHRASE ONLY WHEN IT IS THIS PHRASE'S DETERMINER**
                 # *(2026-09-20)*. «ALL cats are mammals» hangs `all` off `cats` as a determiner;
                 # «ALL that glitters is not gold» hangs it off `gold` as the SUBJECT — one word, two
                 # relations, and the relation was the only thing separating them. Without the test
                 # the binder took whatever noun it was hanging under as its restriction («for all
-                # GOLD»), and the phrase the quantifier actually HEADS got no box at all.
+                # GOLD»), and the phrase the quantifier actually HEADS got no box at all. **A FUSED
+                # quantifier is never a determiner** (`db/0028`): «he was NEVER late» hangs «never»
+                # off «late», and read here it bound the adjective — «he was no late».
                 quantity = Quantity(match.compiled["quantity"])
                 covered.add(child.index, "quantifier")
             elif kind == "box":
@@ -4361,16 +4483,58 @@ class Compiler:
         relative clause narrows it the way req 36 narrows anything, **by sharing the variable**:
         that is `_share_variable`'s job, not a second mechanism here, and it is what the station
         already does for «the cat that sleeps».
+
+        **AN ADVERB BINDS A CIRCUMSTANCE** (`E3.3.11.2.9`, `db/0043`). «He NEVER sleeps» is ¬∃t — no
+        time at which he sleeps — the same binder «nobody» raises, with its variable in the TIME box.
+        No relation names that box (`advmod` is not a nominal one), so the ROW does, exactly as it
+        does for «here» and «now» (`db/0014`); a fused pronoun has no such key and takes its box from
+        its relation, as every nominal does.
+
+        **AND A WORD THAT SAYS MORE THAN A BINDER HOLDS IS NOT BOUND.** The row's `force` is what
+        the word means and its `quantity` is what the binder would say; where the two differ — «often»
+        is `many`, and «seldom» is `few` with no quantity at all (`db/0043`, the Captain's
+        `E3.3.11.2.9.2`: proportions withheld) — the binder would claim something else than the word.
+        It stays unplaced, with why, and the clause is withheld (`E3.12.5.2`: an unplaced operator
+        changes the claim wherever it stands). The decompiler's `_fused` refuses the same rows for the
+        same reason, from the other side. **A COUNT IS HELD** — the binder's own `count`, «twice»
+        (`E3.3.11.2.9.4`); «once», with two readings, never reaches here: its row says `ambiguous`.
         """
-        role = self._role_of(word, skeleton, marks, copular, defaulted, abstained)
+        features = match.features or {}
+        if features.get("force") != match.compiled.get("quantity"):
+            if abstained is not None:
+                abstained.append(f"{match.form}: says {features.get('force')}, which no quantity of "
+                                 f"the format holds — left unplaced (E3.3.11.2.9.2)")
+            return
+        # **AND A QUANTITY SOMETHING MODIFIES IS NOT THAT QUANTITY.** «ALMOST never», «NEARLY
+        # always», «almost EVERYONE» hang their adverb off the quantifier word itself, and the format
+        # holds the quantity and not how close the speaker came to it: bound, «he almost never
+        # sleeps» claimed that he never does. The tree says what the adverb modifies; only a «not»
+        # there is the prefix's own («NOT everyone»), and `_scope` places it.
+        modifiers = [child for child in skeleton.children(word.index)
+                     if child.bare_dep == "advmod"
+                     and not (marks.get(child.index) is not None
+                              and marks[child.index].compiled.get("element") == "negation")]
+        if modifiers:
+            if abstained is not None:
+                said = " ".join(child.text for child in modifiers)
+                abstained.append(f"{match.form}: modified by «{said}», which no quantity of the "
+                                 f"format holds — left unplaced (E3.3.11.2.9)")
+            return
+        named = match.compiled.get("roles") or ()
+        role = (Role(named[0]) if named
+                else self._role_of(word, skeleton, marks, copular, defaulted, abstained))
         if role is None or role in boxes:
             # No role, or the box is taken. The word stays UNPLACED, which is the honest answer and
             # the one thing the old path could not give: it accounted for the token and dropped it.
+            if named and abstained is not None:
+                # «WHEN does he NEVER sleep?» — two words for one box, and a box holds one filler.
+                abstained.append(f"{match.form}: the {role.value} box it binds is already filled "
+                                 f"— left unplaced")
             return
         name = f"x{len(prefix_rows)}"
         prefix_rows.append(QuantifierRow(
             name=f"q{len(prefix_rows)}", scopes=scopes, binds=name,
-            quantity=Quantity(match.compiled["quantity"]),
+            quantity=Quantity(match.compiled["quantity"]), count=features.get("count"),
             restriction=Box(head=self._unknown(match))))
         boxes[role] = Box(head=Var(name=name), sense=Open())
         covered.update(range(word.index, word.index + match.length), label=f"box:{role.value}")
@@ -4417,7 +4581,14 @@ class Compiler:
             # restriction the sentence has not reached yet. `_box_for` raises it instead, when the
             # noun this determiner hangs off is built — and `_bare_quantifier` when there is no such
             # noun because the quantifier IS the phrase, which `_clause` routes away before here.
-            return taken
+            #
+            # **AND SO IT IS PLACED WHERE ITS BINDER IS BUILT, NOT HERE** (`E3.3.11.2.9`). This
+            # returned the word as taken and trusted a binder somebody else would raise — and
+            # nobody raised one for a quantifier under any relation `_box_for` does not read:
+            # «he NEVER sleeps» compiled to «he sleeps», the reverse, with `unplaced` empty. Both
+            # builders cover the word themselves; one that builds nothing leaves it unplaced, and
+            # an unplaced operator withholds its clause (`E3.12.5.2`).
+            return set()
 
         if kind == "box":
             # The MARKER itself is accounted for here; which role it fills is decided where the

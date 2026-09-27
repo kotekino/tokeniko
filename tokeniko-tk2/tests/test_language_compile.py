@@ -4414,3 +4414,240 @@ def test_a_matrix_with_NO_HOLDER_keeps_its_place_and_the_record_names_its_subjec
     assert not [r for r in out.zip.rows if r.kind == "attitude"]
     assert any(cause in why for why in out.abstained)
     assert not any("passive" in why for why in out.abstained)
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.2.9` — the adverbial quantifiers: «never», «always», «nowhere» bind a circumstance
+# ------------------------------------------------------------------------------------------------
+
+
+def _adverbial(text, rows):
+    """A hand-written parse, in the shape stanza gives these sentences (probed 2026-09-27)."""
+    return skeleton_from_conllu(text, rows)
+
+
+HE_NEVER_SLEEPS = _adverbial("He never sleeps .", [
+    ("1", "He", "he", "PRON", "3", "nsubj"), ("2", "never", "never", "ADV", "3", "advmod"),
+    ("3", "sleeps", "sleep", "VERB", "0", "root"), ("4", ".", ".", "PUNCT", "3", "punct"),
+])
+
+
+def test_an_ADVERBIAL_quantifier_binds_the_box_its_row_names(compiler):
+    """«He never sleeps» compiled to «He sleeps» — the REVERSE, with `unplaced` empty: «never» was
+    matched, counted as placed, and compiled to nothing (`E3.3.11.2.9`). It is ¬∃t — the binder
+    «nobody» raises, its variable in the TIME box, which the row names (`db/0043`) because no
+    relation does: `advmod` is not a nominal one."""
+    out = compiler.compile(HE_NEVER_SLEEPS)
+    (binder,) = rows_of(out, "quantifier")
+    row = main_row(out)
+
+    assert binder.quantity is Quantity.NEGATIVE
+    assert binder.restriction.head == Open(sort="time"), "what the word said, and nothing else"
+    assert row.boxes[Role.TIME].head == Var(name=binder.binds)
+    assert binder.scopes == row.name and row.truth == 1.0
+    assert out.coverage == 1.0 and out.abstained == ()
+
+
+def test_a_quantified_PLACE_fills_the_location_box():
+    """«He sleeps nowhere» — the same repair, the other circumstance the rows name."""
+    out = Compiler(standing_closed_classes()).compile(_adverbial("He sleeps nowhere .", [
+        ("1", "He", "he", "PRON", "2", "nsubj"), ("2", "sleeps", "sleep", "VERB", "0", "root"),
+        ("3", "nowhere", "nowhere", "ADV", "2", "advmod"), ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    (binder,) = rows_of(out, "quantifier")
+
+    assert binder.quantity is Quantity.NEGATIVE
+    assert main_row(out).boxes[Role.LOCATION].head == Var(name=binder.binds)
+
+
+@pytest.mark.parametrize("text, rows, order", [
+    ("He does not always sleep .", [
+        ("1", "He", "he", "PRON", "4", "nsubj"), ("2", "does", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "always", "always", "ADV", "5", "advmod"),
+        ("5", "sleep", "sleep", "VERB", "0", "root"), ("6", ".", ".", "PUNCT", "5", "punct"),
+    ], ["negation", "universal"]),
+    ("He never does not sleep .", [
+        ("1", "He", "he", "PRON", "5", "nsubj"), ("2", "never", "never", "ADV", "5", "advmod"),
+        ("3", "does", "do", "AUX", "5", "aux"), ("4", "not", "not", "PART", "5", "advmod"),
+        ("5", "sleep", "sleep", "VERB", "0", "root"), ("6", ".", ".", "PUNCT", "5", "punct"),
+    ], ["negative", "negation"]),
+])
+def test_the_binder_and_the_negation_scope_in_the_order_the_words_stand(compiler, text, rows,
+                                                                          order):
+    """The literal reading (`E3.12.5` (6)): «does not ALWAYS sleep» is ¬∀t, «NEVER does not sleep»
+    ¬∃t¬ — the prefix is the order the speaker used, which is req 35's whole point."""
+    out = compiler.compile(_adverbial(text, rows))
+    said = [r.quantity.value if r.kind == "quantifier" else r.kind
+            for r in out.zip.rows if r.kind in ("quantifier", "negation")]
+
+    assert said == order
+    assert out.coverage == 1.0
+
+
+def test_a_FUSED_quantifier_is_never_a_determiner_of_what_it_hangs_off(compiler):
+    """«He was never late» hangs «never» off «late», and `_box_for` read it as that phrase's
+    determiner: the binder bound the ADJECTIVE — «he was no late». A fused quantifier is its own
+    phrase (`db/0028`), so the complement stays «late» and the time is quantified."""
+    out = compiler.compile(_adverbial("He was never late .", [
+        ("1", "He", "he", "PRON", "4", "nsubj"), ("2", "was", "be", "AUX", "4", "cop"),
+        ("3", "never", "never", "ADV", "4", "advmod"), ("4", "late", "late", "ADJ", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    (binder,) = rows_of(out, "quantifier")
+    row = main_row(out)
+
+    assert row.boxes[Role.COMPLEMENT].head == "late.a"
+    assert binder.restriction.head == Open(sort="time")
+    assert row.boxes[Role.TIME].head == Var(name=binder.binds)
+
+
+@pytest.mark.parametrize("word, says", [
+    ("seldom", "seldom: says few"), ("often", "often: says many"),
+    ("once", "once: ambiguous"),
+    ("rarely", "rarely: a quantifier over the time"), ("usually", "usually: a quantifier over the time"),
+])
+def test_a_word_that_says_MORE_than_a_quantity_holds_is_withheld_never_bound(compiler, word, says):
+    """«seldom» is few and «often» many — proportions, withheld (the Captain's `E3.3.11.2.9.2`);
+    «seldom»'s row no longer says `negative`, which bound would have read «he never sleeps». «once»
+    has two readings, one time or formerly (`E3.3.11.2.9.4`). «rarely» and «usually» are adverb-kinds
+    rows now (`db/0043`): with none they fell to the manner default and CLAIMED «he sleeps». Each is
+    unplaced with why, and the unplaced operator withholds its clause (`E3.12.5.2`)."""
+    out = compiler.compile(_adverbial(f"He {word} sleeps .", [
+        ("1", "He", "he", "PRON", "3", "nsubj"), ("2", word, word, "ADV", "3", "advmod"),
+        ("3", "sleeps", "sleep", "VERB", "0", "root"), ("4", ".", ".", "PUNCT", "3", "punct"),
+    ]))
+
+    assert _claims(out) == [] and not rows_of(out, "quantifier")
+    assert word in out.zip.unplaced
+    assert any(says in why for why in out.abstained), out.abstained
+
+
+@pytest.mark.parametrize("text, rows, prefix", [
+    ("Do you ever sleep ?", [
+        ("1", "Do", "do", "AUX", "4", "aux"), ("2", "you", "you", "PRON", "4", "nsubj"),
+        ("3", "ever", "ever", "ADV", "4", "advmod"), ("4", "sleep", "sleep", "VERB", "0", "root"),
+        ("5", "?", "?", "PUNCT", "4", "punct"),
+    ], ["existential"]),
+    ("Nobody ever sleeps .", [
+        ("1", "Nobody", "nobody", "PRON", "3", "nsubj"), ("2", "ever", "ever", "ADV", "3", "advmod"),
+        ("3", "sleeps", "sleep", "VERB", "0", "root"), ("4", ".", ".", "PUNCT", "3", "punct"),
+    ], ["negative", "existential"]),
+    ("He does not ever sleep .", [
+        ("1", "He", "he", "PRON", "5", "nsubj"), ("2", "does", "do", "AUX", "5", "aux"),
+        ("3", "not", "not", "PART", "5", "advmod"), ("4", "ever", "ever", "ADV", "5", "advmod"),
+        ("5", "sleep", "sleep", "VERB", "0", "root"), ("6", ".", ".", "PUNCT", "5", "punct"),
+    ], ["negation", "existential"]),
+])
+def test_EVER_is_an_existential_over_times(compiler, text, rows, prefix):
+    """«ever» is ∃t (the Captain's `E3.3.11.2.9.3`) — its row said `universal` and its own force
+    `existential`, and the force was right. Under a question, a negative binder or a «not»."""
+    out = compiler.compile(_adverbial(text, rows))
+    said = [r.quantity.value if r.kind == "quantifier" else r.kind
+            for r in out.zip.rows if r.kind in ("quantifier", "negation")]
+
+    assert said == prefix
+    assert out.coverage == 1.0
+
+
+def test_TWICE_is_a_count_on_the_binder(compiler):
+    """«He slept twice» — ∃t with a count of two, on the binder's own `count`, as the drill's
+    `freq-1` holds it (the Captain's `E3.3.11.2.9.4`)."""
+    out = compiler.compile(_adverbial("He slept twice .", [
+        ("1", "He", "he", "PRON", "2", "nsubj"), ("2", "slept", "sleep", "VERB", "0", "root"),
+        ("3", "twice", "twice", "ADV", "2", "advmod"), ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    (binder,) = rows_of(out, "quantifier")
+
+    assert binder.quantity is Quantity.EXISTENTIAL and binder.count == 2
+    assert main_row(out).boxes[Role.TIME].head == Var(name=binder.binds)
+
+
+def _modal_never(modal, adverb="never"):
+    return _adverbial(f"He {modal} {adverb} sleep .", [
+        ("1", "He", "he", "PRON", "4", "nsubj"), ("2", modal, modal, "AUX", "4", "aux"),
+        ("3", adverb, adverb, "ADV", "4", "advmod"), ("4", "sleep", "sleep", "VERB", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ])
+
+
+@pytest.mark.parametrize("modal, prefix", [
+    ("can", ["negative", "modality"]),      # ¬∃t ◇ — «can»'s «not» scopes outside
+    ("must", ["modality", "negative"]),     # □ ¬∃t — «must»'s stays inside
+    ("need", ["negative", "modality"]),     # ¬∃t □
+])
+def test_a_NEGATIVE_binder_after_a_modal_follows_the_modal_s_row(compiler, modal, prefix):
+    """The Captain's `E3.3.11.2.9.5`: «never» after a modal auxiliary stands in the slot «not» does,
+    and the modal's `following_negation` (`db/0036`) places its negation exactly as it places a
+    «not». Read by word order «can never» claimed ◇¬ — «he might never sleep»."""
+    out = compiler.compile(_modal_never(modal))
+    said = [r.quantity.value if r.kind == "quantifier" else r.kind
+            for r in out.zip.rows if r.kind in ("quantifier", "modality")]
+
+    assert said == prefix
+    assert out.coverage == 1.0 and _claims(out)
+
+
+@pytest.mark.parametrize("modal, adverb, why", [
+    ("may", "never", "both inside the modality and outside it"),
+    ("can", "always", "carries no negation for the modal's row to place"),
+])
+def test_an_adverbial_binder_after_a_modal_is_withheld_where_no_row_places_it(compiler, modal,
+                                                                             adverb, why):
+    """«may never» is `may`'s ambiguity again, and a positive binder carries no negation for the row
+    to place (`E3.3.11.2.9.5`): both withheld, as «may not» is."""
+    out = compiler.compile(_modal_never(modal, adverb))
+
+    assert _claims(out) == []
+    assert any("after a modal auxiliary" in r and why in r for r in out.abstained), out.abstained
+
+
+def test_a_quantifier_nobody_binds_is_UNPLACED_and_not_counted(compiler):
+    """The root of `E3.3.11.2.9`: a quantifier word was returned as placed on meeting it, trusting a
+    binder someone else would build. «When does he never sleep?» has one time box and two words for
+    it — «when» asks it, so «never» binds nothing, and it must say so rather than vanish."""
+    out = compiler.compile(_adverbial("When does he never sleep ?", [
+        ("1", "When", "when", "ADV", "5", "advmod"), ("2", "does", "do", "AUX", "5", "aux"),
+        ("3", "he", "he", "PRON", "5", "nsubj"), ("4", "never", "never", "ADV", "5", "advmod"),
+        ("5", "sleep", "sleep", "VERB", "0", "root"), ("6", "?", "?", "PUNCT", "5", "punct"),
+    ]))
+
+    assert "never" in out.zip.unplaced
+    assert any("never: the time box it binds is already filled" in why for why in out.abstained)
+    assert _claims(out) == []
+
+
+def test_a_quantity_something_MODIFIES_is_not_bound_as_that_quantity(compiler):
+    """«He ALMOST never sleeps» hangs «almost» off «never»; bound, the zip claimed he never sleeps.
+    The format holds the quantity and not how near the speaker came to it — so the word is left
+    unplaced and the clause withheld. A «not» on the quantifier is the prefix's own («NOT
+    everyone»), and still binds."""
+    almost = compiler.compile(_adverbial("He almost never sleeps .", [
+        ("1", "He", "he", "PRON", "4", "nsubj"), ("2", "almost", "almost", "ADV", "3", "advmod"),
+        ("3", "never", "never", "ADV", "4", "advmod"), ("4", "sleeps", "sleep", "VERB", "0", "root"),
+        ("5", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    not_everyone = compiler.compile(_adverbial("Not everyone sleeps .", [
+        ("1", "Not", "not", "PART", "2", "advmod"), ("2", "everyone", "everyone", "PRON", "3", "nsubj"),
+        ("3", "sleeps", "sleep", "VERB", "0", "root"), ("4", ".", ".", "PUNCT", "3", "punct"),
+    ]))
+
+    assert _claims(almost) == [] and "never" in almost.zip.unplaced
+    assert any("modified by «almost»" in why for why in almost.abstained)
+    assert [r.kind for r in not_everyone.zip.rows][:2] == ["negation", "quantifier"]
+    assert not_everyone.coverage == 1.0
+
+
+def test_a_cut_circumstance_under_an_adverbial_UNIVERSAL_withholds_the_clause(compiler):
+    """«He always sleeps EXCEPT ON SUNDAYS» — «except» is not compiled, and what it cuts narrows the
+    times «always» ranges over: kept, the zip said he always sleeps. An adverbial binder's
+    restriction is its clause's circumstances, so the cut is read as one in a universal's
+    restriction, and the clause is withheld."""
+    out = compiler.compile(_adverbial("He always sleeps except on Sundays .", [
+        ("1", "He", "he", "PRON", "3", "nsubj"), ("2", "always", "always", "ADV", "3", "advmod"),
+        ("3", "sleeps", "sleep", "VERB", "0", "root"), ("4", "except", "except", "ADP", "6", "case"),
+        ("5", "on", "on", "ADP", "6", "case"), ("6", "Sundays", "Sunday", "PROPN", "3", "obl"),
+        ("7", ".", ".", "PUNCT", "3", "punct"),
+    ]))
+
+    assert _claims(out) == []
+    assert any("restriction of a universal" in why for why in out.abstained)

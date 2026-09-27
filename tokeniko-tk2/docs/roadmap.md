@@ -219,10 +219,12 @@
       claims → right or withheld; nested attitudes, «Don't touch it!», «whether» (`db/0041`), tag questions as req 50's
       OPEN + prior (`db/0042`), the speech act's strength an invariant, the same law across sentences (`E3.3.11.2.16`,
       `E3.3.11.2.21` … `E3.3.11.2.24`). Drill prefix pairs 29 → 33; UD 30 · 0 · 15. Record `202609261600_…`
-- [ ] `E3.3.11.2.9` **⚑ WRONG CLAIMS — the adverbial quantifiers compile to NOTHING** — «He never sleeps» → «He
-      sleeps»; «seldom», «nowhere» the reverse; «always», «sometimes» silent losses. Found by the same measurement
+- [x] `E3.3.11.2.9` **⚑ THE ADVERBIAL QUANTIFIERS** *(09-27)* — «He never sleeps» was «He sleeps»: now binders over time or place;
+      «never» one NEGATIVE binder · «ever» ∃ with polarity · «twice» a count · after a modal by `following_negation` ·
+      «any-» at the mouth · proportions withheld (`db/0043`). Fixpoint 72 · 9 · 0 + W6 · drill 62 · 4 · 21. Record `202609271400_…`
 - [ ] `E3.3.11.2.5.1` · `E3.3.11.2.6.1` · `E3.3.11.2.1.1` · `E3.3.11.2.8.1` **⚑ WRONG CLAIMS left in the attitude family** —
       a relative clause escapes the attitude · «Which man thinks…?» a statement · ¬ above a definite · «It is true that» a free pronoun
+- [ ] `E3.3.11.2.9.14` · `E3.3.11.2.9.16` **⚑ WRONG CLAIMS left by the frequency family** — free-choice «He sleeps anywhere» read as ∃ · «frequently», «occasionally», «generally» have no rows and claim the event
 - [ ] `E3.3.11.2.26` **⚑ WRONG CLAIM — a quoted sentence with no frame is claimed as the speaker's own**
 - [ ] `E3.3.11.2.27` **⚑ WRONG CLAIM (the mouth) — an asked conditional said as a claim** — «Will you stay if it rains?» → «If it rains, you will stay.»
 - [ ] `E3.3.11.2.17` **⚑ WRONG CLAIM — the quoted «I» beyond the first level** — «Anna said: "Bob thinks that I sleep."» → the speaker
@@ -266,6 +268,8 @@
 - [ ] `E3.12.5.9.19` the decompiler refuses a folded conjunction under a supposition
 - [ ] `E3.3.11.2.25` a conjunct gets no agent — «John said to Marie and left» → «…and it left»
 - [ ] `E3.3.11.2.28` · `E3.3.11.2.29` · `E3.3.11.2.30` · `E3.3.11.2.31` — «we» loses its number · the perfect aspect lost («You have eaten» → «You eat») · «wo»/«ca» have no rows · the speech act's mark over an attitude (latent)
+- [ ] `E3.3.11.2.9.13` · `E3.3.11.2.9.15` · `E3.3.11.2.9.17` — «cannot ever» withheld · «ever» said «sometimes» · «He slept not twice»
+- [ ] `E3.3.11.2.9.8` · `E3.3.11.2.9.9` · `E3.3.11.2.9.10` · `E3.3.11.2.9.11` — «never at night» not composed · «Sometimes everyone sleeps» can't be fronted · «almost all cats» unchecked · «Nobody in the room sleeps» said wrong
 - [ ] `E3.3.11.2.6.2` «Where do you think he sleeps?» kept as a different question · `E3.3.11.2.20` the mouth: «He was told» → «He told», no boundary between clauses, «a old man»
 - [ ] `E3.2.1.6.2` «I was happy» decompiles as «I were happy»
 - [ ] `E3.2.1.6.4` «What is this?» came back «Is this what?» — no longer reproduces; see `E3.2.1.6.5`

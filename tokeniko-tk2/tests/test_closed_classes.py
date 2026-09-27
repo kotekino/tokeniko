@@ -467,3 +467,95 @@ def test_the_0041_check_asks_the_question_the_LOOKUP_asks():
             features.get("takes_number")), row["form"]
     reader = Decompiler(ClosedClasses(module.CLOSED_CLASS_ROWS, "db/0041 (test)"))
     assert reader.the_form("interrogative", kind="open", binds=None, opens="truth") == "whether"
+
+
+# ------------------------------------------------------------------------------------------------
+# `db/0043` — an adverbial quantifier says which box it binds (`E3.3.11.2.9`), and the Captain's
+# rulings of 2026-09-27 folded in before it was applied (`E3.3.11.2.9.2` · `.3` · `.4` · `.7`)
+# ------------------------------------------------------------------------------------------------
+
+
+def test_0043_names_the_box_of_EVERY_adverbial_fused_quantifier():
+    """«never» reached no box — `advmod` names none — so «he never sleeps» compiled to «he sleeps».
+    The thirteen adverbial fused rows gain `compiled.roles` (`db/0014`'s repair one role over); no
+    form arrives, so D's exclusion set does not move."""
+    module, before = migration(43), migration(41)
+    was = [r for r in before.CLOSED_CLASS_ROWS if r["version"] == 22]
+
+    assert set(module.CLOSED_CLASS_FORMS) == set(before.CLOSED_CLASS_FORMS)
+    assert len(module.CLOSED_CLASS_ROWS) == len(was)
+    fused = {r["form"]: r for r in module.CLOSED_CLASS_ROWS if r["role"] == "fused_quantifier"}
+    for form, role in module.BINDS_IN.items():
+        compiled = fused[form]["compiled"]
+        for candidate in compiled.get("candidates", [compiled]):
+            assert candidate["roles"] == [role], form
+    for row, old in zip(module.CLOSED_CLASS_ROWS, was):
+        if row["form"] in module.BINDS_IN and row["form"] not in module.MEANING \
+                and row["role"] == "fused_quantifier":
+            assert {k: v for k, v in row["compiled"].items() if k != "roles"} == old["compiled"]
+
+
+def test_0043_moves_the_MEANINGS_the_rulings_name_and_no_other():
+    """«seldom» is not `negative` (ruling 2) · «ever» is ∃ and a polarity item (ruling 3) · «once»
+    is two readings (ruling 4) · the «any-» rows say their polarity and «anyone» is the person said
+    under a negation (ruling 7)."""
+    module = migration(43)
+    fused = {r["form"]: r for r in module.CLOSED_CLASS_ROWS if r["role"] == "fused_quantifier"}
+
+    assert "quantity" not in fused["seldom"]["compiled"] and fused["seldom"]["features"]["force"] == "few"
+    assert fused["ever"]["compiled"]["quantity"] == "existential"
+    assert fused["once"]["compiled"]["kind"] == "ambiguous"
+    assert fused["twice"]["features"]["count"] == 2
+    assert {form for form, r in fused.items()
+            if (r.get("features") or {}).get("polarity") == "negative-context"} == set(module.POLAR)
+    assert fused["anyone"]["spoken"] and not fused["anybody"]["spoken"]
+
+
+def test_0043_gives_RARELY_and_USUALLY_a_row_so_that_they_withhold():
+    """Without a row both fell to the manner default and CLAIMED «he sleeps». They are adverb kinds —
+    the closed classes filter D's vocabulary — compiled as a quantifier over times with no quantity."""
+    module = migration(43)
+    added = {r["form"]: r for r in module.ADVERB_KIND_ROWS if r["version"] == module.ADVERB_VERSION
+             and r["form"] in module.UNHELD}
+
+    assert set(added) == {"rarely", "usually"}
+    assert all(r["compiled"] == {"kind": "quantifier", "roles": ["time"]} and not r["spoken"]
+               for r in added.values())
+
+
+@pytest.mark.parametrize("form, change", [
+    ("always", {"roles": ["duration"]}),                      # one sort in two boxes
+    ("often", {"quantity": "negative"}),                      # a quantity by the back door
+    ("never", {"quantity": "universal"}),                     # ruling 1's own row
+])
+def test_the_0043_check_REFUSES_movement_the_rulings_do_not_name(monkeypatch, form, change):
+    module = migration(43)
+    rows = [dict(r, compiled={**r["compiled"], **change})
+            if r["form"] == form and r["role"] == "fused_quantifier" else r
+            for r in module.CLOSED_CLASS_ROWS]
+    monkeypatch.setattr(module, "CLOSED_CLASS_ROWS", rows)
+
+    with pytest.raises(ValueError):
+        module._check()                                                     # noqa: SLF001
+
+
+def test_the_0043_check_asks_the_question_the_LOOKUP_asks():
+    """The voice key gained the polarity a row states (`Decompiler._key`), so «anyone» and «someone»
+    are two meanings to the check AND to the index — and each speaks its own."""
+    from tk2.language.closed import ClosedClasses
+    from tk2.language.decompile import Decompiler
+    from tk2.tkzip.schema import Quantity
+
+    module = migration(43)
+    for row in module.CLOSED_CLASS_ROWS:
+        features = row.get("features") or {}
+        assert module._meaning(row) == Decompiler._key(                    # noqa: SLF001
+            row["role"], row.get("compiled") or {}, features.get("sort"),
+            features.get("takes_number"), features.get("polarity")), row["form"]
+    reader = Decompiler(ClosedClasses(module.CLOSED_CLASS_ROWS, "db/0043 (test)"))
+    assert reader._fused(Quantity.EXISTENTIAL, "person") == "someone"      # noqa: SLF001
+    assert reader._fused(Quantity.EXISTENTIAL, "person",                   # noqa: SLF001
+                         polarity="negative-context") == "anyone"
+    assert reader._fused(Quantity.EXISTENTIAL, "time",                     # noqa: SLF001
+                         polarity="negative-context") == "ever"
+    assert reader._fused(Quantity.EXISTENTIAL, "time", count=2) == "twice"  # noqa: SLF001

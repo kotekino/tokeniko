@@ -1290,6 +1290,18 @@ it).
      sentence with no frame claimed as the speaker's own · `E3.3.11.2.27` ⚑ an asked conditional said as a
      claim · `E3.3.11.2.28` «we» loses its number · `E3.3.11.2.29` the perfect lost · `E3.3.11.2.30`
      «wo»/«ca» no rows · `E3.3.11.2.31` the speech act's mark over an attitude.
+     `E3.3.11.2.9` **the adverbial quantifiers — BUILT 09-27** (`202609271400_the-adverbial-quantifiers.md`,
+     `db/0043` not applied): a binder over time or place, no schema change. For the Captain:
+     `E3.3.11.2.9.1` «never» as one NEGATIVE binder or ∀t + ¬ (reqs 32 / 72, `nha-1`, `nha-2`) ·
+     `E3.3.11.2.9.2` proportions (seldom, often, usually) · `E3.3.11.2.9.3` «ever» · `E3.3.11.2.9.4`
+     once / twice · `E3.3.11.2.9.5` a binder after a modal · `E3.3.11.2.9.6` the mid-clause rule, frame
+     or knowledge · `E3.3.11.2.9.7` «any-» at the mouth · `E3.3.11.2.9.12` the ratchets. Found:
+     `E3.3.11.2.9.8` «never at night» · `E3.3.11.2.9.9` fronting «sometimes» · `E3.3.11.2.9.10` «almost
+     all cats» · `E3.3.11.2.9.11` «Nobody in the room sleeps».
+     **RULED and BUILT 09-27** — all eight as leaned; fixpoint 72 · 9 · 0 + W6, drill 62 · 4 · 21, UD
+     30 · 0 · 15. Found: `E3.3.11.2.9.13` «cannot ever» · `E3.3.11.2.9.14` free-choice «any» read as ∃ ·
+     `E3.3.11.2.9.15` «ever» said «sometimes» · `E3.3.11.2.9.16` other frequency adverbs claim the event ·
+     `E3.3.11.2.9.17` «He slept not twice».
    - `E3.3.12` «I remember the day I slept» is a wrong complete zip — `202609241130_…`
    - `E3.3.13` five small things recorded rather than fixed — numbered 09-26: `E3.3.13.1` a definite's
      relative clause kept claimed (a presupposition) · `E3.3.13.2` «Neither is late» loses the «two» (a
@@ -1455,9 +1467,10 @@ asked; the exit is:
 1. **no known wrong claim and no known silent loss** — on the drill, the UD gate,
    the fixpoint corpus and the fresh set (`E3.12.2`);
 2. **the ratchets, never below** *(re-based 09-26 by `E3.12.5`, when false claims became abstentions)*:
-   drill agreed ≥ 63 · fixpoint FIXED ≥ 74 with SILENT = 0 (a withheld sentence is WITHHELD, not
-   SILENT) · read-whole ≥ 63 of 69 · UD gate answered ≥ 32 with WRONG = 0 *(again 09-26 by
-   `E3.12.5.9`: «only» unplaced, `t-ws-3` withheld — both honest)*;
+   drill agreed ≥ 62 · fixpoint FIXED ≥ 72 with SILENT = 0 (a withheld sentence is WITHHELD, not
+   SILENT) · read-whole ≥ 61 of 67 · UD gate answered ≥ 30 with WRONG = 0 *(re-based 09-26 by
+   `E3.12.5.9`, 09-27 by `E3.3.11.2.16` and `E3.3.11.2.9.12` — each time a false claim became an
+   honest abstention)*;
 3. **`E3.8.3`** — the frame/knowledge audit, re-run;
 4. and then every open quality item moves to **`E3c`** (`E3.12.3`), so E3 can CLOSE.
 

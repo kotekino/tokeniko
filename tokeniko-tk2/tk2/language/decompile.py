@@ -285,6 +285,9 @@ class _Reading:
     #: id(box) -> (the focus particle, the rows its phrase stands for) — «ONLY cats eat fish»: the
     #: phrase whose ∀-and-identity rows `_focused` folded back into it (`db/0039`).
     focus: dict = field(default_factory=dict)
+    #: content row -> the auxiliary its level must be said with instead of the voice `_operators`
+    #: chose — «NEED never know», a negative binder over a modality (`_mid_binder`, `E3.3.11.2.9.5`).
+    modal_override: dict = field(default_factory=dict)
 
 
 class Decompiler:
@@ -320,7 +323,8 @@ class Decompiler:
     # -- the rows, read backwards -----------------------------------------------------------------
 
     @staticmethod
-    def _key(role, compiled: dict, sort: str | None = None, number: str | None = None) -> tuple:
+    def _key(role, compiled: dict, sort: str | None = None, number: str | None = None,
+             polarity: str | None = None) -> tuple:
         """A row's VOICE — its meaning, the SORT it ranges over, and the NUMBER of noun it takes.
 
         **`db/0028`'s AND `db/0029`'s `_meaning()` KEY ON THIS AND IT MUST STAY THAT WAY.** Twice in
@@ -331,8 +335,13 @@ class Decompiler:
 
         A dict does not raise when two rows want one slot — it keeps whichever it met last — so a
         check keyed on anything but this is checking a table that does not exist.
+
+        **AND THE POLARITY A ROW STATES** (`db/0043`, the Captain's `E3.3.11.2.9.7`): «anyone» and
+        «someone» are one quantity over one sort, said in two contexts — the key a third time coarser
+        than the meaning. Carried only where a row states one, so every older key is unchanged.
         """
-        return (role, tuple(sorted((k, str(v)) for k, v in compiled.items())), sort, number)
+        key = (role, tuple(sorted((k, str(v)) for k, v in compiled.items())), sort, number)
+        return key if polarity is None else (*key, polarity)
 
     @classmethod
     def _invert(cls, table: ClosedClasses) -> dict[tuple, set[str]]:
@@ -344,7 +353,8 @@ class Decompiler:
                 continue
             features = row.get("features") or {}
             found.setdefault(cls._key(row.get("role"), compiled,
-                                      features.get("sort"), features.get("takes_number")),
+                                      features.get("sort"), features.get("takes_number"),
+                                      features.get("polarity")),
                              set()).add(row["form"])
         return found
 
@@ -361,7 +371,8 @@ class Decompiler:
                 continue
             features = row.get("features") or {}
             found[cls._key(row.get("role"), row.get("compiled") or {},
-                           features.get("sort"), features.get("takes_number"))] = row["form"]
+                           features.get("sort"), features.get("takes_number"),
+                           features.get("polarity"))] = row["form"]
         return found
 
     @classmethod
@@ -1815,6 +1826,7 @@ class Decompiler:
         if existential and not there:
             rd.out.unsaid.append(f"{row.name}: the existential has no form in the table")
 
+        subject_box = boxes.get(subject_role) if subject_role is not None else None
         subject, agreement = "", {"person": 3, "number": "sg"}
         if there:
             # **THE EXPLETIVE IS NOT WHAT THE VERB AGREES WITH** *(2026-09-21, the 1st Officier)*.
@@ -1879,6 +1891,19 @@ class Decompiler:
         # a marked phrase can stand anywhere after the verb, and a bare one cannot, so putting the
         # bare one first is the order that is always readable. Measured on `t-dc-2`, which came back
         # with its milk as a destination.
+        # **A QUANTIFIED TIME IS SAID IN THE MIDDLE, WHERE ITS SCOPE IS READ** (`E3.3.11.2.9`) —
+        # «he NEVER sleeps», «he does not ALWAYS sleep», before a circumstance ever is.
+        mid = self._mid_binder(row, boxes, subject_box, rd, modal)
+        if mid is None:
+            return None
+        modal = rd.modal_override.pop(row.name, modal)
+        before, middle, negated_here = mid
+        if negated_here:
+            negated, negation = True, f"{negation} {middle}"
+            middle = ""
+        if not negated and negation and self._negation_to_the_verb(boxes, subject_box, rd):
+            negated = True
+
         after = []
         for marked in (False, True):
             for role in (*OBJECT_ORDER, *CIRCUMSTANCE_ORDER):
@@ -1905,7 +1930,8 @@ class Decompiler:
             tag = None
         invert = bool((asked and not tag) or fronted) and not embedded
         parts = self._verb_phrase(lemma, subject, negated, modal, negation or "", invert,
-                                  imperative, row, agreement, rd, passive)
+                                  imperative, row, agreement, rd, passive,
+                                  before=before, mid=middle)
         after = ([after_agent] if after_agent else []) + after
         complement = rd.complements.get(row.name)
         if complement is not None:
@@ -1963,7 +1989,8 @@ class Decompiler:
 
     def _verb_phrase(self, lemma: str, subject: str, negated: bool, modal: str,
                      negation: str, invert: bool, imperative: bool, row,
-                     agreement: dict, rd: _Reading, passive: bool = False) -> list[str]:
+                     agreement: dict, rd: _Reading, passive: bool = False,
+                     before: str = "", mid: str = "") -> list[str]:
         """Subject and verb in the order and the shape the clause asked for.
 
         Seven English rules, all of them word order or inflection and none of them vocabulary: the
@@ -1974,24 +2001,35 @@ class Decompiler:
 
         **The carrier is whatever comes first** — will · can · is · does — and everything after it
         is bare. That is one rule rather than five, and it is why this reads as a list.
+
+        **AND TWO SLOTS FOR AN ADVERB THAT SCOPES** (`_mid_binder`): `mid` after the carrier and its
+        «not» — «he has NEVER slept», «he NEVER sleeps» where there is no carrier at all — and
+        `before` ahead of the carrier, for an adverb that scopes over the «not» or the modal the
+        carrier holds: «he NEVER does not sleep».
         """
+        extra = [word for word in (mid,) if word]
         # An attitude row stands in for its verb's clause here, and is never copular.
         copular = getattr(row, "kind", None) == "content" and row.predicate is None
         if imperative:
             # «DO NOT touch it!» — English's own repair again: an imperative is negated through a
             # bare «do», whatever its verb, the copula included («Do not be late!»).
-            return [DO, negation, lemma] if negated else [lemma]
+            return ([before] if before else []) + ([DO, negation, *extra, lemma] if negated
+                                                   else [*extra, lemma])
+
+        def said(head: list[str]) -> list[str]:
+            lead = [before] if before else []
+            return [head[0], subject, *lead, *head[1:]] if invert else [subject, *lead, *head]
 
         if passive:
             # «the mail WAS WRITTEN by John» — be, in the tense and the agreement, then the
             # participle. Under a modal the modal is the carrier and `be` goes bare.
             participle = self.inflections.of(lemma, PARTICIPLE)
             if modal:
-                head = [modal] + ([negation] if negated else []) + [COPULA, participle]
+                head = [modal] + ([negation] if negated else []) + extra + [COPULA, participle]
             else:
                 head = ([self._copula(agreement, rd)]
-                        + ([negation] if negated else []) + [participle])
-            return [head[0], subject, *head[1:]] if invert else [subject, *head]
+                        + ([negation] if negated else []) + extra + [participle])
+            return said(head)
 
         if rd.when == AFTER:
             # **THE FUTURE IS A WORD.** English inflects the past and not the future, so the carrier
@@ -2002,21 +2040,22 @@ class Decompiler:
                 rd.out.unsaid.append(f"{row.name}: the table names several futures and none is "
                                      f"preferred")
             else:
-                head = [future] + ([negation] if negated else []) + [lemma]
-                return [head[0], subject, *head[1:]] if invert else [subject, *head]
+                head = [future] + ([negation] if negated else []) + extra + [lemma]
+                return said(head)
 
         if modal:
-            head = [modal] + ([negation] if negated else []) + [lemma]
-            return [*head[:1], subject, *head[1:]] if invert else [subject, *head]
+            head = [modal] + ([negation] if negated else []) + extra + [lemma]
+            return said(head)
         if copular:
             be = self._copula(agreement, rd)
-            tail = [be] + ([negation] if negated else [])
-            return [tail[0], subject, *tail[1:]] if invert else [subject, *tail]
+            tail = [be] + ([negation] if negated else []) + extra
+            return said(tail)
         if negated or invert:
             do = self._agreeing(DO, agreement, rd)
-            tail = [do] + ([negation] if negated else []) + [lemma]
-            return [tail[0], subject, *tail[1:]] if invert else [subject, *tail]
-        return [subject, self._agreeing(lemma, agreement, rd)]
+            tail = [do] + ([negation] if negated else []) + extra + [lemma]
+            return said(tail)
+        return [subject, *([before] if before else []), *extra,
+                self._agreeing(lemma, agreement, rd)]
 
     # -- agreement -----------------------------------------------------------------------------------
 
@@ -2224,7 +2263,9 @@ class Decompiler:
         if isinstance(restriction.head, Open) and restriction.head.sort and binder.quantity:
             # **A BINDER WITHOUT A QUANTITY FUSES WITH NOTHING** (schema v8): «nobody» is a QUANTITY
             # and a sort in one word, and a binder that quantifies nothing has only half of that.
-            fused = self._fused(binder.quantity, restriction.head.sort)
+            fused = self._fused(binder.quantity, restriction.head.sort,
+                                count=binder.count if isinstance(binder.count, int) else None,
+                                polarity=self._polarity(binder, rd))
             if fused is None:
                 rd.out.unsaid.append(f"a {binder.quantity.value} over "
                                      f"{restriction.head.sort}s: no single word fuses them")
@@ -2366,27 +2407,188 @@ class Decompiler:
             rd.out.unsaid.append(f"{row.name}: said as a restriction, so its claim is not spoken")
         return True
 
-    def _fused(self, quantity: Quantity, sort: str) -> str | None:
+    def _mid_binder(self, row, boxes: dict, subject_box: Box | None,
+                    rd: _Reading, modal: str = "") -> tuple[str, str, bool] | None:
+        """**WHERE A QUANTIFIED TIME IS SAID** (`E3.3.11.2.9`) — `(before, mid, negated)`, all empty
+        when the clause has none; None when it has one that cannot be said without moving its scope,
+        and the refusal is recorded.
+
+        «He never sleeps» compiles to ¬∃t over the clause, its variable in the TIME box, and said
+        with the circumstances it came back «He sleeps never». The compiler reads an adverbial binder
+        LITERALLY, by where it stands against the «not», the modal and the other binders
+        (`E3.12.5` (6)), so the mouth says it where that same reading gives the same prefix. **THE
+        POSITION IS FRAME — word order** (the Captain's `E3.3.11.2.9.6`, 2026-09-27), as
+        `CIRCUMSTANCE_ORDER` is; the WORD is still the rows' (`_fused`):
+
+            a «not» right before it     «does NOT ALWAYS sleep» — said with the «not», which is the
+                                        quantifier the negation is delivered at (`negated_binders`)
+            a «not» or a modal after    «NEVER does not sleep», «ALWAYS can sleep» — ahead of the
+                                        carrier that holds them
+            nothing                     after the carrier — «has NEVER slept», «is NEVER late» —
+                                        or before the verb where there is none: «NEVER sleeps»
+
+        **AND ANY ORDER THE COMPILER WOULD NOT READ BACK IS REFUSED**, never said: a binder inside a
+        modality (the compiler withholds «can never», `Compiler._binder_after_a_modal`), a universal
+        over a «not» («always … not» scopes both ways, `Compiler._universal_meets_negation`), a
+        subject's binder under it (which would need the adverb fronted), an object's over it.
+        """
+        box = boxes.get(Role.TIME)
+        if box is None or not isinstance(box.head, Var):
+            return "", "", False
+        name = box.head.name
+        binder = rd.binders.get(name)
+        # A COUNTED time — «twice» — goes where English says a count, after the verb, with the
+        # circumstances (`_variable_said`); only a bare quantity takes the middle.
+        if binder is None or binder.quantity is None or name in rd.said \
+                or binder.count is not None \
+                or not isinstance(binder.restriction.head, Open) \
+                or not binder.restriction.head.sort \
+                or rd.restrictions.get(name) or rd.modifiers.get(name):
+            return "", "", False
+        segment = self._levels(rd.prefix.get(row.name, []))[0][-1]
+        if binder not in segment:
+            return "", "", False
+        word = self._fused(binder.quantity, binder.restriction.head.sort,
+                           polarity=self._polarity(binder, rd))
+        if word is None:
+            return "", "", False                   # `_variable_said` records it where it falls
+        at = segment.index(binder)
+        over, under = segment[:at], segment[at + 1:]
+        subject = subject_box.head.name if subject_box is not None \
+            and isinstance(subject_box.head, Var) else None
+        mine = {b.head.name for b in row.boxes.values() if isinstance(b.head, Var)}
+        why = None
+        # **A NEGATIVE ONE BESIDE A MODAL IS PLACED BY THE MODAL'S ROW** (`E3.3.11.2.9.5`), as the
+        # compiler reads it: after an auxiliary whose «not» stays inside — «must NEVER» □¬∃t — or
+        # one whose «not» goes outside it when the binder is outside — «can NEVER» ¬∃t◇.
+        negative = binder.quantity is Quantity.NEGATIVE
+        above = next((element for element in over if element.kind == "modality"), None)
+        if above is not None and negative and modal and not self._follows_inside(modal):
+            # ◇ ¬∃t is «MIGHT never», not «can never»: the auxiliary whose «not» stays inside.
+            inside = self.the_modal(INSIDE, kind="prefix", element="modality",
+                                    modality=above.modality.value)
+            if inside is not None:
+                rd.modal_override[row.name] = modal = inside
+        if above is not None and not (negative and modal and self._follows_inside(modal)):
+            why = "a quantified time inside a modality"
+        elif binder.quantity is Quantity.UNIVERSAL \
+                and any(element.kind == "negation" for element in under):
+            why = "a universal time over a negation scopes both ways when said"
+        # A binder with no quantity (schema v8, «THE cat that sleeps») claims no force whose scope
+        # could turn round, so where it stands against the time says nothing.
+        elif any(element.kind == "quantifier" and element.quantity is not None
+                 and element.binds == subject for element in under):
+            why = "a quantified time over its subject's binder would have to be fronted"
+        elif any(element.kind == "quantifier" and element.quantity is not None
+                 and element.binds in mine and element.binds != subject for element in over):
+            why = "a quantified time under a binder said after the verb"
+        if why is not None:
+            rd.out.refused.append(f"{row.name}: {why}, which no position says")
+            return None
+        boxes.pop(Role.TIME)
+        rd.said.add(name)
+        if name in rd.negated_binders:
+            rd.negated_binders.discard(name)
+            return "", word, True
+        if any(element.kind == "negation" for element in under):
+            return word, "", False
+        below = next((element for element in under if element.kind == "modality"), None)
+        if below is not None and negative:
+            # ¬∃t □ is «NEED never», not «must never»: the auxiliary whose «not» scopes OUTSIDE, as
+            # `_operators` asks for ¬□ — and where the table has none, ahead of the carrier.
+            if modal and self._follows(modal, OUTSIDE):
+                return "", word, False
+            outside = self.the_modal(OUTSIDE, kind="prefix", element="modality",
+                                     modality=below.modality.value)
+            if outside is not None and modal:
+                rd.modal_override[row.name] = outside
+                return "", word, False
+        if below is not None:
+            return word, "", False
+        return "", word, False
+
+    def _negation_to_the_verb(self, boxes: dict, subject_box: Box | None, rd: _Reading) -> bool:
+        """**«HE DOES NOT SLEEP ANYWHERE», NOT «HE SLEEPS NOT SOMEWHERE»** (`E3.3.11.2.9.7`). A «not»
+        right over the binder of a phrase said after the verb was delivered AT the phrase — the
+        right scope in the wrong English. Where the rows hold a form for that quantity under a
+        negation, the «not» goes on the verb instead: after it, in the text, stands only that
+        phrase, so the compiler reads the same ¬∃ back. True when one was moved; the phrase then
+        says the «any-» form, because a negation now stands over its binder (`_polarity`)."""
+        moved = False
+        for box in boxes.values():
+            if box is subject_box or not isinstance(box.head, Var):
+                continue
+            binder = rd.binders.get(box.head.name)
+            if binder is None or box.head.name not in rd.negated_binders \
+                    or binder.quantity is not Quantity.EXISTENTIAL \
+                    or not isinstance(binder.restriction.head, Open) \
+                    or not binder.restriction.head.sort:
+                continue
+            if self._fused(binder.quantity, binder.restriction.head.sort,
+                           count=binder.count if isinstance(binder.count, int) else None,
+                           polarity=self.NEGATIVE_CONTEXT, fallback=False) is None:
+                continue
+            rd.negated_binders.discard(box.head.name)
+            moved = True
+            break                                  # one «not», one phrase
+        return moved
+
+    def _follows(self, form: str, where: str) -> bool:
+        """Does a «not» after this auxiliary scope `where` — `_follows_inside`, for either answer."""
+        return any(form in forms for (_key, at), forms in self._by_following.items() if at == where)
+
+    def _fused(self, quantity: Quantity, sort: str, count: int | None = None,
+               polarity: str | None = None, fallback: bool = True) -> str | None:
         """The one word that is a quantity AND the thing it ranges over — «nobody», «everywhere».
 
         Chosen by the rows and never here: the `spoken` flag settles «nobody» against «no one» and
-        «everyone» against «everybody», and a form whose polarity binds it to a negative context
-        («anyone») is not a candidate for a plain statement.
+        «everyone» against «everybody». **The polarity is the caller's to ask** (`_polarity`,
+        `E3.3.11.2.9.7`): under a negation or a negative binder the «any-» form the rows mark —
+        «nobody sleeps ANYWHERE», «does not EVER sleep» — and in a plain context a form with no
+        polarity. A sort with no marked form under a negation falls back to its plain one, which
+        is what it was said with before any row marked one.
         """
-        found = [row for row in self.table._rows                     # noqa: SLF001
-                 if row.get("role") == FUSED_QUANTIFIER
-                 and (row.get("compiled") or {}).get("quantity") == quantity.value
-                 and (row.get("features") or {}).get("sort") == sort
-                 # **THE FORCE MUST BE THE PLAIN ONE.** «often» and «seldom» range over times and
-                 # say HOW MANY as well — `force: many`, `force: few` — which is more than a bare
-                 # quantity states; «once» and «twice» carry a count. A word that says more than
-                 # the zip does is the sin in this direction too (req 8).
-                 and (row.get("features") or {}).get("force") == quantity.value
-                 and (row.get("features") or {}).get("count") is None
-                 and not (row.get("features") or {}).get("polarity")]
+        def candidates(wanted: str | None) -> list:
+            return [row for row in self.table._rows                      # noqa: SLF001
+                    if row.get("role") == FUSED_QUANTIFIER
+                    and (row.get("compiled") or {}).get("quantity") == quantity.value
+                    and (row.get("features") or {}).get("sort") == sort
+                    # **THE FORCE MUST BE THE PLAIN ONE.** «often» and «seldom» range over times
+                    # and say HOW MANY as well — `force: many`, `force: few` — which is more than a
+                    # bare quantity states. A word that says more than the zip does is the sin in
+                    # this direction too (req 8). **And the COUNT must be the binder's** — «twice»
+                    # is ∃ with a count of two (`E3.3.11.2.9.4`), «sometimes» is ∃ with none.
+                    and (row.get("features") or {}).get("force") == quantity.value
+                    and (row.get("features") or {}).get("count") == count
+                    and (row.get("features") or {}).get("polarity") == wanted]
+
+        found = candidates(polarity)
+        if not found and polarity is not None and fallback:
+            found = candidates(None)
         if len(found) > 1:
             found = [row for row in found if row.get("spoken")] or found
         return found[0]["form"] if len(found) == 1 else None
+
+    #: `any`'s own feature value (`db/0008`), the one `db/0043` gave the «any-» rows — a name.
+    NEGATIVE_CONTEXT = "negative-context"
+
+    def _polarity(self, binder, rd: _Reading) -> str | None:
+        """**IS A NEGATION OVER THIS BINDER?** — `NEGATIVE_CONTEXT` when a «not» or a negative binder
+        stands before it on its own level of the prefix, else None (`E3.3.11.2.9.7`). Logic reads
+        the prefix; which word is at home there is the rows'."""
+        prefix = rd.prefix.get(binder.scopes, [])
+        if binder not in prefix:
+            return None
+        before = prefix[:prefix.index(binder)]
+        cut = max((at for at, element in enumerate(before) if element.kind == "attitude"),
+                  default=-1)
+        over = before[cut + 1:]
+        if binder.binds in rd.negated_binders or any(
+                element.kind == "negation"
+                or (element.kind == "quantifier" and element.quantity is Quantity.NEGATIVE)
+                for element in over):
+            return self.NEGATIVE_CONTEXT
+        return None
 
     def _head(self, box: Box, rd: _Reading, case: str = ACCUSATIVE) -> str:
         """The word in the box — a key becomes its word, and an abstention stays an abstention."""

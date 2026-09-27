@@ -286,16 +286,19 @@ case("exist-4", "Is there a cat?", "cluster:existential",
 # ================================================================================================
 
 case("nha-1", "He never works.", "cluster:never-hardly-almost",
-     Zip(rows=[all_of("bT", "T", generic("time.n"), scopes="w"), not_("neg", "w"),
+     Zip(rows=[no_("bT", "T", Box(head=Open(sort="time")), scopes="w"),
                c("w", "work.v", agent=who("he"), time=V("T"))]),
-     "pass", "∀T ¬work — a universal over the time variable and a negation, both in the prefix. "
-             "`never` collapses exactly as req 23 says.")
+     "pass", "¬∃T work — ONE negative binder over the time variable, restricted to what the word "
+             "said (a time). `never` collapses exactly as req 23 says. *Amended 2026-09-27 "
+             "(E3.3.11.2.9.1, the Captain): it was ∀T(time.n) ¬ — the same claim in a second "
+             "spelling; one spelling for nobody, nothing, nowhere, never.*")
 
 case("nha-2", "A calculator never thinks.", "cluster:never-hardly-almost",
      Zip(rows=[all_of("bX", "X", generic("calculator.n"), scopes="t"),
-               all_of("bT", "T", generic("time.n"), scopes="t"), not_("neg", "t"),
+               no_("bT", "T", Box(head=Open(sort="time")), scopes="t"),
                c("t", "think.v", experiencer=V("X"), time=V("T"))]),
-     "pass", "his own traffic (missed-negation): two binders and a negation, all scoping one row")
+     "pass", "his own traffic (missed-negation): two binders, both scoping one row. *Amended "
+             "2026-09-27 (E3.3.11.2.9.1): the time binder and its negation are ONE negative binder.*")
 
 case("nha-3", "He hardly works.", "cluster:never-hardly-almost",
      Zip(rows=[c("w", "work.v", agent=who("he"), manner=Box(degree=0.1))]),

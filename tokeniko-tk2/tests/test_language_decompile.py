@@ -1681,3 +1681,200 @@ def test_a_half_HELD_by_an_attitude_is_claimed_by_it_and_the_want_is_not(spoken)
 
     assert because.text == "Because anna wonders whether he sleeps, I leave."
     assert unless.text == "Come here or I leave."
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.2.9` — a quantified time is said where its scope is read
+# ------------------------------------------------------------------------------------------------
+
+
+def _times(quantity, name="t"):
+    return QuantifierRow(name=f"q{name}", scopes="r", binds=name, quantity=quantity,
+                         restriction=Box(head=Open(sort="time")))
+
+
+def _sleeps(truth=1.0, **boxes):
+    return ContentRow(name="r", predicate="sleep.v", truth=truth, boxes={
+        Role.AGENT: Box(head=Open(person=3, number="sg", gender="m")),
+        Role.TIME: Box(head=Var(name="t")), **boxes})
+
+
+@pytest.mark.parametrize("prefix, said", [
+    ([_times(Quantity.NEGATIVE)], "He never sleeps."),
+    ([_times(Quantity.UNIVERSAL)], "He always sleeps."),
+    ([NegationRow(name="n", scopes="r"), _times(Quantity.UNIVERSAL)], "He does not always sleep."),
+    ([_times(Quantity.NEGATIVE), NegationRow(name="n", scopes="r")], "He never does not sleep."),
+    ([_times(Quantity.EXISTENTIAL), NegationRow(name="n", scopes="r")],
+     "He sometimes does not sleep."),
+])
+def test_a_quantified_TIME_is_said_where_the_compiler_reads_its_scope(decompiler, prefix, said):
+    """`E3.3.11.2.9`: said with the circumstances, «never» came back «He sleeps never», and against
+    a «not» it could come back as the other scope — «He does not sleep never». The compiler reads
+    an adverbial binder by where it stands against the «not»; the mouth puts it there."""
+    assert decompiler.decompile(Zip(rows=[*prefix, _sleeps()])).text == said
+
+
+def test_a_quantified_time_rides_the_CARRIER_the_clause_already_has(decompiler):
+    """«He was never late» · «Does he never sleep?» — after the copula, after the inverted «does»:
+    the same middle slot, whatever carries the clause."""
+    late = ContentRow(name="r", truth=1.0, theatre=Theatre(interval=[-1.0, -1.0] + [0.0] * 6,
+                                                           epoch=1),
+                      boxes={Role.PATIENT: Box(head=Open(person=3, number="sg", gender="m")),
+                             Role.COMPLEMENT: Box(head="late.a"),
+                             Role.TIME: Box(head=Var(name="t"))})
+    asked = _sleeps(truth=Open())
+
+    assert decompiler.decompile(Zip(rows=[_times(Quantity.NEGATIVE), late])).text == \
+        "He was never late."
+    assert decompiler.decompile(Zip(rows=[_times(Quantity.NEGATIVE), asked])).text == \
+        "Does he never sleep?"
+
+
+@pytest.mark.parametrize("prefix, why", [
+    ([ModalityRow(name="m", scopes="r", modality=Modality.POSSIBILITY), _times(Quantity.UNIVERSAL)],
+     "inside a modality"),
+    ([_times(Quantity.UNIVERSAL), NegationRow(name="n", scopes="r")], "scopes both ways"),
+])
+def test_a_scope_the_compiler_would_not_read_back_is_REFUSED(decompiler, prefix, why):
+    """◇∀t would be «he can always sleep», which the compiler withholds (the modal fixes the slot);
+    ∀t¬ would be «he always does not sleep», which it withholds as the proverb's ambiguity. Said
+    anyway, the next reading would be a different claim — so nothing is said."""
+    out = decompiler.decompile(Zip(rows=[*prefix, _sleeps()]))
+
+    assert out.text == ""
+    assert any(why in refusal for refusal in out.refused)
+
+
+def test_a_quantified_time_over_its_SUBJECT_s_binder_is_refused(decompiler):
+    """∃t∀x — «sometimes everyone sleeps» — said in the middle would be «everyone sometimes
+    sleeps», ∀x∃t: the other claim. Fronting is not built, so it is refused."""
+    everyone = QuantifierRow(name="qx", scopes="r", binds="x", quantity=Quantity.UNIVERSAL,
+                             restriction=Box(head=Open(sort="person")))
+    row = _sleeps().model_copy(update={"boxes": {Role.AGENT: Box(head=Var(name="x")),
+                                                 Role.TIME: Box(head=Var(name="t"))}})
+
+    assert decompiler.decompile(Zip(rows=[everyone, _times(Quantity.EXISTENTIAL), row])).text == \
+        "Everyone sometimes sleeps."
+    out = decompiler.decompile(Zip(rows=[_times(Quantity.EXISTENTIAL), everyone, row]))
+    assert out.text == ""
+    assert any("fronted" in refusal for refusal in out.refused)
+
+
+def test_an_imperative_s_quantified_time_comes_first(spoken):
+    """«Never close the door!» — the want outermost, then ¬∃t; an imperative has no carrier."""
+    close = ContentRow(name="r", predicate="close.v", truth=None, boxes={
+        Role.AGENT: Box(head="you.n"), Role.TIME: Box(head=Var(name="t")),
+        Role.PATIENT: Box(head="door.n", determination=Determination.DEFINITE, number="sg")})
+    want = AttitudeRow(name="w", scopes="r", holder=Box(head="me.n"), verb="want.v", strength=0.9)
+
+    assert spoken.decompile(Zip(rows=[want, _times(Quantity.NEGATIVE), close])).text == \
+        "Never close the door!"
+
+
+@pytest.mark.skeleton
+@pytest.mark.parametrize("text", [
+    "He never sleeps.", "He does not always sleep.", "He never does not sleep.",
+    "He was never late.", "Everyone always sleeps.", "He sleeps nowhere.",
+    "I think that he never sleeps.",
+    # the Captain's rulings of 2026-09-27 (`E3.3.11.2.9.3` · `.4` · `.5` · `.7`)
+    "He does not ever sleep.", "Nobody ever sleeps.", "Nobody sleeps anywhere.",
+    "He does not sleep anywhere.", "He slept twice.",
+    "He can never sleep.", "He must never lie.", "He need never know.", "He might never sleep.",
+])
+def test_an_adverbial_quantifier_comes_back_as_the_zip_it_went_out_as(text):
+    """The round trip for `E3.3.11.2.9`: sentence to zip to sentence to zip, the two zips IDENTICAL
+    — and the sentence said back is the one that went in."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider = StanzaSkeletons()
+    compiler = Compiler(standing_closed_classes())
+    first = compile_utterance(compiler, provider(text), DRILL_CONTEXT).zip
+    assert any(r.kind == "quantifier" for r in first.rows), "the binder was not built"
+
+    out = Decompiler(context=DRILL_CONTEXT).decompile(first)
+    assert out.text == text
+    assert canonical(compile_utterance(compiler, provider(out.text), DRILL_CONTEXT).zip) == \
+        canonical(first)
+
+
+def test_a_binder_with_NO_quantity_does_not_order_against_a_quantified_time(decompiler):
+    """«The cat that always sleeps never eats» — the definite's binder (schema v8) claims no force,
+    so it standing after ¬∃t is no scope the mouth could turn round."""
+    the_cat = QuantifierRow(name="qc", scopes="r", binds="c",
+                            restriction=Box(head="cat.n", determination=Determination.DEFINITE,
+                                            number="sg"))
+    eats = ContentRow(name="r", predicate="eat.v", truth=1.0, boxes={
+        Role.AGENT: Box(head=Var(name="c")), Role.TIME: Box(head=Var(name="t"))})
+
+    assert decompiler.decompile(Zip(rows=[_times(Quantity.NEGATIVE), the_cat, eats])).text == \
+        "The cat never eats."
+
+
+# ------------------------------------------------------------------------------------------------
+# the Captain's rulings of 2026-09-27 — polarity, a count, a modal (`E3.3.11.2.9.3` … `.7`)
+# ------------------------------------------------------------------------------------------------
+
+
+def _place(quantity, name="l"):
+    return QuantifierRow(name=f"q{name}", scopes="r", binds=name, quantity=quantity,
+                         restriction=Box(head=Open(sort="place")))
+
+
+@pytest.mark.parametrize("prefix, said", [
+    ([NegationRow(name="n", scopes="r"), _place(Quantity.EXISTENTIAL)], "He does not sleep anywhere."),
+    ([_place(Quantity.EXISTENTIAL)], "He sleeps somewhere."),
+])
+def test_the_ANY_form_is_said_under_a_negation_and_the_SOME_form_elsewhere(decompiler, prefix, said):
+    """`E3.3.11.2.9.7`: «He sleeps not somewhere» was the right scope in the wrong English, and
+    «Nobody sleeps somewhere» invites the reverse one. Under a negation the rows' «any-» form, and
+    the «not» on the verb."""
+    row = ContentRow(name="r", predicate="sleep.v", truth=1.0, boxes={
+        Role.AGENT: Box(head=Open(person=3, number="sg", gender="m")),
+        Role.LOCATION: Box(head=Var(name="l"))})
+
+    assert decompiler.decompile(Zip(rows=[*prefix, row])).text == said
+
+
+def test_a_negative_binder_makes_the_ANY_form_too(decompiler):
+    """«Nobody sleeps anywhere» · «Nobody ever sleeps» — a negative binder over it is a negation."""
+    nobody = QuantifierRow(name="qx", scopes="r", binds="x", quantity=Quantity.NEGATIVE,
+                           restriction=Box(head=Open(sort="person")))
+    where = ContentRow(name="r", predicate="sleep.v", truth=1.0, boxes={
+        Role.AGENT: Box(head=Var(name="x")), Role.LOCATION: Box(head=Var(name="l"))})
+    when = ContentRow(name="r", predicate="sleep.v", truth=1.0, boxes={
+        Role.AGENT: Box(head=Var(name="x")), Role.TIME: Box(head=Var(name="t"))})
+
+    assert decompiler.decompile(Zip(rows=[nobody, _place(Quantity.EXISTENTIAL), where])).text == \
+        "Nobody sleeps anywhere."
+    assert decompiler.decompile(Zip(rows=[nobody, _times(Quantity.EXISTENTIAL), when])).text == \
+        "Nobody ever sleeps."
+
+
+def test_a_COUNTED_time_is_said_with_its_count_after_the_verb(decompiler):
+    """«He slept twice» — ∃t with a count of two is «twice», and «sometimes» is ∃t with none."""
+    twice = _times(Quantity.EXISTENTIAL).model_copy(update={"count": 2})
+    slept = _sleeps().model_copy(update={"theatre": Theatre(interval=[-1.0, -1.0] + [0.0] * 6,
+                                                            epoch=1)})
+
+    assert decompiler.decompile(Zip(rows=[twice, slept])).text == "He slept twice."
+
+
+@pytest.mark.parametrize("prefix, said", [
+    ([_times(Quantity.NEGATIVE), ModalityRow(name="m", scopes="r", modality=Modality.POSSIBILITY)],
+     "He can never sleep."),
+    ([ModalityRow(name="m", scopes="r", modality=Modality.NECESSITY), _times(Quantity.NEGATIVE)],
+     "He must never sleep."),
+    ([_times(Quantity.NEGATIVE), ModalityRow(name="m", scopes="r", modality=Modality.NECESSITY)],
+     "He need never sleep."),
+    ([ModalityRow(name="m", scopes="r", modality=Modality.POSSIBILITY), _times(Quantity.NEGATIVE)],
+     "He might never sleep."),
+])
+def test_a_negative_time_beside_a_modal_is_said_as_the_modal_s_row_reads_it(decompiler, prefix,
+                                                                            said):
+    """`E3.3.11.2.9.5`, read back: the auxiliary whose «not» scopes where the binder stands — «can»
+    and «need» outside, «must» and «might» inside — so the compiler reads the same prefix again."""
+    assert decompiler.decompile(Zip(rows=[*prefix, _sleeps()])).text == said
