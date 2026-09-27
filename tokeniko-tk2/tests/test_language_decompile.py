@@ -271,16 +271,20 @@ def test_what_the_halves_CLAIM_is_what_chooses_between_because_and_if(decompiler
 
 def test_a_BOUND_VARIABLE_is_spoken_where_it_first_occurs_and_is_definite_after(decompiler):
     """A variable mentioned twice is one thing mentioned twice — «some cat … the cat» — because
-    saying «some cat» again would be a second cat, which is a different thought."""
+    saying «some cat» again would be a second cat, which is a different thought.
+
+    *A disjunction since `E3.3.14`*: an AND under ∃ of two claimed rows about its variable IS the
+    one spelling of a restricted phrase, and is said «Some cat that sleeps dreams» — the same claim,
+    and the zip the compiler reads back."""
     out = decompiler.decompile(Zip(rows=[
         QuantifierRow(name="b", scopes="j", binds="C", quantity=Quantity.EXISTENTIAL,
                       restriction=Box(head="cat.n")),
-        row("a", predicate="sleep.v", agent=Box(head=Var(name="C"))),
-        row("z", predicate="dream.v", agent=Box(head=Var(name="C"))),
-        JoinRow(name="j", truth=1.0, operator=Operator.AND, operands=["a", "z"]),
+        row("a", predicate="sleep.v", truth=None, agent=Box(head=Var(name="C"))),
+        row("z", predicate="dream.v", truth=None, agent=Box(head=Var(name="C"))),
+        JoinRow(name="j", truth=1.0, operator=Operator.OR, operands=["a", "z"]),
     ]))
 
-    assert out.text == "Some cat sleeps and the cat dreams."
+    assert out.text == "Some cat sleeps or the cat dreams."
 
 
 def test_a_MODIFIER_folds_back_into_the_noun_phrase_the_compiler_took_it_out_of(decompiler):
@@ -315,6 +319,44 @@ def test_a_modifier_does_NOT_fold_out_of_an_implication(decompiler):
     ]))
 
     assert out.text == "Because every person lies, the person is wrong."
+
+
+def test_a_RESTRICTION_JOIN_is_said_as_the_clause_it_restricts(decompiler):
+    """`E3.3.14` — the compiler's one spelling of a restricted phrase: the binder scopes a join of
+    the restriction with its clause, by the binder's operator, the halves stated under ∀. Read
+    back, the restriction goes into the phrase — an adjective folded, a relative clause after the
+    noun — and the clause is said with the join's claim. A negation over the join is the clause's."""
+    def every(restriction):
+        return Zip(rows=[
+            NegationRow(name="n", scopes="j"),
+            QuantifierRow(name="b", scopes="j", binds="X", quantity=Quantity.UNIVERSAL,
+                          restriction=Box(head="man.n")),
+            restriction,
+            row("s", predicate="sleep.v", truth=None, agent=Box(head=Var(name="X"))),
+            JoinRow(name="j", truth=1.0, operator=Operator.IMPLY, operands=[restriction.name, "s"]),
+        ])
+
+    tired = row("m", truth=None, patient=Box(head=Var(name="X")), complement="tired.a")
+    snoring = row("r", predicate="snore.v", truth=None, agent=Box(head=Var(name="X")))
+
+    assert decompiler.decompile(every(tired)).text == "Not every tired man sleeps."
+    assert decompiler.decompile(every(snoring)).text == "Not every man that snores sleeps."
+
+
+def test_a_RELATIVE_GAP_in_an_attitude_s_holder_is_the_relative_pronoun(decompiler):
+    """«The man THAT thinks that she sleeps is happy» (`E3.3.14`): the restriction is the thinking,
+    seated on what was thought, and the gap is its holder — said as the relative pronoun, in the
+    subject's place, exactly as `_clause` says a gap in a box."""
+    out = decompiler.decompile(Zip(rows=[
+        QuantifierRow(name="b", scopes="j", binds="X",
+                      restriction=Box(head="man.n", determination=Determination.DEFINITE)),
+        AttitudeRow(name="a", scopes="t", holder=Box(head=Var(name="X")), verb="think.v"),
+        row("t", predicate="sleep.v", agent=Box(head=Open(person=3, number="sg", gender="f"))),
+        row("h", patient=Box(head=Var(name="X")), complement="happy.a"),
+        JoinRow(name="j", truth=1.0, operator=Operator.AND, operands=["t", "h"]),
+    ]))
+
+    assert out.text == "The man that thinks that she sleeps is happy."
 
 
 def test_each_clause_is_spoken_in_ITS_OWN_TENSE(decompiler):

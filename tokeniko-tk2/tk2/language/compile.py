@@ -136,6 +136,9 @@ CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis", 
 #: take what it says in its own sentence (`Compiled.complemented`)?
 COMPLEMENT_DEPS = frozenset({"ccomp", "xcomp"})
 
+#: `Compiler._unentailed`'s answer for a cut from a clause that ASKS (`E3.3.16`) — a name.
+ASKING = "in a question"
+
 #: What a joining word claims about its halves (closed classes v4, `db/0010`).
 ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
 ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
@@ -197,6 +200,15 @@ UPWARD_OPERANDS: dict[Operator, tuple[bool, bool]] = {
 UPWARD_RESTRICTION = frozenset({Quantity.EXISTENTIAL, Quantity.NEGATED_UNIVERSAL})
 UPWARD_SCOPE = frozenset({Quantity.UNIVERSAL, Quantity.EXISTENTIAL})
 
+#: **A RESTRICTION JOINS WHAT ITS BINDER SCOPES BY WHAT THE BINDER SAYS** — restricted
+#: quantification, logic again (`E3.3.14`): «every tired man sleeps» is ∀x (tired(x) → sleep(x)),
+#: and «not every…» is the same implication under its ¬. Every other binder conjoins — ∃ and ¬∃
+#: over (R ∧ S), and a binder with no force (a definite, schema v8) describes its one by (R ∧ S).
+RESTRICTED_BY: dict[Quantity, Operator] = {
+    Quantity.UNIVERSAL: Operator.IMPLY,
+    Quantity.NEGATED_UNIVERSAL: Operator.IMPLY,
+}
+
 #: **THE OPERATORS THAT CARRY THEIR OWN NEGATION** — logic: `nand` is ¬(a ∧ b), `nor` ¬(a ∨ b),
 #: `nimply` ¬(a → b), `nconv` ¬(b → a). A joining word whose row says `polarity: negative` and
 #: compiles to one of these has already said its negation («nor»); on any other operator the
@@ -235,10 +247,15 @@ def _is_operator(compiled: dict) -> bool:
     than IN one of its boxes (`E3.12.5.2`)? Read off the row's own `compiled`: a PREFIX element
     (negation · modality · attitude · domain), a BINDER, or a TIME the row states. The two kinds are
     the table's names for the two ways a row reaches the prefix (tkzip req 35), not a roster of
-    words; an ambiguous row is one if any of its readings is."""
+    words; an ambiguous row is one if any of its readings is.
+
+    **AND AN INTERROGATIVE** (`E3.3.15`, 2026-09-27) — a row that OPENS something binds it, and
+    questions and quantifiers are one binding mechanism (tkzip req 36). Cut, it turns a question
+    into a claim: «Which man sleeps?» came back «Man sleeps.» with «which» in `unplaced`."""
     if compiled.get("kind") == "ambiguous":
         return any(_is_operator(candidate) for candidate in compiled.get("candidates") or ())
     return compiled.get("kind") in ("prefix", "quantifier") \
+        or (compiled.get("kind") == "open" and bool(compiled.get("opens"))) \
         or bool(compiled.get("tense") or compiled.get("aspect"))
 
 def numeral_value(lemma: str, text: str = "") -> int | None:
@@ -410,6 +427,18 @@ class _Scoped:
 
 
 @dataclass
+class _Restriction:
+    """**ONE RESTRICTIVE MODIFIER OF A BOUND PHRASE** — an attributive adjective (`key`, whose row
+    `Compiler._modify` builds) or a relative clause (`row`, the clause's own). Both are joined to the
+    binder's scope by the one builder, `_modify` (`E3.3.14`)."""
+
+    var: str
+    binder: QuantifierRow
+    key: str | None = None
+    row: str | None = None
+
+
+@dataclass
 class _Seating:
     """**WHERE EACH ATTITUDE CAME FROM** — the bookkeeping that lets an attitude take its matrix
     clause's place (`E3.3.11.1` · `E3.3.11.2`, the Captain's `E3.3.11.2.16` of 2026-09-26).
@@ -457,7 +486,8 @@ def matrix_keeps_its_place(matrix: ContentRow, holder: Role | None, verb, binder
                           (`E3.3.11.2.16` (10), `E3.3.11.2.8`)
         its boxes         the holder's and the addressee's, and nothing else (ruling 2)
         a restriction     a box bound by a binder that does not scope the matrix, nor any join above
-                          it: a relative clause, and an attitude is not a row that restricts a phrase
+                          it: a row held by its variable alone. *Since `E3.3.14` a relative clause is
+                          inside its binder's join, and its attitude takes its place there*
         its truth         CLAIMED, or unasserted under the speech act's want — an attitude row has
                           no truth slot (ruling 2: asked, supposed)
 
@@ -489,6 +519,22 @@ def matrix_keeps_its_place(matrix: ContentRow, holder: Role | None, verb, binder
             return "it is SUPPOSED, and an attitude row has no truth slot to suppose it in"
         return f"it is held at {truth}, and an attitude row has no truth slot to hold it at"
     return None
+
+
+def restriction_truths(binder: QuantifierRow, truth) -> tuple:
+    """**WHAT THE TWO HALVES OF A RESTRICTION JOIN CLAIM**, given what the join claims — `(the
+    restriction's, the scope's)` (`E3.3.14`). ONE rule, read in two places: `Compiler._settle`
+    writes it and the decompiler reads it back (`Decompiler._restricted`), so the two cannot drift.
+
+    A half is claimed on its own only where the binder DISTRIBUTES over the conjunction — ∃x (R ∧
+    S) entails ∃x R and ∃x S, and a binder with no force describes its one — and only as much as
+    the join claims. ∀ and ¬∀ (an implication's halves) and ¬∃ distribute over neither. A DEFINITE's
+    restriction is its presupposition and is claimed whatever the join claims."""
+    distributes = binder.quantity is None or binder.quantity in UPWARD_RESTRICTION & UPWARD_SCOPE
+    claimed = distributes and truth == CLAIMED
+    definite = Determination.DEFINITE in (binder.determination, binder.restriction.determination)
+    return (CLAIMED if claimed or (distributes and definite) else None,
+            CLAIMED if claimed else None)
 
 
 @dataclass
@@ -627,7 +673,7 @@ class Compiler:
         abstained: list[str] = []
         defaulted: list[str] = []
         prefix_rows: list = []
-        modifiers: list = []   # (var, adjective key, its binder, the row it belongs to)
+        modifiers: list = []   # every restrictive modifier of a bound phrase (`_Restriction`)
         adverb_joins: list = []   # (row, operator, pragmatic, word) — a discourse adverb needs two
         content: dict[int, ContentRow] = {}
         open_truth: set[str] = set()          # rows whose TRUTH was asked («whether», a polar)
@@ -660,8 +706,10 @@ class Compiler:
         joined: dict[int, tuple] = {}  # a clause head -> (its joiner's index, the joiner, the join)
         tied: dict[str, set[str]] = {}          # a row -> the rows that stand or fall with it
         seating = _Seating()                    # where each attitude came from (RAW → SEATED)
+        vacant: list = []                       # binders whose relative clause was withheld
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained,
-                             dissolved, withheld, coordinated, built_from, joined, seating, tied)
+                             dissolved, withheld, coordinated, built_from, joined, seating, tied,
+                             modifiers, vacant)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
         questioned: set[int] = set()          # statements a `?` closes (`_question`)
         self._question(skeleton, heads, owner, content, joins, asked, marks, covered, prefix_rows,
@@ -669,7 +717,7 @@ class Compiler:
         self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins, seating)
         self._tags(skeleton, heads, owner, content, tags, elliptic, unscoped, abstained,
                    prefix_rows, joins, marks, covered, tagged, questioned)
-        extra += self._modify(modifiers, joins, content)
+        extra += self._modify(modifiers, joins, content, prefix_rows)
         self._control(skeleton, heads, content, marks, covered, prefix_rows, joins, abstained)
         self._connect(adverb_joins, content, joins, abstained, coordinated, built_from)
         self._focus(skeleton, focus, owner, content, prefix_rows, extra, joins, covered, abstained,
@@ -701,7 +749,7 @@ class Compiler:
                 self._orphaned(content, prefix_rows, dissolved, seating)
             pending = self._unentailed(skeleton, heads, content, prefix_rows, joins, dissolved,
                                        covered, abstained, marks, owner, seating,
-                                       quotation_withheld, quoted, tagged) - taken
+                                       quotation_withheld, quoted, tagged, asked) - taken
             if withheld_any:
                 # **AND WHAT A WITHHOLDING LEAVES STRANDED GOES WITH IT** (`E3.12.5.9.13`).
                 pending |= self._stranded(content, prefix_rows, joins, dissolved, abstained,
@@ -725,6 +773,7 @@ class Compiler:
         # believes it (`E3.3.11.2.3`). Seated, both attitudes stand over X, and what pointed at the
         # dissolved clause points at the place its complement took (`_seat`). The rule below is
         # kept for what it always said: a row something points at is never dropped.
+        prefix_rows = [p for p in prefix_rows if not any(p is v for v in vacant)]
         named = self._named(prefix_rows, joins)
         rows = [*prefix_rows,
                 *(row for row in content.values()
@@ -888,12 +937,16 @@ class Compiler:
         # is UD's own clausal set, `xcomp` included, because UD is right to call it a clause; that
         # it does not become a row of its own is OUR judgement and it lives in rows now.
         found = [w for w in skeleton
-                 if self._readable(w)
-                 and (w.is_root or (w.bare_dep in CLAUSE_DEPS
-                                    and self.readings.opens_clause(w.bare_dep)
-                                    and w.upos in ("VERB", "AUX", "ADJ", "NOUN", "PROPN", "PRON")
-                                    and not self._joins_its_complement(w, skeleton, marks or {})))]
+                 if self._readable(w) and (w.is_root or self._opens_clause(w, skeleton, marks))]
         return sorted(found, key=lambda w: w.index)
+
+    def _opens_clause(self, word: Word, skeleton: Skeleton, marks: dict | None = None) -> bool:
+        """Does this dependent open a clause of its own — `_clause_heads`' test for everything but
+        the root, read also where a phrase is built (`_box_for`), which must know whether a relative
+        clause will restrict it."""
+        return (word.bare_dep in CLAUSE_DEPS and self.readings.opens_clause(word.bare_dep)
+                and word.upos in ("VERB", "AUX", "ADJ", "NOUN", "PROPN", "PRON")
+                and not self._joins_its_complement(word, skeleton, marks or {}))
 
     @staticmethod
     def _joins_its_complement(word: Word, skeleton: Skeleton, marks: dict) -> bool:
@@ -1045,6 +1098,12 @@ class Compiler:
             boxes[role] = self._box_for(head, skeleton, marks, covered, prefix_rows, name,
                                         modifiers, abstained, context)
             covered.add(head.index, f"box:{role.value}")
+            if unscoped is not None and self._predicate_lost(head, skeleton, marks):
+                abstained.append(f"«{head.text}»: a sentence whose root is a noun phrase with a clause "
+                                 f"in it, and no copula and no subject — nothing is said OF it, and "
+                                 f"the parse has lost its predicate: the sentence is withheld "
+                                 f"(E3.3.14.3)")
+                unscoped.append(head.index)
             copular = True
 
         # **THE FRAME IS READ BEFORE THE PARTICIPANTS**, because one of the two signals is that a
@@ -1207,6 +1266,28 @@ class Compiler:
 
         return ContentRow(name=name, predicate=predicate, theatre=theatre,
                           predicate_sense=Open() if predicate else None, boxes=boxes)
+
+    def _predicate_lost(self, head: Word, skeleton: Skeleton, marks: dict) -> bool:
+        """**A SENTENCE WHOSE ROOT IS A NOUN PHRASE WITH A CLAUSE IN IT** (`E3.3.14.3`, the QM's
+        judgement of 2026-09-27) — «A student who studied passed.»: stanza makes «student» the root,
+        hangs «passed» inside the relative clause, and the station built «[] is a student» — a row
+        with no predicate and no subject, saying nothing of anything — beside a relative clause that
+        claims what the parse misattached («the student said that the exam FAILED hard»). What
+        remains is not what the words said (E3.12.5 (1)), so the sentence is withheld.
+
+        All of it read on the tree, frame: the root a NOMINAL (UD's own classes), no `cop` and no
+        subject under it, a clause of its own restricting it (`acl`), and the sentence CLOSED — the
+        root carries its final token as `punct`. The last is what spares the citation fragment UD's
+        pages print, «the cat that sleeps», which states nothing and asks nothing of its own; a
+        sentence the speaker ended as one has lost its predicate. *No character is read.*"""
+        if not head.is_root or head.upos not in ("NOUN", "PROPN", "PRON"):
+            return False
+        children = list(skeleton.children(head.index))
+        last = max(word.index for word in skeleton)
+        return (not any(c.bare_dep == "cop" or c.bare_dep in SUBJECT_DEPS for c in children)
+                and any(c.bare_dep == "acl" and self._opens_clause(c, skeleton, marks)
+                        for c in children)
+                and any(c.bare_dep == "punct" and c.index == last for c in children))
 
     def _universal_meets_negation(self, scoped: list[_Scoped], mine: set[int], marks: dict,
                                   covered: Placements, abstained: list) -> bool:
@@ -1718,7 +1799,8 @@ class Compiler:
                 coordinated: dict | None = None,
                 built_from: dict | None = None,
                 joined: dict | None = None, seating: "_Seating | None" = None,
-                tied: dict | None = None) -> list[JoinRow]:
+                tied: dict | None = None,
+                restrictions: list | None = None, vacant: list | None = None) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -1743,12 +1825,13 @@ class Compiler:
             at, joiner, governed = found if found is not None else (None, None, False)
 
             if head.bare_dep == "acl":
-                # A RELATIVE CLAUSE SHARES A VARIABLE with the phrase it modifies, rather than
-                # joining it: «the cat that sleeps» is one cat, described twice (req 36). It may
-                # also leave the clause UNASSERTED — a quantifier's restriction is stated, never
-                # claimed — which is why the set is handed over rather than read back afterwards.
+                # A RELATIVE CLAUSE SHARES A VARIABLE with the phrase it modifies: «the cat that
+                # sleeps» is one cat, described twice (req 36). What it says of the cat is a
+                # RESTRICTION of the cat's binder, joined to the binder's scope by `_modify` with the
+                # attributive adjectives — one spelling for both (`E3.3.14`), and its truth is the
+                # join's to decide, once every truth is final.
                 self._share_variable(skeleton, head, content, outer, prefix_rows, covered, marks,
-                                     unasserted, withheld, abstained)
+                                     restrictions, withheld, abstained, vacant)
                 continue
 
             if joiner is not None and (joiner.compiled.get("asserts") == ASSERTS_MATRIX
@@ -2558,8 +2641,10 @@ class Compiler:
 
         return set()
 
-    def _modify(self, modifiers: list, joins: list, content: dict | None = None) -> list:
-        """**ATTRIBUTIVE ADJECTIVES BECOME ROWS** — tkzip req 70, and the shape is the drill's own.
+    def _modify(self, restrictions: list, joins: list, content: dict, prefix_rows: list) -> list:
+        """**A RESTRICTIVE MODIFIER IS JOINED TO WHAT ITS BINDER SCOPES** — tkzip req 70 for the
+        attributive adjective, whose shape is the drill's own, and since `E3.3.14` the relative
+        clause too: «a tired man» and «a man who is tired» are one reading, and one zip.
 
         «I live in a human body» is hand-compiled in E2's drill as
 
@@ -2568,64 +2653,105 @@ class Compiler:
             me:  live.v, agent = me.n, location = (B, marker «in»)
             j1:  AND (hu, me)
 
-        Three things in that are not obvious and all three are load-bearing. The adjective row has
-        **no predicate** — req 31, «the cat is cute» is cat + cute and no verb. Its subject is the
-        **patient**, not the topic, which is the copular row's shape E2 ruled and the drill uses 43
-        times. And **the binder scopes the JOIN, not either row**, because the variable is shared
-        across both and a binder scoping one of them would leave the other's `B` unbound.
+        The adjective row has **no predicate** — req 31, «the cat is cute» is cat + cute and no verb.
+        Its subject is the **patient**, not the topic, which is the copular row's shape E2 ruled and
+        the drill uses 43 times. A relative clause brings its own row (`_share_variable`). And **the
+        binder scopes the JOIN, not either row**, because the variable is shared across both and a
+        binder scoping one of them would leave the other's `B` unbound. Several restrictions chain,
+        one join apiece, exactly as the drill chains j1, j2, j3.
 
-        Several adjectives chain: «large hot dogs» is AND(large, AND(hot, eats)), one join apiece,
-        exactly as the drill chains j1, j2, j3.
+        **THE OPERATOR IS THE BINDER'S** (`RESTRICTED_BY`, logic): «every tired man sleeps» is
+        ∀x (tired(x) → sleep(x)) — joined by AND it claimed that every man is tired. **AND SO ARE THE
+        TRUTHS** (`_settle`): a half is claimed on its own only where the binder distributes over the
+        conjunction — ∃, or a binder with no force — and only as much as the clause it restricts
+        claims (G9); a definite's restriction is its presupposition, and stays claimed.
+
+        **THE JOIN STANDS WHERE ITS BINDER STANDS** (req 35). The binder used to move out to the
+        outermost join and leave behind it every row that preceded it: «NOT every tired man sleeps»
+        came out ∀¬, and «He does NOT see a tired man» claimed the man. So the rows scoping the
+        owner are walked innermost first; each binder's restrictions are joined around what is
+        built so far, and every row before it scopes the new join. Row order is untouched.
         """
         raised = []
-        attached: dict[str, str] = {}      # owner row -> the conjunction built over it so far
-        binders: dict[str, list] = {}      # owner row -> every binder whose scope must follow it
-        clause_joins = list(joins)         # the joins `_relate` and its neighbours already built
-        # **AND IT TAKES THE ROW'S TRUTH, NOT A CLAIM OF ITS OWN** *(2026-09-25)*. The conjunction
-        # takes the row's place (below), so it says what the row said: «I went to Genoa to see the
-        # Ligurian sea» leaves the SEEING unclaimed (a purpose, `db/0037`), and a conjunction of it
-        # with «the sea is Ligurian» held CLAIMED asserted the seeing all over again. The adjective's
-        # own row stays claimed — the sea is Ligurian whether or not I saw it.
-        truth_of = {row.name: row.truth for row in (content or {}).values()}
-        for position, (var, key, binder, owner) in enumerate(modifiers):
-            row = ContentRow(
-                name=f"m{position}", truth=CLAIMED,
-                boxes={Role.PATIENT: Box(head=Var(name=var), sense=Open()),
-                       Role.COMPLEMENT: Box(head=key, sense=Open())})
-            raised.append(row)
-            # **ONE TREE PER CLAUSE, NOT ONE JOIN PER ADJECTIVE.** Two nouns each carrying an
-            # adjective would otherwise produce two joins both naming the content row — logically
-            # sound, and not what the drill does: it chains j1, j2, j3 into a single conjunction.
-            # A zip with two unrelated top-level assertions says the same thing in a shape nothing
-            # else in the format uses.
-            join = JoinRow(name=f"j{len(joins)}", operator=Operator.AND,
-                           operands=[row.name, attached.get(owner, owner)],
-                           truth=truth_of.get(owner, CLAIMED))
-            joins.append(join)
-            attached[owner] = join.name
-            binders.setdefault(owner, []).append(binder)
+        rows: dict[str, object] = {row.name: row for row in content.values()}
+        by_binder: dict[int, list] = {}
+        for restriction in restrictions:
+            if restriction.key is not None:
+                row = ContentRow(
+                    name=f"m{len(raised)}", truth=CLAIMED,
+                    boxes={Role.PATIENT: Box(head=Var(name=restriction.var), sense=Open()),
+                           Role.COMPLEMENT: Box(head=restriction.key, sense=Open())})
+                raised.append(row)
+                rows[row.name] = row
+                by_binder.setdefault(id(restriction.binder), []).append(row.name)
+            else:
+                by_binder.setdefault(id(restriction.binder), []).append(restriction.row)
+        rows.update({join.name: join for join in joins})
 
-        # THE BINDERS MOVE TO SCOPE THE WHOLE CONJUNCTION. Each was raised scoping the content row,
-        # because that was all that existed when `_box_for` ran; now its variable lives in two rows
-        # and only the outermost join covers both. Their ORDER is unchanged, and row order is scope
-        # order (req 35) — so the prefix still reads left to right as the speaker said it.
-        for owner, raised_binders in binders.items():
-            for binder in raised_binders:
-                binder.scopes = attached[owner]
+        made: dict[str, QuantifierRow] = {}     # a restriction join -> the binder it restricts
+        roots: dict[str, object] = {}           # each owner's outermost join -> the owner's truth
+        owners = list(dict.fromkeys(p.scopes for p in prefix_rows if id(p) in by_binder))
+        for owner in owners:
+            truth = getattr(rows.get(owner), "truth", CLAIMED)
+            chain: set[str] = set()
+            current = owner
+            for p in reversed([p for p in prefix_rows if p.scopes == owner]):
+                for name in by_binder.get(id(p), ()):
+                    # A relative clause may sit in a join of its own («who left BECAUSE he was
+                    # tired»): the restriction is all of it.
+                    join = JoinRow(name=f"j{len(joins)}",
+                                   operator=RESTRICTED_BY.get(p.quantity, Operator.AND),
+                                   operands=[self._outermost(name, joins), current])
+                    joins.append(join)
+                    rows[join.name] = join
+                    made[join.name] = p
+                    chain.add(join.name)
+                    current = join.name
+                p.scopes = current
+            if current == owner:
+                continue
+            roots[current] = truth
+            # **AND THE CONJUNCTION TAKES THE ROW'S PLACE** *(2026-09-24, G2)* — «a sentence is a
+            # tree»: everywhere the row was an operand, its restriction join is now, exactly as a
+            # `conj` replaces the clause it extends. The binders already scope it.
+            for join in joins:
+                if join.name not in chain and owner in join.operands:
+                    join.operands = [current if name == owner else name for name in join.operands]
 
-        # **AND THE CONJUNCTION TAKES THE ROW'S PLACE** *(2026-09-24, G2)* — the 09-20 rule in
-        # `_relate`, «a sentence is a tree», applied to the one join built after it. «Cognition is
-        # the psychological result of perception and learning» had `and(r0, r2)` from the clause
-        # AND `and(m0, r0)` from the adjective: `r0` with two parents, and the decompiler duly said
-        # the second one as a sentence of its own — «Cognition is the result.» The adjective
-        # conjunction IS the row now, everywhere the row was an operand, exactly as a `conj`
-        # replaces the clause it extends. The binders already scope it, so they move with it.
-        for owner, outermost in attached.items():
-            for join in clause_joins:
-                if owner in join.operands:
-                    join.operands = [outermost if name == owner else name
-                                     for name in join.operands]
+        for name, truth in roots.items():
+            if not any(name in rows[other].operands for other in made):
+                self._settle(name, truth, rows, made)
         return raised
+
+    @staticmethod
+    def _settle(name: str, truth, rows: dict, made: dict) -> None:
+        """What a restriction join and everything under it claim, given what the join claims.
+
+        **A JOIN TAKES THE ROW'S TRUTH, NOT A CLAIM OF ITS OWN** *(2026-09-25)* — it stands where
+        the row stood, so it says what the row said. Its halves (`E3.3.14`):
+
+            ∀ · ¬∀ (IMPLY) · ¬∃     stated, never claimed on their own: «every cat that sleeps»
+                                     says of no cat that it sleeps (req 38's conditional halves)
+            ∃ · no force (AND)      the scope as claimed as the join; the restriction too — and a
+                                     definite's whatever the join: the sea is Ligurian whether or
+                                     not I saw it («to see the Ligurian sea», a purpose)
+
+        A half that is itself a join claimed with its halves («who left because he was tired») takes
+        them with it: what it claimed, it claimed only through the clause it restricts (G9).
+        """
+        row = rows.get(name)
+        if row is None:
+            return
+        before = row.truth
+        row.truth = truth
+        binder = made.get(name)
+        if binder is not None:
+            for operand, held in zip(row.operands, restriction_truths(binder, truth)):
+                Compiler._settle(operand, held, rows, made)
+        elif row.kind == "join" and before == CLAIMED and truth != CLAIMED:
+            for operand in row.operands:
+                if getattr(rows.get(operand), "truth", None) == CLAIMED:
+                    Compiler._settle(operand, truth, rows, made)
 
     def _control(self, skeleton: Skeleton, heads: list[Word], content: dict, marks: dict,
                  covered: Placements, prefix_rows: list, joins: list, abstained: list) -> None:
@@ -3183,8 +3309,8 @@ class Compiler:
         return current
 
     def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks,
-                        unasserted: set | None = None, withheld: list | None = None,
-                        abstained: list | None = None) -> None:
+                        restrictions: list | None = None, withheld: list | None = None,
+                        abstained: list | None = None, vacant: list | None = None) -> None:
         """A relative clause describes the SAME thing as the phrase it modifies — one variable in
         two rows, which is req 36's one binding mechanism doing the work a second box would fake.
 
@@ -3195,13 +3321,14 @@ class Compiler:
         says nothing about anybody. `Placements` already records which box each token became, and
         that record survives the rewrite the key comparison could not see through.
 
-        **AND A RESTRICTION IS STATED, NOT CLAIMED.** «All that glitters is not gold» does not say
-        that anything glitters, and «every cat that sleeps» does not say that every cat sleeps — the
-        clause says WHICH ones are being spoken about. So a relative clause sharing a BINDER's
-        variable is unasserted, exactly as a conditional's halves are (req 38), while one describing
-        a referring phrase — «the cat that sleeps» — stays claimed. Reading the variable back into
-        the clause without this would have turned an unbound name nobody could evaluate into a bound
-        one saying something false, which is the worse of the two failures (req 8).
+        **AND THE CLAUSE IS A RESTRICTION OF THE BINDER** *(`E3.3.14`, 2026-09-27)*. «All that
+        glitters is not gold» does not say that anything glitters, and «every cat that sleeps» does
+        not say that every cat sleeps — the clause says WHICH ones are being spoken about. It used to
+        be a row held by the variable alone, unasserted under a quantifier: nothing held it inside
+        an attitude («I think that a man who sleeps is tired» claimed the man), and «every cat that
+        sleeps is happy» still claimed every cat happy. It is recorded here and joined to the
+        binder's scope by `_modify`, with the attributive adjectives — the operator and the truths
+        are the binder's to decide there.
 
         **THE GAP'S ROLE IS READ BEFORE ANYTHING IS BOUND** *(2026-09-24, G5)* — by `_gap`, and a
         gap it cannot place WITHHOLDS the clause instead of guessing, so nothing here is minted for
@@ -3225,6 +3352,18 @@ class Compiler:
                                  f"is withheld")
             if withheld is not None:
                 withheld.append(head.index)
+            # **AND A BINDER RAISED ONLY FOR IT BINDS NOTHING** (`E3.3.14`): `_box_for` raised it
+            # for this clause, where the tree could not see that it would be withheld — so the
+            # phrase is the noun again, and the binder is dropped when the zip is assembled (`vacant`;
+            # not here, where a later row would be minted under a name it still holds).
+            role = self._placed_role(covered, target.index)
+            box = outer_row.boxes.get(role) if role is not None else None
+            bound = box.head.name if box is not None and isinstance(box.head, Var) else None
+            binder = next((p for p in prefix_rows or () if getattr(p, "binds", None) == bound), None)
+            if binder is not None and binder.quantity is None and vacant is not None \
+                    and not any(r.binder is binder for r in restrictions or ()):
+                outer_row.boxes[role] = binder.restriction.model_copy(update={"marker": box.marker})
+                vacant.append(binder)
             return
 
         role = self._placed_role(covered, target.index)
@@ -3257,6 +3396,9 @@ class Compiler:
                 #
                 # The `marker` stays OUTSIDE: «You learn only FROM minds you trust» marks this
                 # phrase's role in ITS clause, not the range of the variable.
+                #
+                # *Since `E3.3.14` a noun's binder is raised with its phrase (`_box_for`), so this
+                # mints only for a phrase `_box_for` did not build — a pronoun, «HE who hesitates».*
                 outer_row.boxes[role] = Box(head=Var(name=name), sense=Open(),
                                             marker=box.marker)
                 if prefix_rows is not None:
@@ -3268,13 +3410,10 @@ class Compiler:
         # the living — so it rides on this box, as every marker rides on the box it marks (req 65).
         inner.boxes[gap] = Box(head=Var(name=name), sense=Open(), marker=marker)
 
-        # **ONLY A QUANTIFIER'S BINDER MAKES THE CLAUSE A RESTRICTION.** `binder` is deliberately
-        # still None on the branch above, which mints one: «every cat that sleeps» does not say any
-        # cat sleeps, and «the cat that sleeps» DOES — a definite description commits the speaker to
-        # it, and the brain should get the fact. Keying this on «is there a binder» would have
-        # reversed that the moment schema v8 gave the second case a binder too.
-        if binder is not None and unasserted is not None:
-            unasserted.add(inner.name)
+        if binder is None and prefix_rows is not None:
+            binder = next((row for row in prefix_rows if getattr(row, "binds", None) == name), None)
+        if binder is not None and restrictions is not None:
+            restrictions.append(_Restriction(var=name, binder=binder, row=inner.name))
         # The relative pronoun IS the variable — «the cat THAT sleeps» has no third participant.
         if pronoun is not None:
             covered.add(pronoun.index, "var")
@@ -3319,6 +3458,12 @@ class Compiler:
             role = self._role_of(proxy, skeleton, marks, copular)
             if role is None:
                 return None, None, pronoun, f"«{pronoun.text}» as `{pronoun.dep}` names no role"
+            if any(c.index != pronoun.index and c.bare_dep in NOMINAL_DEPS
+                   and self._role_of(c, skeleton, marks, copular) == role
+                   for c in skeleton.children(head.index)):
+                # Read on the tree, so `_box_for` knows it before any clause is built: a phrase
+                # whose relative clause will be withheld raises no binder for it (`E3.3.14`).
+                return None, None, pronoun, f"its {role.value} box is already filled by the clause itself"
             marker = next((marks[c.index].form for c in skeleton.children(pronoun.index)
                            if marks.get(c.index) is not None and marks[c.index].kind == "box"),
                           None)
@@ -3591,8 +3736,8 @@ class Compiler:
             its boxes          the holder's and the addressee's, and nothing else — a time, a
                                manner, a second participant are boxes no attitude row has (ruling 2)
             not a restriction  a box bound by a binder that scopes neither the matrix nor a join
-                               above it is a relative clause's, and an attitude is not a row that
-                               can restrict a phrase
+                               above it — a row held by its variable alone (since `E3.3.14` a
+                               relative clause sits in its binder's join, and can hand its place)
             its truth          CLAIMED, or WANTED by the speech act (the imperative) — an attitude
                                row has no truth slot, so an ASKED or a SUPPOSED one has no place
                                (ruling 2: «Do you think…?», «If Anna thinks…»)
@@ -3807,7 +3952,7 @@ class Compiler:
                     abstained: list, marks: dict, owner: dict[int, int],
                     seating: _Seating | None = None,
                     quotation_withheld: Collection[str] = (), quoted: bool = False,
-                    tagged: Collection[int] = ()) -> set[int]:
+                    tagged: Collection[int] = (), asked: Collection[str] = ()) -> set[int]:
         """The clauses whose partial reading is NOT entailed by the sentence — to be withheld.
 
         **A PARTIAL ZIP IS QUALITY ONLY IF WHAT IT STILL CLAIMS IS ENTAILED** (E3.12.5 (1), the
@@ -3872,6 +4017,10 @@ class Compiler:
 
         **A TAG'S WORDS ARE NO CLAUSE'S CONTENT** (`tagged`, `_tags`): what a tag says is about the
         speech act, so a word of one that went unplaced is no cut from the clause it hangs off.
+
+        **AND A QUESTION IS NEITHER UPWARD NOR DOWNWARD** (`E3.3.16`, 2026-09-27): a clause that asks
+        — its truth open, or a slot its wh-word opened (`asked`) — asks ANOTHER question once a word
+        is cut from it, and an answer to that one is no answer to what was asked.
         """
         seating = seating if seating is not None else _Seating()
         named = self._named(prefix_rows, joins)
@@ -3890,6 +4039,8 @@ class Compiler:
         opaque = set().union(*(seating.inside.get(p.name, set()) for p in prefix_rows
                                if isinstance(p, AttitudeRow) and p.name in seating.matrix))
 
+        rows = {row.name: row for row in [*content.values(), *joins]}
+
         def position(name: str) -> str | None:
             """Why this row's claim does NOT survive a cut, or None where it only weakens."""
             if name in opaque or quoted:
@@ -3897,6 +4048,9 @@ class Compiler:
             seen = set()
             while name is not None and name not in seen:
                 seen.add(name)
+                if name in asked or isinstance(getattr(rows.get(name), "truth", None), Open):
+                    # «Who thinks that he sleeps?» is not «Who thinks?» (`E3.3.16`).
+                    return ASKING
                 for p in over.get(name, ()):
                     if isinstance(p, NegationRow):
                         return "under a negation"
@@ -3979,10 +4133,21 @@ class Compiler:
             abstained.append(
                 f"«{said}»: an operator cut from its clause changes the claim — the clause is "
                 f"withheld" if why == "OPERATOR" else
+                f"«{said}»: cut from a clause in a question, which then asks another one — the "
+                f"clause is withheld" if why == ASKING else
                 f"«{said}»: cut from a clause {why}, where the cut widens the claim rather than "
                 f"weakening it — the clause is withheld")
 
         index_of = {row.name: i for i, row in content.items()}
+        for index in sorted(found):
+            # **A RESTRICTION WHOSE ATTITUDE LOSES WHAT IT HELD** — here by a cut under it, not by a
+            # place it cannot take (below): the description moves all the same (`E3.3.14`: in a
+            # join the attitude could take its place, and this was the way left for the loss).
+            for attitude in over.get(content[index].name, ()):
+                at = index_of.get(seating.matrix.get(getattr(attitude, "name", None), ""))
+                if isinstance(attitude, AttitudeRow) and at is not None:
+                    found |= self._described_definitely(skeleton[at], content[at], content,
+                                                        prefix_rows, present, abstained, joins)
         for name in sorted(quotation_withheld):
             index = index_of.get(name)
             if index is None or index not in present:
@@ -3995,7 +4160,7 @@ class Compiler:
                                  f"clause {why}, where the cut widens the claim rather than "
                                  f"weakening it — the clause is withheld (E3.3.11.2.12)")
             found |= self._described_definitely(frame, content[index], content, prefix_rows,
-                                                present, abstained)
+                                                present, abstained, joins)
         for attitude in prefix_rows:
             if not isinstance(attitude, AttitudeRow) or attitude.name not in seating.matrix:
                 continue
@@ -4009,8 +4174,19 @@ class Compiler:
                 abstained.append(f"«{matrix.text}»: the attitude cannot take its clause's place — "
                                  f"{seating.cannot.get(matrix_row.name, 'its clause stays')} — so "
                                  f"what it holds is withheld (E3.3.11.2.16)")
+                if matrix_row.predicate is None \
+                        and any(child.bare_dep in ("expl", "csubj") for child in skeleton.children(at)):
+                    # **AND A COPULA WHOSE SUBJECT IS THAT CLAUSE GOES WITH IT** (`E3.3.11.2.8.1`, on
+                    # ruling 10 of `E3.3.11.2.16`: «It is (not) true that…» withheld meanwhile) —
+                    # «That he sleeps is true», and «It is true that he sleeps», where the expletive
+                    # stands for the clause: the adjective is said OF the clause, and alone the row
+                    # said «True is.» of nothing. The tree's shape and the row's, read — frame. *A
+                    # verb keeps its row: «[it] surprised me» stands (the Captain's re-base, 09-27).*
+                    found.add(at)
+                    abstained.append(f"«{matrix.text}»: its subject is the clause withheld — what it "
+                                     f"says is said of that clause, and is withheld with it")
                 found |= self._described_definitely(matrix, matrix_row, content, prefix_rows,
-                                                    present, abstained)
+                                                    present, abstained, joins)
                 continue
             link, node = [], skeleton[skeleton[scoped].head]
             for _ in range(len(skeleton)):
@@ -4036,7 +4212,7 @@ class Compiler:
 
     @staticmethod
     def _described_definitely(matrix: Word, row: ContentRow, content: dict, prefix_rows: list,
-                              present: set, abstained: list) -> set[int]:
+                              present: set, abstained: list, joins: list = ()) -> set[int]:
         """**A RESTRICTION THAT LOSES WHAT ITS ATTITUDE HELD DESCRIBES ANOTHER MAN** — when the
         description it restricts is DEFINITE (E3.12.5 (1), the logic of `E3.12.5.12`).
 
@@ -4051,19 +4227,41 @@ class Compiler:
         *Only this cut, and deliberately*: a definite's restriction read as upward everywhere else
         is `E3.12.5.12`, open — measured on the corpora it would withhold `t-dc-5` and one UD
         sentence as well, which is a ratchet for the Captain, not a side effect of this fix.
+
+        **A RESTRICTION IS THE FIRST OPERAND OF ITS BINDER'S JOIN** (`E3.3.14`), so that is where
+        the row is looked for: a row on the SCOPE side — «the man who left SAID to Marie» — says
+        something of the man and describes nothing, and losing its complement moves no description.
+        *(«The man who thinks that he sleeps is happy» no longer comes here: in a join an attitude
+        can take its place inside a restriction.)*
         """
         binders = {p.binds: p for p in prefix_rows if isinstance(p, QuantifierRow)}
+        rows = {r.name: r for r in [*content.values(), *joins]}
+
+        def restricting(binder) -> set[str]:
+            side, current = set(), rows.get(binder.scopes)
+            for _ in range(len(rows)):
+                if getattr(current, "kind", None) != "join" \
+                        or current.operator is not RESTRICTED_BY.get(binder.quantity, Operator.AND):
+                    break
+                frontier = [current.operands[0]]
+                while frontier:
+                    name = frontier.pop()
+                    side.add(name)
+                    frontier += list(getattr(rows.get(name), "operands", None) or ())
+                current = rows.get(current.operands[1])
+            return side
 
         def definite(binder) -> bool:
-            # The binder of a relative clause states no force (v8); what it describes carries the
-            # determiner, on its restriction box.
-            return binder.quantity is None and Determination.DEFINITE in (
-                binder.determination, binder.restriction.determination)
+            # What a phrase describes carries the determiner, on its restriction box. *Its force is
+            # not asked* (`E3.3.14.1`): an adjective mints ∃ for «the TIRED man», a relative clause
+            # none for «the man who…», and the description is definite in both.
+            return Determination.DEFINITE in (binder.determination,
+                                              binder.restriction.determination)
 
         described = {box.head.name for box in row.boxes.values()
                      if isinstance(box.head, Var) and box.head.name in binders
                      and definite(binders[box.head.name])
-                     and binders[box.head.name].scopes != row.name}
+                     and row.name in restricting(binders[box.head.name])}
         if not described:
             return set()
         about = {index for index, other in content.items()
@@ -4439,28 +4637,45 @@ class Compiler:
         # binder that req 36 already provides, and the box refers to the variable.
         adjectives = [c for c in skeleton.children(word.index)
                       if c.bare_dep == "amod" and c.upos in ("ADJ", "VERB")]
+        # **AND SO DOES A RELATIVE CLAUSE, AT THE SAME PLACE** (`E3.3.14`, 2026-09-27). «the man WHO
+        # LEFT» restricts its phrase exactly as «the TIRED man» does, and its binder used to be
+        # minted late, by `_share_variable`, once every clause was built — appended after whatever
+        # the clause had raised, so «The man who left was NOT happy» put the ¬ above the definite,
+        # against the words' order (`E3.3.11.2.1.1`). Raised here, it stands where the phrase stands.
+        # Only one whose gap the tree places (`_gap`): a relative clause withheld leaves nothing to
+        # bind, and a binder over nothing turns the phrase into a variable for no restriction.
+        relatives = [c for c in skeleton.children(word.index)
+                     if c.bare_dep == "acl" and self._opens_clause(c, skeleton, marks)
+                     and self._gap(skeleton, c, word, marks)[0] is not None]
         if adjectives and quantity is None:
             # No quantifier word, so the force comes from the phrase itself. EXISTENTIAL, because
             # «a human body» is the drill's own worked case and it is existential — and the
             # determination rides along beside it, which is exactly what req 26 split them for.
             # *A bare plural («large dogs») is genericity, which E2 parked; it reads existential
             # here and that is the honest approximation rather than a silent universal.*
+            # *A relative clause alone mints no force (schema v8, `_share_variable`): which of the
+            # two is right is `E3.3.14.1`, for the Captain.*
             quantity = Quantity.EXISTENTIAL
-        if quantity is not None and prefix_rows is not None:
+        if (quantity is not None or relatives) and prefix_rows is not None:
             # THE BINDER, and the box that referred to the noun now refers to the VARIABLE. That
             # indirection is req 36's whole point: one binding mechanism for quantification,
             # questions, equations and naming, instead of a quantified phrase the evaluator has to
             # synthesise a variable for.
+            #
+            # **THE MARKER STAYS OUTSIDE** — «You learn only FROM minds you trust» marks this
+            # phrase's role in ITS clause, not the range of the variable: the drill writes it so
+            # (`aw-15`, `t-dc-1`, `t-dc-4`), and `_share_variable` always did (`E3.3.14`).
             name = f"x{len(prefix_rows)}"
             binder = QuantifierRow(name=f"q{len(prefix_rows)}", scopes=scopes, binds=name,
                                    quantity=quantity, determination=determination,
-                                   restriction=box)
+                                   restriction=box.model_copy(update={"marker": None}))
             prefix_rows.append(binder)
             for adjective in adjectives:
                 if modifiers is not None:
-                    modifiers.append((name, self._key(adjective), binder, scopes))
+                    modifiers.append(_Restriction(var=name, binder=binder,
+                                                  key=self._key(adjective)))
                 covered.add(adjective.index, "row")
-            return Box(head=Var(name=name), sense=Open())
+            return Box(head=Var(name=name), sense=Open(), marker=box.marker)
         return box
 
     def _bare_quantifier(self, word: Word, match, skeleton: Skeleton, marks: dict, boxes: dict,

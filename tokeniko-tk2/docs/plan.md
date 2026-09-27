@@ -646,7 +646,7 @@ asking for the commit, not a checkpoint between edits.
    isolate them; marked.
 `E1e.8.3` `test_migrations` is DB-bound at ~40 minutes and sits inside the datatier's section gate.
 
-## E2 — The format *(tkzip v2)* — ✅ **COMPLETE 2026-09-14**
+## E2 — The format *(tkzip v2)* — closed 2026-09-14 · **REOPENED 2026-09-27** *(the geometry)*
 
 **Goal:** the fixed-arity zip — limit B dies on paper before any code. The schema answers every open
 question the blueprint carries.
@@ -719,6 +719,26 @@ mood/imperative field, third-memory-tier framing).
 
 **Done when:** the drill passes its pre-set bar on paper and the schema is frozen v2.0 (changes
 after freeze are migrations, not edits).
+
+**REOPENED 2026-09-27 by the Captain** — limit B was killed on paper for the SHAPE only; the NUMBERS
+(tkzip reqs 11–17) had no owner (`E4.8`). *«E2 for the holding itself. E3 for the compiling consequences
+(if ones). E4 for the understanding consequences (if ones): no shortcut here.»* Method: **Socratic** —
+one-line turns with him and a small probe per conclusion, no design ahead of the dialog. Runs beside
+E3's exit list. Record `docs/E2-tkzip/202609272000_e2-reopened-the-geometry.md`.
+
+`E2.3.1` *(found at E3)* **two spellings of one attitude** — `ContentRow.pov` (`Pov`, req 45's
+   shorthand) and `AttitudeRow`. The station never builds a `Pov`, the decompiler refuses one, the
+   drill uses it once. The schema's own rule refuses two spellings of one reading. And `AttitudeRow`
+   cannot hold an ASKED attitude, a SUPPOSED one, or one with boxes of its own (withheld at E3,
+   `E3-parser-compiler/202609261600_…`). **Socratic** *(the Captain, 09-27)*: discover why, what does
+   not work, and how to make it work — before E4 compares zips.
+`E2.7` **a geometry that can rank** — *«The geometry MUST rank, or at least we need to find a geometry
+   that can»* (the Captain, 09-27). Replaces tkzip req 11's premise, measured false on 09-14 (D:
+   5.9% precision@10; R 28.7%, WordNet-advantaged). Socratic, probe by probe.
+`E2.8` **the zip holds its geometry** — tkzip reqs 11–17 on the format: role vectors (11), the compound
+   point (12), derived points epoch-stamped (16), the dual read at the compound floor (17);
+   `Zip.geometry_cache` and `tkzip_derived_points` get a writer. Shaped by `E2.7`. A compiling
+   consequence goes to E3, an understanding one to E4, each if it exists.
 
 ---
 
@@ -1303,6 +1323,36 @@ it).
      `E3.3.11.2.9.15` «ever» said «sometimes» · `E3.3.11.2.9.16` other frequency adverbs claim the event ·
      `E3.3.11.2.9.17` «He slept not twice».
    - `E3.3.12` «I remember the day I slept» is a wrong complete zip — `202609241130_…`
+   - `E3.3.14` *(found at `E3.3.11.2.5.1`, placed under `E3.3`, 09-27)* **a restrictive modifier has two
+     spellings, and ∀ claims its restriction** — the QM's probe: «A tired man sleeps» is `q` scoping
+     AND(tired(x), sleep(x)) (the drill's `aw-15` shape) while «A man who is tired sleeps» is a row held
+     only by the shared variable (`_share_variable`) — one reading, two zips. The variable-held row is
+     what escapes an attitude (`E3.3.11.2.5.1`). And under ∀ the join is AND: «Every tired man sleeps»
+     → ∀x man(x): tired(x) ∧ sleep(x), a WRONG CLAIM (every man is tired); a restriction under ∀ is
+     IMPLY. Also: «The man who left was not happy» puts ¬ above the definite at top level too — so
+     `E3.3.11.2.1.1` is not the attitude's; the adjective route orders it right.
+   - `E3.3.15` *(found at `E3.3.11.2.6.1`, 09-27)* **«Which man sleeps?» → «Man sleeps.»** — a WRONG
+     CLAIM at top level: the interrogative determiner «which» opens nothing; `E3.3.11.2.6.1` is its
+     attitude case.
+   - `E3.3.16` *(found at `E3.3.11.2.6.1`, 09-27)* **«Who thinks that he sleeps?» → «Who thinks?»** — a
+     SILENT LOSS: under an OPEN holder the complement is dropped, not withheld.
+     **BUILT 09-27 with `E3.3.11.2.5.1` · `E3.3.11.2.1.1` · `E3.3.11.2.6.1` · `E3.3.11.2.8.1`**
+     (`202609272100_the-attitude-family-wrong-claims.md`): `E3.3.14` one spelling — every restriction joined
+     to what its binder scopes by `RESTRICTED_BY` (∀ / ¬∀ IMPLY, else AND), halves by `restriction_truths`,
+     the join at the binder's place (which also closed «not every» ∀¬ and «does not see a tired man»);
+     `E3.3.15` an interrogative is an operator; `E3.3.16` a question with a cut is withheld whole;
+     `E3.3.11.2.8.1` a copula whose subject is the withheld clause goes with it. Gates unchanged (fixpoint
+     72 · 9 · 0 + W6, drill 62 · 4 · 21, UD 30 · 0 · 15); drill prefix pairs 35 → 33 (`aw-15`). For the
+     Captain: `E3.3.14.1` the minted binder's force (∃ for an adjective, none for a relative clause) ·
+     `E3.3.14.2` `aw-15` read literally · `E3.3.16.1` the narrower question no longer stands · `E3.3.15.1`
+     how «which X» is held · `E3.3.11.2.8.3` the clause adjectives composed (a knowledge table) ·
+     `E3.3.14.4` the drill gate reads a restriction's scope through its join. Found: `E3.3.14.3` ⚑ stanza's
+     nominal root, a misattached complement claimed under a relative's attitude — **CLOSED BY WITHHOLDING**
+     on the QM's judgement (a closed sentence rooted in a noun phrase with a clause, no copula, no
+     subject has lost its predicate; `_predicate_lost`) · `E3.3.14.5` ⚑ proportional determiners read as
+     adjectives under ∃ («Most tired men sleep»): stanza's `ADJ` tag hides the quantifier row behind the
+     09-22 content-POS guard, so `E3.3.11.2.9.2` never applies — for the Captain · `E3.3.14.6` «bit»
+     tagged present · `E3.3.14.7` «snore» parsed a noun (provider misreads, `E3.3.2.8`'s class).
    - `E3.3.13` five small things recorded rather than fixed — numbered 09-26: `E3.3.13.1` a definite's
      relative clause kept claimed (a presupposition) · `E3.3.13.2` «Neither is late» loses the «two» (a
      silent loss, `E3.12.1`) · `E3.3.13.3` «one another» comes back as a question (a silent loss) ·
@@ -1610,10 +1660,7 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    outward, ingestion-time differentia, trust-ledger digests and consumers, contrast-as-expectation,
    the scaffold voice, the `life:*` triggers, the possessive relation. Each goes into an epic, or into
    «What deliberately stays OUT» with a reason.
-`E2.3.1` *(E2 closed; found at E3)* **two spellings of one attitude** — `ContentRow.pov` (`Pov`, req 45's
-   shorthand) and `AttitudeRow`. The station never builds a `Pov`, the decompiler refuses one, the
-   drill uses it once. The schema's own rule refuses two spellings of one reading. **For the
-   Captain**: retire `Pov` into `AttitudeRow`, or declare a normal form — before E4 compares zips.
+`E2.3.1` → moved to E2 (reopened 2026-09-27), a Socratic task there.
 
 ## E3b — The name *(named individuals: recognition, identification, and the first micro-nn)*
 
@@ -1808,6 +1855,9 @@ change may never lower them, and a wrong claim or silent loss found here is fixe
    replaces req 11's premise. A cheap probe meanwhile: declare which schema fields are GEOMETRIC and
    which SURFACE (`topicality`, `marker_implicit`, `unplaced` are surface), and check that paraphrase
    pairs meet on the geometric projection.
+   **RULED 2026-09-27 (the Captain):** E2 owns the zip's geometry (reopened: `E2.7` a geometry that can
+   rank, `E2.8` the zip holds it); E3 takes the compiling consequences and E4 the understanding ones,
+   each only if it exists. Record `E2-tkzip/202609272000_e2-reopened-the-geometry.md`.
 
 **Done when:** every drill sentence evaluates against a seed KB with a defensible verdict, and the
 evaluator's answers cite their floor (cell vs cosine vs chain).

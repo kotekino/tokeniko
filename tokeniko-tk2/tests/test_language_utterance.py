@@ -579,7 +579,11 @@ def test_a_RESTRICTING_frame_cannot_take_its_place_and_is_judged_like_a_matrix(c
     copy of it. Cut, «the man who said to Marie» may pick out another man — a DEFINITE description
     moves when its restriction loses what it held (E3.12.5 (1)), exactly as «The man who thinks that
     he sleeps is happy» does inside one sentence — so everything said of him is withheld. Under an
-    INDEFINITE the cut only weakens («a man who said to Marie left» is entailed), and it stays."""
+    INDEFINITE the cut only weakens («a man who said to Marie left» is entailed), and it stays.
+
+    *Amended 2026-09-27 (`E3.3.14`)*: a relative clause is the first operand of its binder's join
+    now, not a row the variable alone holds — so the frame cannot hand over its place because it is
+    JOINED, which is this side's own test, and the outcome is the same."""
     definite = compile_utterance(compiler, [_said_of("The man who said to Marie left", "The",
                                                      "the"), YOU_ARE_LATE],
                                  Context(speaker="kotekino", addressee="captain"))
@@ -590,7 +594,7 @@ def test_a_RESTRICTING_frame_cannot_take_its_place_and_is_judged_like_a_matrix(c
     for out in (definite, indefinite):
         assert not [r for r in out.zip.rows if r.kind == "attitude"]
         assert {"You", "are", "late"} <= set(out.unplaced)
-        assert any("RESTRICTION" in why and "quotation it frames is withheld" in why
+        assert any("joined to another clause" in why and "quotation it frames is withheld" in why
                    for why in out.abstained)
     assert _claims(definite) == [] and any("DEFINITE" in why for why in definite.abstained)
     said = next(r for r in indefinite.zip.rows if getattr(r, "predicate", None) == "say.v")

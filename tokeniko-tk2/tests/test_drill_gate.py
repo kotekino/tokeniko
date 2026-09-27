@@ -21,6 +21,8 @@ from tk2.tkzip.schema import (
     ModalityRow,
     Open,
     Operator,
+    QuantifierRow,
+    Quantity,
     Role,
     Var,
     Zip,
@@ -254,6 +256,30 @@ def test_a_JOIN_claiming_what_the_drill_leaves_UNCLAIMED_is_a_DISAGREEMENT():
     assert reading.conflicts == [
         "truth of (imply rain.v | stay.v): the station says stated, the drill says unstated"]
     assert compare(drill, drill).conflicts == [], "the same join against itself agrees"
+
+
+def test_a_row_the_one_spelling_put_in_a_RESTRICTION_JOIN_claims_through_the_join():
+    """`E3.3.14` — «all human beings are animals»: the station reads «human» as a restriction and
+    joins it to what ∀ scopes, ∀x (human(x) → animal(x)), whose halves are stated; the drill,
+    hand-compiling «human being» as one noun, has the animal row claimed under ∀ by itself. Both
+    say the same thing of the animal row, and the gate compares what each row CLAIMS: a scope row
+    through the join that stands for it. A row stated with no such join still disagrees."""
+    every = QuantifierRow(name="q", scopes="j", binds="x", quantity=Quantity.UNIVERSAL,
+                          restriction=Box(head="being.n"))
+    human = ContentRow(name="m", boxes={Role.PATIENT: Box(head=Var(name="x")),
+                                        Role.COMPLEMENT: Box(head="human.a")})
+    animal = ContentRow(name="r", boxes={Role.PATIENT: Box(head=Var(name="x")),
+                                         Role.COMPLEMENT: Box(head="animal.n")})
+    station = Zip(rows=[every, human, animal,
+                        JoinRow(name="j", operator=Operator.IMPLY, operands=["m", "r"], truth=1.0)])
+    drill = Zip(rows=[QuantifierRow(name="b", scopes="a", binds="H", quantity=Quantity.UNIVERSAL,
+                                    restriction=Box(head="human.n")),
+                      row("a", patient=Box(head=Var(name="H")), complement="animal.n")])
+    stated = Zip(rows=[animal])
+
+    assert compare(station, drill).conflicts == []
+    assert compare(stated, drill).conflicts == [
+        "truth of =animal.n: the station says unstated, the drill says stated"]
 
 
 def test_a_question_compiled_as_a_CLAIM_is_a_DISAGREEMENT():

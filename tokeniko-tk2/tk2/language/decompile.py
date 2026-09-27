@@ -84,7 +84,8 @@ from dataclasses import dataclass, field
 from tk2.dictionary import keys
 from tk2.language.adverbs import EXCLUSIVE, FOCUS, AdverbKinds, standing_adverb_kinds
 from tk2.language.compile import (
-    ANTECEDENT, ASSERTS_ANTECEDENT, IMPERATIVE_VERB, MATRIX, RELATION_FILLS_ROLE,
+    ANTECEDENT, ASSERTS_ANTECEDENT, IMPERATIVE_VERB, MATRIX, RELATION_FILLS_ROLE, RESTRICTED_BY,
+    restriction_truths,
 )
 from tk2.language.closed import (
     FOLLOWING_NEGATION,
@@ -288,6 +289,11 @@ class _Reading:
     #: content row -> the auxiliary its level must be said with instead of the voice `_operators`
     #: chose — «NEED never know», a negative binder over a modality (`_mid_binder`, `E3.3.11.2.9.5`).
     modal_override: dict = field(default_factory=dict)
+    #: a restriction join -> the rows it is said as: its scope, whose clause it IS once the
+    #: restriction is inside the phrase (`Decompiler._restricted`, `E3.3.14`).
+    stands_for: dict = field(default_factory=dict)
+    #: restriction rows whose truth `_restricted` already read against their join's.
+    checked: set = field(default_factory=set)
 
 
 class Decompiler:
@@ -583,6 +589,9 @@ class Decompiler:
         # relative clause is its SHAPE — it shares the variable of a binder that does not scope it,
         # and no join names it — and the truth decides only whether it can be said as one
         # (`_restricting`).
+        #
+        # *The station's own zips join a relative clause to its binder's scope since `E3.3.14`, and
+        # `_restricted` reads those; this reads one held by its variable alone — a zip built elsewhere.*
         for row in zip_.rows:
             if row.kind != "content" or row.name in rd.consumed:
                 continue
@@ -622,9 +631,94 @@ class Decompiler:
                 rd.complements[source.name] = row.scopes
                 rd.consumed.add(row.scopes)
                 rd.linking.add(row.name)
-        self._fold(zip_, rd)
         self._focused(zip_, rd)
+        self._restricted(zip_, rd)
+        self._fold(zip_, rd)
         return rd
+
+    def _restricted(self, zip_: Zip, rd: _Reading) -> None:
+        """**A RESTRICTION JOIN IS SAID AS THE CLAUSE IT RESTRICTS** (`E3.3.14`) — the compiler's one
+        spelling of a restrictive modifier (`Compiler._modify`), read back into the phrase:
+
+            J = op(R, S)    a binder of x scopes J, and op is the binder's (`RESTRICTED_BY`)
+            R               a row about x — an adjective, folded into the phrase, or a relative
+                            clause, said after the noun
+            S               the clause, said with J's prefix before its own and J's truth
+
+        and only where every half holds the truth the compiler would give it
+        (`restriction_truths`) — otherwise the join is read like any other. Inner joins first: an
+        owner restricted by two binders is two joins, the outer one's scope the inner one. Read
+        before `_fold`, which must not take the clause for a modifier of its own subject, and after
+        `_focused`, whose «only» is a ∀-implication of its own.
+        """
+        # «ONLY cats eat fish» is a ∀-implication too, and `_focused` has read it whole already.
+        joins = [row for row in zip_.rows if row.kind == "join" and row.name not in rd.folded]
+        for _ in range(len(joins)):
+            # Found again on every pass: a restriction that is itself restricted («who owns a dog
+            # THAT BARKS») is a row about its variable only once its own join has been read.
+            restricts: dict[str, object] = {}   # a restriction join -> the binder it restricts
+            for row in joins:
+                binder = next((p for p in rd.prefix.get(row.name, ())
+                               if p.kind == "quantifier" and self._restricts(row, p, rd)), None)
+                # A binder with two restrictions is two joins, the inner one the outer one's scope.
+                for _ in range(len(joins)):
+                    if binder is None:
+                        break
+                    restricts[row.name] = binder
+                    row = rd.rows.get(row.operands[1])
+                    if getattr(row, "kind", None) != "join" or not self._restricts(row, binder, rd):
+                        break
+            found = False
+            for name, binder in restricts.items():
+                row = rd.rows[name]
+                if name in rd.stands_for:
+                    continue
+                restriction, scope = (rd.rows.get(operand) for operand in row.operands)
+                if getattr(scope, "kind", None) != "content" \
+                        or (restriction.truth, scope.truth) != restriction_truths(binder, row.truth):
+                    continue
+                if restriction.name not in rd.folded:
+                    if self._modifier(restriction, binder.binds, rd):
+                        rd.modifiers.setdefault(binder.binds, []).append(restriction)
+                    else:
+                        rd.restrictions.setdefault(binder.binds, []).append(restriction)
+                        rd.checked.add(restriction.name)
+                    rd.folded.add(restriction.name)
+                inner = row.operands[1]
+                rd.rows[name] = scope.model_copy(update={"name": name, "truth": row.truth})
+                rd.prefix[name] = [*rd.prefix.get(name, ()), *rd.prefix.get(inner, ())]
+                rd.stands_for[name] = {inner, *rd.stands_for.get(inner, ())}
+                found = True
+            if not found:
+                return
+
+    def _restricts(self, row, binder, rd: _Reading) -> bool:
+        """Is this join one of `binder`'s restriction joins — the binder's operator, and a first
+        operand about its variable?"""
+        return (RESTRICTED_BY.get(binder.quantity, Operator.AND) is row.operator
+                and self._about(rd.rows.get(row.operands[0]), binder.binds, rd))
+
+    @staticmethod
+    def _about(row, var: str, rd: _Reading) -> bool:
+        """Is this a row about `var` — a box holding it, or the holder of an attitude over it?"""
+        if getattr(row, "kind", None) != "content":
+            return False
+        held = [p.holder for p in rd.prefix.get(row.name, ()) if p.kind == "attitude"]
+        return any(isinstance(box.head, Var) and box.head.name == var
+                   for box in [*row.boxes.values(), *held])
+
+    def _modifier(self, row, var: str, rd: _Reading) -> bool:
+        """A copular row whose one participant is the bare variable and whose other box an
+        adjective or a marked phrase — said in the phrase, as `_fold` says one out of a conjunction."""
+        if row.predicate is not None or len(row.boxes) != 2 or rd.prefix.get(row.name) \
+                or row.pov is not None or row.theatre is not None:
+            return False
+        carrier = [role for role, box in row.boxes.items()
+                   if isinstance(box.head, Var) and box.head.name == var and self._bare(box)]
+        if len(carrier) != 1:
+            return False
+        other = next(box for role, box in row.boxes.items() if role != carrier[0])
+        return other.marker is not None or self._adjective(other)
 
     @staticmethod
     def _subject_head(row) -> object:
@@ -691,10 +785,16 @@ class Decompiler:
         """
         conjoined = {operand for row in zip_.rows if row.kind == "join"
                      and row.operator is Operator.AND for operand in row.operands}
+        # A restriction join's clause is said as the clause (`_restricted`), never as a modifier.
+        clauses = {name for names in rd.stands_for.values() for name in names}
         for row in zip_.rows:
-            if row.kind != "content" or row.truth != CLAIMED or row.pov is not None:
+            if row.kind != "content" or row.truth != CLAIMED or row.pov is not None \
+                    or row.name in rd.folded or row.name in clauses:
                 continue
-            if row.predicate is not None or len(row.boxes) != 2:
+            # **AND NEVER A ROW WITH A TIME OF ITS OWN** (`E3.3.14`): an attributive modifier has no
+            # tense, and a relative clause does — «a man who WAS tired» is a clause in a join since
+            # the relative clause joined the adjective's spelling, and folded it lost its time.
+            if row.predicate is not None or len(row.boxes) != 2 or row.theatre is not None:
                 continue
             # **ONLY OUT OF A CONJUNCTION.** A modifier distributes over «and» and nowhere else: the
             # antecedent of an implication says «every person WHO says a falsehood», which is a
@@ -814,6 +914,7 @@ class Decompiler:
             rd.spoken = before                         # what was said under it never arrived
             return said
         rd.spoken.add(name)
+        rd.spoken.update(rd.stands_for.get(name, ()))
         return said
 
     @staticmethod
@@ -1382,9 +1483,14 @@ class Decompiler:
                        inner_when: float, asked: bool, top: bool = False,
                        reason: str = "") -> _Said | None:
         agreement = self._agreement(element.holder, rd)
-        holder = self._phrase(element.holder, rd, case=NOMINATIVE)
-        asks = False
         unknown = getattr(element.holder, "head", None)
+        if isinstance(unknown, Var) and unknown.name == rd.gap:
+            # **A RELATIVE CLAUSE WHOSE GAP IS THE HOLDER** — «the man THAT thinks that she sleeps»
+            # (`E3.3.14`): the relative pronoun stands in the subject's gap, as `_clause` puts it.
+            holder = self.the_form("relative", kind="open", binds="antecedent") or ""
+        else:
+            holder = self._phrase(element.holder, rd, case=NOMINATIVE)
+        asks = False
         if not holder and isinstance(unknown, Open) and unknown.sort is not None:
             # **«WHO thinks that…?» — A HOLDER THE SENTENCE ASKS** is said by its question word, in
             # the subject's gap, and nothing inverts: `_clause`'s own rule for a wh-word that is the
@@ -1703,7 +1809,8 @@ class Decompiler:
             # form for, because a declarative clause asserts by being one.
             rd.out.unsaid.append(f"{row.name} is stated but claims nothing, and no form says that")
             return None
-        if not asked and not imperative and row.truth not in (CLAIMED, DENIED):
+        if not asked and not imperative and row.truth not in (CLAIMED, DENIED) \
+                and row.name not in rd.checked:
             rd.out.unsaid.append(f"{row.name} is held at {row.truth} and a hedge is not built yet")
 
         negated = negated or (not asked and row.truth == DENIED)
@@ -2366,7 +2473,7 @@ class Decompiler:
         # noun. Popped rather than read, so a phrase said twice does not say its clause twice and a
         # clause that mentions its own antecedent cannot recurse into this.
         for restricting in rd.restrictions.pop(name, ()):
-            if not self._restricting(binder, restricting, rd):
+            if restricting.name not in rd.checked and not self._restricting(binder, restricting, rd):
                 return None
             outer_gap, rd.gap = rd.gap, name
             try:
@@ -2383,6 +2490,8 @@ class Decompiler:
     @staticmethod
     def _restricting(binder, row, rd: _Reading) -> bool:
         """Can this row be said as its binder's relative clause and come back with the same truth?
+        *For a relative clause held by its variable alone — the station joins its own since
+        `E3.3.14`, and `_restricted` reads those against `restriction_truths`.*
 
         **THE COMPILER DECIDES THE TRUTH OF A RELATIVE CLAUSE BY ITS BINDER, SO THIS READS IT THE
         SAME WAY** (`Compiler._share_variable`). A binder that quantifies — «every cat that sleeps»
@@ -2519,14 +2628,17 @@ class Decompiler:
             if box is subject_box or not isinstance(box.head, Var):
                 continue
             binder = rd.binders.get(box.head.name)
-            if binder is None or box.head.name not in rd.negated_binders \
-                    or binder.quantity is not Quantity.EXISTENTIAL \
-                    or not isinstance(binder.restriction.head, Open) \
-                    or not binder.restriction.head.sort:
+            if binder is None or box.head.name not in rd.negated_binders:
                 continue
-            if self._fused(binder.quantity, binder.restriction.head.sort,
-                           count=binder.count if isinstance(binder.count, int) else None,
-                           polarity=self.NEGATIVE_CONTEXT, fallback=False) is None:
+            # **A NOUN PHRASE SAYS ITS QUANTITY IN ITS DETERMINER WHEREVER THE «NOT» STANDS** —
+            # «He does not see A tired man» (`E3.3.14`): after the verb, the phrase is read after
+            # the «not», which is the order the prefix holds. A fused word needs its «any-» form.
+            if isinstance(binder.restriction.head, Open) and (
+                    binder.quantity is not Quantity.EXISTENTIAL
+                    or not binder.restriction.head.sort
+                    or self._fused(binder.quantity, binder.restriction.head.sort,
+                                   count=binder.count if isinstance(binder.count, int) else None,
+                                   polarity=self.NEGATIVE_CONTEXT, fallback=False) is None):
                 continue
             rd.negated_binders.discard(box.head.name)
             moved = True

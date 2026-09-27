@@ -73,6 +73,10 @@ The root rule says reconcile before proposing. Concretely, here, that is four ch
    reconciled before any next step is proposed** *(the Captain, 2026-09-26)* — the step proposed
    must be the first open line. A new finding is placed where it belongs in that order, never simply
    prepended; done items move up with the done ones.
+   **And a new line enters MARKED ⏸ «to be discussed»** *(the Captain, 2026-09-27: «I find not entirely
+   correct that the roadmap grows before I give my 2 cents on it»)* — it joins the execution order only
+   on his green light, and a ⏸ line is never proposed as the next step. Its id still goes into the plan
+   and the chapter note first, so nothing is lost while it waits.
 2. **`plan.md`** — does the epic's task list still match what the epic turned out to be? New tasks
    found by the work go in, with their measurement. **Every item has its nested id** (root
    `CLAUDE.md`): a new one takes the next free child of its SOURCE — `E3.3.2.10.1` was found while

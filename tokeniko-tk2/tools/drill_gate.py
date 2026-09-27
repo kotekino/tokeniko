@@ -256,6 +256,7 @@ def compare(produced, expected, case_id="", sentence="") -> Reading:
     reading = Reading(case_id=case_id, sentence=sentence)
     mine = rows_of(produced)
     theirs = rows_of(expected)
+    through, theirs_through = claimed_through(produced), claimed_through(expected)
 
     taken = set()
     for row in mine:
@@ -318,7 +319,8 @@ def compare(produced, expected, case_id="", sentence="") -> Reading:
         # not the value: the drill writes a negated row as `truth=0.0` where the station raises a
         # negation prefix, and a forecast as a confidence — a value against a value is not a
         # disagreement about whether anything was claimed or asked.
-        mine_state, their_state = truth_state(row), truth_state(other)
+        mine_state = truth_state(through.get(row.name, row))
+        their_state = truth_state(theirs_through.get(other.name, other))
         if mine_state != their_state:
             reading.conflicts.append(
                 f"truth of {signature(row)}: the station says {mine_state}, "
@@ -439,6 +441,35 @@ def _join_pass(produced, expected, reading) -> None:
 
     for target, waiting in pool.items():
         reading.missing_joins.extend(target for _ in waiting)
+
+
+def claimed_through(zip_) -> dict[str, object]:
+    """**THE SCOPE OF A RESTRICTION JOIN CLAIMS THROUGH THE JOIN** (`E3.3.14`). The station spells a
+    restricted phrase as a join of the restriction with what the binder scopes — «all human beings
+    are animals» is ∀x (human(x) → animal(x)), whose halves are stated and whose claim is the
+    implication's — where the drill, hand-compiling «human being» as one noun, has the animal row
+    claimed under ∀ by itself. Both say the same thing of the animal row; its own slot does not.
+    So a scope row is compared by the join that stands for it, on both sides (the drill's own
+    `only-6` and `t-ws-3` are spelled so): content row name -> that join."""
+    from tk2.language.compile import RESTRICTED_BY
+    from tk2.tkzip.schema import Operator, Var
+
+    rows = {r.name: r for r in zip_.rows}
+    through: dict[str, object] = {}
+    for binder in rows_of(zip_, "quantifier"):
+        join = rows.get(binder.scopes)
+        for _ in range(len(rows)):
+            if getattr(join, "kind", None) != "join" \
+                    or join.operator is not RESTRICTED_BY.get(binder.quantity, Operator.AND):
+                break
+            first = rows.get(join.operands[0])
+            if not any(isinstance(box.head, Var) and box.head.name == binder.binds
+                       for box in getattr(first, "boxes", {}).values()):
+                break
+            scope = rows.get(join.operands[1])
+            through[join.operands[1]] = through.get(join.name, join)
+            join = scope
+    return through
 
 
 def truth_state(row) -> str:

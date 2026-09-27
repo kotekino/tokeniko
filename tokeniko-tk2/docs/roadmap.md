@@ -9,6 +9,10 @@
 > The ORDER of a list is execution order, so ids need not be sequential. A moved item takes a new id
 > in its new home and the old one keeps a pointer. Drill case ids (`t-ng-4`) name evidence, not work.
 
+> **⏸ = TO BE DISCUSSED** *(the Captain, 2026-09-27)* — a new line enters the roadmap marked ⏸ and joins the
+> execution order only on his green light; a ⏸ line is never «the next step». Its id and reasoning are already
+> in `plan.md` and the chapter note (document first); the roadmap waits for his two cents.
+
 > **The reasoning is NOT here.** It lives in `docs/<chapter>/` — `requirements.md`, the dated
 > `_notes.md` beside it, any `origin-*.md` — and in `plan.md` for the epics' tasks. A line here says
 > *what* and points at *where*; a roadmap that grows prose is one nobody can read at a glance.
@@ -42,7 +46,42 @@
 - [ ] `E1e.4` bar words become `extra_seeds` on a measuring run — **cost: moves the config fingerprint**
 - [ ] `E1e.5` the doctrine line in `core/models/__init__.py` calls three things one thing
 
-## E2 — the format (tkzip v2) ✅ 2026-09-14 — see `landed.md`
+## E2 — the format (tkzip v2) *(closed 2026-09-14 · REOPENED 2026-09-27 by the Captain: the geometry — runs beside E3,
+Socratic; record `E2-tkzip/202609272000_e2-reopened-the-geometry.md`)*
+
+*Limit B dies on paper before any code — and it did, in seventy-eight sentences. Six tasks, all run
+in the Captain's Socratic shape; from task 2 onward under his standing instruction: **be as pedantic
+with core design as with deploys — bench first, candidates second, no recommendation before the test.***
+
+- [x] `E2.1` **the role inventory — 17 boxes, FRAME** — cut from VerbNet (29 roles / 429 classes), PropBank (112,917 annotated sentences) and FrameNet (1,221 frames), then cross-checked against the Captain's own first draft, which already had `comitative` — a box neither computational inventory carries. Ruled **named and verb-independent**: PropBank's `ARG2` means recipient for *give* and substance for *fill*, which would compare Anna against water. Settles OQ2 — passive normalizes to deep roles, topicality survives as one non-geometric marker. **No catch-all slot, ever**: the Captain refuted the QM's typed `other` as «the db option by the back door».
+- [x] `E2.2` **named rows & scope — the collapse** — his rule: *collapse into math everything we can, into fields or variables what remains.* **Nothing survived as a relation.** CAUSE is `IMPLY` read with the theatre's arrow (premise stated, not assumed: *in a deterministic world a cause is what implies its effect*); PURPOSE is POV(want) + IMPLY; RESULT goes with them. «because» and «if» are one IMPLY separated by **assertion status**; «only» converts IMPLY→EQ and is a marker word, a KB row. **The operator set is the ten non-degenerate truth functions — frame, closed by mathematics, never trimmed to what English marks.** Row order = scope order, with a five-element prefix. OQ3, OQ5, OQ6, OQ8 answered.
+- [x] `E2.3` **binding states & moods — the largest collapse** — **mood is not a field.** Question = something OPEN (a box, or the row's TRUTH for polar questions) · imperative = POV(want) over an unasserted row · supposition = POV(suppose), which heart 16's imagination gain reads · forecast = a future theatre (heart 17 verbatim) · irony leaves for the figurative layer. A question and an equation are the SAME zip — the Captain's own 2026-08-11 ruling, found by reading the notes. Net addition: binding state (`BOUND · OPEN · EMPTY`), a PRIOR on open slots, and the record's sixth field.
+- [x] `E2.4` **confidence & provenance — an audit that added one field** — `parse_confidence`, one scalar per zip and a slot, so it may be EMPTY. Provenance, `derived_by`, `original` and forecast resolution are all document-level and were all built at E0. Two findings handed to `data-modeling` and `datatier` (req 7 each) rather than decided inside E2.
+- [x] `E2.5` **storage (OQ9) — decided by measurement** — mean 2.59 roles per row of 18 slots, so **~80% of every row is EMPTY**; sparse, and fixed arity is a property of the schema. **The KEY is the truth, the VECTOR is an epoch-stamped cache** (dictionary req 13) — affordable because E1c's sense vectors average 6.78 cells of 4,555. **~60× smaller than v1 per sentence.** The consequence that matters: a dictionary rebuild invalidates only the cache, so **E9's translation night is for a SCHEMA change and never for a new base.**
+- [x] `E2.6` **⚑ THE DRILL — 78 sentences, 97.4% no-abstention, 0 silent-wrong, BAR MET** — bar and scoring rules declared and committed *before* the drill existed (`1a68337`). All 28 sentences drawn from his own stored journeys zipped clean. **Three schema changes forced**, each named with the sentence that forced it: `direction` (the 18th role — «He looked up») · `scopes` on prefix rows («software can be minds and humans must be minds») · `Ref` («the result of perception and learning and reasoning»). The only abstention is **`almost`**, on two witnesses, amending req 23.
+- [x] **tkzip FROZEN at v2.0** — `tk2/tkzip/schema.py`. Changes from here are migrations, never edits.
+
+**The world it can now hold:** «my cat is cute» is *cat + cute, no verb* — his first draft verbatim ·
+«every man loves a woman» is two zips · de re and de dicto are two zips · «as a doctor I disagree; as
+a father I understand» is not a contradiction · a passive and its active differ by one non-geometric
+marker · and «the cat sleeps» stores in **130 bytes**.
+
+*Two method rulings came out of this epic and now govern the project: **the chapter docs are the
+decision record** (`CLAUDE.md`, after the QM rebuilt the role inventory without reading the Captain's
+own draft — «an origin that cannot be read is not documentation»), and **pedantry applies to
+direction, not only to operations** (PRIO 1 — bench first, state costs both ways, never let «what the
+next layer needs» decide what the frame is).*
+
+*Open, named rather than left to be discovered: **`almost`** has no home and the format says so ·
+the derived point's DENSITY follows from a composition operator that is not yet defined for all ten
+(req 43) · whether a zip is EMBEDDED in its document is data-modeling's call · and the drill's
+«to / toward» cluster left `direction`'s marker semantics (arrival entailment) to E3's closed-class
+rows.*
+
+**The tail** *(Socratic: one-line turns with the Captain, a small probe per conclusion)*
+- [ ] `E2.3.1` **`Pov` and `AttitudeRow`** — why two spellings, what does not work, how to make it work (asked · supposed · own boxes withheld at E3)
+- [ ] `E2.7` **a geometry that can rank** — the B test's numbers; replaces req 11's premise (D measured unable, 09-14)
+- [ ] `E2.8` **the zip holds its geometry** — tkzip reqs 11–17 made real (role vectors · compound point · derived points · dual read), shaped by `E2.7`
 
 ## E3 — the station (parser/compiler)
 - [x] `E3.0` **the closed classes' SEMANTICS** — 383 rows carry a complete `compiled` (`db/0008`,
@@ -222,79 +261,87 @@
 - [x] `E3.3.11.2.9` **⚑ THE ADVERBIAL QUANTIFIERS** *(09-27)* — «He never sleeps» was «He sleeps»: now binders over time or place;
       «never» one NEGATIVE binder · «ever» ∃ with polarity · «twice» a count · after a modal by `following_negation` ·
       «any-» at the mouth · proportions withheld (`db/0043`). Fixpoint 72 · 9 · 0 + W6 · drill 62 · 4 · 21. Record `202609271400_…`
-- [ ] `E3.3.11.2.5.1` · `E3.3.11.2.6.1` · `E3.3.11.2.1.1` · `E3.3.11.2.8.1` **⚑ WRONG CLAIMS left in the attitude family** —
-      a relative clause escapes the attitude · «Which man thinks…?» a statement · ¬ above a definite · «It is true that» a free pronoun
-- [ ] `E3.3.11.2.9.14` · `E3.3.11.2.9.16` **⚑ WRONG CLAIMS left by the frequency family** — free-choice «He sleeps anywhere» read as ∃ · «frequently», «occasionally», «generally» have no rows and claim the event
-- [ ] `E3.3.11.2.26` **⚑ WRONG CLAIM — a quoted sentence with no frame is claimed as the speaker's own**
-- [ ] `E3.3.11.2.27` **⚑ WRONG CLAIM (the mouth) — an asked conditional said as a claim** — «Will you stay if it rains?» → «If it rains, you will stay.»
-- [ ] `E3.3.11.2.17` **⚑ WRONG CLAIM — the quoted «I» beyond the first level** — «Anna said: "Bob thinks that I sleep."» → the speaker
-- [ ] `E3.3.11.2.18` **⚑ WRONG CLAIM — «almost», «nearly», «hardly» claim the event** — a veridicality column on the adverb rows
-- [ ] `E3.3.11.2.19` **WRONG CLAIM — a cut under an intensional verb** — «He wants me to go» → «He wants me»
-- [ ] `E3.3.11.2.14` · `E3.3.11.2.14.1` · `E3.3.11.2.15` · `E3.3.11.2.15.1` · `E3.3.11.2.8` · `E3.3.11.2.8.2` **withheld meanwhile, by `E3.3.11.2.16`** —
+- [x] `E3.3.14` · `E3.3.11.2.5.1` · `E3.3.11.2.1.1` **⚑ ONE SPELLING FOR A RESTRICTION** *(09-27)* — adjective and relative clause joined to the binder's scope by its own operator (∀ → IMPLY), halves by `restriction_truths`, the join at the binder's place; gates unchanged. Record `202609272100_…`
+- [x] `E3.3.15` · `E3.3.11.2.6.1` · `E3.3.16` · `E3.3.11.2.8.1` **withheld, honestly** *(09-27)* — an interrogative is an operator · a cut question asks another · «It is true that» goes with its clause
+- [x] `E3.3.14.3` **stanza's nominal root, closed by withholding** *(09-27, the QM's blocker)* — a closed sentence rooted in a noun phrase with a clause and no copula has lost its predicate
+- [ ] ⏸ `E3.3.14.1` **the minted binder's force — ∃ for an adjective, none for a relative clause** *(for the Captain)* — lean: none for both, `t-dc-1` · `aw-15` at E1e
+- [ ] ⏸ `E3.3.14.2` **`aw-15` read literally — domain · ◇ · ∃, the drill has ∃ outside** *(for the Captain)* — lean: amend at E1e; drill prefix pairs 35 → 33
+- [ ] ⏸ `E3.3.16.1` **a question with a cut is withheld whole, the narrower question no longer stands** *(for the Captain)* — built; lean: keep
+- [ ] ⏸ `E3.3.15.1` **how «which X» is held** *(for the Captain)* — lean: `determination = Open(sort="selection")`; withheld meanwhile
+- [ ] ⏸ `E3.3.11.2.8.3` **the clause adjectives composed — true · false · possible · likely · sure** *(for the Captain)* — lean: one knowledge table by migration; withheld meanwhile
+- [ ] ⏸ `E3.3.14.4` **the drill gate reads a restriction's scope through its join** *(for the Captain)* — built (`claimed_through`); lean: keep
+- [ ] ⏸ `E3.3.11.2.9.14` · `E3.3.11.2.9.16` **⚑ WRONG CLAIMS left by the frequency family** — free-choice «He sleeps anywhere» read as ∃ · «frequently», «occasionally», «generally» have no rows and claim the event
+- [ ] ⏸ `E3.3.11.2.26` **⚑ WRONG CLAIM — a quoted sentence with no frame is claimed as the speaker's own**
+- [ ] ⏸ `E3.3.11.2.27` **⚑ WRONG CLAIM (the mouth) — an asked conditional said as a claim** — «Will you stay if it rains?» → «If it rains, you will stay.»
+- [ ] ⏸ `E3.3.11.2.17` **⚑ WRONG CLAIM — the quoted «I» beyond the first level** — «Anna said: "Bob thinks that I sleep."» → the speaker
+- [ ] ⏸ `E3.3.11.2.18` **⚑ WRONG CLAIM — «almost», «nearly», «hardly» claim the event** — a veridicality column on the adverb rows
+- [ ] ⏸ `E3.3.11.2.19` **WRONG CLAIM — a cut under an intensional verb** — «He wants me to go» → «He wants me»
+- [ ] ⏸ `E3.3.14.5` **⚑ WRONG CLAIM — proportional determiners read as adjectives under ∃** *(for the Captain)* — «Most tired men sleep» → «Some most…»; stanza's `ADJ` hides the row (the 09-22 content-POS guard)
+- [ ] ⏸ `E3.3.11.2.14` · `E3.3.11.2.14.1` · `E3.3.11.2.15` · `E3.3.11.2.15.1` · `E3.3.11.2.8` · `E3.3.11.2.8.2` **withheld meanwhile, by `E3.3.11.2.16`** —
       a pronoun under a quantified holder or addressee · the elided complement (an elided «does» tagged VERB escapes) ·
       «It is not true that» · «I am sure that…» (the clause-adjective table, knowledge)
-- [ ] `E3.12.1.1` `dere-4` «I don't know who ate the fish» carries `E3.3.11.2`'s contradiction — its zip falls with
+- [ ] ⏸ `E3.12.1.1` `dere-4` «I don't know who ate the fish» carries `E3.3.11.2`'s contradiction — its zip falls with
       `E3.3.11.2`; the drill gate agreeing with it is `E1e.6.5`
-- [ ] `E3.12.5.9.15` **⚑ WRONG CLAIM — «I did not swim, nor did I run»** → NOR(¬swim, run), which claims I swam
-- [ ] `E3.3.12` **⚑ WRONG CLAIM — «I remember the day I slept»** *(09-25)* — stanza's `obl:tmod` on the matrix;
+- [ ] ⏸ `E3.12.5.9.15` **⚑ WRONG CLAIM — «I did not swim, nor did I run»** → NOR(¬swim, run), which claims I swam
+- [ ] ⏸ `E3.3.12` **⚑ WRONG CLAIM — «I remember the day I slept»** *(09-25)* — stanza's `obl:tmod` on the matrix;
       also «…the day she was born», «…the night we met». Record `202609241130_…`
-- [ ] `E3.3.2.8` **⚑ WRONG CLAIMS — the provider's misreads, claimed** — «Because I think, I am» → «I think that
+- [ ] ⏸ `E3.3.2.8` **⚑ WRONG CLAIMS — the provider's misreads, claimed** — «Because I think, I am» → «I think that
       I am»; `t-ws-7` «…a mind can be an animal or a mind can be a software», complete with two subjectless rows
-- [ ] `E3.3.2.1.1` **WRONG CLAIM, latent — «so» as a coordinator claims its consequence backwards** (stanza
+- [ ] ⏸ `E3.3.2.1.1` **WRONG CLAIM, latent — «so» as a coordinator claims its consequence backwards** (stanza
       tags «so» `advmod` today, which reaches `E3.3.2.10.2` instead)
-- [ ] `E3.12.5.9.14` **⚑ WRONG CLAIM — «lest»** — `advmod` under a `parataxis`: AND, both halves claimed
-- [ ] `E3.12.5.9.18` · `E3.12.5.9.16` · `E3.12.5.9.17` **wrong claims, latent** — «wherever»'s row asserts both
+- [ ] ⏸ `E3.12.5.9.14` **⚑ WRONG CLAIM — «lest»** — `advmod` under a `parataxis`: AND, both halves claimed
+- [ ] ⏸ `E3.12.5.9.18` · `E3.12.5.9.16` · `E3.12.5.9.17` **wrong claims, latent** — «wherever»'s row asserts both
       halves · «just in case» would compose to CONV · «the only cat» makes a row «x is only»
-- [ ] `E3.3.2.10.2` **⚑ SILENT LOSS — «, so» / «So …» lose their implication** — every «, so» clause
-- [ ] `E3.2.1.6.1` **⚑ SILENT LOSS — «That» as a pronoun** — «That is a cat» → «A cat is.»; «She saw that»
-- [ ] `E3.2.1.6.3` **SILENT LOSS — «I saw that cat» → «I saw cat»** — the demonstrative determiner leaves no trace
-- [ ] `E3.2.1.6.5` **SILENT LOSS — «What is this?»** — the demonstrative compiled as a content key, the pointing lost
-- [ ] `E3.3.2.10.5` **SILENT LOSS — «I could swim» loses its past** — every row under a modal auxiliary has an
+- [ ] ⏸ `E3.3.2.10.2` **⚑ SILENT LOSS — «, so» / «So …» lose their implication** — every «, so» clause
+- [ ] ⏸ `E3.2.1.6.1` **⚑ SILENT LOSS — «That» as a pronoun** — «That is a cat» → «A cat is.»; «She saw that»
+- [ ] ⏸ `E3.2.1.6.3` **SILENT LOSS — «I saw that cat» → «I saw cat»** — the demonstrative determiner leaves no trace
+- [ ] ⏸ `E3.2.1.6.5` **SILENT LOSS — «What is this?»** — the demonstrative compiled as a content key, the pointing lost
+- [ ] ⏸ `E3.3.2.10.5` **SILENT LOSS — «I could swim» loses its past** — every row under a modal auxiliary has an
       empty theatre, unrecorded; `E3.3.11.8` is its symptom
-- [ ] `E3.3.13.2` · `E3.3.13.3` **SILENT LOSSES — «Neither is late» loses the «two»; «They love one another»
+- [ ] ⏸ `E3.3.13.2` · `E3.3.13.3` **SILENT LOSSES — «Neither is late» loses the «two»; «They love one another»
       comes back as a question** (ruled 09-26: an `Open` by number is said, never asked)
-- [ ] `E3.12.1.5` **SILENT LOSS — the decompiler drops a binder's «not» on a bare noun** — «He does not eat fish
+- [ ] ⏸ `E3.12.1.5` **SILENT LOSS — the decompiler drops a binder's «not» on a bare noun** — «He does not eat fish
       that swims» → «He eats fish that swims»; by `E3.12.5` (4) a WRONG CLAIM by the mouth
-- [ ] `E3.12.1.6` **SILENT LOSS — rows with no predicate or no subject** — «Some cats are not», `t-ng-4`
-- [ ] `E3.12.5.12` **unmeasured — may hide either** — a definite description's binder read as upward · an
+- [ ] ⏸ `E3.12.1.6` **SILENT LOSS — rows with no predicate or no subject** — «Some cats are not», `t-ng-4`
+- [ ] ⏸ `E3.3.14.6` · `E3.3.14.7` **provider misreads** (`E3.3.2.8`'s class) — «bit» tagged present · «snore» parsed a noun in «Does a man who sleeps snore?»
+- [ ] ⏸ `E3.12.5.12` **unmeasured — may hide either** — a definite description's binder read as upward · an
       unplaced joining word not treated as an operator
-- [ ] `E3.12.2` **⚑ the fresh set** — 100 UD-EWT sentences frozen before the run; every complete zip judged for
+- [ ] ⏸ `E3.12.2` **⚑ the fresh set** — 100 UD-EWT sentences frozen before the run; every complete zip judged for
       wrong claims and silent losses
-- [ ] `E3.8.3` **the frame/knowledge audit, re-run at E3's real close** *(09-26)* — ten constants arrived after it,
+- [ ] ⏸ `E3.8.3` **the frame/knowledge audit, re-run at E3's real close** *(09-26)* — ten constants arrived after it,
       and today's (`UPWARD_*`, `DIRECTIONS`, `FOCUS_DIRECTIONS`, `POINTED_FEATURES`)
-- [ ] `E3.12.3` **at E3's close, every open quality item moves to `E3c`** — below this line: quality only, then the Captain's
-- [ ] `E3.12.5.10` · `E3.12.5.11` · `E3.12.5.4` **over-withholding, conservative** — «if and only if» with commas ·
+- [ ] ⏸ `E3.12.3` **at E3's close, every open quality item moves to `E3c`** — below this line: quality only, then the Captain's
+- [ ] ⏸ `E3.12.5.10` · `E3.12.5.11` · `E3.12.5.4` **over-withholding, conservative** — «if and only if» with commas ·
       «because»'s own antecedent («I love» in `t-of-1`, «simply because») · any negation, whatever the parity
-- [ ] `E3.12.5.9.19` the decompiler refuses a folded conjunction under a supposition
-- [ ] `E3.3.11.2.25` a conjunct gets no agent — «John said to Marie and left» → «…and it left»
-- [ ] `E3.3.11.2.28` · `E3.3.11.2.29` · `E3.3.11.2.30` · `E3.3.11.2.31` — «we» loses its number · the perfect aspect lost («You have eaten» → «You eat») · «wo»/«ca» have no rows · the speech act's mark over an attitude (latent)
-- [ ] `E3.3.11.2.9.13` · `E3.3.11.2.9.15` · `E3.3.11.2.9.17` — «cannot ever» withheld · «ever» said «sometimes» · «He slept not twice»
-- [ ] `E3.3.11.2.9.8` · `E3.3.11.2.9.9` · `E3.3.11.2.9.10` · `E3.3.11.2.9.11` — «never at night» not composed · «Sometimes everyone sleeps» can't be fronted · «almost all cats» unchecked · «Nobody in the room sleeps» said wrong
-- [ ] `E3.3.11.2.6.2` «Where do you think he sleeps?» kept as a different question · `E3.3.11.2.20` the mouth: «He was told» → «He told», no boundary between clauses, «a old man»
-- [ ] `E3.2.1.6.2` «I was happy» decompiles as «I were happy»
-- [ ] `E3.2.1.6.4` «What is this?» came back «Is this what?» — no longer reproduces; see `E3.2.1.6.5`
-- [ ] `E3.3.11.3` · `E3.3.11.4` · `E3.3.11.5` · `E3.3.11.7` · `E3.3.11.8` **the scope reading's smaller findings** —
+- [ ] ⏸ `E3.12.5.9.19` the decompiler refuses a folded conjunction under a supposition
+- [ ] ⏸ `E3.3.11.2.25` a conjunct gets no agent — «John said to Marie and left» → «…and it left»
+- [ ] ⏸ `E3.3.11.2.28` · `E3.3.11.2.29` · `E3.3.11.2.30` · `E3.3.11.2.31` — «we» loses its number · the perfect aspect lost («You have eaten» → «You eat») · «wo»/«ca» have no rows · the speech act's mark over an attitude (latent)
+- [ ] ⏸ `E3.3.11.2.9.13` · `E3.3.11.2.9.15` · `E3.3.11.2.9.17` — «cannot ever» withheld · «ever» said «sometimes» · «He slept not twice»
+- [ ] ⏸ `E3.3.11.2.9.8` · `E3.3.11.2.9.9` · `E3.3.11.2.9.10` · `E3.3.11.2.9.11` — «never at night» not composed · «Sometimes everyone sleeps» can't be fronted · «almost all cats» unchecked · «Nobody in the room sleeps» said wrong
+- [ ] ⏸ `E3.3.11.2.6.2` «Where do you think he sleeps?» kept as a different question · `E3.3.11.2.20` the mouth: «He was told» → «He told», no boundary between clauses, «a old man»
+- [ ] ⏸ `E3.2.1.6.2` «I was happy» decompiles as «I were happy»
+- [ ] ⏸ `E3.2.1.6.4` «What is this?» came back «Is this what?» — no longer reproduces; see `E3.2.1.6.5`
+- [ ] ⏸ `E3.3.11.3` · `E3.3.11.4` · `E3.3.11.5` · `E3.3.11.7` · `E3.3.11.8` **the scope reading's smaller findings** —
       the fixpoint blind to a chain's truth · the drill gate blind to prefix order · «by by» · no domain before a modal ·
       a modal carries no theatre (with `E3.3.2.10.5`). Record `202609241130_…`
-- [ ] `E3.3.2` **the fixpoint's reading, what remains** — `E3.3.2.4.1` every unclaimed row reports a false loss ·
+- [ ] ⏸ `E3.3.2` **the fixpoint's reading, what remains** — `E3.3.2.4.1` every unclaimed row reports a false loss ·
       `E3.3.2.4.2` «I saw all» said «I saw.», recorded · `E3.3.2.6` → `E3b.6.1`. Record `202609241130_…`
-- [ ] **the side findings, numbered 09-26** — `E3.3.2.12` expletive · `E3.3.2.13` agreement ·
+- [ ] ⏸ **the side findings, numbered 09-26** — `E3.3.2.12` expletive · `E3.3.2.13` agreement ·
       `E3.3.2.1.2` purpose under an imperative · `E3.3.2.10.3` `closed_forms` · `E3.3.2.10.4` «can't» ·
       `E3.3.2.10.6` `_withhold` over-counts · `E3.3.2.10.7` archaic question · `E3.3.2.5.1.1` stative subject ·
       `E3.3.2.5.1.2` «she bore» (a reversed decompile: by `E3.12.5` (4) a wrong claim by the mouth) · `E3.3.2.5.1.3` «i»
-- [ ] `E3.3.13.1` · `E3.3.13.4` · `E3.3.13.5` **three of the five small things** — a definite's relative clause kept
+- [ ] ⏸ `E3.3.13.1` · `E3.3.13.4` · `E3.3.13.5` **three of the five small things** — a definite's relative clause kept
       claimed (a presupposition) · the clause-headed plural universal on the QM's grammar · discourse «No» unplaced
-- [ ] `E3.9.2` **the domain's two open halves** *(09-22)* — a fronted ADVERB («Legally,») needs `legally` → `law.n` ·
+- [ ] ⏸ `E3.9.2` **the domain's two open halves** *(09-22)* — a fronted ADVERB («Legally,») needs `legally` → `law.n` ·
       a NON-fronted `as` («I work as a teacher») never benched
-- [ ] `E3.4` **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band decisive; bookkeeping kept,
+- [ ] ⏸ `E3.4` **confidence scalar — MEASURED AND DEFERRED** *(09-20, req 4)* — no band decisive; bookkeeping kept,
       scalar EMPTY. Waits on `E3.3.2`
-- [ ] `E3.2.17` **the compile core's shape** *(09-26)* — one state, one module per pass; at E3's close
-- [ ] `E2.3.1` **two spellings of one attitude — `Pov` and `AttitudeRow`** *(for the Captain)* — before E4 compares zips
-- [ ] `E3.3.4.1` **the format enforces less than the ratchets test** *(for the Captain)* — free variables, tree-ness, `Ref` placement
+- [ ] ⏸ `E3.2.17` **the compile core's shape** *(09-26)* — one state, one module per pass; at E3's close
+- [ ] ⏸ `E3.3.4.1` **the format enforces less than the ratchets test** *(for the Captain)* — free variables, tree-ness, `Ref` placement
 - [x] `E3.10` **a compiled zip cannot say what compiled it** *(ruled 09-27: no stamp — a station change triggers the check)*
-- [ ] `E3.10.1` **the check after a station change** — recompile from `original`, compare, change through the mind; before the first zip is stored
-- [ ] `E3.11` **the station reads its knowledge from migration FILES** — the r-cache at PS1 / E10
-- [ ] `E3.13` **ten carried-in features placed nowhere** — an epic each, or «stays OUT» with a reason
+- [ ] ⏸ `E3.10.1` **the check after a station change** — recompile from `original`, compare, change through the mind; before the first zip is stored
+- [ ] ⏸ `E3.11` **the station reads its knowledge from migration FILES** — the r-cache at PS1 / E10
+- [ ] ⏸ `E3.13` **ten carried-in features placed nowhere** — an epic each, or «stays OUT» with a reason
 
 ## E3c — the station's long tail *(opened 2026-09-26 by `E3.12` — runs beside E4)*
 - [ ] its tasks arrive at E3's close (`E3.12.3`): every open quality item, `E3.2.17`, `E3.4`
@@ -331,7 +378,7 @@
 - [ ] `E4.4` chaining migrated + generalized
 - [ ] `E4.5` budget + micro-nn ordering hook
 - [ ] `E4.6` stake resolution
-- [ ] `E4.8` **⚑ LIMIT B has no owner** *(09-26, for the Captain)* — no task builds the zip's geometry (tkzip reqs 11–17); req 11 flagged since 09-14
+- [x] `E4.8` **⚑ LIMIT B has no owner** *(ruled 09-27)* — E2 owns the holding (`E2.7` · `E2.8`); E3 / E4 take their consequences, if any
 - [ ] `E4.7` ⚑ PROOF SLICE 1: text → zip → verdict, end-to-end on sandbox
 
 ## E5 — the instinct middleware (parallel after E0)
