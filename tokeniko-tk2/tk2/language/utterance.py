@@ -155,6 +155,11 @@ def prefixed(zip_: Zip, prefix: str) -> Zip:
         if getattr(row, "boxes", None):
             update["boxes"] = {role: _rename(box, prefix, rows, vars_)
                                for role, box in row.boxes.items()}
+        # An attitude's holder and addressee, and a domain, are boxes too — «Nobody said…» binds
+        # the variable its holder is, and a binder renamed without its holder unbinds it.
+        for slot in ("holder", "addressee", "domain"):
+            if getattr(row, slot, None) is not None:
+                update[slot] = _rename(getattr(row, slot), prefix, rows, vars_)
         if getattr(row, "pov", None) is not None:
             update["pov"] = row.pov.model_copy(update={
                 "holder": _rename(row.pov.holder, prefix, rows, vars_)})
@@ -172,8 +177,17 @@ SAYING_VERBS = frozenset({"say.v", "tell.v", "ask.v", "reply.v", "answer.v", "wr
                           "whisper.v", "call.v"})
 
 
-def _frame(zip_) -> object | None:
+def _frame(rows: Iterable, held: Iterable[str] = ()) -> object | None:
     """Is this sentence a QUOTE FRAME — «John said to Marie» — and if so, what attitude is it?
+    `rows` are a zip's rows, or the rows its compile withheld (`Compiled.withheld`); `held` names
+    the rows whose clause took a complement in its own sentence (`Compiled.complemented`).
+
+    **A SAYING THAT HELD ITS OWN COMPLEMENT FRAMES NOTHING AFTER IT** *(2026-09-27,
+    `E3.3.11.2.23`)*. «Nobody said to Marie that he sleeps. It rains.» — the saying said what it
+    said, in its own sentence, and was withheld there (ruling 8); read as a frame all the same, it
+    took «It rains» down with it as a quotation it never introduced. What a frame IS is a saying
+    whose content is still to come, and whether the content came is the tree's (`ccomp` · `xcomp`),
+    so the compiler reports it and this reads it — never the verb's name.
 
     Returns something shaped like an `AttitudeRow` (a holder and an addressee) so that
     `Context.under` can read it without caring whether the attitude came from a dependency tree or
@@ -190,14 +204,71 @@ def _frame(zip_) -> object | None:
     """
     from tk2.tkzip.schema import AttitudeRow, Role
 
-    for row in zip_.rows:
-        if row.kind != "content" or getattr(row, "predicate", None) not in SAYING_VERBS:
+    held = set(held)
+    for row in rows:
+        if row.name in held:
+            continue
+        # A predicate may be an OPEN — «WHY do you think…?» raises a row whose predicate is asked —
+        # and an OPEN is no key, and not hashable either: the membership test crashed the utterance.
+        predicate = getattr(row, "predicate", None)
+        if row.kind != "content" or not isinstance(predicate, str) or predicate not in SAYING_VERBS:
             continue
         holder = row.boxes.get(Role.AGENT)
         if holder is None:
             continue
         return AttitudeRow(name=row.name, scopes=row.name, holder=holder,
-                           verb=row.predicate, addressee=row.boxes.get(Role.RECIPIENT))
+                           verb=row.predicate, addressee=row.boxes.get(Role.RECIPIENT),
+                           theatre=row.theatre)
+    return None
+
+
+def _keeps_its_place(rows: list, frame) -> str | None:
+    """Why the FRAME row cannot hand its place to the attitude over the quote — None when it can.
+
+    «John did not say to Marie. "You are late."» — the frame row kept its «not», and the attitude
+    raised over the quote beside it claimed that he DID say it: the double claim `E3.3.11.2` was,
+    one sentence later (`E3.3.11.2.12`). So the frame dissolves into the attitude exactly as a
+    matrix does within a sentence — its prefix moving over the quote before the attitude — and
+    where it cannot, the quote is withheld.
+
+    **BY THE SAME RULE, NOT A COPY OF IT** — `compile.matrix_keeps_its_place`, which
+    `Compiler._places` reads too. A copy had drifted within the day it was written: it had no
+    restriction test, so «The man who said to Marie left. "You are late."» — `_frame` taking the
+    relative clause's saying for the frame — dissolved the man's restriction in silence and left
+    the attitude's holder outside its binder. What only this side has is the join: a quote cannot
+    take its frame's place in a join the frame's sentence built.
+
+    **AND WHAT FOLLOWS A «CANNOT» IS THE COMPILER'S JUDGEMENT TOO** *(2026-09-27)*: the quote is
+    withheld, and the frame's sentence goes back to the compiler with the frame named in
+    `quotation_withheld`, where `_unentailed` judges it as it judges a matrix that lost its
+    complement (`compile_utterance`).
+    """
+    from tk2.language.compile import IMPERATIVE_VERB, matrix_keeps_its_place
+    from tk2.tkzip.schema import QuantifierRow
+
+    row = next((r for r in rows if r.name == frame.name), None)
+    if row is None:
+        return "the frame is not a row of the zip"
+    # The box `_frame` read the holder from — whichever it was — is the one the attitude speaks for.
+    holder = next((role for role, box in row.boxes.items() if box == frame.holder), None)
+    binders = {r.binds: r for r in rows if isinstance(r, QuantifierRow)}
+    parent = {operand: r for r in rows for operand in (getattr(r, "operands", None) or ())}
+    above, current = {row.name}, row.name
+    for _ in range(len(parent) + 1):
+        join = parent.get(current)
+        if join is None or join.name in above:
+            break
+        above.add(join.name)
+        current = join.name
+    # An unasserted frame under the speech act's want is wanted, not supposed (tkzip req 48).
+    wanted = any(getattr(r, "scopes", None) == row.name and r.kind == "attitude"
+                 and r.verb == IMPERATIVE_VERB for r in rows)
+    why = matrix_keeps_its_place(row, holder, frame.verb, binders, above, wanted,
+                                 "the frame's holder is no box of its row")
+    if why is not None:
+        return why
+    if row.name in parent:
+        return "the frame is joined to another clause, and the quote cannot take its place there"
     return None
 
 
@@ -219,10 +290,11 @@ def quoted_under(zip_, frame):
     """A quoted sentence's zip, placed UNDER the attitude that introduced it.
 
     **THE SAME SHAPE `ccomp` ALREADY PRODUCES**, arriving across a sentence boundary instead of down
-    a dependency tree:
+    a dependency tree — and since 2026-09-26 (`E3.3.11.2.16`) with the frame gone in both, the
+    attitude having taken the saying's place (`compile_utterance`, `_keeps_its_place`):
 
-        «he says that you swim»        attitude(he, say) scopes r1 · r1 is EMPTY · r0 is CLAIMED
-        «John said: "you swim"»        attitude(john, say) scopes s1.… · s1.… is EMPTY
+        «he says that you swim»        attitude(he, say) scopes r1 · r1 keeps its truth · no r0
+        «John said: "you swim"»        attitude(john, say) scopes s1.… · s1.… keeps its truth
 
     **THE QUOTE IS NOT CLAIMED OF THE WORLD, AND THE ATTITUDE IS WHAT SAYS SO.** «John said the sky
     is green» does not assert that the sky is green — it asserts that John said so — and the prefix
@@ -240,7 +312,7 @@ def quoted_under(zip_, frame):
     if scopes is None:
         return zip_
     attitude = AttitudeRow(name=f"{scopes}.pov", scopes=scopes, holder=frame.holder,
-                           verb=frame.verb, addressee=frame.addressee)
+                           verb=frame.verb, addressee=frame.addressee, theatre=frame.theatre)
     return zip_.model_copy(update={"rows": [attitude, *zip_.rows]})
 
 
@@ -266,6 +338,121 @@ class CompiledUtterance:
     split: bool = False
 
 
+@dataclass
+class _Sentence:
+    """One sentence of an utterance, as `compile_utterance` holds it until the utterance is whole.
+
+    **HELD WHOLE, NOT FOLDED AS IT ARRIVES**, because a later sentence can send an earlier one back
+    to the compiler: a frame whose quotation cannot stand under it is judged by the compiler's own
+    rule, and that judgement is a second compile of the frame's sentence (`quotation_withheld`).
+    """
+
+    skeleton: object
+    context: Context
+    prefix: str
+    compiled: object = None
+    zip: Zip | None = None
+    #: The attitude this sentence frames the NEXT one with (`_frame`), and whether that frame was
+    #: withheld by the sentence's own compile — a withheld frame places nothing under it.
+    frame: object | None = None
+    frame_withheld: bool = False
+    #: This sentence is the quotation the previous one frames, and stands under that frame.
+    placed: bool = False
+    #: This sentence is withheld whole — a quotation with nowhere to stand. Its words are unplaced.
+    withheld: bool = False
+    #: This sentence is the QUOTATION of the frame before it — placed under that frame, or withheld
+    #: with it, and never a claim at the top level. Its compile is told so (`Compiler.compile`'s
+    #: `quoted`), so a cut from it is judged as a cut under an attitude (`E3.3.11.2.22`).
+    quoted: bool = False
+    #: What the utterance recorded while judging this sentence, said before its compile's own.
+    notes: list = field(default_factory=list)
+
+    def compile(self, compiler, quotation_withheld: Iterable[str] = ()) -> None:
+        # Named only when there is something to judge: a first compile of a sentence that is no
+        # quotation is the call it always was.
+        judge = {"quotation_withheld": frozenset(quotation_withheld)} if quotation_withheld else {}
+        if self.quoted:
+            judge["quoted"] = True
+        self.compiled = compiler.compile(self.skeleton, context=self.context, **judge)
+        self.zip = prefixed(self.compiled.zip, self.prefix)
+        held = self.compiled.complemented
+        self.frame = _frame(self.zip.rows, {f"{self.prefix}{name}" for name in held})
+        self.frame_withheld = False
+        if self.frame is None:
+            # A frame the sentence's own compile withheld still frames the next sentence — and that
+            # quotation falls with it, as a complement falls with its matrix (`Compiler._attitude`).
+            lost = _frame(self.compiled.withheld, held)
+            if lost is not None:
+                self.frame = lost.model_copy(update={"name": f"{self.prefix}{lost.name}"})
+                self.frame_withheld = True
+
+    @property
+    def claims_nothing(self) -> bool:
+        """Everything in it was withheld — the one empty row a zip of nothing is (`compile`)."""
+        empty = ContentRow(name="r0").model_dump(exclude={"name"})
+        return all(row.kind == "content" and row.model_dump(exclude={"name"}) == empty
+                   for row in self.zip.rows)
+
+    def words(self) -> list[str]:
+        return [w.text for w in self.skeleton if w.upos not in ("PUNCT", "SYM")]
+
+
+def _fold(sentences: list[_Sentence]) -> list:
+    """The utterance's rows, from its sentences as they now stand.
+
+    A quotation placed under its frame takes the frame's place (`_keeps_its_place`): the frame row
+    goes, what stood over it moves over the quotation before the attitude, and the attitude scopes
+    the quotation's claim (`quoted_under`). A withheld sentence contributes nothing.
+    """
+    rows: list = []
+    for at, sentence in enumerate(sentences):
+        if sentence.withheld:
+            continue
+        zip_ = sentence.zip
+        if sentence.placed:
+            frame = sentences[at - 1].frame
+            over = [r for r in rows if getattr(r, "scopes", None) == frame.name]
+            rows = [r for r in rows if r.name != frame.name and r not in over]
+            zip_ = quoted_under(zip_, frame)
+            scopes = zip_.rows[0].scopes
+            moved = [r.model_copy(update={"scopes": scopes}) for r in over]
+            zip_ = zip_.model_copy(update={"rows": [*moved, *zip_.rows]})
+        rows.extend(zip_.rows)
+    return rows
+
+
+def _withhold_quotation(compiler, sentences: list[_Sentence], at: int, why: str) -> None:
+    """Sentence `at` is the quotation of the frame before it, and it cannot stand there.
+
+    **THE SAME RULE AS INSIDE A SENTENCE, NOT A COPY OF IT** (`E3.3.11.2.12`, the Captain's
+    `E3.3.11.2.16`): a complement that cannot stand under its attitude is withheld, and the matrix
+    it was cut from is judged on its own — kept where the cut only weakens it (a claimed saying,
+    `E3.12.5.1`), withheld where it widens the claim (under a negation, in an antecedent) or moves a
+    definite description. That judgement is `Compiler._unentailed`'s, so the frame's sentence is
+    compiled again with its frame named in `quotation_withheld` — never re-judged here. The copy
+    this replaces had drifted within a day: it withheld the whole framing sentence whenever anything
+    scoped or joined the frame (a ◇ over it, an AND beside it — both weakened by the cut, both
+    entailed), and kept a frame that restricted a DEFINITE description, which the compiler withholds.
+
+    And recursively: when that second compile leaves nothing of a sentence that was itself a
+    quotation, ITS frame has lost its quotation in turn. **Such a sentence is compiled `quoted`
+    both times** *(2026-09-27, `E3.3.11.2.22`)*, so its frame is judged where it stands — under the
+    attitude one sentence further back, where a cut widens the claim. Judged at the top level, «Anna
+    said to Bob. "John said to Marie yesterday." "You sleep."» kept John's cut saying and placed it
+    under Anna's: a claim the same words in one sentence never make.
+    """
+    quotation, framing = sentences[at], sentences[at - 1]
+    quotation.withheld = True
+    quotation.notes.append(f"{framing.frame.name}: {why} — the quotation it frames is withheld")
+    if framing.frame_withheld or framing.withheld:
+        return
+    local = framing.frame.name[len(framing.prefix):]
+    framing.compile(compiler, quotation_withheld={local})
+    if framing.placed and framing.claims_nothing and at - 1 > 0:
+        _withhold_quotation(compiler, sentences, at - 1,
+                            "nothing of its quotation could be placed")
+
+
 def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTEXT
                       ) -> CompiledUtterance:
     """Every skeleton of one utterance → one zip.
@@ -282,39 +469,68 @@ def compile_utterance(compiler, skeletons: Sequence, context: Context = NO_CONTE
         # than a second convention for the same state.
         return CompiledUtterance(zip=Zip(rows=[ContentRow(name="r0")]), sentences=0, coverage=1.0)
 
-    rows, unplaced, abstained, defaulted, covered, total = [], [], [], [], 0, 0
-    topicality = None
-    quoting = None          # the attitude the PREVIOUS sentence set up, if it set one up
+    sentences: list[_Sentence] = []
     for position, skeleton in enumerate(skeletons):
         # **A QUOTE ROTATES AGAINST THE SENTENCE THAT INTRODUCED IT.** «John said to Marie" You are
         # a clever girl "» is two skeletons, and the first one is the frame: a saying with an agent
         # and a recipient. So the second compiles under the first's participants, which is req 20's
         # rule applied across a sentence boundary instead of down a dependency tree.
-        compiled = compiler.compile(skeleton, context=context if quoting is None
-                                    else context.under(quoting))
-        frame, quoting = quoting, _frame(compiled.zip)
-        zip_ = prefixed(compiled.zip, "" if position == 0 else f"s{position}.")
-        if frame is not None:
-            # The previous sentence introduced this one, so it is what was SAID rather than a claim
-            # of its own.
-            zip_ = quoted_under(zip_, frame)
-        rows.extend(zip_.rows)
-        unplaced.extend(compiled.unplaced)
-        abstained.extend(compiled.abstained)
-        defaulted.extend(compiled.defaulted)
-        covered += len(compiled.covered)
-        total += len(compiled.covered) + len(compiled.unplaced)
-        # **THE FIRST SENTENCE'S VOICE IS THE UTTERANCE'S.** `topicality` is one field on the zip
-        # rather than one per row, so a merge has to choose, and the first sentence is the one the
-        # utterance is about. *The THEATRE needed no such choice after schema v5: it rides on the
-        # rows, so every clause of every sentence keeps its own time.*
-        if topicality is None:
-            topicality = compiled.zip.topicality
+        previous = sentences[-1] if sentences else None
+        frame = previous.frame if previous is not None else None
+        sentence = _Sentence(skeleton, context if frame is None else context.under(frame),
+                             "" if position == 0 else f"s{position}.", quoted=frame is not None)
+        sentence.compile(compiler)
+        sentences.append(sentence)
+        if frame is None:
+            continue
+        # The previous sentence introduced this one, so it is what was SAID rather than a claim of
+        # its own — and the frame hands the quote its place, or the quote cannot stand.
+        if previous.frame_withheld or previous.withheld:
+            # **A QUOTATION FALLS WITH ITS FRAME** — «Anna did not tell Bob. "You sleep."»: the
+            # telling was withheld by its own sentence (`E3.12.5`), and the quotation left behind
+            # stood CLAIMED at top level — the speaker telling the listener he sleeps.
+            _withhold_quotation(compiler, sentences, position, "the frame itself was withheld")
+        elif sentence.claims_nothing:
+            # Withheld whole by its own compile: the frame lost what it held, and is judged so.
+            _withhold_quotation(compiler, sentences, position,
+                                "nothing of its quotation could be placed")
+        else:
+            why = _keeps_its_place(_fold(sentences[:-1]), frame)
+            if why is None:
+                sentence.placed = True
+            else:
+                # **WITHHELD, AND SAID WHY** (`E3.3.11.2.16` (2)): an asked or a supposed frame, a
+                # frame with boxes of its own, a frame that restricts a phrase — the attitude row
+                # has no place for the quote under it.
+                _withhold_quotation(compiler, sentences, position, why)
 
+    unplaced: list[str] = []
+    defaulted: list[str] = []
+    notes: list[str] = []
+    covered = total = 0
+    for sentence in sentences:
+        compiled = sentence.compiled
+        words = sentence.words() if sentence.withheld else list(compiled.unplaced)
+        placed = 0 if sentence.withheld else len(compiled.covered)
+        unplaced.extend(words)
+        notes.extend([*sentence.notes, *compiled.abstained])
+        defaulted.extend(compiled.defaulted)
+        covered += placed
+        total += placed + len(words)
+
+    rows = _fold(sentences)
+    if not rows:
+        rows = [ContentRow(name="r0")]
+    # **THE FIRST SENTENCE'S VOICE IS THE UTTERANCE'S.** `topicality` is one field on the zip rather
+    # than one per row, so a merge has to choose, and the first sentence is the one the utterance is
+    # about. *The THEATRE needed no such choice after schema v5: it rides on the rows, so every
+    # clause of every sentence keeps its own time.*
+    topicality = next((s.compiled.zip.topicality for s in sentences
+                       if s.compiled.zip.topicality is not None), None)
     return CompiledUtterance(
         zip=Zip(rows=rows, unplaced=list(unplaced), topicality=topicality),
         sentences=len(skeletons),
-        unplaced=tuple(unplaced), abstained=tuple(abstained), defaulted=tuple(defaulted),
+        unplaced=tuple(unplaced), abstained=tuple(notes), defaulted=tuple(defaulted),
         coverage=1.0 if not total else covered / total,
         split=len(skeletons) > 1,
     )

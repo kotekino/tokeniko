@@ -612,6 +612,9 @@ runtime, so it is app knowledge.
    drill holds EQ — a join's operator is never compared.
 `E1e.6.4` *(found 2026-09-26 at `E3.12.5.9`)* the drill's `c()` claims the halves of a quantified
    implication (`only-6`, `t-ws-3`); `only-4` encodes «only because» as EQ, which `E3.12.5.9.12` (2) overrides.
+`E1e.6.5` *(from `E3.12.1.1`, 2026-09-26)* the drill gate AGREED with `dere-4` «I don't know who ate the
+   fish», a zip that contradicts itself — «0 wrong claims» cannot be read off the gate until it compares truth
+   across an attitude.
 `E1e.9` *(the course check, 2026-09-26)* **a tool read the biography around the guard** —
    `tools/journey_ledger_build.py` opened tk1's `tokeniko_mem.tkzipdebug` with a raw client, the only
    one of ten database-opening tools that skipped `guard_db_name`. Read-only in intent is not the
@@ -1257,8 +1260,41 @@ it).
    - `E3.3.10` `as far as` — `202609221300_…`
    - `E3.3.11` the fixpoint sees scope · `E3.3.11.1` · `E3.3.11.2` · `E3.3.11.3` · `E3.3.11.4` · `E3.3.11.5` · `E3.3.11.6` · `E3.3.11.7` · `E3.3.11.8` its findings, `.1` and `.2` truth errors
      (the neg-raising reading is the Captain's) — `202609241130_…`
+     **MEASURED 2026-09-26** (`202609261600_the-attitude-takes-its-matrix-place.md`): `E3.3.11.1` and
+     `E3.3.11.2` are two faces of ONE defect — the attitude is appended as a prefix on its complement
+     and never takes its matrix clause's place — and it is most of the attitude space: 59 sentences, 53
+     wrong claims. Families: `E3.3.11.2.1` the attitude innermost · `E3.3.11.2.2` the matrix surviving
+     beside it · `E3.3.11.2.3` nested attitudes · `E3.3.11.2.4` escape from a supposition · `E3.3.11.2.5`
+     escape of a coordinated complement · `E3.3.11.2.6` an asked attitude · `E3.3.11.2.7` the
+     imperative's want · `E3.3.11.2.8` «It is not true that» · `E3.3.11.2.9` ⚑ the adverbial quantifiers
+     compile to nothing («He never sleeps» → «He sleeps») · `E3.3.11.2.10` passive attitudes ·
+     `E3.3.11.2.11` second participants · `E3.3.11.2.12` across a sentence boundary · `E3.3.11.2.13`
+     «whether» never said · `E3.3.11.2.14` a pronoun under a quantified holder · `E3.3.11.2.15` the
+     elided complement. Designed («the attitude takes its matrix's place») and challenged (sound with
+     four blocking amendments); **`E3.3.11.2.16` RULED as leaned** (the Captain, 09-26) — building.
+     **BUILT and verified twice** (09-26/27): the corpus unchanged or more honest (drill prefix pairs
+     29 → 33, UD 30 · 0 · 15), a third fix round running. Pre-existing, found by the verifiers:
+     `E3.3.11.2.1.1` ¬ above a definite · `E3.3.11.2.5.1` a relative clause escapes the attitude ·
+     `E3.3.11.2.6.1` «Which man thinks…?» a statement · `E3.3.11.2.6.2` «Where do you think…?» another
+     question · `E3.3.11.2.8.1` «It is true that» a free pronoun · `E3.3.11.2.8.2` «I am sure that…»
+     withheld until the clause-adjective table · `E3.3.11.2.14.1` a quantified addressee ·
+     `E3.3.11.2.15.1` an elided «does» tagged VERB · `E3.3.11.2.17` the quoted «I» beyond one level ·
+     `E3.3.11.2.18` «almost / nearly / hardly» claim the event · `E3.3.11.2.19` a cut under an
+     intensional verb · `E3.3.11.2.20` the mouth's three.
+     **Round 3** (09-27): `E3.3.11.2.21` what a TAG QUESTION is — req 50 against the 09-18 note (for the
+     Captain) · `E3.3.11.2.22` ⚑ nested frames across sentences, a wrong claim round 3 made ·
+     `E3.3.11.2.23` a withheld saying read as a frame · `E3.3.11.2.24` the speech act's want has no
+     structural mark (for the Captain) · `E3.3.11.2.25` a conjunct gets no agent.
+     **Round 4 — DONE 09-27**: tags as req 50's OPEN host with a prior (`db/0042`), the strength invariant,
+     nested frames, a complemented saying no frame; corpus unchanged. Found `E3.3.11.2.26` ⚑ a quoted
+     sentence with no frame claimed as the speaker's own · `E3.3.11.2.27` ⚑ an asked conditional said as a
+     claim · `E3.3.11.2.28` «we» loses its number · `E3.3.11.2.29` the perfect lost · `E3.3.11.2.30`
+     «wo»/«ca» no rows · `E3.3.11.2.31` the speech act's mark over an attitude.
    - `E3.3.12` «I remember the day I slept» is a wrong complete zip — `202609241130_…`
-   - `E3.3.13` five small things recorded rather than fixed
+   - `E3.3.13` five small things recorded rather than fixed — numbered 09-26: `E3.3.13.1` a definite's
+     relative clause kept claimed (a presupposition) · `E3.3.13.2` «Neither is late» loses the «two» (a
+     silent loss, `E3.12.1`) · `E3.3.13.3` «one another» comes back as a question (a silent loss) ·
+     `E3.3.13.4` the clause-headed plural universal · `E3.3.13.5` discourse «No» unplaced
    - **numbered 2026-09-26** (found on 09-24/25, listed in `202609241130_…` without ids):
      `E3.3.2.12` the compiler never produces an expletive · `E3.3.2.13` relative-clause agreement ·
      `E3.3.2.1.2` a purpose under an imperative is refused · `E3.3.2.7.1` «I asked Anna where she

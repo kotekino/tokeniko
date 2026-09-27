@@ -206,9 +206,12 @@ def test_THE_CAPTAINS_OWN_SENTENCE(compiler):
     out = compile_utterance(compiler, [SAID, QUOTED],
                             Context(speaker="kotekino", addressee="captain"))
 
-    saying = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v")
-    assert saying.boxes[Role.AGENT].head == "john.n"
-    assert saying.boxes[Role.RECIPIENT].head == "marie.n"
+    # *Amended 2026-09-26 (`E3.3.11.2.12`, the Captain's `E3.3.11.2.16`)*: the frame dissolves into
+    # the attitude across the sentence boundary exactly as a matrix does inside one, so the saying
+    # is the attitude row and no say.v row is left beside it to claim the saying twice.
+    saying = next(r for r in out.zip.rows if r.kind == "attitude")
+    assert (saying.verb, saying.holder.head, saying.addressee.head) == ("say.v", "john.n", "marie.n")
+    assert not [r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v"]
 
     quoted = next(r for r in out.zip.rows if r.name.startswith("s1.")
                   and Role.PATIENT in getattr(r, "boxes", {}))
@@ -320,13 +323,24 @@ def test_QUOTED_speech_rotates_and_stanza_is_what_says_which(compiler):
     assert not [r for r in out.zip.rows if r.kind == "attitude"] and "you" in out.unplaced
 
 def test_a_CONDITIONAL_does_not_rotate(compiler):
-    """Only an ATTITUDE rotates. «if you know who did it» is still the outer speaker's «you» — the
-    test is the joiner saying `asserts: matrix`, not merely being a subordinate clause."""
-    out = compiler.compile(case("if you know who did it , tell me").skeleton,
-                           context=Context(speaker="kotekino", addressee="captain"))
-    knowing = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v")
+    """Only an ATTITUDE rotates. «if you sleep» is still the outer speaker's «you» — the test is the
+    joiner saying `asserts: matrix`, not merely being a subordinate clause.
 
-    assert knowing.boxes[Role.EXPERIENCER].head == "captain"  # `know` is cognition (req 22)
+    *Amended 2026-09-26 (`E3.3.11.2.16` (2))*: it read «if you know who did it», and that sentence
+    is withheld now — a supposed knowing has no attitude row to go in. A conditional with no
+    attitude in it asks the same question."""
+    if_you_sleep = skeleton_from_conllu("if you sleep , I stay", [
+        ("1", "if", "if", "SCONJ", "3", "mark"),
+        ("2", "you", "you", "PRON", "3", "nsubj"),
+        ("3", "sleep", "sleep", "VERB", "6", "advcl"),
+        ("4", ",", ",", "PUNCT", "3", "punct"),
+        ("5", "I", "I", "PRON", "6", "nsubj"),
+        ("6", "stay", "stay", "VERB", "0", "root"),
+    ])
+    out = compiler.compile(if_you_sleep, context=Context(speaker="kotekino", addressee="captain"))
+    sleeping = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "sleep.v")
+
+    assert sleeping.boxes[Role.AGENT].head == "captain"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -349,8 +363,10 @@ def test_A_QUOTE_IS_NOT_CLAIMED_OF_THE_WORLD_and_the_ATTITUDE_is_what_says_so(co
     out = compile_utterance(compiler, [SAID, QUOTED],
                             Context(speaker="kotekino", addressee="captain"))
 
-    saying = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v")
-    assert saying.truth == 1.0, "the SAYING is claimed"
+    # *Amended 2026-09-26 (`E3.3.11.2.12`)*: the SAYING is the attitude row now — the frame took
+    # its place across the boundary — and what the speaker claims is that attitude, over the quote.
+    assert not [r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v"], (
+        "the saying is not written twice")
 
     quoted = [r for r in out.zip.rows if r.name.startswith("s1.") and r.kind in ("content", "join")]
     assert quoted and all(r.truth == 1.0 for r in quoted), "and John asserted its content"
@@ -462,3 +478,315 @@ def test_a_BARE_ccomp_under_a_saying_verb_is_reported_content(compiler):
         assert not [r for r in out.zip.rows
                     if getattr(r, "predicate", None) in ("say.v", "ask.v")], (
             "the saying dissolved into the attitude that replaced it")
+
+
+# ------------------------------------------------------------------------------------------------
+# E3.3.11.2.12 — the attitude takes its frame's place across the sentence boundary (2026-09-26)
+# ------------------------------------------------------------------------------------------------
+
+JOHN_DID_NOT_SAY = skeleton_from_conllu("John did not say to Marie", [
+    ("1", "John", "john", "PROPN", "4", "nsubj"),
+    ("2", "did", "do", "AUX", "4", "aux"),
+    ("3", "not", "not", "PART", "4", "advmod"),
+    ("4", "say", "say", "VERB", "0", "root"),
+    ("5", "to", "to", "ADP", "6", "case"),
+    ("6", "Marie", "marie", "PROPN", "4", "obl"),
+])
+YOU_ARE_LATE = skeleton_from_conllu("You are late", [
+    ("1", "You", "you", "PRON", "3", "nsubj"),
+    ("2", "are", "be", "AUX", "3", "cop"),
+    ("3", "late", "late", "ADJ", "0", "root"),
+])
+
+
+def test_a_NEGATED_frame_puts_its_negation_OVER_the_attitude_and_is_not_claimed_beside_it(compiler):
+    """«John did not say to Marie. "You are late."» — stanza splits it, and the frame row kept its
+    «not» while the attitude over the quote claimed that he DID say it: `E3.3.11.2`'s double claim,
+    one sentence later. The frame hands the quote its place, as a matrix does: ¬ · ATT(john, say,
+    to Marie) over the lateness, and no say.v row."""
+    out = compile_utterance(compiler, [JOHN_DID_NOT_SAY, YOU_ARE_LATE],
+                            Context(speaker="kotekino", addressee="captain"))
+    late = next(r for r in out.zip.rows if r.name.startswith("s1.") and r.kind == "content")
+    stack = [r for r in out.zip.rows if getattr(r, "scopes", None) == late.name]
+
+    assert [r.kind for r in stack] == ["negation", "attitude"], "the «not» is over the saying"
+    assert (stack[1].holder.head, stack[1].addressee.head) == ("john.n", "marie.n")
+    assert not [r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v"]
+    assert late.boxes[Role.PATIENT].head == "marie.n", "and the rotation still reads the frame"
+
+
+def test_a_frame_with_a_box_of_its_own_WITHHOLDS_its_quote(compiler):
+    """«John said loudly to Marie. "You are late."» — an attitude row has no manner, so the saying
+    cannot hand over its place (`E3.3.11.2.16` (2)): the quote is withheld and said why, and the
+    saying stands on its own, claimed — cutting what was said from a claimed saying only weakens it."""
+    loudly = skeleton_from_conllu("John said loudly to Marie", [
+        ("1", "John", "john", "PROPN", "2", "nsubj"),
+        ("2", "said", "say", "VERB", "0", "root"),
+        ("3", "loudly", "loudly", "ADV", "2", "advmod"),
+        ("4", "to", "to", "ADP", "5", "case"),
+        ("5", "Marie", "marie", "PROPN", "2", "obl"),
+    ])
+    out = compile_utterance(compiler, [loudly, YOU_ARE_LATE],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    assert not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert not [r for r in out.zip.rows if r.name.startswith("s1.")]
+    assert {"You", "are", "late"} <= set(out.unplaced)
+    assert any("quotation it frames is withheld" in why for why in out.abstained)
+    assert next(r for r in out.zip.rows if getattr(r, "predicate", None) == "say.v").truth == 1.0
+
+
+def test_a_WHY_question_does_not_crash_the_utterance(compiler):
+    """«Why do you sleep?» raises a row whose predicate is an OPEN — asked, not a key — and the frame
+    test compared it against a set of keys: an OPEN is not hashable, and the whole utterance
+    raised. Found by the skeptic of `E3.3.11.2.16`; every «why» question went through here."""
+    why = skeleton_from_conllu("Why do you sleep ?", [
+        ("1", "Why", "why", "ADV", "4", "advmod"),
+        ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "you", "you", "PRON", "4", "nsubj"),
+        ("4", "sleep", "sleep", "VERB", "0", "root"),
+        ("5", "?", "?", "PUNCT", "4", "punct"),
+    ])
+    out = compile_utterance(compiler, [why, YOU_ARE_LATE])
+
+    assert any(isinstance(getattr(r, "predicate", None), Open) for r in out.zip.rows)
+
+
+def _said_of(text, determiner, determiner_lemma):
+    return skeleton_from_conllu(text, [
+        ("1", determiner, determiner_lemma, "DET", "2", "det"),
+        ("2", "man", "man", "NOUN", "7", "nsubj"),
+        ("3", "who", "who", "PRON", "4", "nsubj"),
+        ("4", "said", "say", "VERB", "2", "acl:relcl"),
+        ("5", "to", "to", "ADP", "6", "case"),
+        ("6", "Marie", "marie", "PROPN", "4", "obl"),
+        ("7", "left", "leave", "VERB", "0", "root"),
+    ])
+
+
+def _claims(out) -> list:
+    return [r for r in out.zip.rows if getattr(r, "truth", None) == 1.0]
+
+
+def test_a_RESTRICTING_frame_cannot_take_its_place_and_is_judged_like_a_matrix(compiler):
+    """«The man who said to Marie left. "You are late."» — `_frame` takes the relative clause's saying
+    for the frame (an old mis-framing), and the cross-sentence copy of the rule had no restriction
+    test: it dissolved the man's «who said to Marie» in silence and left the attitude's holder
+    outside its binder. One rule now reads both sides (`compile.matrix_keeps_its_place`): a
+    restriction cannot hand over its place, and the quote is withheld and said why.
+
+    *Amended 2026-09-27 (`E3.3.11.2.12`)*: and what follows is the compiler's judgement too, not a
+    copy of it. Cut, «the man who said to Marie» may pick out another man — a DEFINITE description
+    moves when its restriction loses what it held (E3.12.5 (1)), exactly as «The man who thinks that
+    he sleeps is happy» does inside one sentence — so everything said of him is withheld. Under an
+    INDEFINITE the cut only weakens («a man who said to Marie left» is entailed), and it stays."""
+    definite = compile_utterance(compiler, [_said_of("The man who said to Marie left", "The",
+                                                     "the"), YOU_ARE_LATE],
+                                 Context(speaker="kotekino", addressee="captain"))
+    indefinite = compile_utterance(compiler, [_said_of("A man who said to Marie left", "A", "a"),
+                                              YOU_ARE_LATE],
+                                   Context(speaker="kotekino", addressee="captain"))
+
+    for out in (definite, indefinite):
+        assert not [r for r in out.zip.rows if r.kind == "attitude"]
+        assert {"You", "are", "late"} <= set(out.unplaced)
+        assert any("RESTRICTION" in why and "quotation it frames is withheld" in why
+                   for why in out.abstained)
+    assert _claims(definite) == [] and any("DEFINITE" in why for why in definite.abstained)
+    said = next(r for r in indefinite.zip.rows if getattr(r, "predicate", None) == "say.v")
+    assert said.truth == 1.0 and isinstance(said.boxes[Role.AGENT].head, Var), "the restriction stays"
+
+
+# ------------------------------------------------------------------------------------------------
+# E3.3.11.2.12 — a frame whose quotation cannot stand is judged by the COMPILER'S rule (2026-09-27)
+# ------------------------------------------------------------------------------------------------
+
+YOU_SLEEP = skeleton_from_conllu("You sleep", [
+    ("1", "You", "you", "PRON", "2", "nsubj"),
+    ("2", "sleep", "sleep", "VERB", "0", "root"),
+])
+YOU_MAY_NOT_GO = skeleton_from_conllu("You may not go", [
+    ("1", "You", "you", "PRON", "4", "nsubj"),
+    ("2", "may", "may", "AUX", "4", "aux"),
+    ("3", "not", "not", "PART", "4", "advmod"),
+    ("4", "go", "go", "VERB", "0", "root"),
+])
+
+
+def _say_loudly(text, *before):
+    """«John [may | did not] say loudly to Marie» — a saying with a manner box of its own, which an
+    attitude row cannot hold, so its quotation can never take its place."""
+    words = [("1", "John", "john", "PROPN", str(len(before) + 2), "nsubj")]
+    for at, (form, lemma, upos) in enumerate(before, start=2):
+        words.append((str(at), form, lemma, upos, str(len(before) + 2),
+                      "aux" if upos == "AUX" else "advmod"))
+    say = len(before) + 2
+    words += [(str(say), "say", "say", "VERB", "0", "root"),
+              (str(say + 1), "loudly", "loudly", "ADV", str(say), "advmod"),
+              (str(say + 2), "to", "to", "ADP", str(say + 3), "case"),
+              (str(say + 3), "Marie", "marie", "PROPN", str(say), "obl")]
+    return skeleton_from_conllu(text, words)
+
+
+def test_a_frame_the_cut_only_WEAKENS_is_kept_where_the_copy_withheld_its_sentence(compiler):
+    """The copy in `compile_utterance` withheld the framing sentence WHOLE whenever anything scoped
+    or joined the frame. A ◇ over it and an AND beside it are both weakened by the cut — «John may
+    say loudly to Marie» and «John said to Marie and left» are entailed by the sentences they come
+    from — and the compiler, asked, keeps them: the quotation alone is withheld."""
+    may = compile_utterance(compiler, [_say_loudly("John may say loudly to Marie",
+                                                   ("may", "may", "AUX")), YOU_ARE_LATE],
+                            Context(speaker="kotekino", addressee="captain"))
+    and_left = compile_utterance(compiler, [skeleton_from_conllu("John said to Marie and left", [
+        ("1", "John", "john", "PROPN", "2", "nsubj"),
+        ("2", "said", "say", "VERB", "0", "root"),
+        ("3", "to", "to", "ADP", "4", "case"),
+        ("4", "Marie", "marie", "PROPN", "2", "obl"),
+        ("5", "and", "and", "CCONJ", "6", "cc"),
+        ("6", "left", "leave", "VERB", "2", "conj"),
+    ]), YOU_ARE_LATE], Context(speaker="kotekino", addressee="captain"))
+
+    saying = next(r for r in may.zip.rows if getattr(r, "predicate", None) == "say.v")
+    assert [r.kind for r in may.zip.rows if getattr(r, "scopes", None) == saying.name] == [
+        "modality"], "the ◇ stays over the saying it scoped"
+    assert saying.truth == 1.0 and Role.MANNER in saying.boxes
+    assert sorted(r.predicate for r in _claims(and_left) if r.kind == "content") == [
+        "leave.v", "say.v"]
+    for out in (may, and_left):
+        assert {"You", "are", "late"} <= set(out.unplaced)
+        assert not [r for r in out.zip.rows if r.name.startswith("s1.")]
+
+
+def test_a_frame_the_cut_WIDENS_is_withheld_by_the_compilers_own_rule(compiler):
+    """«John did not say loudly to Marie. "You are late."» — the saying cannot hand over its place
+    (a manner box), and cut from under its «not» it claims that John said nothing loud to Marie at
+    all: the cut widens the claim. The frame's sentence is compiled again with the frame named, and
+    `_unentailed` withholds it — the record is the compiler's, not a verdict of the utterance's."""
+    out = compile_utterance(compiler, [_say_loudly("John did not say loudly to Marie",
+                                                   ("did", "do", "AUX"), ("not", "not", "PART")),
+                                       YOU_ARE_LATE],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert any("quotation it frames was withheld" in why and "under a negation" in why
+               for why in out.abstained)
+    assert {"John", "say", "loudly", "Marie", "You", "late"} <= set(out.unplaced)
+
+
+def test_a_quotation_FALLS_WITH_a_frame_its_own_sentence_withheld(compiler):
+    """«Anna did not tell Bob. "You sleep."» — the telling is withheld by its own sentence («Bob», an
+    `iobj` with no object, is not read, and cut from under the «not»), and the quotation it framed
+    stood CLAIMED at top level: the speaker telling the listener that he sleeps. A complement falls
+    with its matrix inside a sentence (`Compiler._attitude`); across the boundary, the same."""
+    told = skeleton_from_conllu("Anna did not tell Bob", [
+        ("1", "Anna", "anna", "PROPN", "4", "nsubj"),
+        ("2", "did", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"),
+        ("4", "tell", "tell", "VERB", "0", "root"),
+        ("5", "Bob", "bob", "PROPN", "4", "iobj"),
+    ])
+    out = compile_utterance(compiler, [told, YOU_SLEEP],
+                            Context(speaker="kotekino", addressee="captain"))
+
+    assert _claims(out) == []
+    assert any("the frame itself was withheld" in why for why in out.abstained)
+    assert {"You", "sleep"} <= set(out.unplaced)
+
+
+def test_a_quotation_withheld_WHOLE_leaves_its_frame_judged_without_it(compiler):
+    """«John said to Marie. "You may not go."» — the quotation is withheld by its own sentence («may
+    not» scopes both ways), and the saying dissolved into an attitude over nothing: «John said to
+    marie that is». A frame whose quotation is gone is a matrix whose complement is: kept where the
+    cut weakens it, withheld under its «not»."""
+    said = compile_utterance(compiler, [SAID, YOU_MAY_NOT_GO],
+                             Context(speaker="kotekino", addressee="captain"))
+    not_said = compile_utterance(compiler, [JOHN_DID_NOT_SAY, YOU_MAY_NOT_GO],
+                                 Context(speaker="kotekino", addressee="captain"))
+
+    assert [r.predicate for r in _claims(said)] == ["say.v"]
+    assert not [r for r in said.zip.rows if r.kind == "attitude"]
+    assert {"You", "may", "not", "go"} <= set(said.unplaced)
+    assert _claims(not_said) == [] and not [r for r in not_said.zip.rows if r.kind == "attitude"]
+
+
+# ------------------------------------------------------------------------------------------------
+# E3.3.11.2.22 · E3.3.11.2.23 — a quotation is judged where it stands, and a saying that said what
+# it said frames nothing (2026-09-27)
+# ------------------------------------------------------------------------------------------------
+
+ANNA_SAID_TO_BOB = skeleton_from_conllu("Anna said to Bob", [
+    ("1", "Anna", "anna", "PROPN", "2", "nsubj"),
+    ("2", "said", "say", "VERB", "0", "root"),
+    ("3", "to", "to", "ADP", "4", "case"),
+    ("4", "Bob", "bob", "PROPN", "2", "obl"),
+])
+IT_RAINS = skeleton_from_conllu("It rains", [
+    ("1", "It", "it", "PRON", "2", "nsubj"),
+    ("2", "rains", "rain", "VERB", "0", "root"),
+])
+
+
+def test_a_quotation_that_FRAMES_another_is_judged_under_the_attitude_it_stands_under(compiler):
+    """«Anna said to Bob. "John said loudly to Marie." "You sleep."» — John's saying cannot hand its
+    place to the last quotation (a manner box), so that quotation goes and John's sentence is
+    judged without it. Judged at the TOP level the cut only weakened it, and it was placed under
+    Anna's saying claimed: «Anna said to Bob that John said loudly to Marie» — where in one sentence
+    the same cut is under Anna's attitude and widens the claim, and only «Anna said to Bob» stands.
+    A quotation is compiled `quoted` now, both times, so the judgement is the one-sentence one."""
+    out = compile_utterance(compiler, [ANNA_SAID_TO_BOB, _say_loudly("John said loudly to Marie"),
+                                       YOU_SLEEP], Context(speaker="kotekino", addressee="captain"))
+
+    assert [(r.predicate, r.boxes[Role.AGENT].head) for r in _claims(out)] == [("say.v", "anna.n")]
+    assert not [r for r in out.zip.rows if r.kind == "attitude" or r.name.startswith("s")]
+    assert any("under an attitude" in why for why in out.abstained)
+    assert {"John", "say", "loudly", "Marie", "You", "sleep"} <= set(out.unplaced)
+
+
+def test_a_chain_of_quotations_with_nothing_cut_still_stands_whole(compiler):
+    """The control: «Anna said to Bob. "John said to Marie." "You sleep."» — nothing is cut, so being
+    under an attitude costs nothing: two sayings over the sleeping, Anna's outermost, and the «you»
+    rotated to Marie."""
+    out = compile_utterance(compiler, [ANNA_SAID_TO_BOB, SAID, YOU_SLEEP],
+                            Context(speaker="kotekino", addressee="captain"))
+    attitudes = [r for r in out.zip.rows if r.kind == "attitude"]
+    (sleeping,) = [r for r in out.zip.rows if getattr(r, "predicate", None) == "sleep.v"]
+
+    assert [a.holder.head for a in attitudes] == ["anna.n", "john.n"]
+    assert {a.scopes for a in attitudes} == {sleeping.name}
+    assert sleeping.boxes[Role.AGENT].head == "marie.n" and out.unplaced == ()
+
+
+def test_a_saying_that_HELD_its_own_complement_frames_nothing_after_it(compiler):
+    """«Nobody said to Marie that he sleeps. It rains.» — the saying is withheld by its own sentence
+    (ruling 8: «he» under a quantified holder), and ANY withheld saying was read as a quote frame:
+    «It rains» went down with it as a quotation it never introduced. «John said loudly to Marie that
+    he sleeps. It rains.» — kept, with its complement withheld — did the same from the zip's side.
+    A saying whose complement is in its own sentence said what it said (`Compiled.complemented`)."""
+    nobody = skeleton_from_conllu("Nobody said to Marie that he sleeps", [
+        ("1", "Nobody", "nobody", "PRON", "2", "nsubj"),
+        ("2", "said", "say", "VERB", "0", "root"),
+        ("3", "to", "to", "ADP", "4", "case"),
+        ("4", "Marie", "marie", "PROPN", "2", "obl"),
+        ("5", "that", "that", "SCONJ", "7", "mark"),
+        ("6", "he", "he", "PRON", "7", "nsubj"),
+        ("7", "sleeps", "sleep", "VERB", "2", "ccomp"),
+    ])
+    loudly = skeleton_from_conllu("John said loudly to Marie that he sleeps", [
+        ("1", "John", "john", "PROPN", "2", "nsubj"),
+        ("2", "said", "say", "VERB", "0", "root"),
+        ("3", "loudly", "loudly", "ADV", "2", "advmod"),
+        ("4", "to", "to", "ADP", "5", "case"),
+        ("5", "Marie", "marie", "PROPN", "2", "obl"),
+        ("6", "that", "that", "SCONJ", "8", "mark"),
+        ("7", "he", "he", "PRON", "8", "nsubj"),
+        ("8", "sleeps", "sleep", "VERB", "2", "ccomp"),
+    ])
+    for first in (nobody, loudly):
+        out = compile_utterance(compiler, [first, IT_RAINS],
+                                Context(speaker="kotekino", addressee="captain"))
+        raining = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "rain.v")
+
+        assert raining.truth == 1.0, first.text
+        assert not [r for r in out.zip.rows if getattr(r, "scopes", None) == raining.name]
+        assert not any("quotation it frames" in why for why in out.abstained), first.text
+    assert "r0" in compiler.compile(loudly).complemented
+    assert "r0" not in compiler.compile(SAID).complemented, "a frame's content is still to come"

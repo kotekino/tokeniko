@@ -420,3 +420,50 @@ def test_the_0039_check_asks_the_question_the_LOOKUP_asks():
     reader = Decompiler(adverbs=AdverbKinds(module.ADVERB_KIND_ROWS, "db/0039 (test)"))
     assert reader.the_adverb(kind="focus", focus="exclusive") == "only"
     assert reader.the_adverb(kind="focus", focus="identifying") == "exactly"
+
+
+# ------------------------------------------------------------------------------------------------
+# `db/0041` — «whether» is the voice of an open truth (`E3.3.11.2.13`, the Captain's
+# `E3.3.11.2.16` (5))
+# ------------------------------------------------------------------------------------------------
+
+
+def test_0041_moves_ONE_flag_and_no_form():
+    """«whether» and «if» both carry `opens: truth` in the interrogative role, so the decompiler,
+    rightly, said neither — and fell back to «that»: «I know whether he sleeps» came back a factive
+    claim. One row gains its voice; nothing else moves, and D's exclusion set with it."""
+    module, before = migration(41), migration(39)
+    was = [r for r in before.CLOSED_CLASS_ROWS if r["version"] == 21]
+
+    assert set(module.CLOSED_CLASS_FORMS) == set(before.CLOSED_CLASS_FORMS)
+    assert len(module.CLOSED_CLASS_ROWS) == len(was)
+    moved = [(row["role"], row["form"]) for row, old in zip(module.CLOSED_CLASS_ROWS, was)
+             if bool(row.get("spoken")) != bool(old.get("spoken"))]
+    assert moved == [("interrogative", "whether")]
+    assert all(row["compiled"] == old["compiled"] for row, old in zip(module.CLOSED_CLASS_ROWS, was))
+
+
+def test_the_0041_check_REFUSES_a_second_voice_for_the_open_truth(monkeypatch):
+    module = migration(41)
+    rows = [dict(r, spoken=True) if (r["role"], r["form"]) == ("interrogative", "if") else r
+            for r in module.CLOSED_CLASS_ROWS]
+    monkeypatch.setattr(module, "CLOSED_CLASS_ROWS", rows)
+
+    with pytest.raises(ValueError):
+        module._check()                                                     # noqa: SLF001
+
+
+def test_the_0041_check_asks_the_question_the_LOOKUP_asks():
+    """The decompiler asks for the open truth's voice by its meaning — keyed as the migration keys
+    it — and «whether» answers."""
+    from tk2.language.closed import ClosedClasses
+    from tk2.language.decompile import Decompiler
+
+    module = migration(41)
+    for row in module.CLOSED_CLASS_ROWS:
+        features = row.get("features") or {}
+        assert module._meaning(row) == Decompiler._key(                    # noqa: SLF001
+            row["role"], row.get("compiled") or {}, features.get("sort"),
+            features.get("takes_number")), row["form"]
+    reader = Decompiler(ClosedClasses(module.CLOSED_CLASS_ROWS, "db/0041 (test)"))
+    assert reader.the_form("interrogative", kind="open", binds=None, opens="truth") == "whether"

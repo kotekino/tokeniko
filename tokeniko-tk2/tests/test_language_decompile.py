@@ -566,9 +566,13 @@ def test_a_DOMAIN_is_fronted_and_an_unmarked_one_is_recorded_instead(decompiler)
 def test_the_IMPERATIVE_is_recognised_as_the_shape_the_compiler_built(spoken):
     """«Close the door!» — the speaker WANTS it of the addressee and nothing is claimed (task 2d).
     Read backwards it is the same rule: without it the sentence comes back as «I want you to close
-    the door», which is a different zip."""
+    the door», which is a different zip.
+
+    *Amended 2026-09-27 (`E3.3.11.2.24`)*: the want carries its strength, as every imperative's
+    want the station builds does — the invariant the decompiler now relies on. The same want with
+    none is one the speaker STATES (`test_a_want_with_NO_strength_is_never_the_speech_act`)."""
     out = spoken.decompile(Zip(rows=[
-        AttitudeRow(name="w", scopes="c", holder=Box(head="me.n"), verb="want.v"),
+        AttitudeRow(name="w", scopes="c", holder=Box(head="me.n"), verb="want.v", strength=0.9),
         ContentRow(name="c", predicate="close.v", truth=None, boxes={
             Role.AGENT: Box(head="you.n"),
             Role.PATIENT: Box(head="door.n", determination=Determination.DEFINITE)}),
@@ -1045,9 +1049,12 @@ def test_a_purpose_whose_SLEEPER_is_not_the_one_its_act_controls_is_REFUSED(spok
 def test_an_IMPERATIVE_is_never_the_clause_a_subordinator_marks(spoken):
     """«Go to sleep!» compiles to a want over the act and a claimed purpose over two unclaimed rows —
     which reads, by the halves' truth, as «if». Said that way it came out «If go, you sleep»; an
-    imperative is a clause of its own and no subordinator marks one, so the join is refused."""
+    imperative is a clause of its own and no subordinator marks one, so the join is refused.
+
+    *Amended 2026-09-27 (`E3.3.11.2.24`)*: the want carries the imperative's strength, as the
+    station always writes it."""
     zip_ = Zip(rows=[
-        AttitudeRow(name="p0", scopes="r0", holder=Box(head="me.n"), verb="want.v"),
+        AttitudeRow(name="p0", scopes="r0", holder=Box(head="me.n"), verb="want.v", strength=0.9),
         row("r0", "go.v", truth=None, agent="you.n"),
         row("r1", "sleep.v", truth=None, agent="you.n"),
         JoinRow(name="j0", operator=Operator.IMPLY, operands=["r0", "r1"], truth=1.0)])
@@ -1367,3 +1374,310 @@ def test_only_and_the_conditionals_come_back_as_the_zip_they_went_out_as(text):
 
     assert not first.unplaced, first.unplaced
     assert canonical(second) == canonical(first), out.text
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.1` · `E3.3.11.2` — a stack is said level by level, each on its own verb (2026-09-26)
+# ------------------------------------------------------------------------------------------------
+
+def _he(truth=1.0, name="r"):
+    return ContentRow(name=name, predicate="sleep.v", truth=truth, boxes={
+        Role.AGENT: Box(head=Open(person=3, number="sg", gender="m"))})
+
+
+def _thinks(name, holder="me.n", verb="think.v", scopes="r", **kw):
+    return AttitudeRow(name=name, scopes=scopes, holder=Box(head=holder), verb=verb, **kw)
+
+
+@pytest.mark.parametrize("stack, said", [
+    (["att", "neg"], "I think that he does not sleep."),
+    (["neg", "att"], "I do not think that he sleeps."),
+    (["neg", "att", "neg"], "I do not think that he does not sleep."),
+])
+def test_a_negation_is_said_on_the_level_it_stands_on(spoken, stack, said):
+    """`E3.3.11.1` and `E3.3.11.2`, read back: the «not» after the attitude is the clause's, the
+    «not» before it the attitude's own."""
+    rows = [NegationRow(name=f"n{at}", scopes="r") if kind == "neg" else _thinks("a")
+            for at, kind in enumerate(stack)]
+    assert spoken.decompile(Zip(rows=[*rows, _he()])).text == said
+
+
+def test_nested_attitudes_carry_their_own_negation(spoken):
+    out = spoken.decompile(Zip(rows=[
+        _thinks("a1", "anna.n"), NegationRow(name="n", scopes="r"),
+        _thinks("a2", "bob.n", "believe.v"), _he()]))
+    assert out.text == "Anna thinks that bob does not believe that he sleeps."
+
+
+@pytest.mark.parametrize("stack, said", [
+    (["can", "att"], "I can think that he sleeps."),
+    (["neg", "can", "att"], "I cannot think that he sleeps."),
+    (["att", "can"], "I think that he can sleep."),
+])
+def test_a_modality_BEFORE_an_attitude_is_said_on_its_verb(spoken, stack, said):
+    """[◇ · ATT] was said «I think that he can sleep» — the mouth moved the scope, and the
+    recompile came back the other reading. One helper says every level's operators, so the
+    attitude's verb takes its modal exactly as a clause does — the fused «cannot» included."""
+    make = {"neg": lambda at: NegationRow(name=f"n{at}", scopes="r"),
+            "can": lambda at: ModalityRow(name=f"m{at}", scopes="r", modality=Modality.POSSIBILITY),
+            "att": lambda at: _thinks(f"a{at}")}
+    rows = [make[kind](at) for at, kind in enumerate(stack)]
+    assert spoken.decompile(Zip(rows=[*rows, _he()])).text == said
+
+
+def _touch():
+    return ContentRow(name="r", predicate="touch.v", truth=None, boxes={
+        Role.AGENT: Box(head="you.n"),
+        Role.PATIENT: Box(head=Open(person=3, number="sg", gender="n"))})
+
+
+def test_a_NEGATED_imperative_says_its_not(spoken):
+    """`E3.3.11.2.7` — the want is the speech act, OUTERMOST, and the level right after it is the
+    imperative's own: [WANT · ¬] is «Do not touch it!», never «Touch it!»."""
+    out = spoken.decompile(Zip(rows=[_thinks("w", verb="want.v", strength=0.9),
+                                     NegationRow(name="n", scopes="r"), _touch()]))
+    assert out.text == "Do not touch it!"
+
+
+def test_a_negation_OVER_the_want_is_never_an_imperative(spoken):
+    out = spoken.decompile(Zip(rows=[NegationRow(name="n", scopes="r"),
+                                     _thinks("w", verb="want.v"), _touch()]))
+    assert "!" not in out.text and not out.text.startswith("Touch")
+
+
+def test_an_imperative_over_an_attitude_is_said_on_the_attitude_s_verb(spoken):
+    """`aw-20` as the station builds it now: WANT(me) · ATT(you, suppose) over the cat — the
+    imperative is the supposing, and what is supposed comes after it."""
+    hungry = ContentRow(name="r", truth=1.0, boxes={
+        Role.EXPERIENCER: Box(head="cat.n", determination=Determination.DEFINITE),
+        Role.COMPLEMENT: Box(head="hungry.a")})
+    supposed = spoken.decompile(Zip(rows=[_thinks("w", verb="want.v", strength=0.9),
+                                          _thinks("s", "you.n", "suppose.v"), hungry]))
+    # *Amended 2026-09-26, the verification round*: the want carries the imperative's strength, as
+    # the station builds it — without one it is a wanting the speaker STATES (below).
+    thought = spoken.decompile(Zip(rows=[_thinks("w", verb="want.v", strength=0.9),
+                                         NegationRow(name="n", scopes="r"),
+                                         _thinks("t", "you.n"), _he()]))
+
+    assert supposed.text == "Suppose that the cat is hungry!"
+    assert thought.text == "Do not think that he sleeps!"
+
+
+def test_a_want_the_speaker_STATES_over_an_attitude_is_never_a_command(spoken):
+    """«I want that you suppose that the cat is hungry» — the lexical want is the speaker's too, and
+    it came back «Suppose that the cat is hungry!»: a statement said as a command. Over an attitude
+    the imperative's own unasserted row has dissolved into it, and the mark of the speech act the
+    zip keeps is its strength (`db/0020`); a want with none is said as the statement it is."""
+    hungry = ContentRow(name="r", truth=1.0, boxes={
+        Role.EXPERIENCER: Box(head="cat.n", determination=Determination.DEFINITE),
+        Role.COMPLEMENT: Box(head="hungry.a")})
+    stated = spoken.decompile(Zip(rows=[_thinks("w", verb="want.v"),
+                                        _thinks("s", "you.n", "suppose.v"), hungry]))
+    negated = spoken.decompile(Zip(rows=[_thinks("w", verb="want.v"),
+                                         NegationRow(name="n", scopes="r"),
+                                         _thinks("t", "you.n"), _he()]))
+
+    assert stated.text == "I want that you suppose that the cat is hungry."
+    assert "!" not in negated.text and negated.text.startswith("I want")
+
+
+def test_a_want_with_NO_strength_is_never_the_speech_act(spoken):
+    """`E3.3.11.2.24`, the Captain 2026-09-27: every imperative's want carries a strength, and the
+    station asserts it — so a speaker-held want with none is a want the speaker STATES, wherever it
+    stands. Over a clause it used to be read by the unasserted row alone."""
+    out = spoken.decompile(Zip(rows=[
+        AttitudeRow(name="w", scopes="c", holder=Box(head="me.n"), verb="want.v"),
+        ContentRow(name="c", predicate="close.v", truth=None, boxes={
+            Role.AGENT: Box(head="you.n"),
+            Role.PATIENT: Box(head="door.n", determination=Determination.DEFINITE)}),
+    ]))
+
+    assert "!" not in out.text and out.text.startswith("I want")
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.2.21` — an OPEN truth with a prior is said as a TAG question (tkzip req 50)
+# ------------------------------------------------------------------------------------------------
+
+EXPECTS = Open(prior=0.8)
+PAST = Theatre(interval=[-1.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], epoch=1)
+
+
+def test_a_PRIOR_is_said_as_a_TAG_of_the_reversed_polarity(decompiler, spoken):
+    """The compiler's `_tags`, read backwards: the host declarative, then its carrier and its
+    subject as a pronoun, the polarity reversed. The carrier is the inverted clause's own first
+    word — the copula, do-support in the tense, the modal in its PLAIN form — and the pronoun is
+    the rows' for the subject's features."""
+    it = Box(head=Open(person=3, number="sg", gender="n"))
+    she = Box(head=Open(person=3, number="sg", gender="f"))
+    cold = decompiler.decompile(Zip(rows=[ContentRow(name="r", truth=EXPECTS, boxes={
+        Role.PATIENT: it, Role.COMPLEMENT: Box(head="cold.a")})]))
+    slept = decompiler.decompile(Zip(rows=[ContentRow(
+        name="r", predicate="sleep.v", truth=EXPECTS, theatre=PAST, boxes={Role.AGENT: she})]))
+    not_asleep = decompiler.decompile(Zip(rows=[NegationRow(name="n", scopes="r"),
+                                                _he(EXPECTS)]))
+    swim = spoken.decompile(Zip(rows=[
+        ModalityRow(name="m", scopes="r", modality=Modality.POSSIBILITY),
+        ContentRow(name="r", predicate="swim.v", truth=EXPECTS,
+                   boxes={Role.AGENT: Box(head="you.n")})]))
+
+    assert cold.text == "It is cold, is it not?"
+    assert slept.text == "She slept, did she not?"
+    assert not_asleep.text == "He does not sleep, does he?"
+    assert swim.text == "You can swim, can you not?"
+
+
+def test_a_tag_with_no_single_pronoun_is_asked_plainly_and_the_prior_is_RECORDED(decompiler):
+    """A singular noun's gender is in no zip, so «the cat» has no single pronoun — he, she, it — and
+    no tag: the clause is asked plainly, and the prior is unsaid rather than guessed. A plural has
+    one, «they». And a prior of one half or less expects nothing a tag says."""
+    def cat(number=None, prior=0.8):
+        return Zip(rows=[ContentRow(name="r", predicate="sleep.v", truth=Open(prior=prior), boxes={
+            Role.AGENT: Box(head="cat.n", determination=Determination.DEFINITE, number=number)})])
+    one, many, unsure = (decompiler.decompile(cat()), decompiler.decompile(cat("pl")),
+                         decompiler.decompile(cat(prior=0.4)))
+
+    assert one.text == "Does the cat sleep?"
+    assert any("no single pronoun" in why for why in one.unsaid)
+    assert many.text == "The cats sleep, do they not?"
+    assert unsure.text == "Does the cat sleep?" and any("0.4" in why for why in unsure.unsaid)
+
+
+def test_a_CONDITIONAL_asked_with_a_prior_takes_its_tag_on_the_main_clause(decompiler):
+    """«If it rains, she stays, doesn't she?» — the compiler asks the conditional, and the tag is its
+    main clause's. Without a tag to say, the join is REFUSED: said as it stands it is a claim."""
+    rains = ContentRow(name="a", predicate="rain.v", truth=None, boxes={
+        Role.AGENT: Box(head=Open(person=3, number="sg", gender="n"))})
+    stays = ContentRow(name="b", predicate="stay.v", truth=None, boxes={
+        Role.AGENT: Box(head=Open(person=3, number="sg", gender="f"))})
+    asked = decompiler.decompile(Zip(rows=[rains, stays, JoinRow(
+        name="j", operator=Operator.IMPLY, operands=["a", "b"], truth=EXPECTS)]))
+    unsayable = decompiler.decompile(Zip(rows=[rains, stays.model_copy(update={"boxes": {
+        Role.AGENT: Box(head="cat.n", determination=Determination.DEFINITE)}}), JoinRow(
+        name="j", operator=Operator.IMPLY, operands=["a", "b"], truth=EXPECTS)]))
+
+    assert asked.text == "If it rains, she stays, does she not?"
+    assert unsayable.text == "" and any("prior" in why for why in unsayable.refused)
+
+
+@pytest.mark.skeleton
+def test_a_TAG_question_round_trips():
+    """The tag this module says is one the compiler reads back as the same zip — the fixpoint, on
+    the real parser, for each carrier the station builds."""
+    from tk2.language import StanzaSkeletons, standing_closed_classes
+    from tk2.language.compile import Compiler
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+    from tools.roundtrip import canonical
+
+    provider, station = StanzaSkeletons(), Compiler(standing_closed_classes())
+    mouth = Decompiler(standing_closed_classes(), context=DRILL_CONTEXT)
+    for sentence in ("She slept, didn't she?", "He is tired, isn't he?",
+                     "You can swim, can't you?", "He will come, won't he?",
+                     "If it rains, she stays, doesn't she?"):
+        first = compile_utterance(station, provider(sentence), DRILL_CONTEXT).zip
+        said = mouth.decompile(first).text
+        again = compile_utterance(station, provider(said), DRILL_CONTEXT).zip
+        assert canonical(again) == canonical(first), (sentence, said)
+
+
+def _why(effect="r", truth=1.0):
+    return [ContentRow(name=f"{effect}_why", predicate=Open(), truth=None),
+            JoinRow(name="j", operator=Operator.IMPLY, operands=[f"{effect}_why", effect],
+                    truth=truth)]
+
+
+def test_WHY_is_asked_of_the_OUTERMOST_verb(spoken):
+    """«Why do you sleep?» compiles to an OPEN row implying the claimed one (req 37: no cause box),
+    and came back «You sleep.» — the question dropped, recorded only as unsaid. The word the rows
+    give for an open antecedent is fronted on the outermost verb: on the thinking in «Why does he
+    think that she sleeps?», where fronted on the sleeping it would ask another question."""
+    sleep = ContentRow(name="r", predicate="sleep.v", truth=1.0,
+                       boxes={Role.AGENT: Box(head="you.n")})
+    plain = spoken.decompile(Zip(rows=[sleep, *_why()]))
+    thinks = spoken.decompile(Zip(rows=[_thinks("a", Open(person=3, number="sg", gender="m")),
+                                        _he(), *_why()]))
+
+    assert plain.text == "Why do you sleep?" and not plain.unsaid
+    assert thinks.text == "Why does he think that he sleeps?"
+
+
+def test_an_embedded_WHY_neither_inverts_nor_asks_aloud(spoken):
+    sleep = ContentRow(name="r", predicate="sleep.v", truth=1.0,
+                       boxes={Role.AGENT: Box(head="you.n")})
+    out = spoken.decompile(Zip(rows=[_thinks("k", verb="know.v", scopes="j"), sleep, *_why()]))
+    assert out.text == "I know why you sleep."
+
+
+def test_a_QUESTIONED_holder_is_said_by_its_question_word(spoken):
+    """«Who thinks that the cat sleeps?» — the holder is the slot the question opens (only an
+    interrogative carries a `sort`), said in the subject's gap with nothing inverted; embedded, the
+    question is the complement's and asks nothing aloud."""
+    cat = ContentRow(name="r", predicate="sleep.v", truth=1.0, boxes={
+        Role.AGENT: Box(head="cat.n", determination=Determination.DEFINITE)})
+    who = _thinks("a", Open(sort="person"))
+    asked = spoken.decompile(Zip(rows=[who, cat]))
+    embedded = spoken.decompile(Zip(rows=[_thinks("w", verb="wonder.v"), who, cat]))
+
+    assert asked.text == "Who thinks that the cat sleeps?"
+    assert embedded.text == "I wonder who thinks that the cat sleeps."
+
+
+def test_linking_never_hides_a_double_claim(spoken):
+    """«¬ think(me)» beside «ATT(me, think) · sleep» claims both «I do not think» and «I think he
+    sleeps». Linked on the verb alone it was said as the one clause «I do not think that he
+    sleeps», and the fixpoint could not see the double claim. Said apart, it can."""
+    out = spoken.decompile(Zip(rows=[
+        NegationRow(name="n", scopes="m"),
+        ContentRow(name="m", predicate="think.v", truth=1.0,
+                   boxes={Role.EXPERIENCER: Box(head="me.n")}),
+        _thinks("a"), _he()]))
+    assert out.text == "I do not think. I think that he sleeps."
+
+
+def test_an_ASKED_complement_is_said_with_WHETHER(spoken):
+    """`E3.3.11.2.13` — an open truth is its holder's question, and «that» turned it into a claim:
+    «I know whether he sleeps» came back «I know that he sleeps». The voice is `db/0041`'s."""
+    assert spoken.decompile(Zip(rows=[_thinks("a", verb="know.v"), _he(Open())])).text == \
+        "I know whether he sleeps."
+    assert spoken.decompile(Zip(rows=[NegationRow(name="n", scopes="r"),
+                                      _thinks("a", verb="wonder.v"), _he(Open())])).text == \
+        "I do not wonder whether he sleeps."
+
+
+def test_an_ASKED_complement_with_no_voice_is_REFUSED_never_said_with_that():
+    """Where no row voices the open truth — the table before `db/0041` — nothing is said: «that»
+    would claim what the holder only asks."""
+    from tk2.language.closed import ClosedClasses
+    from tk2.migrations import discover
+
+    v21 = next(m for m in discover() if m.number == 39).load().CLOSED_CLASS_ROWS
+    reader = Decompiler(ClosedClasses(v21, "db/0039 (test)"),
+                        context=Context(speaker="me.n", addressee="you.n"))
+    out = reader.decompile(Zip(rows=[_thinks("a", verb="know.v"), _he(Open())]))
+
+    assert "that" not in out.text
+    assert any("«that» would claim it" in why for why in out.refused)
+
+
+def test_a_half_HELD_by_an_attitude_is_claimed_by_it_and_the_want_is_not(spoken):
+    """«I leave because Anna wonders whether he sleeps» — the complement took the wondering's place
+    in the «because», and its open truth is ANNA's question: the half is claimed by the attitude.
+    Narrowly — never through the speech act's own want: «Come here or I leave!» stays a want and a
+    claim, said as it came."""
+    leave = ContentRow(name="l", predicate="leave.v", truth=1.0,
+                       boxes={Role.AGENT: Box(head="me.n")})
+    because = spoken.decompile(Zip(rows=[
+        _thinks("a", "anna.n", "wonder.v"), _he(Open()), leave,
+        JoinRow(name="j", operator=Operator.IMPLY, operands=["r", "l"], truth=1.0)]))
+    come = ContentRow(name="c", predicate="come.v", truth=None, boxes={
+        Role.AGENT: Box(head="you.n"),
+        Role.LOCATION: Box(head=Open(deixis="place", distance="proximal"))})
+    # *Amended 2026-09-27 (`E3.3.11.2.24`)*: the imperative's want carries its strength.
+    unless = spoken.decompile(Zip(rows=[
+        _thinks("w", "me.n", "want.v", scopes="c", strength=0.9), come,
+        leave.model_copy(update={"truth": None}),
+        JoinRow(name="j", operator=Operator.OR, operands=["c", "l"], truth=1.0)]))
+
+    assert because.text == "Because anna wonders whether he sleeps, I leave."
+    assert unless.text == "Come here or I leave."

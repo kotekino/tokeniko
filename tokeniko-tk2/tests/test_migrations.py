@@ -875,3 +875,18 @@ def test_the_standing_policy_declares_how_the_two_geometries_are_read_together(c
 
     assert config.relations.derivational_resolution == DERIVATIONAL_PRIMARY_SENSE
     assert dict(config.relations.weights)["derivational"] == 0.45
+
+
+@live
+def test_0042_reads_back_as_the_priors_it_declares(created):
+    """The chain read-back for tkzip req 50's prior (`db/0042`, the Captain 2026-09-27): rows out of
+    mongo, through the reader the compiler asks, and the one shape the ruling witnesses answers
+    with the number the migration declares — the same value the offline reader gives."""
+    from tk2.language.prior import CONSTANT_TAG, REVERSED_TAG, OpenPriors, standing_open_priors
+
+    stored = list(created["language_open_priors"].find({}, {"_id": 0}))
+    live_rows = OpenPriors.from_rows(stored, "the test database")
+
+    assert [r["shape"] for r in stored] == [REVERSED_TAG]
+    assert live_rows.of(REVERSED_TAG) == standing_open_priors().of(REVERSED_TAG) > 0.5
+    assert live_rows.of(CONSTANT_TAG) is None

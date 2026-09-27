@@ -69,7 +69,10 @@ The root rule says reconcile before proposing. Concretely, here, that is four ch
 
 1. **`roadmap.md`** — tick what is done, and rewrite any line whose TEXT no longer describes reality.
    **One line per item**: the reasoning belongs in the chapter note, and a roadmap that grows prose
-   is a roadmap he can no longer read at a glance.
+   is a roadmap he can no longer read at a glance. **The open list is EXECUTION ORDER, and it is
+   reconciled before any next step is proposed** *(the Captain, 2026-09-26)* — the step proposed
+   must be the first open line. A new finding is placed where it belongs in that order, never simply
+   prepended; done items move up with the done ones.
 2. **`plan.md`** — does the epic's task list still match what the epic turned out to be? New tasks
    found by the work go in, with their measurement. **Every item has its nested id** (root
    `CLAUDE.md`): a new one takes the next free child of its SOURCE — `E3.3.2.10.1` was found while

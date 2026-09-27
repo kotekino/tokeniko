@@ -50,7 +50,13 @@ def test_the_gate_answers_what_it_can_and_the_number_is_held(scored):
 
     # Re-based 2026-09-26, 33 → 32, E3.12.5 — the Captain re-based the exit's ratchets: the two
     # «muffin man» sentences claimed a content never said, and now abstain.
-    assert answered >= 32, f"the gate answered {answered} of {len(CASES)}; 32 on 2026-09-26"
+    # Re-based 2026-09-26 (night), 32 → 30, E3.3.11.2.16 (2) — built by the 1st Officier on the
+    # ruling, CONFIRMED by the Captain 2026-09-27 («all your ruling, go», the build's re-base of
+    # E3.3.11.2.16 taken whole): «if you know who did it, tell me» supposes the knowing, which
+    # has no attitude row to go in, and is withheld whole; «That he lied surprised me» made ME the
+    # holder of a surprising (the holder read off the patient box) and keeps «[it] surprised me».
+    # Both ANSWERED → ABSTAINED; WRONG stays 0.
+    assert answered >= 30, f"the gate answered {answered} of {len(CASES)}; 30 on 2026-09-26, night"
 
 
 def test_every_abstention_says_WHY(scored):

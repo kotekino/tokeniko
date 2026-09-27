@@ -192,12 +192,21 @@ def test_an_EMBEDDED_QUESTION_opens_its_slot(compiler):
     interrogative. It was then read as «therefore RELATIVE», which is the conflation: an embedded
     question opens its slot exactly as a root one does. **UD marks the difference**: a relative
     clause modifies a NOUN (`acl:relcl`); an embedded question is a clausal COMPLEMENT.
-    """
-    out = compiled(compiler, "if you know who did it , tell me")
-    did = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "do.v")
 
-    assert isinstance(did.boxes[Role.AGENT].head, Open), "`who` opens the agent slot"
+    *Amended 2026-09-26 (`E3.3.11.1` · `E3.3.11.2`, the Captain's `E3.3.11.2.16` (2))*: «if you
+    know who did it» SUPPOSES the knowing, and an attitude row has no truth slot to suppose it in —
+    so that sentence is withheld whole, and the property is pinned on `dere-4`'s claimed knowing.
+    """
+    out = compiler.compile(I_DO_NOT_KNOW_WHO)
+    ate = next(r for r in out.zip.rows if getattr(r, "predicate", None) == "eat.v")
+
+    assert isinstance(ate.boxes[Role.AGENT].head, Open), "`who` opens the agent slot"
     assert out.coverage == 1.0 and out.unplaced == ()
+    assert not [r for r in out.zip.rows if isinstance(getattr(r, "truth", None), Open)], (
+        "and the utterance is not a question")
+
+    supposed = compiled(compiler, "if you know who did it , tell me")
+    assert _claims(supposed) == [] and any("SUPPOSED" in why for why in supposed.abstained)
 
 
 def test_the_three_readings_of_a_wh_word_stay_apart(compiler):
@@ -206,7 +215,9 @@ def test_the_three_readings_of_a_wh_word_stay_apart(compiler):
     them the other way."""
     asking = compiled(compiler, "when do you sleep ?")
     describing = compiled(compiler, "the cat that sleeps")
-    embedded = compiled(compiler, "if you know who did it , tell me")
+    # Amended 2026-09-26 (E3.3.11.2.16 (2)): the supposed «if you know who did it» is withheld; the
+    # complement clause that asks is `dere-4`'s, under a claimed knowing.
+    embedded = compiler.compile(I_DO_NOT_KNOW_WHO)
 
     assert Role.TIME in main_row(asking).boxes, "the root clause ASKS: a box is opened"
     assert isinstance(main_row(asking).boxes[Role.TIME].head, Open)
@@ -214,8 +225,8 @@ def test_the_three_readings_of_a_wh_word_stay_apart(compiler):
     sleeps = next(r for r in describing.zip.rows if getattr(r, "predicate", None) == "sleep.v")
     assert isinstance(sleeps.boxes[Role.AGENT].head, Var), "the relative BINDS, it does not open"
 
-    did = next(r for r in embedded.zip.rows if getattr(r, "predicate", None) == "do.v")
-    assert isinstance(did.boxes[Role.AGENT].head, Open), "the embedded one asks"
+    ate = next(r for r in embedded.zip.rows if getattr(r, "predicate", None) == "eat.v")
+    assert isinstance(ate.boxes[Role.AGENT].head, Open), "the embedded one asks"
     assert all(c == 1.0 for c in (asking.coverage, describing.coverage, embedded.coverage))
 
 
@@ -292,24 +303,30 @@ def test_UNASSERTION_PROPAGATES_into_an_enclosed_clause(compiler):
     is what keeps it out of the world. What must still hold is the thing this test was written for —
     **nothing reaches the world** — so the row that carries the attitude is unasserted, and every
     content row outside one is too.
+
+    **AND SINCE 2026-09-26 NOTHING IS CLAIMED AT ALL** (`E3.3.11.2.16` (2)). The knowing is
+    SUPPOSED, and an attitude row has no truth slot to suppose it in: the attitude cannot take its
+    clause's place, so what it holds is withheld, the antecedent with it (a cut there widens the
+    claim), and the conditional goes. The property holds more strongly than before: nothing, not
+    even the conditional, reaches the world — and the zip says why.
     """
     out = compiled(compiler, "if you know who did it , tell me")
     content = [r for r in out.zip.rows if r.kind == "content"]
     under_attitude = {r.scopes for r in out.zip.rows if r.kind == "attitude"}
-    holders = {r.name for r in content if r.predicate in {"know.v"}}
 
     loose = [r for r in content if r.name not in under_attitude]
     assert all(r.truth is None for r in loose), f"claimed: {[r.name for r in loose if r.truth]}"
-    assert holders and all(out_row.truth is None for out_row in content
-                           if out_row.name in holders), (
-        "the KNOWING is supposed, so nothing under it reaches the world either")
-    assert [r.truth for r in out.zip.rows if r.kind == "join"] == [1.0], "the JOIN is claimed"
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "join"]
+    assert any("SUPPOSED" in why for why in out.abstained)
 
 
 def test_a_compiled_form_does_not_ALSO_abstain(compiler):
     """A report that cries wolf is worse than no report. `if` was in the abstention list of a
     sentence whose IMPLY it had built, because the per-clause walk met it before `_relate` ran."""
-    out = compiled(compiler, "if you know who did it , tell me")
+    # Amended 2026-09-26 (E3.3.11.2.16 (2)): «if you know who did it» is withheld now — its
+    # supposed knowing has no attitude row to go in — and says why. A conditional with no attitude
+    # in it carries the property.
+    out = compiler.compile(IF)
 
     assert out.abstained == (), f"spurious: {out.abstained}"
     assert any(r.kind == "join" and r.operator is Operator.IMPLY for r in out.zip.rows)
@@ -1223,6 +1240,8 @@ def test_existential_be_IS_content_and_keeps_its_predicate(compiler):
 
 def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
     """The 25 cases that existed before the corpus reached all 37 relations: **24 whole, 99.4%.**
+    *Today (2026-09-26, night) 23 whole, 93.1% — the `full` floor has no slack left; the mean's
+    re-base below is the Captain's (2026-09-27).*
 
     **The floor is stated in TWO HALVES on purpose.** On 2026-09-16 the corpus grew from 16 relations
     to 37, and the eighteen new cases are the hard ones by construction — everything easy had already
@@ -1238,11 +1257,17 @@ def test_the_RATCHET_half_of_the_corpus_never_gets_worse(compiler):
     assert full >= 23, f"{full} of {len(scored)} whole; 23 were on 2026-09-16"
     # Re-based 2026-09-26, 0.98 → 0.97, E3.12.5 — the Captain re-based the exit's ratchets: «he says
     # that you like to swim» claimed a false content and is now withheld but for «he says».
-    assert mean >= 0.97, f"mean {mean:.1%}; it was 97.1% on 2026-09-26 (98.9% on 2026-09-16)"
+    # Re-based 2026-09-26 (night), 0.97 → 0.93, E3.3.11.2.16 (2) — built by the 1st Officier on the
+    # ruling, CONFIRMED by the Captain 2026-09-27 («all your ruling, go», the build's re-base of
+    # E3.3.11.2.16 taken whole): «if you know who did it, tell me» SUPPOSES the knowing, an
+    # attitude row has no truth slot to suppose it in, and the sentence is withheld whole (it
+    # claimed a conditional whose antecedent was a knowing held outside any supposition).
+    assert mean >= 0.93, f"mean {mean:.1%}; it was 93.1% on 2026-09-26, night (98.9% on 2026-09-16)"
 
 
 def test_the_FRONTIER_half_is_where_the_work_is(compiler):
-    """The relations the corpus reached on 2026-09-16: **11 of 20 whole, 84.6% mean.**
+    """The relations the corpus reached on 2026-09-16: **11 of 20 whole, 84.6% mean.** *Today
+    (2026-09-26, night) 9 whole, 74.8% — re-based by the Captain, 2026-09-27.*
 
     Low, and honestly so. What is missing is NAMED rather than averaged away — `flat`/`list` (one
     name across several tokens — E3b), `xcomp` (deliberately not a clause, and what it IS instead is
@@ -1256,10 +1281,15 @@ def test_the_FRONTIER_half_is_where_the_work_is(compiler):
     assert len(scored) >= 20, "a relation may gain a case; the frontier grows and the ratchet does not"
     # Re-based 2026-09-26, 11 → 10 and 0.78 → 0.77, E3.12.5.9.7 (the Captain's re-base): «left
     # early in the morning» — «early» was counted placed with the time box taken; it is unplaced now.
-    assert full >= 10, f"{full} of {len(scored)} whole; 10 were on 2026-09-26 (11 on 2026-09-16)"
+    # Re-based 2026-09-26 (night), 10 → 9 and 0.77 → 0.74, E3.3.11.2.10 / E3.3.11.2.16 (2) — built
+    # by the 1st Officier on the ruling, CONFIRMED by the Captain 2026-09-27 («all your ruling, go»,
+    # the build's re-base of E3.3.11.2.16 taken whole): «That he lied surprised me» made ME
+    # the holder of a surprising — the holder was read off the patient box. A clausal subject is not
+    # a holder, the matrix keeps its place, and «[it] surprised me» stands with «that he lied» cut.
+    assert full >= 9, f"{full} of {len(scored)} whole; 9 were on 2026-09-26, night (11 on 09-16)"
     # Re-based 2026-09-26, 0.84 → 0.78, E3.12.5 — the Captain re-based the exit's ratchets: the two
     # «muffin man» sentences claimed a content never said and are withheld but for the saying.
-    assert mean >= 0.77, f"mean {mean:.1%}; it was 77.8% on 2026-09-26 (84.6% on 2026-09-16)"
+    assert mean >= 0.74, f"mean {mean:.1%}; it was 74.8% on 2026-09-26, night (84.6% on 2026-09-16)"
 
 
 # ------------------------------------------------------------------------------------------------
@@ -1571,12 +1601,19 @@ def test_the_QUESTION_MARK_decides_and_the_word_order_does_not(compiler):
 
 def test_a_question_belongs_to_the_STATEMENT_it_closes(compiler):
     """Stanza hangs the `?` on the ROOT, *know*. The question is the coordinate: the tiredness stays
-    claimed, the hunger is asked, and the AND binding them is not claimed either."""
+    claimed, the hunger is asked, and the AND binding them is not claimed either.
+
+    *Amended 2026-09-26 (`E3.3.11.2`)*: the knowing is the attitude over the tiredness, and it
+    takes its clause's place in the «but» — so the join names the tiredness, and no know.v row is
+    left beside the attitude to claim the knowing a second time."""
     out = compiler.compile(CLAIM_THEN_QUESTION)
-    assert _row(out, "r0").truth == 1.0
+    knowing = next(r for r in out.zip.rows if r.kind == "attitude")
+    assert (knowing.verb, knowing.scopes) == ("know.v", "r1")
+    assert not [r for r in out.zip.rows if getattr(r, "predicate", None) == "know.v"]
     assert _row(out, "r1").truth == 1.0, "«you are tired» is still asserted"
     assert isinstance(_row(out, "r2").truth, Open)
     between = next(j for j in out.zip.rows if j.kind == "join" and "r2" in j.operands)
+    assert between.operands == ["r1", "r2"], "the complement took the knowing's place in the join"
     assert isinstance(between.truth, Open), "«A, but B?» does not claim A-and-B"
 
 
@@ -1618,11 +1655,25 @@ def test_a_WH_question_keeps_its_truth(compiler):
     assert main_row(out).truth == 1.0
 
 
-def test_a_TAG_question_claims_and_then_asks(compiler):
-    """«The cat is hungry, isn't it?» — the claim stands and the tag asks for its confirmation."""
+def test_a_TAG_question_asks_its_host_with_a_PRIOR(compiler):
+    """«The cat is hungry, isn't it?» — tkzip req 50: the host OPEN with a high prior, and the tag no
+    row of its own.
+
+    *Amended 2026-09-27 (`E3.3.11.2.21`, the Captain: «a tag question is req 50's: the host OPEN
+    with a high prior»)* — this was `test_a_TAG_question_claims_and_then_asks`, pinning the 09-18
+    note's «a claim followed by a request to confirm it»: the hunger claimed at 1.0 beside an asked
+    copula with no complement — a claim and a question of one content. Superseded, and renamed so
+    the name says what is pinned. The copula tag is the one the elision never saw (`be` heading its
+    clause is no elided verb); the tag's SHAPE sees it.
+
+    And «it» says the cat is neuter, which no box of a noun holds: unplaced, and said so."""
     out = compiler.compile(TAG_QUESTION)
-    assert _row(out, "r0").truth == 1.0
-    assert isinstance(_row(out, "r1").truth, Open)
+    (host,) = [r for r in out.zip.rows if r.kind == "content"]
+
+    assert isinstance(host.truth, Open) and host.truth.prior == compiler.priors.of("reversed_tag")
+    assert [r.kind for r in out.zip.rows] == ["content"], "no tag row, no join, no ¬ of the tag's"
+    assert out.unplaced == ("it",)
+    assert any("«it»" in why and "gender" in why for why in out.abstained)
 
 
 WONDER_WHETHER = skeleton_from_conllu("I wonder whether the cat is hungry .", [
@@ -1731,15 +1782,17 @@ def test_the_IMPERATIVE_is_a_WANT_over_an_unstated_row(compiler):
 def test_how_strongly_an_imperative_wants_comes_from_THE_ROWS(compiler):
     """**Requirement 23, and the seam is the point.** The tree states no number; the Captain ruled
     the gradation «close the door» → «would you mind closing the door» KNOWLEDGE, so the compiler
-    asks the table. Handed a table with no row it says NOTHING rather than a number of its own —
-    half-understood is legal, wrongly-understood is not (req 8)."""
+    asks the table — and a table with no row for the bare imperative is refused, because every
+    imperative's want carries its strength (`E3.3.11.2.24`)."""
     from tk2.language.compile import Compiler
     from tk2.language.strength import AttitudeStrengths
 
-    empty = Compiler(compiler.table, strengths=AttitudeStrengths({}, "a table with no rows"))
-    silent = next(r for r in empty.compile(CLOSE_THE_DOOR, _speech()).zip.rows
-                  if r.kind == "attitude")
-    assert silent.strength is None
+    # *Amended 2026-09-27 (`E3.3.11.2.24`, the Captain: every imperative's want carries a strength,
+    # an invariant the station asserts)* — a table with no row for the bare imperative used to
+    # leave the slot EMPTY, and the want was then read back as one the speaker STATES. It is refused
+    # where the compiler is built now, never in the middle of a sentence.
+    with pytest.raises(ValueError, match="bare imperative"):
+        Compiler(compiler.table, strengths=AttitudeStrengths({}, "a table with no rows"))
 
     louder = Compiler(compiler.table,
                       strengths=AttitudeStrengths({"imperative": {"strength": 0.4}}, "a curation"))
@@ -3389,3 +3442,975 @@ def test_EVEN_on_a_noun_is_unplaced_and_the_claim_stays(compiler):
     assert out.unplaced == ("Even",) and main_row(out).truth == 1.0
     assert Role.MANNER not in main_row(out).boxes
     assert any("not settled" in why for why in out.abstained)
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.1` · `E3.3.11.2` — THE ATTITUDE TAKES ITS MATRIX CLAUSE'S PLACE (the Captain's
+# `E3.3.11.2.16`, 2026-09-26: [what stood over the matrix] · ATTITUDE · [what the complement raised])
+# ------------------------------------------------------------------------------------------------
+
+def _stack(out, name):
+    """The prefix over one row, outermost first, as (kind, what) — an attitude's verb, a modality's
+    value, a binder's force."""
+    def what(row):
+        return {"attitude": getattr(row, "verb", None),
+                "modality": getattr(getattr(row, "modality", None), "value", None),
+                "quantifier": getattr(getattr(row, "quantity", None), "value", None)}.get(row.kind)
+    return [(r.kind, what(r)) for r in out.zip.rows if getattr(r, "scopes", None) == name]
+
+
+def _content(out, predicate):
+    return next(r for r in out.zip.rows if getattr(r, "predicate", None) == predicate)
+
+
+def _none_of(out, *predicates):
+    return not [r for r in out.zip.rows if getattr(r, "predicate", None) in predicates]
+
+
+I_THINK_HE_DOES_NOT_SLEEP = _tree("I think that he does not sleep .", [
+    ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+    ("3", "that", "that", "SCONJ", "7", "mark"), ("4", "he", "he", "PRON", "7", "nsubj"),
+    ("5", "does", "do", "AUX", "7", "aux"), ("6", "not", "not", "PART", "7", "advmod"),
+    ("7", "sleep", "sleep", "VERB", "2", "ccomp"), ("8", ".", ".", "PUNCT", "2", "punct"),
+])
+I_DO_NOT_THINK_HE_SLEEPS = _tree("I do not think that he sleeps .", [
+    ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+    ("3", "not", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+    ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "he", "he", "PRON", "7", "nsubj"),
+    ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", ".", ".", "PUNCT", "4", "punct"),
+])
+I_DONT_THINK_HE_SLEEPS = _tree("I do n't think he sleeps .", [
+    ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+    ("3", "n't", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+    ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "4", "ccomp"),
+    ("7", ".", ".", "PUNCT", "4", "punct"),
+])
+ANNA_BOB_DOES_NOT_BELIEVE = _tree("Anna thinks that Bob does not believe that he sleeps .", [
+    ("1", "Anna", "Anna", "PROPN", "2", "nsubj"), ("2", "thinks", "think", "VERB", "0", "root"),
+    ("3", "that", "that", "SCONJ", "7", "mark"), ("4", "Bob", "Bob", "PROPN", "7", "nsubj"),
+    ("5", "does", "do", "AUX", "7", "aux"), ("6", "not", "not", "PART", "7", "advmod"),
+    ("7", "believe", "believe", "VERB", "2", "ccomp"), ("8", "that", "that", "SCONJ", "10", "mark"),
+    ("9", "he", "he", "PRON", "10", "nsubj"), ("10", "sleeps", "sleep", "VERB", "7", "ccomp"),
+    ("11", ".", ".", "PUNCT", "2", "punct"),
+])
+
+
+def test_an_embedded_negation_stays_INSIDE_its_attitude(compiler):
+    """`E3.3.11.1` — «I think that he does not sleep» compiled ¬ · ATT: «it is not so that I think
+    he sleeps», the reverse scope. The attitude was appended last and so landed innermost."""
+    out = compiler.compile(I_THINK_HE_DOES_NOT_SLEEP, _speech())
+    assert _stack(out, _content(out, "sleep.v").name) == [("attitude", "think.v"), ("negation", None)]
+    assert _none_of(out, "think.v")
+
+
+@pytest.mark.parametrize("skeleton", [I_DO_NOT_THINK_HE_SLEEPS, I_DONT_THINK_HE_SLEEPS])
+def test_a_matrix_negation_goes_OUTSIDE_and_no_matrix_row_is_left(compiler, skeleton):
+    """`E3.3.11.2` — «I do not think that he sleeps» claimed ¬think(me) AND «I think that he
+    sleeps». Literally ¬think(p), neg-raising not built (`E3.12.5` (6)): the «not» stands over the
+    attitude, on the complement, and the matrix row is gone — with a «that» or without one."""
+    out = compiler.compile(skeleton, _speech())
+    sleeping = _content(out, "sleep.v")
+
+    assert _stack(out, sleeping.name) == [("negation", None), ("attitude", "think.v")]
+    assert _none_of(out, "think.v")
+    assert all(getattr(r, "scopes", sleeping.name) == sleeping.name for r in out.zip.rows
+               if r.kind not in ("content", "join"))
+    assert out.unplaced == ()
+
+
+def test_both_negations_keep_their_sides(compiler):
+    out = compiler.compile(_tree("I do n't think that he does n't sleep .", [
+        ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "n't", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+        ("5", "that", "that", "SCONJ", "9", "mark"), ("6", "he", "he", "PRON", "9", "nsubj"),
+        ("7", "does", "do", "AUX", "9", "aux"), ("8", "n't", "not", "PART", "9", "advmod"),
+        ("9", "sleep", "sleep", "VERB", "4", "ccomp"), ("10", ".", ".", "PUNCT", "4", "punct"),
+    ]), _speech())
+    assert _stack(out, _content(out, "sleep.v").name) == [
+        ("negation", None), ("attitude", "think.v"), ("negation", None)]
+
+
+def test_nested_attitudes_stack_on_the_innermost_row_in_order(compiler):
+    """`E3.3.11.2.3` — «Anna thinks that Bob does not believe that he sleeps»: Bob's clause stayed
+    as a row because Anna's attitude scoped it, and so claimed that Bob does not believe. Seated,
+    both attitudes and Bob's «not» stand over the sleeping, in the words' own order."""
+    out = compiler.compile(ANNA_BOB_DOES_NOT_BELIEVE)
+    assert _stack(out, _content(out, "sleep.v").name) == [
+        ("attitude", "think.v"), ("negation", None), ("attitude", "believe.v")]
+    assert _none_of(out, "think.v", "believe.v")
+    assert [r.holder.head for r in out.zip.rows if r.kind == "attitude"] == ["anna.n", "bob.n"]
+
+
+def test_the_seating_is_ORDER_INDEPENDENT(compiler):
+    """`_seat` reads where each attitude came from, never the order the rows were raised in: the
+    same RAW rows handed over with the two attitudes swapped — a fronted quote nests the other way
+    round — seat to the same stack."""
+    from tk2.language.compile import _Seating
+    from tk2.tkzip.schema import AttitudeRow, Box, ContentRow, NegationRow
+
+    def raw(order):
+        rows = {"anna": ContentRow(name="r0", predicate="think.v", truth=1.0,
+                                   boxes={Role.EXPERIENCER: Box(head="anna.n")}),
+                "bob": ContentRow(name="r1", predicate="believe.v", truth=1.0,
+                                  boxes={Role.EXPERIENCER: Box(head="bob.n")}),
+                "sleep": ContentRow(name="r2", predicate="sleep.v", truth=1.0)}
+        prefix = {"neg": NegationRow(name="p0", scopes="r1"),
+                  "a0": AttitudeRow(name="p1", scopes="r1", holder=Box(head="anna.n"),
+                                    verb="think.v"),
+                  "a1": AttitudeRow(name="p2", scopes="r2", holder=Box(head="bob.n"),
+                                    verb="believe.v")}
+        seating = _Seating(matrix={"p1": "r0", "p2": "r1"},
+                           holder={"p1": Role.EXPERIENCER, "p2": Role.EXPERIENCER},
+                           inside={"p1": {"r1", "r2"}, "p2": {"r2"}})
+        content = {0: rows["anna"], 3: rows["bob"], 7: rows["sleep"]}
+        seated, _joins = compiler._seat(content, [prefix[k] for k in order], [], {"r0", "r1"},
+                                        seating)
+        return [(r.kind, getattr(r, "verb", None)) for r in seated if r.scopes == "r2"]
+
+    assert raw(["neg", "a0", "a1"]) == raw(["a1", "neg", "a0"]) == [
+        ("attitude", "think.v"), ("negation", None), ("attitude", "believe.v")]
+
+
+def test_a_matrix_binder_binds_the_holder_OUTSIDE_the_attitude(compiler):
+    """«Everyone thinks that I sleep» — the binder is the matrix's, and it binds the holder: ∀x ·
+    ATT(x, think) over the sleeping, no think row."""
+    out = compiler.compile(_tree("Everyone thinks that I sleep .", [
+        ("1", "Everyone", "everyone", "PRON", "2", "nsubj"), ("2", "thinks", "think", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "I", "I", "PRON", "5", "nsubj"),
+        ("5", "sleep", "sleep", "VERB", "2", "ccomp"), ("6", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    sleeping = _content(out, "sleep.v")
+    binder, attitude = [r for r in out.zip.rows if getattr(r, "scopes", None) == sleeping.name]
+
+    assert binder.kind == "quantifier" and binder.quantity is Quantity.UNIVERSAL
+    assert attitude.kind == "attitude" and attitude.holder.head == Var(name=binder.binds)
+    assert _none_of(out, "think.v")
+
+
+def test_a_pronoun_under_a_QUANTIFIED_holder_is_withheld(compiler):
+    """Ruling 8 (`E3.3.11.2.14`, on `E3.12.5` (5)'s precedent): «Nobody thinks that he sleeps» —
+    «he» is bound by the holder or free, and the tree does not say which. Withheld, not decided."""
+    out = compiler.compile(_tree("Nobody thinks that he sleeps .", [
+        ("1", "Nobody", "nobody", "PRON", "2", "nsubj"), ("2", "thinks", "think", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "sleeps", "sleep", "VERB", "2", "ccomp"), ("6", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert any("bound by it or not" in why for why in out.abstained)
+
+
+@pytest.mark.parametrize("modal, stack", [
+    ("cannot", [("negation", None), ("modality", "possibility"), ("attitude", "think.v")]),
+    ("can", [("modality", "possibility"), ("attitude", "think.v")]),
+])
+def test_a_matrix_modality_keeps_its_side(compiler, modal, stack):
+    """«I cannot think that he sleeps» compiled ¬◇ over the SLEEPING — «I think that he cannot
+    sleep» — and «I can think…» ◇ likewise. The matrix's modality stands over the attitude."""
+    out = compiler.compile(_tree(f"I {modal} think that he sleeps .", [
+        ("1", "I", "I", "PRON", "3", "nsubj"), ("2", modal, modal, "AUX", "3", "aux"),
+        ("3", "think", "think", "VERB", "0", "root"), ("4", "that", "that", "SCONJ", "6", "mark"),
+        ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "3", "ccomp"),
+        ("7", ".", ".", "PUNCT", "3", "punct"),
+    ]), _speech())
+    assert _stack(out, _content(out, "sleep.v").name) == stack
+
+
+def test_a_complement_modality_and_binder_stay_INSIDE(compiler):
+    """«I think that he can sleep» · «I think that some cat sleeps» — the complement's own prefix is
+    the holder's: ATT · ◇, and ATT · ∃ read literally de dicto (ruling 1, the drill's `dere-1`) —
+    no cat is asserted to exist."""
+    can = compiler.compile(_tree("I think that he can sleep .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "6", "mark"), ("4", "he", "he", "PRON", "6", "nsubj"),
+        ("5", "can", "can", "AUX", "6", "aux"), ("6", "sleep", "sleep", "VERB", "2", "ccomp"),
+        ("7", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    some = compiler.compile(_tree("I think that some cat sleeps .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "6", "mark"), ("4", "some", "some", "DET", "5", "det"),
+        ("5", "cat", "cat", "NOUN", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "2", "ccomp"),
+        ("7", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+
+    assert _stack(can, _content(can, "sleep.v").name) == [
+        ("attitude", "think.v"), ("modality", "possibility")]
+    assert _stack(some, _content(some, "sleep.v").name) == [
+        ("attitude", "think.v"), ("quantifier", "existential")]
+
+
+def test_the_attitude_sits_on_its_complement_s_PLACE_not_its_row(compiler):
+    """The skeptic's first amendment: «I don't think that an old man sleeps» is ∃x (old(x) ∧
+    sleep(x)) under the thinking — seated on the sleeping row, the matrix's «not» would land UNDER
+    the complement's ∃ and assert the man. So the stack stands on the conjunction the complement
+    is: ¬ · ATT · ∃."""
+    out = compiler.compile(_tree("I do n't think that an old man sleeps .", [
+        ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "n't", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+        ("5", "that", "that", "SCONJ", "9", "mark"), ("6", "an", "a", "DET", "8", "det"),
+        ("7", "old", "old", "ADJ", "8", "amod"), ("8", "man", "man", "NOUN", "9", "nsubj"),
+        ("9", "sleeps", "sleep", "VERB", "4", "ccomp"), ("10", ".", ".", "PUNCT", "4", "punct"),
+    ]), _speech())
+    (join,) = [r for r in out.zip.rows if r.kind == "join"]
+
+    assert _content(out, "sleep.v").name in join.operands
+    assert _stack(out, join.name) == [
+        ("negation", None), ("attitude", "think.v"), ("quantifier", "existential")]
+    assert _stack(out, _content(out, "sleep.v").name) == []
+
+
+def test_a_complement_joined_to_its_own_matrix_is_withheld_and_no_join_names_itself(compiler):
+    """«I think, therefore I am» — the connective joins the thinking to the being, and the being is
+    the thinking's complement: the place it would take contains its own matrix. Renamed, the join
+    named itself. The complement is withheld; the thinking stands, claimed."""
+    out = compiler.compile(_tree("I think , therefore I am .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+        ("3", ",", ",", "PUNCT", "6", "punct"), ("4", "therefore", "therefore", "ADV", "6", "advmod"),
+        ("5", "I", "I", "PRON", "6", "nsubj"), ("6", "am", "be", "AUX", "2", "ccomp"),
+        ("7", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    assert [r.predicate for r in _claims(out)] == ["think.v"]
+    assert not [r for r in out.zip.rows if r.kind in ("attitude", "join")]
+
+
+def test_the_imperative_want_is_OUTERMOST(compiler):
+    """`E3.3.11.2.7` — «Don't touch it!» was ¬WANT: «I do not want you to touch it». The want is
+    the speech act and goes before every row already over the clause. And «Suppose the cat is
+    hungry» composes two existing rules — the imperative's subject is the addressee, the attitude's
+    holder its verb's subject — into WANT(me) · ATT(you, suppose) over the cat (`aw-20`)."""
+    touch = compiler.compile(_with_mood(_tree("Do n't touch it !", [
+        ("1", "Do", "do", "AUX", "3", "aux"), ("2", "n't", "not", "PART", "3", "advmod"),
+        ("3", "touch", "touch", "VERB", "0", "root"), ("4", "it", "it", "PRON", "3", "obj"),
+        ("5", "!", "!", "PUNCT", "3", "punct"),
+    ]), 0), _speech())
+    suppose = compiler.compile(_with_mood(_tree("Suppose the cat is hungry .", [
+        ("1", "Suppose", "suppose", "VERB", "0", "root"), ("2", "the", "the", "DET", "3", "det"),
+        ("3", "cat", "cat", "NOUN", "5", "nsubj"), ("4", "is", "be", "AUX", "5", "cop"),
+        ("5", "hungry", "hungry", "ADJ", "1", "ccomp"), ("6", ".", ".", "PUNCT", "1", "punct"),
+    ]), 0), _speech())
+
+    assert _stack(touch, _content(touch, "touch.v").name) == [("attitude", "want.v"),
+                                                             ("negation", None)]
+    hungry = next(r for r in suppose.zip.rows if r.kind == "content")
+    want, supposing = [r for r in suppose.zip.rows if r.kind == "attitude"]
+    assert (want.verb, want.holder.head, want.scopes) == ("want.v", "me.n", hungry.name)
+    assert (supposing.verb, supposing.holder.head, supposing.scopes) == (
+        "suppose.v", "you.n", hungry.name)
+    assert _none_of(suppose, "suppose.v") and hungry.truth == 1.0
+
+
+def test_a_withheld_complement_brings_its_matrix_back_WITH_its_negation(compiler):
+    """Trap 1: «I do not think that he knew the muffin man» — the complement is withheld under the
+    attitude, the thinking comes back as its own clause with its «not» still over it (RAW), and a
+    cut under a negation widens the claim: never «I think» claimed."""
+    out = compiler.compile(_tree("I do not think that he knew the muffin man .", [
+        ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+        ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "he", "he", "PRON", "7", "nsubj"),
+        ("7", "knew", "know", "VERB", "4", "ccomp"), ("8", "the", "the", "DET", "10", "det"),
+        ("9", "muffin", "muffin", "NOUN", "10", "compound"), ("10", "man", "man", "NOUN", "7", "obj"),
+        ("11", ".", ".", "PUNCT", "4", "punct"),
+    ]), _speech())
+    assert _claims(out) == [] and _none_of(out, "think.v")
+    assert {"not", "think", "muffin"} <= set(out.unplaced)
+
+
+def test_an_operator_lost_from_a_dissolved_matrix_takes_the_attitude_with_it(compiler):
+    """Trap 2, live before this build: «I would think that he sleeps» claimed «I think that he
+    sleeps» — the matrix had dissolved, nothing named it, and its lost «would» was judged nowhere."""
+    out = compiler.compile(_tree("I would think that he sleeps .", [
+        ("1", "I", "I", "PRON", "3", "nsubj"), ("2", "would", "would", "AUX", "3", "aux"),
+        ("3", "think", "think", "VERB", "0", "root"), ("4", "that", "that", "SCONJ", "6", "mark"),
+        ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "3", "ccomp"),
+        ("7", ".", ".", "PUNCT", "3", "punct"),
+    ]), _speech())
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert "would" in out.unplaced
+
+
+def test_an_attitude_whose_matrix_is_WITHHELD_goes_with_it(compiler):
+    """«He may not think that she sleeps» came back «He thinks that she sleeps»: «may not» withheld
+    the thinking (`E3.12.5` (5)) and the attitude stayed. It stands or falls with its matrix."""
+    out = compiler.compile(_tree("He may not think that she sleeps .", [
+        ("1", "He", "he", "PRON", "4", "nsubj"), ("2", "may", "may", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+        ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "she", "she", "PRON", "7", "nsubj"),
+        ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+
+
+DO_YOU_THINK = _tree("Do you think that he sleeps ?", [
+    ("1", "Do", "do", "AUX", "3", "aux"), ("2", "you", "you", "PRON", "3", "nsubj"),
+    ("3", "think", "think", "VERB", "0", "root"), ("4", "that", "that", "SCONJ", "6", "mark"),
+    ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "3", "ccomp"),
+    ("7", "?", "?", "PUNCT", "3", "punct"),
+])
+
+
+def test_an_ASKED_attitude_is_never_stored_as_a_statement(compiler):
+    """`E3.3.11.2.6` — «Do you think that he sleeps?» claimed ATT(you, think) · sleep: a statement.
+    An attitude row has no truth slot to ask in, so what it holds is withheld (ruling 2) and the
+    narrower question stands — «Do you think?» (`E3.12.5.1`)."""
+    out = compiler.compile(DO_YOU_THINK, _speech())
+    thinking = _content(out, "think.v")
+
+    assert isinstance(thinking.truth, Open) and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert _none_of(out, "sleep.v") and {"that", "he", "sleeps"} <= set(out.unplaced)
+    assert any("ASKED" in why for why in out.abstained)
+
+
+def test_a_wh_word_FRONTED_out_of_its_complement_asks_through_the_attitude(compiler):
+    """The skeptic's amendment: «What do you think he ate?» asks WHAT, through the thinking — the
+    wh-word stands before the thinking's own head — so the thinking is not asked and takes its
+    place as before. «Do you know what he ate?» asks the knowing: the question is embedded."""
+    fronted = compiler.compile(_tree("What do you think he ate ?", [
+        ("1", "What", "what", "PRON", "6", "obj"), ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "you", "you", "PRON", "4", "nsubj"), ("4", "think", "think", "VERB", "0", "root"),
+        ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "ate", "eat", "VERB", "4", "ccomp"),
+        ("7", "?", "?", "PUNCT", "4", "punct"),
+    ]), _speech())
+    embedded = compiler.compile(_tree("Do you know what he ate ?", [
+        ("1", "Do", "do", "AUX", "3", "aux"), ("2", "you", "you", "PRON", "3", "nsubj"),
+        ("3", "know", "know", "VERB", "0", "root"), ("4", "what", "what", "PRON", "6", "obj"),
+        ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "ate", "eat", "VERB", "3", "ccomp"),
+        ("7", "?", "?", "PUNCT", "3", "punct"),
+    ]), _speech())
+
+    eating = _content(fronted, "eat.v")
+    assert _stack(fronted, eating.name) == [("attitude", "think.v")] and eating.truth == 1.0
+    assert isinstance(eating.boxes[Role.PATIENT].head, Open) and _none_of(fronted, "think.v")
+    assert isinstance(_content(embedded, "know.v").truth, Open)
+    assert _none_of(embedded, "eat.v")
+
+
+def test_a_question_mark_AFTER_a_quotation_asks_the_frame(compiler):
+    """`E3.3.11.2.12` — «Did John say to Marie: "You are late"?» stored that JOHN asked Marie
+    whether she is late. The `?` stands after the quotation's closing mark, so it closes the
+    saying — asked, and withheld as every asked attitude is. Inside the marks it is the quote's own
+    (`test_a_QUOTED_question_asks_while_the_saying_stays_claimed`)."""
+    out = compiler.compile(_tree('Did John say to Marie : " You are late " ?', [
+        ("1", "Did", "do", "AUX", "3", "aux"), ("2", "John", "John", "PROPN", "3", "nsubj"),
+        ("3", "say", "say", "VERB", "0", "root"), ("4", "to", "to", "ADP", "5", "case"),
+        ("5", "Marie", "Marie", "PROPN", "3", "obl"), ("6", ":", ":", "PUNCT", "3", "punct"),
+        ("7", '"', '"', "PUNCT", "10", "punct"), ("8", "You", "you", "PRON", "10", "nsubj"),
+        ("9", "are", "be", "AUX", "10", "cop"), ("10", "late", "late", "ADJ", "3", "ccomp"),
+        ("11", '"', '"', "PUNCT", "10", "punct"), ("12", "?", "?", "PUNCT", "3", "punct"),
+    ]), _speech())
+    assert isinstance(_content(out, "say.v").truth, Open)
+    assert not [r for r in out.zip.rows if r.kind == "attitude"] and "late" in out.unplaced
+
+
+def test_a_SUPPOSED_attitude_is_withheld(compiler):
+    """`E3.3.11.2.4` — «If Anna thinks that he sleeps, I leave» claimed that Anna thinks it. A
+    supposed thinking has no truth slot to go in: withheld, then the antecedent, the conditional and
+    what it left stranded (`E3.12.5.9.13`)."""
+    out = compiler.compile(_tree("If Anna thinks that he sleeps , I leave .", [
+        ("1", "If", "if", "SCONJ", "3", "mark"), ("2", "Anna", "Anna", "PROPN", "3", "nsubj"),
+        ("3", "thinks", "think", "VERB", "9", "advcl"), ("4", "that", "that", "SCONJ", "6", "mark"),
+        ("5", "he", "he", "PRON", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "3", "ccomp"),
+        ("7", ",", ",", "PUNCT", "3", "punct"), ("8", "I", "I", "PRON", "9", "nsubj"),
+        ("9", "leave", "leave", "VERB", "0", "root"), ("10", ".", ".", "PUNCT", "9", "punct"),
+    ]), _speech())
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind in ("attitude", "join")]
+
+
+SAID_QUIETLY = [("1", "I", "I", "PRON", "2", "nsubj"), ("2", "said", "say", "VERB", "0", "root"),
+                ("3", "quietly", "quietly", "ADV", "2", "advmod"),
+                ("4", "that", "that", "SCONJ", "7", "mark"), ("5", "he", "he", "PRON", "7", "nsubj"),
+                ("6", "did", "do", "AUX", "7", "aux"), ("7", "sleep", "sleep", "VERB", "2", "ccomp"),
+                ("8", ".", ".", "PUNCT", "2", "punct")]
+
+
+def test_a_matrix_with_a_BOX_of_its_own_withholds_what_its_attitude_holds(compiler):
+    """Ruling 2: an attitude row has no boxes, so «I said quietly that he slept» cannot put the
+    saying's manner anywhere — what was said is withheld and the saying stands, claimed (a cut from
+    a claimed clause weakens it). Under its own «not» the saying goes too."""
+    kept = compiler.compile(_tree("I said quietly that he did sleep .", SAID_QUIETLY), _speech())
+    negated = compiler.compile(_tree("I did not say quietly that he slept .", [
+        ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "did", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "say", "say", "VERB", "0", "root"),
+        ("5", "quietly", "quietly", "ADV", "4", "advmod"), ("6", "that", "that", "SCONJ", "8", "mark"),
+        ("7", "he", "he", "PRON", "8", "nsubj"), ("8", "slept", "sleep", "VERB", "4", "ccomp"),
+        ("9", ".", ".", "PUNCT", "4", "punct"),
+    ]), _speech())
+
+    (said,) = _claims(kept)
+    assert said.predicate == "say.v" and Role.MANNER in said.boxes
+    assert not [r for r in kept.zip.rows if r.kind == "attitude"] and "sleep" in kept.unplaced
+    assert any("manner box of its own" in why for why in kept.abstained)
+    assert _claims(negated) == []
+
+
+def test_the_complement_takes_the_matrix_s_place_in_a_join(compiler):
+    """«I leave because Anna thinks that he does not sleep» — the because-join named Anna's clause;
+    seated, it names the sleeping, with ATT(anna) · ¬ over it."""
+    out = compiler.compile(_tree("I leave because Anna thinks that he does not sleep .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "leave", "leave", "VERB", "0", "root"),
+        ("3", "because", "because", "SCONJ", "5", "mark"), ("4", "Anna", "Anna", "PROPN", "5", "nsubj"),
+        ("5", "thinks", "think", "VERB", "2", "advcl"), ("6", "that", "that", "SCONJ", "10", "mark"),
+        ("7", "he", "he", "PRON", "10", "nsubj"), ("8", "does", "do", "AUX", "10", "aux"),
+        ("9", "not", "not", "PART", "10", "advmod"), ("10", "sleep", "sleep", "VERB", "5", "ccomp"),
+        ("11", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    sleeping, leaving = _content(out, "sleep.v"), _content(out, "leave.v")
+    (join,) = [r for r in out.zip.rows if r.kind == "join"]
+
+    assert join.operator is Operator.IMPLY and join.operands == [sleeping.name, leaving.name]
+    assert join.truth == 1.0
+    assert _stack(out, sleeping.name) == [("attitude", "think.v"), ("negation", None)]
+    assert _none_of(out, "think.v")
+
+
+def test_a_relative_clause_holding_an_attitude_is_withheld(compiler):
+    """«Every man who thinks that he sleeps is happy» claimed ∀x happy(x) with the restriction gone
+    and a thinking held by a free x. A restriction is a row, and an attitude is not."""
+    out = compiler.compile(_tree("Every man who thinks that he sleeps is happy .", [
+        ("1", "Every", "every", "DET", "2", "det"), ("2", "man", "man", "NOUN", "9", "nsubj"),
+        ("3", "who", "who", "PRON", "4", "nsubj"), ("4", "thinks", "think", "VERB", "2", "acl:relcl"),
+        ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "he", "he", "PRON", "7", "nsubj"),
+        ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", "is", "be", "AUX", "9", "cop"),
+        ("9", "happy", "happy", "ADJ", "0", "root"), ("10", ".", ".", "PUNCT", "9", "punct"),
+    ]))
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert any("RESTRICTION" in why for why in out.abstained)
+
+
+def test_a_PASSIVE_subject_is_not_the_attitude_s_holder(compiler):
+    """`E3.3.11.2.10` — «He was not told that she sleeps» said HE did not tell: the holder was read
+    off the patient box. A passive subject holds nothing; the matrix keeps its place, what it holds
+    is withheld, and under its «not» the telling goes too."""
+    out = compiler.compile(_tree("He was not told that she sleeps .", [
+        ("1", "He", "he", "PRON", "4", "nsubj:pass"), ("2", "was", "be", "AUX", "4", "aux:pass"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "told", "tell", "VERB", "0", "root"),
+        ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "she", "she", "PRON", "7", "nsubj"),
+        ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert any("passive" in why for why in out.abstained)
+
+
+def test_a_SECOND_PARTICIPANT_keeps_the_matrix_and_is_never_lost(compiler):
+    """`E3.3.11.2.11` — «He did not persuade Anna that she sleeps»: Anna is a box no attitude row
+    has, and dissolving the persuading lost her in silence."""
+    out = compiler.compile(_tree("He did not persuade Anna that she sleeps .", [
+        ("1", "He", "he", "PRON", "4", "nsubj"), ("2", "did", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "persuade", "persuade", "VERB", "0", "root"),
+        ("5", "Anna", "Anna", "PROPN", "4", "obj"), ("6", "that", "that", "SCONJ", "8", "mark"),
+        ("7", "she", "she", "PRON", "8", "nsubj"), ("8", "sleeps", "sleep", "VERB", "4", "ccomp"),
+        ("9", ".", ".", "PUNCT", "4", "punct"),
+    ]))
+    assert _claims(out) == [] and "Anna" in out.unplaced
+
+
+def test_a_cut_LINK_takes_the_boxes_its_own_dependents_filled(compiler):
+    """«I tried to tell him that she sleeps» came back «I tried him»: «tell» opens no row, so «him»
+    had landed on the trying. With the link cut, its phrases go with it."""
+    out = compiler.compile(_tree("I tried to tell him that she sleeps .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "tried", "try", "VERB", "0", "root"),
+        ("3", "to", "to", "PART", "4", "mark"), ("4", "tell", "tell", "VERB", "2", "xcomp"),
+        ("5", "him", "he", "PRON", "4", "iobj"), ("6", "that", "that", "SCONJ", "8", "mark"),
+        ("7", "she", "she", "PRON", "8", "nsubj"), ("8", "sleeps", "sleep", "VERB", "4", "ccomp"),
+        ("9", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    (tried,) = _claims(out)
+    assert tried.predicate == "try.v" and set(tried.boxes) == {Role.AGENT}
+    assert {"tell", "him"} <= set(out.unplaced)
+
+
+def test_the_ELIDED_conjunct_and_the_post_verbal_NOT_are_withheld(compiler):
+    """Ruling 9 (`E3.3.11.2.15`): «…and she DOES not» is an auxiliary heading its clause — the verb it
+    carries is elided — and «I hope NOT» negates the elided complement, never the hoping. Neither
+    is decided; both are withheld, and the proforms wait for their rows."""
+    elided = compiler.compile(_tree("I think that he sleeps and she does not .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "sleeps", "sleep", "VERB", "2", "ccomp"), ("6", "and", "and", "CCONJ", "8", "cc"),
+        ("7", "she", "she", "PRON", "8", "nsubj"), ("8", "does", "do", "AUX", "5", "conj"),
+        ("9", "not", "not", "PART", "8", "advmod"), ("10", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    hope_not = compiler.compile(_tree("I hope not .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "hope", "hope", "VERB", "0", "root"),
+        ("3", "not", "not", "PART", "2", "advmod"), ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+
+    assert _none_of(elided, "do.v") and not [r for r in elided.zip.rows if r.kind == "attitude"]
+    assert any("elided" in why for why in elided.abstained)
+    assert _claims(hope_not) == [] and "not" in hope_not.unplaced
+
+
+def test_a_joining_word_after_its_verb_joins_nothing_and_is_not_placed(compiler):
+    """«I think SO» · «I don't think SO» — «so» is the elided complement, a proform its row does not
+    describe yet (ruling 9: later). Counted as a join no pass would build, it vanished: «I think»
+    claimed in silence, and under the «not» the reverse. Unplaced, the first keeps «I think» and says
+    so; the second is withheld."""
+    plain = compiler.compile(_tree("I think so .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+        ("3", "so", "so", "ADV", "2", "advmod"), ("4", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    negated = compiler.compile(_tree("I do n't think so .", [
+        ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "n't", "not", "PART", "4", "advmod"), ("4", "think", "think", "VERB", "0", "root"),
+        ("5", "so", "so", "ADV", "4", "advmod"), ("6", ".", ".", "PUNCT", "4", "punct"),
+    ]), _speech())
+    assert [r.predicate for r in _claims(plain)] == ["think.v"] and plain.unplaced == ("so",)
+    assert _claims(negated) == [] and "so" in negated.unplaced
+
+
+def test_a_complement_is_OPAQUE_WHOLE_and_a_cut_in_its_conjunct_withholds_it(compiler):
+    """«I think that he sleeps and he knew the muffin man» — the conjunct is inside the thinking
+    (seated, the attitude stands over their join), so «muffin» cut from it is cut under an
+    attitude: the conjunct goes, then the complement it was joined in, then the attitude; the
+    thinking stands on its own. Judged as a free clause, the conjunct would have claimed that he
+    knew «the man» OUTSIDE anybody's thinking."""
+    out = compiler.compile(_tree("I think that he sleeps and he knew the muffin man .", [
+        ("1", "I", "I", "PRON", "2", "nsubj"), ("2", "think", "think", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "sleeps", "sleep", "VERB", "2", "ccomp"), ("6", "and", "and", "CCONJ", "8", "cc"),
+        ("7", "he", "he", "PRON", "8", "nsubj"), ("8", "knew", "know", "VERB", "5", "conj"),
+        ("9", "the", "the", "DET", "11", "det"), ("10", "muffin", "muffin", "NOUN", "11", "compound"),
+        ("11", "man", "man", "NOUN", "8", "obj"), ("12", ".", ".", "PUNCT", "2", "punct"),
+    ]), _speech())
+    assert [r.predicate for r in _claims(out)] == ["think.v"]
+    assert not [r for r in out.zip.rows if r.kind in ("attitude", "join")]
+    assert {"sleeps", "knew", "muffin"} <= set(out.unplaced)
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.1` · `E3.3.11.2` — the verification round (2026-09-26): what the seating newly exposed
+# ------------------------------------------------------------------------------------------------
+
+THE_MAN_WHO_THINKS = _tree("The man who thinks that he sleeps is happy .", [
+    ("1", "The", "the", "DET", "2", "det"), ("2", "man", "man", "NOUN", "9", "nsubj"),
+    ("3", "who", "who", "PRON", "4", "nsubj"), ("4", "thinks", "think", "VERB", "2", "acl:relcl"),
+    ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "he", "he", "PRON", "7", "nsubj"),
+    ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", "is", "be", "AUX", "9", "cop"),
+    ("9", "happy", "happy", "ADJ", "0", "root"), ("10", ".", ".", "PUNCT", "9", "punct"),
+])
+A_WOMAN_WHO_SAYS = _tree("A woman who says that she sleeps is happy .", [
+    ("1", "A", "a", "DET", "2", "det"), ("2", "woman", "woman", "NOUN", "9", "nsubj"),
+    ("3", "who", "who", "PRON", "4", "nsubj"), ("4", "says", "say", "VERB", "2", "acl:relcl"),
+    ("5", "that", "that", "SCONJ", "7", "mark"), ("6", "she", "she", "PRON", "7", "nsubj"),
+    ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", "is", "be", "AUX", "9", "cop"),
+    ("9", "happy", "happy", "ADJ", "0", "root"), ("10", ".", ".", "PUNCT", "9", "punct"),
+])
+
+
+def test_a_DEFINITE_description_that_loses_its_restriction_s_content_is_withheld(compiler):
+    """«The man who thinks that he sleeps is happy» kept «the man who thinks is happy» once what
+    was thought had to go (an attitude row cannot restrict): a weaker description under a definite
+    may pick out another man, so what remained was not entailed (E3.12.5 (1)). Under an INDEFINITE
+    it is — «a woman who says is happy» is weaker and true — and is kept, honestly partial."""
+    definite = compiler.compile(THE_MAN_WHO_THINKS)
+    indefinite = compiler.compile(A_WOMAN_WHO_SAYS)
+
+    assert _claims(definite) == [] and not [r for r in definite.zip.rows if r.kind == "attitude"]
+    assert any("DEFINITE" in why for why in definite.abstained)
+    assert sorted(r.predicate or "(be)" for r in _claims(indefinite)) == ["(be)", "say.v"]
+    assert {"that", "she", "sleeps"} == set(indefinite.unplaced)
+
+
+def test_a_TAG_on_an_attitude_asks_the_attitude_and_its_complement_waits_for_the_format(compiler):
+    """«He says that he sleeps, doesn't he?» — the tag's verb is elided (ruling 9), and it was the
+    sentence's only question: the host stood as a plain claim, a question stored as a statement.
+
+    *Amended 2026-09-27 (`E3.3.11.2.21`)* — this was `test_a_TAG_takes_the_clause_it_asks_about_
+    with_it`, when req 50's prior was not built and the host went with its tag. Now the host is
+    asked with the prior, exactly as «Does he say that he sleeps?» asks it — and an ASKED attitude
+    has no truth slot in an attitude row (`E3.3.11.2.16` (2)), so what it holds is withheld and the
+    saying is asked alone. One rule for a `?` and a tag."""
+    out = compiler.compile(_tree("He says that he sleeps , does n't he ?", [
+        ("1", "He", "he", "PRON", "2", "nsubj"), ("2", "says", "say", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "sleeps", "sleep", "VERB", "2", "ccomp"), ("6", ",", ",", "PUNCT", "7", "punct"),
+        ("7", "does", "do", "AUX", "2", "parataxis"), ("8", "n't", "not", "PART", "7", "advmod"),
+        ("9", "he", "he", "PRON", "7", "nsubj"), ("10", "?", "?", "PUNCT", "2", "punct"),
+    ]), _speech())
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    saying = _content(out, "say.v")
+    assert isinstance(saying.truth, Open) and saying.truth.prior is not None
+    assert any("ASKED" in why for why in out.abstained)
+    assert {"that", "he", "sleeps"} == set(out.unplaced)
+
+
+def test_a_TAG_whose_auxiliary_the_parser_calls_a_VERB_is_read_as_a_tag(compiler):
+    """«She said that he left, didn't she?» with «did» tagged VERB, as stanza tags it — round 2 of
+    the verification. Then only the second cue of an elision saw the tag, and the host stood
+    CLAIMED, a question stored as a statement.
+
+    *Amended 2026-09-27 (`E3.3.11.2.21`)* — this was `…_takes_its_host_with_it`. A tag is found by
+    its SHAPE (`_is_tag`), and a form the table reads as a function word heads one whatever label
+    the parser gave it; so the host is asked with the prior, and the tag's words are placed."""
+    out = compiler.compile(_tree("She said that he left , did n't she ?", [
+        ("1", "She", "she", "PRON", "2", "nsubj"), ("2", "said", "say", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "left", "leave", "VERB", "2", "ccomp"), ("6", ",", ",", "PUNCT", "7", "punct"),
+        ("7", "did", "do", "VERB", "2", "parataxis"), ("8", "n't", "not", "PART", "7", "advmod"),
+        ("9", "she", "she", "PRON", "7", "nsubj"), ("10", "?", "?", "PUNCT", "2", "punct"),
+    ]), _speech())
+
+    assert _claims(out) == [] and not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert isinstance(_content(out, "say.v").truth, Open)
+    assert _content(out, "say.v").truth.prior is not None
+    assert {i for i, where in out.placement.items() if where == "tag"} == {6, 7, 8}
+
+
+@pytest.mark.skeleton
+def test_a_TAG_question_claims_nothing_whichever_tag_the_parser_gives_its_auxiliary():
+    """The tree is the point, so the real parser reads them: stanza tags the «did» of the first three
+    VERB and of the last AUX (measured 2026-09-27), and all four were one question each — none may
+    come out a claim. Round 2 found the first three stored as plain claims."""
+    from tk2.language import StanzaSkeletons
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+
+    provider, station = StanzaSkeletons(), Compiler(standing_closed_classes())
+    for sentence in ("She said that he left, didn't she?",
+                     "Anna knew that the cat slept, didn't she?",
+                     "She slept, didn't she?",
+                     "He slept, didn't he?"):
+        zip_ = compile_utterance(station, provider(sentence), DRILL_CONTEXT).zip
+        assert not [r for r in zip_.rows if getattr(r, "truth", None) == 1.0], sentence
+
+
+# ------------------------------------------------------------------------------------------------
+# `E3.3.11.2.21` — a tag question is req 50's: the host OPEN with a prior (the Captain, 2026-09-27)
+# ------------------------------------------------------------------------------------------------
+
+
+def _slept(tag_auxiliary, *tag, host_subject=("She", "she"), upos="AUX"):
+    """«She slept, <tag> ?» — the tag's words after its auxiliary, each (text, lemma, upos, dep)."""
+    text, lemma = host_subject
+    rows = [("1", text, lemma, "PRON", "2", "nsubj"), ("2", "slept", "sleep", "VERB", "0", "root"),
+            ("3", ",", ",", "PUNCT", "4", "punct"),
+            ("4", tag_auxiliary, "do", upos, "2", "parataxis")]
+    for at, (word, word_lemma, word_upos, dep) in enumerate(tag, start=5):
+        rows.append((str(at), word, word_lemma, word_upos, "4", dep))
+    rows.append((str(len(rows) + 1), "?", "?", "PUNCT", "2", "punct"))
+    return _tree(" ".join(r[1] for r in rows), rows)
+
+
+def test_a_TAG_on_a_lexical_verb_asks_its_host_whichever_label_its_auxiliary_has(compiler):
+    """«She slept, didn't she?» — the do-support tag, with «did» as stanza tags it (VERB) and as UD
+    would (AUX): one shape, one reading. The host is asked with the reversed tag's prior, and every
+    word of the tag is placed — «she» says nothing its host's «She» did not."""
+    for upos in ("VERB", "AUX"):
+        out = compiler.compile(_slept("did", ("n't", "not", "PART", "advmod"),
+                                      ("she", "she", "PRON", "nsubj"), upos=upos))
+        (host,) = [r for r in out.zip.rows]
+        assert host.predicate == "sleep.v" and host.truth.prior == compiler.priors.of("reversed_tag")
+        assert out.unplaced == () and out.abstained == (), upos
+
+
+def test_a_NEGATIVE_host_with_a_POSITIVE_tag_is_the_same_shape(compiler):
+    """«She did not sleep, did she?» — the polarity REVERSED the other way round: the ¬ stays over
+    the host, and the host is asked with the same prior. Polarity is read off the rows each clause
+    raised, never off a word."""
+    out = compiler.compile(_tree("She did not sleep , did she ?", [
+        ("1", "She", "she", "PRON", "4", "nsubj"), ("2", "did", "do", "AUX", "4", "aux"),
+        ("3", "not", "not", "PART", "4", "advmod"), ("4", "sleep", "sleep", "VERB", "0", "root"),
+        ("5", ",", ",", "PUNCT", "6", "punct"), ("6", "did", "do", "AUX", "4", "parataxis"),
+        ("7", "she", "she", "PRON", "6", "nsubj"), ("8", "?", "?", "PUNCT", "4", "punct"),
+    ]))
+    sleeping = _content(out, "sleep.v")
+
+    assert _stack(out, sleeping.name) == [("negation", None)]
+    assert sleeping.truth.prior == compiler.priors.of("reversed_tag")
+
+
+def test_a_tag_of_its_host_s_OWN_polarity_has_no_row_and_is_withheld(compiler):
+    """«She slept, did she?» — the constant tag infers, doubts or mocks, and nothing witnesses how
+    much it expects (`db/0042`: a class enters on a witness). Opened without a prior it would be
+    «Did she sleep?», which the sentence did not ask; claimed, a question stored as a statement."""
+    out = compiler.compile(_slept("did", ("she", "she", "PRON", "nsubj")))
+
+    assert [r for r in out.zip.rows if getattr(r, "predicate", None)] == []
+    assert any("constant_tag" in why for why in out.abstained)
+    assert {"She", "slept", "did", "she"} == set(out.unplaced)
+
+
+def test_the_PRIOR_comes_from_THE_ROWS(compiler):
+    """Req 50's number is knowledge (`db/0042`): re-curated, it moves by migration; with no row for
+    the shape, the tag is withheld with its host rather than opened without it."""
+    from tk2.language.prior import OpenPriors
+
+    tag = _slept("did", ("n't", "not", "PART", "advmod"), ("she", "she", "PRON", "nsubj"))
+    curated = Compiler(compiler.table, priors=OpenPriors({"reversed_tag": {"prior": 0.6}}, "test"))
+    empty = Compiler(compiler.table, priors=OpenPriors({}, "a table with no rows"))
+
+    assert _content(curated.compile(tag), "sleep.v").truth.prior == 0.6
+    assert [r for r in empty.compile(tag).zip.rows if getattr(r, "predicate", None)] == []
+
+
+def test_a_TAG_on_a_CONDITIONAL_asks_the_conditional(compiler):
+    """«If it rains, she stays, doesn't she?» — the conditional is the one claim there, so it is
+    what is asked, exactly as «Will you stay if it rains?» asks its IMPLY. `_relate` supposes the
+    tag with the consequent it extends; the `?` closes it all the same. It claimed the conditional."""
+    out = compiler.compile(_tree("If it rains , she stays , does n't she ?", [
+        ("1", "If", "if", "SCONJ", "3", "mark"), ("2", "it", "it", "PRON", "3", "nsubj"),
+        ("3", "rains", "rain", "VERB", "6", "advcl"), ("4", ",", ",", "PUNCT", "6", "punct"),
+        ("5", "she", "she", "PRON", "6", "nsubj"), ("6", "stays", "stay", "VERB", "0", "root"),
+        ("7", ",", ",", "PUNCT", "8", "punct"), ("8", "does", "do", "AUX", "6", "parataxis"),
+        ("9", "n't", "not", "PART", "8", "advmod"), ("10", "she", "she", "PRON", "8", "nsubj"),
+        ("11", "?", "?", "PUNCT", "6", "punct"),
+    ]))
+    (imply,) = _joins(out).values()
+
+    assert imply.operator is Operator.IMPLY and imply.truth.prior is not None
+    assert _content(out, "rain.v").truth is None and _content(out, "stay.v").truth is None
+    assert out.unplaced == ()
+
+
+def test_a_TAG_on_a_COORDINATION_is_withheld_with_it(compiler):
+    """«He slept and she left, didn't she?» — UD hangs what a whole coordination shares on its first
+    conjunct, so a tag there asks «he slept» or both, and the tree cannot say which. It claimed
+    «she left» and dropped the rest."""
+    out = compiler.compile(_tree("He slept and she left , did n't she ?", [
+        ("1", "He", "he", "PRON", "2", "nsubj"), ("2", "slept", "sleep", "VERB", "0", "root"),
+        ("3", "and", "and", "CCONJ", "5", "cc"), ("4", "she", "she", "PRON", "5", "nsubj"),
+        ("5", "left", "leave", "VERB", "2", "conj"), ("6", ",", ",", "PUNCT", "7", "punct"),
+        ("7", "did", "do", "VERB", "2", "parataxis"), ("8", "n't", "not", "PART", "7", "advmod"),
+        ("9", "she", "she", "PRON", "7", "nsubj"), ("10", "?", "?", "PUNCT", "2", "punct"),
+    ]))
+
+    assert [r for r in out.zip.rows if getattr(r, "predicate", None)] == []
+    assert any("coordination" in why for why in out.abstained)
+
+
+def test_a_TAG_whose_pronoun_or_carrier_is_not_its_host_s_asks_another_clause(compiler):
+    """«He said that she was late, wasn't SHE?» asks the lateness and hangs off the saying; «He
+    said that he was late, WASN'T he?» likewise — «said» takes «did». The tree hangs the tag on a
+    clause it does not ask, so the host goes with it rather than a question for the wrong clause."""
+    def said(pronoun, gender_lemma):
+        return _tree(f"He said that {pronoun} was late , was n't {pronoun} ?", [
+            ("1", "He", "he", "PRON", "2", "nsubj"), ("2", "said", "say", "VERB", "0", "root"),
+            ("3", "that", "that", "SCONJ", "6", "mark"),
+            ("4", pronoun, gender_lemma, "PRON", "6", "nsubj"),
+            ("5", "was", "be", "AUX", "6", "cop"), ("6", "late", "late", "ADJ", "2", "ccomp"),
+            ("7", ",", ",", "PUNCT", "8", "punct"), ("8", "was", "be", "AUX", "2", "parataxis"),
+            ("9", "n't", "not", "PART", "8", "advmod"),
+            ("10", pronoun, gender_lemma, "PRON", "8", "nsubj"), ("11", "?", "?", "PUNCT", "2", "punct"),
+        ])
+    she, he = compiler.compile(said("she", "she")), compiler.compile(said("he", "he"))
+
+    assert _claims(she) == [] and any("does not agree" in why for why in she.abstained)
+    assert _claims(he) == [] and any("no carrier" in why for why in he.abstained)
+    assert not [r for r in [*she.zip.rows, *he.zip.rows] if isinstance(getattr(r, "truth", None),
+                                                                      Open)]
+
+
+def test_a_TAG_on_an_IMPERATIVE_keeps_the_want_and_places_nothing_of_itself(compiler):
+    """«Close the door, will you?» — the host is wanted, not claimed; the tag presses or softens the
+    want (req 51's gradation of its strength) and no row says by how much. The want stands at the
+    bare imperative's strength, the tag is unplaced and said why — and not read as a cut from what
+    is wanted, which withheld the whole sentence."""
+    out = compiler.compile(_with_mood(_tree("Close the door , will you ?", [
+        ("1", "Close", "close", "VERB", "0", "root"), ("2", "the", "the", "DET", "3", "det"),
+        ("3", "door", "door", "NOUN", "1", "obj"), ("4", ",", ",", "PUNCT", "5", "punct"),
+        ("5", "will", "will", "AUX", "1", "parataxis"), ("6", "you", "you", "PRON", "5", "nsubj"),
+        ("7", "?", "?", "PUNCT", "1", "punct"),
+    ]), 0), _speech())
+    (want,) = [r for r in out.zip.rows if r.kind == "attitude"]
+
+    assert want.verb == "want.v" and want.strength == compiler.strengths.of("imperative")
+    assert _content(out, "close.v").truth is None
+    assert set(out.unplaced) == {"will", "you"}
+    assert any("imperative" in why and "strength" in why for why in out.abstained)
+
+
+def test_an_elided_question_that_is_NO_tag_still_takes_its_host(compiler):
+    """«Anna sleeps, but does Bob?» — a coordinator and a name: an elided question of its own, not a
+    tag (`_is_tag`). Ruling 9 withholds it, and what it asks is elided, so its host goes with it as
+    before — never asked with a tag's prior."""
+    out = compiler.compile(_tree("Anna sleeps , but does Bob ?", [
+        ("1", "Anna", "anna", "PROPN", "2", "nsubj"), ("2", "sleeps", "sleep", "VERB", "0", "root"),
+        ("3", ",", ",", "PUNCT", "5", "punct"), ("4", "but", "but", "CCONJ", "5", "cc"),
+        ("5", "does", "do", "AUX", "2", "conj"), ("6", "Bob", "bob", "PROPN", "5", "nsubj"),
+        ("7", "?", "?", "PUNCT", "2", "punct"),
+    ]))
+
+    assert [r for r in out.zip.rows if getattr(r, "predicate", None)] == []
+    assert not [r for r in out.zip.rows if getattr(getattr(r, "truth", None), "prior", None)]
+
+
+def test_the_0042_check_REFUSES_what_the_ruling_does_not_say(monkeypatch):
+    """`db/0042`'s check travels with its rows: one row per shape, a shape the reader asks for, no
+    row for the unwitnessed constant tag, and a prior that is HIGH (req 50)."""
+    from tk2.migrations import discover
+
+    found = next(m for m in discover() if m.number == 42)
+    module = found.load()
+    row = module.OPEN_PRIOR_ROWS[0]
+    assert [r["shape"] for r in module.OPEN_PRIOR_ROWS] == ["reversed_tag"]
+    for broken in ([row, row],
+                   [dict(row, shape="tag")],
+                   [row, dict(row, shape="constant_tag")],
+                   [dict(row, compiled={"prior": 0.5})],
+                   [dict(row, compiled={"prior": 1.5})]):
+        monkeypatch.setattr(module, "OPEN_PRIOR_ROWS", broken)
+        with pytest.raises(ValueError):
+            module._check()                                                 # noqa: SLF001
+
+
+@pytest.mark.skeleton
+def test_every_TAG_the_parser_gives_is_one_rule():
+    """The tree is the point, so the real parser reads them (measured 2026-09-27): «did» tagged VERB
+    and AUX, the copula tag, the modal tags — «won't» split by stanza into a «wo» no row reads — a
+    tag on a conditional, and the cases the tree cannot settle. None may come out a claim; each is
+    asked with a prior or withheld whole."""
+    from tk2.language import StanzaSkeletons
+    from tk2.language.utterance import compile_utterance
+    from tools.drill_gate import DRILL_CONTEXT
+
+    provider, station = StanzaSkeletons(), Compiler(standing_closed_classes())
+
+    def read(sentence):
+        return compile_utterance(station, provider(sentence), DRILL_CONTEXT)
+
+    asked = {"She slept, didn't she?": "r0", "He left, did he not?": "r0",
+             "He is tired, isn't he?": "r0", "It's cold, isn't it?": "r0",
+             "He will come, won't he?": "r0", "You can swim, can't you?": "r0",
+             "If it rains, she stays, doesn't she?": "j0"}
+    for sentence, name in asked.items():
+        out = read(sentence)
+        rows = {r.name: r for r in out.zip.rows}
+        assert rows[name].truth.prior is not None, sentence
+        assert not [r for r in out.zip.rows if getattr(r, "truth", None) == 1.0], sentence
+        assert out.unplaced == (), sentence
+    for sentence in ("He slept and she left, didn't she?", "He said that she was late, wasn't she?",
+                     "She slept, did she?"):
+        out = read(sentence)
+        assert not [r for r in out.zip.rows if getattr(r, "truth", None) is not None
+                    and getattr(r, "kind", "") in ("content", "join")], sentence
+
+
+WHO_THINKS_SHE_SLEEPS = _tree("Who thinks that she sleeps ?", [
+    ("1", "Who", "who", "PRON", "2", "nsubj"), ("2", "thinks", "think", "VERB", "0", "root"),
+    ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "she", "she", "PRON", "5", "nsubj"),
+    ("5", "sleeps", "sleep", "VERB", "2", "ccomp"), ("6", "?", "?", "PUNCT", "2", "punct"),
+])
+WHO_THINKS_THE_CAT_SLEEPS = _tree("Who thinks that the cat sleeps ?", [
+    ("1", "Who", "who", "PRON", "2", "nsubj"), ("2", "thinks", "think", "VERB", "0", "root"),
+    ("3", "that", "that", "SCONJ", "6", "mark"), ("4", "the", "the", "DET", "5", "det"),
+    ("5", "cat", "cat", "NOUN", "6", "nsubj"), ("6", "sleeps", "sleep", "VERB", "2", "ccomp"),
+    ("7", "?", "?", "PUNCT", "2", "punct"),
+])
+
+
+def test_a_QUESTIONED_holder_holds_its_attitude(compiler):
+    """«Who thinks that the cat sleeps?» — the wh-word's box is the one it OPENED, which the
+    placement trace does not label as a box, so no holder was found and the record said «a passive
+    or an expletive subject» of a sentence with neither. The holder is the asked box, and the
+    thinking takes its clause's place."""
+    out = compiler.compile(WHO_THINKS_THE_CAT_SLEEPS)
+    (att,) = [r for r in out.zip.rows if r.kind == "attitude"]
+
+    assert att.verb == "think.v" and isinstance(att.holder.head, Open) and att.holder.head.sort
+    assert att.scopes == _content(out, "sleep.v").name and _none_of(out, "think.v")
+    assert out.unplaced == ()
+
+
+def test_a_pronoun_under_a_QUESTIONED_holder_is_withheld_like_a_quantified_one(compiler):
+    """«Who thinks that SHE sleeps?» asks for the x who thinks x sleeps as readily as for whoever
+    thinks that she does — questions and quantifiers are one binding mechanism (tkzip req 36), so
+    ruling 8's ambiguity is withheld here too. And the record names that, not a passive."""
+    out = compiler.compile(WHO_THINKS_SHE_SLEEPS)
+
+    assert not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert any("questioned holder" in why for why in out.abstained)
+    assert not any("passive" in why or "expletive" in why for why in out.abstained)
+
+
+def test_WHETHER_or_NOT_asks_whether(compiler):
+    """«I don't know whether he sleeps or not» — «or not» is the other alternative an open truth
+    already holds (p-or-not-p is what «whether p» asks). Read as the clause's own «not» it claimed
+    «I do not know that he does not sleep»; read as an elided verb, it withheld the sentence."""
+    out = compiler.compile(_tree("I do n't know whether he sleeps or not", [
+        ("1", "I", "I", "PRON", "4", "nsubj"), ("2", "do", "do", "AUX", "4", "aux"),
+        ("3", "n't", "not", "PART", "4", "advmod"), ("4", "know", "know", "VERB", "0", "root"),
+        ("5", "whether", "whether", "SCONJ", "7", "mark"), ("6", "he", "he", "PRON", "7", "nsubj"),
+        ("7", "sleeps", "sleep", "VERB", "4", "ccomp"), ("8", "or", "or", "CCONJ", "9", "cc"),
+        ("9", "not", "not", "PART", "7", "conj"),
+    ]), _speech())
+    sleeping = _content(out, "sleep.v")
+
+    assert _stack(out, sleeping.name) == [("negation", None), ("attitude", "know.v")]
+    assert isinstance(sleeping.truth, Open) and out.unplaced == ()
+
+
+def test_a_claimed_OR_NOT_is_still_withheld(compiler):
+    """Only under a truth the clause's own word opens: «He sleeps or not» claims nothing it would be
+    honest to keep — «he sleeps» is not entailed by a tautology."""
+    out = compiler.compile(_tree("He sleeps or not .", [
+        ("1", "He", "he", "PRON", "2", "nsubj"), ("2", "sleeps", "sleep", "VERB", "0", "root"),
+        ("3", "or", "or", "CCONJ", "4", "cc"), ("4", "not", "not", "PART", "2", "conj"),
+        ("5", ".", ".", "PUNCT", "2", "punct"),
+    ]))
+    assert _claims(out) == []
+
+
+def _copular(text, subject, subject_lemma, adjective, negated=False):
+    words = [("1", subject, subject_lemma, "PRON", "3" if not negated else "4", "nsubj"),
+             ("2", "is" if subject == "It" else "am", "be", "AUX", "3" if not negated else "4",
+              "cop")]
+    at = 3
+    if negated:
+        words.append(("3", "not", "not", "PART", "4", "advmod"))
+        at = 4
+    words += [(str(at), adjective, adjective, "ADJ", "0", "root"),
+              (str(at + 1), "that", "that", "SCONJ", str(at + 3), "mark"),
+              (str(at + 2), "he", "he", "PRON", str(at + 3), "nsubj"),
+              (str(at + 3), "sleeps", "sleep", "VERB", str(at), "ccomp")]
+    return _tree(text, words)
+
+
+def test_IT_IS_TRUE_THAT_is_withheld_explicitly_not_by_a_side_effect(compiler):
+    """Ruling 10 (`E3.3.11.2.8`): «It is (not) true that…» made the adjective an attitude verb held
+    by the expletive. It is withheld meanwhile — and by its own rule, the copula's complement being
+    the attitude's word, so that no change to how a holder is read can reopen it."""
+    true = compiler.compile(_copular("It is true that he sleeps", "It", "it", "true"), _speech())
+    not_true = compiler.compile(_copular("It is not true that he sleeps", "It", "it", "true",
+                                         negated=True), _speech())
+
+    for out in (true, not_true):
+        assert not [r for r in out.zip.rows if r.kind == "attitude"]
+        assert _none_of(out, "sleep.v")
+        assert any("E3.3.11.2.16 (10)" in why for why in out.abstained)
+    assert _claims(not_true) == [], "cut from under its «not», the rest is withheld too"
+
+
+def test_I_AM_SURE_THAT_keeps_I_am_sure_and_says_why_the_rest_waits(compiler):
+    """«I am sure that he sleeps» has the same tree as «It is true that…», and which adjective its
+    subject HOLDS is a fact about the word — knowledge no row holds yet (ruling 10's rows). So the
+    complement waits, and the record names that, not «a complement box of its own»: the complement
+    box IS the attitude's word."""
+    out = compiler.compile(_copular("I am sure that he sleeps", "I", "I", "sure"), _speech())
+    (sure,) = _claims(out)
+
+    assert sure.predicate is None and sure.boxes[Role.COMPLEMENT].head == "sure.a"
+    assert any("copula's complement" in why for why in out.abstained)
+    assert not any("box of its own" in why for why in out.abstained)
+
+
+@pytest.mark.parametrize("skeleton, cause", [
+    (_tree("That he lied surprised me .", [
+        ("1", "That", "that", "SCONJ", "3", "mark"), ("2", "he", "he", "PRON", "3", "nsubj"),
+        ("3", "lied", "lie", "VERB", "4", "csubj"), ("4", "surprised", "surprise", "VERB", "0", "root"),
+        ("5", "me", "I", "PRON", "4", "obj"), ("6", ".", ".", "PUNCT", "4", "punct"),
+    ]), "CLAUSE"),
+    (_tree("It seems that he sleeps .", [
+        ("1", "It", "it", "PRON", "2", "expl"), ("2", "seems", "seem", "VERB", "0", "root"),
+        ("3", "that", "that", "SCONJ", "5", "mark"), ("4", "he", "he", "PRON", "5", "nsubj"),
+        ("5", "sleeps", "sleep", "VERB", "2", "ccomp"), ("6", ".", ".", "PUNCT", "2", "punct"),
+    ]), "expletive"),
+])
+def test_a_matrix_with_NO_HOLDER_keeps_its_place_and_the_record_names_its_subject(compiler,
+                                                                                  skeleton, cause):
+    """A clausal subject («That he lied surprised me») and an expletive («It seems that…») hold
+    nothing the tree can name. The first was recorded as «a passive or an expletive subject»; the
+    second handed its place to an attitude held by a bare `?`. Both keep their place now, and the
+    record says which subject the sentence has."""
+    out = compiler.compile(skeleton, _speech())
+
+    assert not [r for r in out.zip.rows if r.kind == "attitude"]
+    assert any(cause in why for why in out.abstained)
+    assert not any("passive" in why for why in out.abstained)

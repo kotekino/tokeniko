@@ -83,7 +83,9 @@ from dataclasses import dataclass, field
 
 from tk2.dictionary import keys
 from tk2.language.adverbs import EXCLUSIVE, FOCUS, AdverbKinds, standing_adverb_kinds
-from tk2.language.compile import ANTECEDENT, ASSERTS_ANTECEDENT, MATRIX, RELATION_FILLS_ROLE
+from tk2.language.compile import (
+    ANTECEDENT, ASSERTS_ANTECEDENT, IMPERATIVE_VERB, MATRIX, RELATION_FILLS_ROLE,
+)
 from tk2.language.closed import (
     FOLLOWING_NEGATION,
     FUSED_QUANTIFIER,
@@ -215,6 +217,16 @@ class _Said:
 
 
 @dataclass
+class _Level:
+    """What one level of a prefix stack says of its verb (`Decompiler._operators`): the clause's
+    own, or an attitude's. `modal` may be a fused form that carries its own negation («cannot»)."""
+
+    negated: bool = False
+    modal: str = ""
+    adverb: str = ""
+
+
+@dataclass
 class _Reading:
     """One zip being read backwards: the indexes a sentence needs that a flat row list does not give.
 
@@ -230,10 +242,12 @@ class _Reading:
     binders: dict[str, object] = field(default_factory=dict)
     #: variable name -> the claimed copular rows that are really modifiers of its noun phrase.
     modifiers: dict[str, list] = field(default_factory=dict)
-    #: content row -> the row an attitude built FROM it scopes. «Suppose the cat is hungry» keeps
-    #: both, because the imperative's want must scope a matrix and a prefix row may not scope
-    #: another prefix row — so the supposing is a content row AND an attitude, and the content row
-    #: is the one that gets spoken.
+    #: content row -> the row an attitude built FROM it scopes, where a zip keeps the clause BESIDE
+    #: the attitude it became — «I said quietly that…», the saying with a manner of its own — so the
+    #: two are said as one clause, the content row spoken with its complement after it. *The station
+    #: builds no such zip since 2026-09-26 (`E3.3.11.2.16`): a matrix that cannot hand its place to
+    #: its attitude withholds what the attitude holds (`Compiler._unentailed`), and the imperative's
+    #: want stands over the complement's own row. The reading stays for a zip built elsewhere.*
     complements: dict = field(default_factory=dict)
     #: the attitude rows that link one — already spoken as their content row's verb, so they must
     #: not also wrap the clause they point at.
@@ -247,6 +261,9 @@ class _Reading:
     spoken: set = field(default_factory=set)
     #: variable name -> the rows that RESTRICT it, spoken as relative clauses inside its phrase.
     restrictions: dict[str, list] = field(default_factory=dict)
+    #: a row a question asks the REASON of -> the word that asks it («why», `Decompiler._why`),
+    #: until the row's outermost verb takes it; still here afterwards means it was never said.
+    reason: dict[str, str] = field(default_factory=dict)
     #: the variable whose box is the ANTECEDENT of the clause being rendered right now, and is
     #: therefore a gap rather than a phrase. Pushed and popped around one clause, like `when`.
     gap: str | None = None
@@ -564,17 +581,32 @@ class Decompiler:
             if len(shared) == 1:
                 rd.restrictions.setdefault(shared.pop(), []).append(row)
                 rd.consumed.add(row.name)
-        # **AN ATTITUDE WHOSE OWN CLAUSE SURVIVED IS THAT CLAUSE'S COMPLEMENT.** The compiler
-        # dissolves a clause into the attitude it became — unless something else names it, which is
-        # exactly the imperative's shape: «Suppose the cat is hungry» is a WANT over a supposing,
-        # and the supposing must stay a content row for the want to scope. Both rows are one clause,
-        # and the sentence says the verb once with its content after it.
+        # **AN ATTITUDE WHOSE OWN CLAUSE SURVIVED IS THAT CLAUSE'S COMPLEMENT** — a zip holding a
+        # saying with a manner of its own and, beside it, the attitude over what was said: both rows
+        # are one clause, and the sentence says the verb once with its content after it («I said
+        # quietly that he did not sleep»). *No station zip has this shape since 2026-09-26: ruling 2
+        # of `E3.3.11.2.16` withholds what such an attitude holds, and the imperative's want stands
+        # over its complement's own row (`Compiler._imperative`). It is read for a zip built
+        # elsewhere — by hand, or by the brain.*
+        #
+        # **AND ONLY WHERE THE TWO ARE HONESTLY ONE** *(2026-09-26, `E3.3.11.2`)*. Linked on the
+        # verb alone, «¬ think(me)» beside «ATT(me, think) · sleep» was said as the one clause «I do
+        # not think that he sleeps» — and the fixpoint could never see that the zip claimed both
+        # «I think he sleeps» and «I do not think». So the clause must be CLAIMED, with nothing over
+        # it, its subject the attitude's holder, and the attitude the OUTERMOST row on its target;
+        # anything else is said apart, and a double claim shows as one.
         for row in zip_.rows:
             if row.kind != "attitude":
                 continue
+            over = rd.prefix.get(row.scopes, [])
+            if not over or over[0] is not row:
+                continue
             source = next((other for other in zip_.rows
                            if other.kind == "content" and other.predicate == row.verb
-                           and other.name != row.scopes), None)
+                           and other.name != row.scopes and other.truth == CLAIMED
+                           and not rd.prefix.get(other.name)
+                           and self._subject_head(other) == getattr(row.holder, "head", None)),
+                          None)
             if source is not None:
                 rd.complements[source.name] = row.scopes
                 rd.consumed.add(row.scopes)
@@ -582,6 +614,12 @@ class Decompiler:
         self._fold(zip_, rd)
         self._focused(zip_, rd)
         return rd
+
+    @staticmethod
+    def _subject_head(row) -> object:
+        """What a content row's subject box holds — the first of `SUBJECT_ORDER` it fills."""
+        role = next((role for role in SUBJECT_ORDER if role in row.boxes), None)
+        return row.boxes[role].head if role is not None else None
 
     def _focused(self, zip_: Zip, rd: _Reading) -> None:
         """«ONLY cats eat fish» — the compiler's exclusive shape (`Compiler._exclusive_phrase`), read
@@ -777,26 +815,132 @@ class Decompiler:
     def _say(self, row, name: str, rd: _Reading, embedded: bool) -> _Said | None:
         """`_render`'s body, with this row's tense already in force."""
         # An attitude that only links a clause to its complement is spoken as that clause's VERB,
-        # so it must not wrap the complement as well — «Suppose that (somebody) supposes the cat…».
+        # so it must not wrap the complement as well — «I said quietly that (I said that) he…».
         prefix = [element for element in rd.prefix.get(name, [])
                   if element.name not in rd.linking]
+        imperative = self._imperative(row, name, prefix, rd)
+        if imperative is not None:
+            return imperative
+        return self._stacked(row, name, prefix, rd, embedded)
 
+    @staticmethod
+    def _levels(prefix: list) -> tuple[list, list]:
+        """**A STACK IS SAID LEVEL BY LEVEL, CUT AT ITS ATTITUDES** *(2026-09-26, `E3.3.11.1` ·
+        `E3.3.11.2`)*. The compiler seats [what stood over the matrix] · ATTITUDE · [what the
+        complement raised], so every segment before an attitude is said on THAT attitude's verb and
+        the last one on the clause: ◇ · ATT is «I CAN think that he sleeps», ATT · ◇ «I think that
+        he CAN sleep». Said all on the clause, the first came back as the second — a scope the
+        mouth moved. Returns (the segments, the attitudes between them): one more segment than
+        attitudes, the last one the clause's."""
+        segments, attitudes, current = [], [], []
+        for element in prefix:
+            if element.kind == "attitude":
+                segments.append(current)
+                attitudes.append(element)
+                current = []
+            else:
+                current.append(element)
+        segments.append(current)
+        return segments, attitudes
+
+    def _stacked(self, row, name: str, prefix: list, rd: _Reading,
+                 embedded: bool) -> _Said | None:
+        """One row and its prefix — the five scope-bearing elements, in the order the zip holds
+        them, each level said on its own verb (`_levels`)."""
+        segments, attitudes = self._levels(prefix)
+        owed: list[str] = []
+        level = self._operators(segments[-1], name, rd, owed,
+                                denied=getattr(row, "truth", None) == DENIED)
+        if level is None:
+            return None
+        # **A REASON ASKED IS ASKED OF THE OUTERMOST VERB** — «Why does he THINK that she sleeps?»
+        # asks about the thinking; fronted on the clause it would ask why she sleeps (`_why`).
+        reason = rd.reason.pop(name, "")
+
+        # **A PRIOR IS SAID AS A TAG** (tkzip req 50, `E3.3.11.2.21`): «It is cold, is it not?» —
+        # the clause declarative, and the tag after it. Only on a clause standing alone: the station
+        # never seats a tag's host under an attitude, and a prior this mouth cannot say is recorded.
+        tag = None
+        if not embedded and not attitudes and row.kind == "content" \
+                and isinstance(getattr(row, "truth", None), Open) and row.truth.prior is not None:
+            tag = self._tag_for(row, row.truth.prior, rd)
+
+        # **THE NEGATION CARRIES THE ADVERB**: «not necessarily» is said where «not» is, so every
+        # carrier the clause already knows — do · is · will — takes it with no rule of its own.
+        body = self._body(row, rd, negated=level.negated or bool(level.adverb), modal=level.modal,
+                          embedded=embedded or bool(attitudes), asks=bool(attitudes),
+                          adverb=level.adverb, reason="" if attitudes else reason, tag=tag)
+        if body is None:
+            return None
+        if attitudes and reason:
+            rd.reason[name] = reason
+        body = self._front(segments[-1], body, rd)
+
+        # **ONLY THE INNERMOST ATTITUDE ASKS**: an open truth is its holder's question. Every outer
+        # one holds the attitude inside it, which is claimed by its own holder.
+        asked = isinstance(getattr(row, "truth", None), Open)
+        for at in reversed(range(len(attitudes))):
+            outer = self._operators(segments[at], attitudes[at].name, rd, owed)
+            if outer is None:
+                return None
+            body = self._attitude(attitudes[at], body, outer, rd,
+                                  asked=asked and at == len(attitudes) - 1,
+                                  top=at == 0 and not embedded,
+                                  reason=rd.reason.pop(name, "") if at == 0 else "")
+            if body is None:
+                return None
+            body = self._front(segments[at], body, rd)
+
+        # A binder that never reached a variable site said nothing at all — and if it was the one
+        # carrying a NEGATION, the sentence that came back is the opposite of the zip.
+        for element in prefix:
+            if element.kind == "quantifier" and element.binds not in rd.said:
+                rd.out.unsaid.append(f"{name}: the binder for {element.binds} reached no box")
+        undelivered = [binds for binds in owed if binds in rd.negated_binders]
+        if undelivered:
+            rd.out.refused.append(f"{name}: a negation over {', '.join(undelivered)} was not said")
+            return None
+        return body
+
+    def _front(self, segment: list, body: _Said, rd: _Reading) -> _Said:
+        """A level's DOMAINS, fronted on what that level says — «In Italy, you may drive»."""
+        for element in segment:
+            if element.kind != "domain":
+                continue
+            if element.domain.marker is None:
+                # «legally» is an ADVERB derived from `law.n`, and the table holds no derivation.
+                # Fronting the bare noun would say «Law, he is married», which is not the claim.
+                rd.out.unsaid.append(f"{element.name}: an unmarked domain has no form to be said in")
+                continue
+            said = self._phrase(element.domain, rd)
+            if said:
+                body = _Said(f"{said}, {body.text}", body.mark, asks=body.asks)
+            else:
+                rd.out.unsaid.append(f"{element.name}: the domain could not be said")
+        return body
+
+    def _operators(self, segment: list, name: str, rd: _Reading, owed: list,
+                   denied: bool = False) -> "_Level | None":
+        """**WHAT ONE LEVEL OF A STACK SAYS OF ITS VERB** — its negation, its modal, the adverb that
+        carries a negation outside a modality. One helper for the clause and for every attitude, so
+        the two cannot diverge (the fused «cannot», the adverb for ¬□, the refusals). None when the
+        level cannot be said without lying, and the refusal is recorded."""
         # **A NEGATION APPLIES TO WHAT FOLLOWS IT IN SCOPE ORDER**, and where it cannot be
         # delivered the ROW IS REFUSED. Dropping it would not lose half a sentence: it would produce
-        # the sentence's own opposite, which is the one thing req 8 forbids in either direction.
+        # the sentence's own opposite, which is the one thing req 8 forbids in either direction. At
+        # the end of its level, what follows it is the level's own verb.
         negated_by: set[int] = set()
-        negate_clause = False
-        owed = []
-        for at, element in enumerate(prefix):
+        negate = False
+        for at, element in enumerate(segment):
             if element.kind != "negation":
                 continue
-            following = prefix[at + 1] if at + 1 < len(prefix) else None
+            following = segment[at + 1] if at + 1 < len(segment) else None
             if following is None:
-                negate_clause = True
+                negate = True
             elif following.kind == "quantifier":
                 rd.negated_binders.add(following.binds)
                 owed.append(following.binds)
-            elif following.kind in ("attitude", "modality"):
+            elif following.kind == "modality":
                 negated_by.add(id(following))
             else:
                 rd.out.refused.append(f"{name}: a negation over a {following.kind} cannot be said")
@@ -804,10 +948,10 @@ class Decompiler:
 
         # **A «NOT» INSIDE THE MODALITY IS SAID AFTER ITS AUXILIARY** — and only an auxiliary whose
         # row says its «not» scopes inside can carry it (`db/0036`): «can not» is ¬◇, not ◇¬.
-        inside = negate_clause or getattr(row, "truth", None) == DENIED
+        inside = negate or denied
         modal = adverb = ""
         fused = False
-        for element in prefix:
+        for element in segment:
             if element.kind != "modality":
                 continue
             if id(element) in negated_by:
@@ -833,7 +977,7 @@ class Decompiler:
                     rd.out.refused.append(f"{name}: a negation outside a {element.modality.value} "
                                           f"has no form in the table")
                     return None
-                if negate_clause or adverb or getattr(row, "truth", None) == DENIED:
+                if negate or adverb or denied:
                     # «does not necessarily NOT think» — a second negation inside the first has no
                     # carrier left, and dropping either one says something the zip does not.
                     rd.out.refused.append(f"{name}: a negation outside a {element.modality.value} "
@@ -866,62 +1010,20 @@ class Decompiler:
             rd.out.refused.append(f"{name}: a negated modality beside another modality cannot be "
                                   f"ordered in one clause")
             return None
-
-        attitudes = [element for element in prefix if element.kind == "attitude"]
-        imperative = self._imperative(row, attitudes, rd)
-        if imperative is not None:
-            if adverb:
-                rd.out.refused.append(f"{name}: an imperative has no place for «not {adverb}»")
-                return None
-            return imperative
-
-        # **THE NEGATION CARRIES THE ADVERB**: «not necessarily» is said where «not» is, so every
-        # carrier the clause already knows — do · is · will — takes it with no rule of its own.
-        body = self._body(row, rd, negated=negate_clause or bool(adverb), modal=modal,
-                          embedded=embedded or bool(attitudes), asks=bool(attitudes),
-                          adverb=adverb)
-        if body is None:
-            return None
-
-        for element in reversed(attitudes):
-            body = self._attitude(element, body, negated=id(element) in negated_by, rd=rd)
-            if body is None:
-                return None
-
-        for element in prefix:
-            if element.kind != "domain":
-                continue
-            if element.domain.marker is None:
-                # «legally» is an ADVERB derived from `law.n`, and the table holds no derivation.
-                # Fronting the bare noun would say «Law, he is married», which is not the claim.
-                rd.out.unsaid.append(f"{element.name}: an unmarked domain has no form to be said in")
-                continue
-            said = self._phrase(element.domain, rd)
-            if said:
-                body = _Said(f"{said}, {body.text}", body.mark, asks=body.asks)
-            else:
-                rd.out.unsaid.append(f"{element.name}: the domain could not be said")
-
-        # A binder that never reached a variable site said nothing at all — and if it was the one
-        # carrying a NEGATION, the sentence that came back is the opposite of the zip.
-        for element in prefix:
-            if element.kind == "quantifier" and element.binds not in rd.said:
-                rd.out.unsaid.append(f"{name}: the binder for {element.binds} reached no box")
-        undelivered = [binds for binds in owed if binds in rd.negated_binders]
-        if undelivered:
-            rd.out.refused.append(f"{name}: a negation over {', '.join(undelivered)} was not said")
-            return None
-        return body
+        return _Level(negated=negate, modal=modal, adverb=adverb)
 
     def _body(self, row, rd: _Reading, negated: bool, modal: str,
-              embedded: bool, asks: bool, adverb: str = "") -> _Said | None:
+              embedded: bool, asks: bool, adverb: str = "", reason: str = "",
+              tag: str | None = None) -> _Said | None:
         if row.kind == "join":
             if negated or modal:
                 rd.out.unsaid.append(f"{row.name}: a join cannot carry a modality or a negation yet")
+            if reason:
+                rd.reason[row.name] = reason       # a join has no verb to front it on
             return self._join(row, rd, embedded=embedded)
         if row.kind == "content":
             return self._clause(row, rd, negated=negated, modal=modal, embedded=embedded,
-                                asks=asks, adverb=adverb)
+                                asks=asks, adverb=adverb, reason=reason, tag=tag)
         rd.out.unsaid.append(f"{row.kind} row {row.name}")
         return None
 
@@ -936,6 +1038,9 @@ class Decompiler:
         `db/0010` ruled that the difference is exactly this (req 38). So the key is read off the zip
         and the form comes from the table.
         """
+        matched, asked = self._why(row, rd, embedded)
+        if matched:
+            return asked
         if not any(operand in rd.folded for operand in row.operands) \
                 and self._asserts(row, rd) == ASSERTS_ANTECEDENT:
             return self._purpose(row, rd)
@@ -989,12 +1094,58 @@ class Decompiler:
             # and a zip whose shape reads that way has lost which half was wanted.
             rd.out.refused.append(f"{row.name}: an imperative cannot be the clause a {role} marks")
             return None
+        prior = row.truth.prior if isinstance(row.truth, Open) else None
+        if prior is not None and not embedded:
+            # **A JOIN ASKED WITH A PRIOR IS SAID WITH A TAG ON ITS MAIN CLAUSE** (tkzip req 50) —
+            # «If it rains, she stays, does she not?»: the compiler opened the conditional, the one
+            # claim there. Only a subordinator has a main clause to hang it on; where no tag can be
+            # said, the join is refused — said as it stands, a question would come back a claim.
+            host = rd.rows.get(row.operands[-1]) if role == "subordinator" else None
+            tag = (self._tag_for(host, prior, rd)
+                   if getattr(host, "kind", None) == "content" else None)
+            if tag is None:
+                rd.out.refused.append(f"{row.name}: asked with a prior of {prior}, and no tag can "
+                                      f"be said on it — said as it stands it would be a claim")
+                return None
+            return _Said(f"{form} {alive[0].text}, {alive[1].text}, {tag}", "?",
+                         asks=alive[0].asks)
         if role == "subordinator":
             # «Because it rained, I stayed home» — the marked half is the FIRST operand, which is the
             # antecedent for every implication in the table and is order-free for the rest.
             return _Said(f"{form} {alive[0].text}, {alive[1].text}", alive[1].mark,
                          asks=alive[0].asks)
         return _Said(f"{alive[0].text} {form} {alive[1].text}", alive[1].mark, asks=alive[0].asks)
+
+    def _why(self, row, rd: _Reading, embedded: bool) -> tuple[bool, _Said | None]:
+        """**«WHY DO YOU SLEEP?»** — the compiler's shape for a question about a reason: there is no
+        cause box (req 37), so `Compiler._ask` raises a wholly OPEN row, stated, IMPLYING the claimed
+        one. Read backwards, the claimed row is said as a question, and the word the rows give for an
+        interrogative that opens an `antecedent` is fronted on its OUTERMOST verb — «Why does he
+        think that she sleeps?» asks about the thinking, and fronted on the sleeping it would ask
+        another question (`_stacked`). Embedded, it neither inverts nor asks aloud: «I know why you
+        sleep».
+
+        (False, None) when the join is not this shape, and it is read like any other. Where the word
+        cannot be delivered — a join has no verb, a clause asks through a box already — the claimed
+        row is said alone and the question is recorded as unsaid, never dropped in silence.
+        """
+        if row.operator is not Operator.IMPLY or row.truth != CLAIMED or len(row.operands) != 2:
+            return False, None
+        cause, effect = row.operands
+        unknown = rd.rows.get(cause)
+        if getattr(unknown, "kind", None) != "content" or not isinstance(unknown.predicate, Open) \
+                or unknown.boxes or unknown.truth is not None or rd.prefix.get(cause):
+            return False, None
+        form = self.the_form("interrogative", kind="open", binds=None, opens="antecedent")
+        if form is None or getattr(rd.rows.get(effect), "truth", None) != CLAIMED:
+            return False, None
+        rd.reason[effect] = form
+        said = self._render(effect, rd, embedded=embedded)
+        if rd.reason.pop(effect, None) is not None:
+            rd.out.unsaid.append(f"{row.name}: the reason it asks has no verb to be asked on")
+        elif said is not None and said.text.strip():
+            rd.spoken.add(cause)
+        return True, said
 
     def _focused_conditional(self, row, alive: list, rd: _Reading) -> _Said | None:
         """`CONV` and `EQ` over two supposed halves, said the way the compiler COMPOSED them
@@ -1115,12 +1266,59 @@ class Decompiler:
                           "empty" if truth is None else "claimed")
         if claims == ["claimed", "claimed"]:
             return "both"
+        # **A HALF UNDER AN ATTITUDE IS CLAIMED BY IT** (E3.2.1.2's convention, read back): its truth
+        # slot is its HOLDER's act — «because Anna wonders WHETHER he sleeps» asks nothing of the
+        # speaker. Narrowly: only where the other half is claimed, so the reading is «both», and
+        # never through the speech act's own want — «Come here or I leave!» is a want and a claim,
+        # and reading the want as a claim would make it a disjunction of two claims.
+        if "claimed" in claims and all(claim == "claimed" or self._held(operand, rd)
+                                       for claim, operand in zip(claims, row.operands)):
+            return "both"
         if claims == ["empty", "empty"]:
             return "neither"
         if claims == ["claimed", "empty"] and row.operator is Operator.IMPLY \
                 and row.truth == CLAIMED:
             return ASSERTS_ANTECEDENT
         return None
+
+    def _held(self, name: str, rd: _Reading) -> bool:
+        """Does an attitude — and not the speech act's own want (`_speech_act`) — hold this row?"""
+        prefix = rd.prefix.get(name, [])
+        at = next((at for at, element in enumerate(prefix) if element.kind == "attitude"), None)
+        if at is None:
+            return False
+        return not self._speech_act(prefix[at], prefix[at + 1:], rd.rows.get(name))
+
+    def _speech_act(self, want, after: list, row) -> bool:
+        """**IS THIS ATTITUDE THE SPEECH ACT'S WANT, OR A WANTING THE SPEAKER STATES?**
+
+        Both are `want` held by the speaker, and the format keeps mood out of any field (tkzip req
+        48): the imperative is read off what the want holds.
+
+        **EVERY IMPERATIVE'S WANT CARRIES A STRENGTH — THE STATION'S INVARIANT, RELIED ON HERE** (the
+        Captain, 2026-09-27, `E3.3.11.2.24`: req 23's counted default, asserted where the compiler
+        is built). So a speaker-held want with NO strength is a want the speaker STATES, wherever it
+        stands — never the speech act. Written only for a shape of wanting the station recognised
+        (`db/0020`, `aw-20` · `aw-21`), never by a lexical «want»: without that mark, «I want that
+        you suppose that the cat is hungry» came back «Suppose that the cat is hungry!», a
+        statement said as a command.
+
+        A strength is necessary and, over a clause, not enough: a DESIRATIVE may carry one too
+        (`t-mo-4`'s «I would like to know…», at 0.6), so directly over a clause the imperative is
+        also an UNASSERTED row — «Close the door!», where «I want that you close it» leaves its row
+        claimed. Over an ATTITUDE there is no such row: seated, the imperative's own clause
+        («Suppose …») dissolved into the attitude it became, and the strength is the one mark left.
+        """
+        if getattr(want, "kind", None) != "attitude" or want.verb != IMPERATIVE_VERB:
+            return False
+        holder = getattr(want.holder, "head", None)
+        if holder is None or holder != self.context.speaker:
+            return False
+        if want.strength is None:
+            return False
+        if any(element.kind == "attitude" for element in after):
+            return True
+        return row is not None and getattr(row, "truth", CLAIMED) is None
 
     def _connective(self, operator: str, asserts: str) -> tuple[str | None, str | None]:
         """The word for an operator-and-assertion, and the ROLE it is said in — which is the clause
@@ -1152,55 +1350,96 @@ class Decompiler:
 
     # -- the attitude --------------------------------------------------------------------------------
 
-    def _attitude(self, element, body: _Said, negated: bool, rd: _Reading) -> _Said | None:
+    def _attitude(self, element, body: _Said, level: _Level, rd: _Reading,
+                  asked: bool = False, top: bool = False, reason: str = "") -> _Said | None:
         """«Anna thinks that …» — a holder, a verb, and the complementizer the table names.
 
         The complementizer is not punctuation and not a choice: `that` is the one form the table
         gives for a join that asserts only its matrix, which is precisely what an attitude does to
-        the clause under it.
+        the clause under it — unless the clause is ASKED, and then it is the word curation voices
+        an open truth with (`_complementizer`).
         """
         # **THE SAYING HAS ITS OWN TIME** (schema v5): «John SAID that the sky IS green». Restored
         # before the body is appended, so what is quoted keeps the tense it was quoted in.
         inner_when, rd.when = rd.when, self._when(element)
         try:
-            return self._attitude_said(element, body, negated, rd, inner_when)
+            return self._attitude_said(element, body, level, rd, inner_when, asked, top, reason)
         finally:
             rd.when = inner_when
 
-    def _attitude_said(self, element, body: _Said, negated: bool, rd: _Reading,
-                       inner_when: float) -> _Said | None:
+    def _attitude_said(self, element, body: _Said, level: _Level, rd: _Reading,
+                       inner_when: float, asked: bool, top: bool = False,
+                       reason: str = "") -> _Said | None:
         agreement = self._agreement(element.holder, rd)
         holder = self._phrase(element.holder, rd, case=NOMINATIVE)
+        asks = False
+        unknown = getattr(element.holder, "head", None)
+        if not holder and isinstance(unknown, Open) and unknown.sort is not None:
+            # **«WHO thinks that…?» — A HOLDER THE SENTENCE ASKS** is said by its question word, in
+            # the subject's gap, and nothing inverts: `_clause`'s own rule for a wh-word that is the
+            # subject («Who ate the fish?»). Only an interrogative carries a `sort` (E3.12.5 (3)).
+            holder, _role = self._question_word({Role.AGENT: element.holder}, rd)
+            holder, asks = holder or "", bool(holder)
         if not holder:
             rd.out.unsaid.append(f"{element.name}: the attitude's holder could not be said")
             return None
-        said = [holder]
-        if negated:
-            form = self.the_form("negation", kind="prefix", element="negation")
-            if form is None:
-                rd.out.refused.append(f"{element.name}: the negation has no single form")
-                return None
-            said += [self._agreeing(DO, agreement, rd), form, keys.word_of(element.verb)]
-        else:
-            said.append(self._agreeing(keys.word_of(element.verb), agreement, rd))
-        if element.addressee is not None:
-            # **MARKED, AND THE MARKER IS THE TABLE'S.** «say TO Marie» is right and «tell TO me» is
-            # not: whether an attitude verb marks its addressee or takes it bare is LEXICAL, and
-            # nothing in tk2 holds that fact yet (req 55 rules the CLASSIFICATION of attitude verbs,
-            # not their syntax). Measured both ways on the corpus: marking costs one case and
-            # leaving it bare costs two, and a marked phrase names its role out loud.
-            # The box may already carry the word the sentence used (req 65); only an addressee that
-            # arrived unmarked has to be asked about.
-            to = "" if element.addressee.marker else self._marker_for("recipient")
-            spoken = self._phrase(element.addressee, rd, case=ACCUSATIVE)
-            if spoken:
-                said.append(f"{to} {spoken}" if to else spoken)
+        if reason and asks:
+            rd.reason[element.scopes] = reason     # «why does WHO think…» — one question word only
+            reason = ""
+        # **THE ATTITUDE'S VERB IS A VERB LIKE ANY OTHER** — its level's modal and negation go on
+        # it by the clause's own seven rules (`_verb_phrase`): «I CANNOT think», «he did not say».
+        # A reason asked of it is fronted, and pulls the carrier with it where the question is the
+        # sentence's own: «WHY DOES he think…?», and embedded «…why he thinks…».
+        said = self._verb_said(element, holder, level, agreement, rd,
+                               invert=bool(reason) and top)
+        if said is None:
+            return None
+        said = [reason, *said] if reason else list(said)
+        asks = asks or bool(reason)
+        addressee = self._addressee(element, rd)
+        if addressee:
+            said.append(addressee)
         if element.strength is not None:
             rd.out.unsaid.append(f"{element.name}: a strength of {element.strength} is not spoken")
         rd.when = inner_when
-        complementizer = self._complementizer(body)
+        complementizer = self._complementizer(body, asked)
+        if complementizer is None:
+            rd.out.refused.append(f"{element.name}: what it asks has no single word to be asked "
+                                  f"with, and «that» would claim it")
+            return None
         said.append(f"{complementizer} {body.text}" if complementizer else body.text)
-        return _Said(" ".join(said), "." if body.mark != "?" else "?")
+        return _Said(" ".join(said), "?" if (asks and top) or body.mark == "?" else ".", asks=asks)
+
+    def _verb_said(self, element, subject: str, level: _Level, agreement: dict,
+                   rd: _Reading, imperative: bool = False, invert: bool = False) -> list[str] | None:
+        """An attitude's verb, with its level's operators — the words before its addressee."""
+        negation = ""
+        if level.negated or level.adverb:
+            negation = self.the_form("negation", kind="prefix", element="negation")
+            if negation is None:
+                rd.out.refused.append(f"{element.name}: the negation has no single form")
+                return None
+            if level.adverb:
+                negation = f"{negation} {level.adverb}"
+        return self._verb_phrase(keys.word_of(element.verb), subject, bool(negation), level.modal,
+                                 negation, invert, imperative, element, agreement, rd)
+
+    def _addressee(self, element, rd: _Reading) -> str:
+        """The attitude's addressee as a phrase — «to Marie», or «Anna» where it was understood."""
+        if element.addressee is None:
+            return ""
+        # **MARKED, AND THE MARKER IS THE TABLE'S.** «say TO Marie» is right and «tell TO me» is
+        # not: whether an attitude verb marks its addressee or takes it bare is LEXICAL, and
+        # nothing in tk2 holds that fact yet (req 55 rules the CLASSIFICATION of attitude verbs,
+        # not their syntax). Measured both ways on the corpus: marking costs one case and
+        # leaving it bare costs two, and a marked phrase names its role out loud.
+        # The box may already carry the word the sentence used (req 65); only an addressee that
+        # arrived unmarked has to be asked about.
+        to = "" if element.addressee.marker else self._marker_for("recipient")
+        spoken = self._phrase(element.addressee, rd, case=ACCUSATIVE)
+        if not spoken:
+            return ""
+        return f"{to} {spoken}" if to else spoken
 
     def _marker_for(self, role: str) -> str:
         """The preposition that marks a role, when the table names exactly one that CAN mark it.
@@ -1212,31 +1451,86 @@ class Decompiler:
         """
         return self.table.marker_for(role) or ""
 
-    def _complementizer(self, body: _Said) -> str:
-        """`that`, except before a clause that already opens with its own wh-word.
+    def _complementizer(self, body: _Said, asked: bool = False) -> str | None:
+        """`that`, except before a clause that already opens with its own wh-word — and the voice
+        of an OPEN truth before a clause its holder ASKS.
 
         «I don't know THAT WHO ate the fish» is not English: an embedded question is introduced by
         the question word itself, which the clause has already put at its front.
+
+        **«WHETHER» GETS ITS VOICE** *(2026-09-26, `E3.3.11.2.13`, `db/0041`)*. «I wonder whether he
+        sleeps» came back «I wonder THAT he sleeps», and under «know» that is a factive claim: «I
+        know whether he sleeps» is not «I know that he sleeps». The word is the row curation flags
+        for the meaning `opens: truth` — «whether» and «if» both carry it — and where no row is
+        flagged nothing is said: None, and the caller refuses rather than say «that».
         """
         if body.asks:
             return ""
+        if asked:
+            return self.the_form("interrogative", kind="open", binds=None, opens="truth")
         return self.the_form("subordinator", kind="join", operator="and", asserts="matrix") or ""
 
-    def _imperative(self, row, attitudes: list, rd: _Reading) -> _Said | None:
+    def _imperative(self, row, name: str, prefix: list, rd: _Reading) -> _Said | None:
         """«Close the door!» — the inverse of the compiler's own imperative (task 2d).
 
         The shape is the drill's and the compiler builds exactly it: the SPEAKER wants something of
         the ADDRESSEE, and nothing is claimed. Recognising it here is not a special case bolted on —
         it is the same rule read in the other direction, and without it the sentence comes back as
         «I want you to close the door», which is a different zip.
+
+        **THE IMPERATIVE IS THE CLAUSE A SPEAKER-HELD WANT HEADS** *(2026-09-26, `E3.3.11.2.7`)*. The
+        want is the speech act, so it is OUTERMOST, and the level right after it is the imperative's
+        own: its «not» is said — «Do not touch it!» — where the old reading dropped it and said the
+        reverse. A «not» BEFORE the want is not an imperative at all («I do not want you to…»), so it
+        is never read as one. And where that level is followed by an attitude the ADDRESSEE holds,
+        the imperative is that attitude's verb, with its content after it: «Suppose that the cat is
+        hungry!» (`aw-20`), «Do not think that he sleeps!».
+
+        **AND ONLY THE SPEECH ACT'S WANT** (`_speech_act`) — «I want that you suppose that the cat is
+        hungry» is a want held by the speaker too, and it is a statement.
+
+        None when the zip is not this shape, and the generic path says it.
         """
-        if len(attitudes) != 1 or row.kind != "content" or row.truth is not None:
+        if not prefix or not self._speech_act(prefix[0], prefix[1:], row):
             return None
-        element = attitudes[0]
-        if keys.word_of(element.verb) != "want":
+        want, rest = prefix[0], prefix[1:]
+        cut = next((at for at, element in enumerate(rest) if element.kind == "attitude"), len(rest))
+        segment, after = rest[:cut], rest[cut:]
+        # Only what an imperative can say: its «not», and the binders its phrases carry.
+        if any(element.kind not in ("negation", "quantifier") for element in segment):
             return None
-        holder = getattr(element.holder, "head", None)
-        if holder is None or holder != self.context.speaker:
+        negated, owed = False, []
+        for at, element in enumerate(segment):
+            if element.kind != "negation":
+                continue
+            following = segment[at + 1] if at + 1 < len(segment) else None
+            if following is None:
+                negated = True
+            elif following.kind == "quantifier":
+                owed.append(following.binds)
+            else:
+                return None
+        rd.negated_binders.update(owed)
+        if after:
+            said = self._imperative_attitude(row, name, after, negated, rd)
+        else:
+            said = self._imperative_clause(row, negated, rd)
+        if said is None:
+            rd.negated_binders.difference_update(owed)
+            return None
+        for element in segment:
+            if element.kind == "quantifier" and element.binds not in rd.said:
+                rd.out.unsaid.append(f"{name}: the binder for {element.binds} reached no box")
+        if [binds for binds in owed if binds in rd.negated_binders]:
+            rd.out.refused.append(f"{name}: a negation over a binder of the imperative was not said")
+            return None
+        if want.strength is not None:
+            rd.out.unsaid.append(f"{want.name}: a strength of {want.strength} is not spoken")
+        return said
+
+    def _imperative_clause(self, row, negated: bool, rd: _Reading) -> _Said | None:
+        """The imperative said on the clause itself — its subject the addressee, left unsaid."""
+        if row.kind != "content" or row.truth is not None:
             return None
         subject_role = next((role for role in SUBJECT_ORDER if role in row.boxes), None)
         if subject_role is None:
@@ -1246,19 +1540,146 @@ class Decompiler:
         rest = dict(row.boxes)
         rest.pop(subject_role)
         said = self._clause(row.model_copy(update={"boxes": rest, "truth": CLAIMED}), rd,
-                            negated=False, modal="", embedded=False, imperative=True)
+                            negated=negated, modal="", embedded=False, imperative=True)
         if said is None:
             return None
-        if element.strength is not None:
-            rd.out.unsaid.append(f"{element.name}: a strength of {element.strength} is not spoken")
         return _Said(said.text, "!")
+
+    def _imperative_attitude(self, row, name: str, after: list, negated: bool,
+                             rd: _Reading) -> _Said | None:
+        """The imperative said on an attitude the addressee holds — «Suppose that the cat is
+        hungry!» — and the content the attitude holds said after it, at its own levels."""
+        attitude, remaining = after[0], after[1:]
+        if getattr(attitude.holder, "head", None) != self.context.addressee:
+            return None
+        inner_when, rd.when = rd.when, self._when(attitude)
+        try:
+            words = self._verb_said(attitude, "", _Level(negated=negated), {}, rd, imperative=True)
+        finally:
+            rd.when = inner_when
+        if words is None:
+            return None
+        body = self._stacked(row, name, remaining, rd, embedded=True)
+        if body is None or not body.text.strip():
+            return None
+        said = [word for word in words if word]
+        addressee = self._addressee(attitude, rd)
+        if addressee:
+            said.append(addressee)
+        asked = isinstance(getattr(row, "truth", None), Open) \
+            and not any(element.kind == "attitude" for element in remaining)
+        complementizer = self._complementizer(body, asked)
+        if complementizer is None:
+            rd.out.refused.append(f"{attitude.name}: what it asks has no single word to be asked "
+                                  f"with, and «that» would claim it")
+            return None
+        said.append(f"{complementizer} {body.text}" if complementizer else body.text)
+        if attitude.strength is not None:
+            rd.out.unsaid.append(f"{attitude.name}: a strength of {attitude.strength} is not spoken")
+        return _Said(" ".join(said), "!")
+
+    # -- the tag --------------------------------------------------------------------------------------
+
+    def _tag_for(self, row, prior: float, rd: _Reading) -> str | None:
+        """**THE TAG A PRIOR IS SAID WITH** — «…, is it not» — or None, with the reason recorded
+        (tkzip req 50, `E3.3.11.2.21`; the compiler's `_tags` read backwards).
+
+        An OPEN truth with a prior of *yes* is what the station builds from «It's cold, isn't it?»,
+        so it is said the way English says one: the host declarative, then its carrier and its
+        subject again as a pronoun, the polarity REVERSED — the one shape with a row (`db/0042`).
+        Everything is a rule the clause already obeys, run once more: the carrier is the first word
+        of the inverted clause (`_verb_phrase` — is · does · can · will · was), with the modality in
+        its plain form, since «cannot» is the host's and «can he» the tag's; the pronoun is the
+        subject's own person, number and gender, asked of the rows (`_tag_pronoun`); the polarity is
+        the parity of the host's negations and negative binders. The negation is spoken whole —
+        «is it NOT» — which is the one form the table gives the meaning.
+
+        **A PRIOR OF ONE HALF OR LESS EXPECTS NOTHING A TAG SAYS**, and a subject no single pronoun
+        agrees with — a singular noun, whose gender no zip holds — has no tag: both are recorded,
+        and the clause is asked plainly, the prior unsaid.
+
+        `row` is the clause the tag is said on and `prior` the one being said — its own, or its
+        join's: «If it rains, she stays, does she not?» asks the conditional, and the tag is its
+        main clause's.
+        """
+        if prior <= 0.5:
+            rd.out.unsaid.append(f"{row.name}: a prior of {prior} expects no answer a tag says")
+            return None
+        prefix = [element for element in rd.prefix.get(row.name, [])
+                  if element.name not in rd.linking]
+        if any(element.kind == "attitude" for element in prefix):
+            rd.out.unsaid.append(f"{row.name}: a prior under an attitude has no tag to be said with")
+            return None
+        negative = sum(1 for element in prefix if element.kind == "negation" or (
+            element.kind == "quantifier"
+            and element.quantity in (Quantity.NEGATIVE, Quantity.NEGATED_UNIVERSAL))) % 2 == 1
+        modalities = [element for element in prefix if element.kind == "modality"]
+        modal = ""
+        if len(modalities) > 1:
+            rd.out.unsaid.append(f"{row.name}: the prior of a clause with two modalities has no tag")
+            return None
+        if modalities:
+            modal = self.the_form("modality", kind="prefix", element="modality",
+                                  modality=modalities[0].modality.value)
+            if modal is None:
+                rd.out.unsaid.append(f"{row.name}: the tag's modal has no single form")
+                return None
+        negation = self.the_form("negation", kind="prefix", element="negation")
+        lemma = self._lemma(row, rd)
+        if lemma is None or (not negative and negation is None):
+            rd.out.unsaid.append(f"{row.name}: the prior has no tag to be said with")
+            return None
+
+        boxes = row.boxes
+        subject_role = next((role for role in SUBJECT_ORDER if role in boxes), None)
+        passive = (rd.topic is not None and rd.topic in boxes and rd.topic is not Role.AGENT
+                   and row.predicate is not None)
+        if passive:
+            subject_role = rd.topic
+        agreement = {"person": 3, "number": "sg"}
+        if subject_role is not None:
+            agreement = self._agreement(boxes[subject_role], rd)
+        if lemma == COPULA and row.predicate is not None and subject_role is not None \
+                and len(boxes) == 1:
+            pronoun = self.the_form("existential", kind="structure")
+        elif subject_role is None:
+            pronoun = self.the_form("expletive", kind="structure")
+        else:
+            pronoun = self._tag_pronoun(boxes[subject_role], rd)
+        if not pronoun:
+            rd.out.unsaid.append(f"{row.name}: a prior of {prior} is not said — no single pronoun "
+                                 f"agrees with the subject, and the tag needs one")
+            return None
+        outer, rd.when = rd.when, self._when(row)
+        try:
+            head = self._verb_phrase(lemma, pronoun, False, modal, negation or "", True, False, row,
+                                     agreement, rd, passive)
+        finally:
+            rd.when = outer
+        return " ".join([head[0], pronoun] + ([] if negative else [negation]))
+
+    def _tag_pronoun(self, box: Box, rd: _Reading) -> str | None:
+        """The pronoun a tag says its host's subject with — the rows answering, never a guess."""
+        head = box.head
+        if isinstance(head, Var):
+            return None
+        if self._features_of(head) is not None:
+            return self._pronoun(head, NOMINATIVE, rd)
+        if isinstance(head, Open) and head.person is not None:
+            features = {"person": head.person, "number": head.number, "gender": head.gender}
+        else:
+            features = {**self._agreement(box, rd), "gender": None}
+        return self._same_person(features, "referential", case=NOMINATIVE)
 
     # -- the clause -----------------------------------------------------------------------------------
 
     def _clause(self, row: ContentRow, rd: _Reading, negated: bool, modal: str,
                 embedded: bool, asks: bool = False, imperative: bool = False,
-                adverb: str = "") -> _Said | None:
-        """One content row to one clause, or None when it cannot be said without lying."""
+                adverb: str = "", reason: str = "", tag: str | None = None) -> _Said | None:
+        """One content row to one clause, or None when it cannot be said without lying.
+
+        `tag` is the tag a prior is said with (`_tag_for`): the clause is then said DECLARATIVE and
+        the tag after it — «It is cold, is it not?» — never inverted as well."""
         if row.name in rd.bare and not imperative:
             return self._infinitive(row, rd, negated or bool(modal) or bool(adverb))
         boxes = dict(row.boxes)
@@ -1344,12 +1765,20 @@ class Decompiler:
         subject_role = None if imperative else next(
             (role for role in SUBJECT_ORDER if role in boxes), None)
 
+        # **A REASON ASKED IS FRONTED LIKE ANY QUESTION WORD** (`_why`) — «WHY do you sleep?» — and it
+        # is no box, so nothing leaves the row. One question word per clause: with a box already
+        # asked, the reason goes back unsaid and `_why` records it.
+        if reason and wh is None and not imperative:
+            wh, wh_role = reason, None
+        elif reason:
+            rd.reason[row.name] = reason
+
         # **A QUESTION WORD THAT IS THE SUBJECT DOES NOT MOVE, AND NOTHING INVERTS.** «Who ate the
         # fish?» — the gap is already at the front, so English leaves the clause alone; it is «What
         # did he eat?» that fronts a word and pulls the auxiliary with it. Said the other way round,
         # «who the fish eats» makes the fish the eater.
-        wh_is_subject = wh is not None and wh_role is subject_role
-        if wh is not None:
+        wh_is_subject = wh is not None and wh_role is not None and wh_role is subject_role
+        if wh is not None and wh_role is not None:
             boxes.pop(wh_role)
             if wh_is_subject:
                 subject_role = next((role for role in SUBJECT_ORDER if role in boxes), None)
@@ -1470,7 +1899,11 @@ class Decompiler:
         # The agent of a passive is a marked phrase like any other, and the marker is the table's:
         # exactly one form in it can mark an agent.
         fronted = "" if wh is None or wh_is_subject else wh
-        invert = bool(asked or fronted) and not embedded
+        if tag and wh is not None:
+            rd.out.unsaid.append(f"{row.name}: a prior on a question that asks through a word has "
+                                 f"no tag to be said with")
+            tag = None
+        invert = bool((asked and not tag) or fronted) and not embedded
         parts = self._verb_phrase(lemma, subject, negated, modal, negation or "", invert,
                                   imperative, row, agreement, rd, passive)
         after = ([after_agent] if after_agent else []) + after
@@ -1480,7 +1913,12 @@ class Decompiler:
             if inner is None or not inner.text.strip():
                 rd.out.unsaid.append(f"{row.name}: what is {lemma}d could not be said")
             else:
-                that = self._complementizer(inner)
+                that = self._complementizer(
+                    inner, asked=isinstance(getattr(rd.rows.get(complement), "truth", None), Open))
+                if that is None:
+                    rd.out.refused.append(f"{row.name}: what it asks has no single word to be "
+                                          f"asked with, and «that» would claim it")
+                    return None
                 after.append(f"{that} {inner.text}" if that else inner.text)
 
         if gap_marker and wh is not None:
@@ -1488,6 +1926,8 @@ class Decompiler:
         said = " ".join(part for part in (fronted, *parts, *after) if part)
         if not said.strip():
             return None
+        if tag and asked and not embedded:
+            said = f"{said}, {tag}"
         return _Said(said, "?" if (asked or wh is not None) and not embedded else ".",
                      asks=wh is not None)
 
@@ -1535,9 +1975,12 @@ class Decompiler:
         **The carrier is whatever comes first** — will · can · is · does — and everything after it
         is bare. That is one rule rather than five, and it is why this reads as a list.
         """
-        copular = row.predicate is None
+        # An attitude row stands in for its verb's clause here, and is never copular.
+        copular = getattr(row, "kind", None) == "content" and row.predicate is None
         if imperative:
-            return [lemma]
+            # «DO NOT touch it!» — English's own repair again: an imperative is negated through a
+            # bare «do», whatever its verb, the copula included («Do not be late!»).
+            return [DO, negation, lemma] if negated else [lemma]
 
         if passive:
             # «the mail WAS WRITTEN by John» — be, in the tense and the agreement, then the

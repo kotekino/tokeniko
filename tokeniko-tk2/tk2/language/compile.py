@@ -25,7 +25,7 @@ larger than its format.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from typing import Callable
+from typing import Callable, Collection
 
 from tk2.dictionary import keys as keymod
 from tk2.dictionary.frames import primary_takes_object
@@ -34,6 +34,7 @@ from tk2.language.adverbs import (
 )
 from tk2.language.closed import AMBIGUOUS, FOLLOWING_NEGATION, INSIDE, OUTSIDE, ClosedClasses
 from tk2.language.markers import MarkerSelector
+from tk2.language.prior import CONSTANT_TAG, REVERSED_TAG, OpenPriors, standing_open_priors
 from tk2.language.strength import IMPERATIVE, AttitudeStrengths, standing_attitude_strengths
 from tk2.language.subjects import SubjectRoles, standing_subject_roles
 from tk2.language.ud_readings import UdReadings, standing_ud_readings
@@ -128,6 +129,11 @@ NOMINAL_DEPS = frozenset({"nsubj", "obj", "iobj", "obl", "nmod"})
 #: asks it. A set whose membership encodes an argument is an argument with brackets round it.
 CLAUSE_DEPS = frozenset({"conj", "advcl", "ccomp", "acl", "csubj", "parataxis", "xcomp"})
 
+#: **UD'S COMPLEMENT RELATIONS** — `ccomp` and `xcomp`, the two whose own definitions say a clause
+#: is the COMPLEMENT of its head. Transcription, so frame. Read for one question only: did a clause
+#: take what it says in its own sentence (`Compiled.complemented`)?
+COMPLEMENT_DEPS = frozenset({"ccomp", "xcomp"})
+
 #: What a joining word claims about its halves (closed classes v4, `db/0010`).
 ASSERTS_BOTH, ASSERTS_NEITHER = "both", "neither"
 ASSERTS_MATRIX, ASSERTS_AMBIGUOUS = "matrix", "ambiguous"
@@ -142,6 +148,11 @@ ANTECEDENT, MATRIX = "antecedent", "matrix"
 #: relative pronoun by `_share_variable` — so neither is an abstention when the per-clause walk meets
 #: it, and saying so made the abstention list untrustworthy.
 LATER_PASS_OWNS = frozenset({"join", "open"})
+
+#: The `opens` values by which a wh-word makes its clause ASK — a slot, not the truth. The table's
+#: own names for what an interrogative opens (`db/0008`), so a clause that asks through one of them
+#: keeps its truth under a `?` (req 21); read in two places, kept in one.
+OPENS_A_SLOT = frozenset({"box", "participant", "antecedent", "field"})
 
 #: **ROW-NAME PREFIXES, GATHERED HERE BECAUSE THEY MUST NOT COLLIDE.** The schema requires names to
 #: be unique within a zip (`Zip` validates it), and they were being minted in six places from four
@@ -397,6 +408,88 @@ class _Scoped:
 
 
 @dataclass
+class _Seating:
+    """**WHERE EACH ATTITUDE CAME FROM** — the bookkeeping that lets an attitude take its matrix
+    clause's place (`E3.3.11.1` · `E3.3.11.2`, the Captain's `E3.3.11.2.16` of 2026-09-26).
+
+    The zip is built in two views of one prefix. RAW is the structure the walk produces: every
+    prefix row scopes the clause that raised it, the attitude included — it scopes its complement,
+    and the matrix it was built from keeps its own negation, modality, binders and domain. The
+    withholding loop reads RAW, and that is deliberate: a withheld complement takes its attitude with
+    it and gives the matrix back WITH its operators, so the matrix is judged as the clause it is.
+    SEATED is derived once, after the loop (`Compiler._seat`): the matrix's rows and the attitude
+    move onto the complement's place, in that order, and the matrix row is gone.
+    """
+
+    #: an attitude built from a matrix -> that matrix's row. The speech act's want is in no entry:
+    #: it is the speaker's, not a clause's.
+    matrix: dict[str, str] = field(default_factory=dict)
+    #: an attitude -> the matrix box its holder is, None where no box of the matrix holds it
+    holder: dict[str, Role | None] = field(default_factory=dict)
+    #: an attitude with no holder -> why no box of its matrix holds it (`Compiler._holder_role`), so
+    #: that the record names the subject the sentence actually has
+    no_holder: dict[str, str] = field(default_factory=dict)
+    #: an attitude -> the clause rows its complement is made of (its subtree's), by name
+    inside: dict[str, set[str]] = field(default_factory=dict)
+    #: a matrix -> why it cannot hand its place to its attitude (`Compiler._places`)
+    cannot: dict[str, str] = field(default_factory=dict)
+
+
+def matrix_keeps_its_place(matrix: ContentRow, holder: Role | None, verb, binders: dict,
+                           above: set[str], wanted: bool,
+                           no_holder: str | None = None) -> str | None:
+    """**WHY A MATRIX CANNOT HAND ITS PLACE TO THE ATTITUDE BUILT FROM IT** — None when it can.
+
+    ONE rule, read in two places: `Compiler._places` within a sentence, and
+    `tk2.language.utterance` across the boundary stanza draws at a quote — so the two cannot drift
+    (`E3.3.11.2.12`: the cross-sentence copy had lost the restriction test, and a relative clause's
+    saying was dissolved in silence). What it reads is the format's own: the row's point of view,
+    its boxes, the binders over its variables, its truth slot.
+
+        a point of view   a row with its own POV is not a clause an attitude row can stand for
+        a holder          the box the attitude's holder is; with none — a passive, an expletive, a
+                          clausal subject — the attitude has nobody to be held by
+        its own word      a copular matrix whose complement IS the attitude's word («I am SURE
+                          that…», «It is TRUE that…»): whether its subject holds it or it is said of
+                          the clause is a fact about the word, and no row holds that fact yet
+                          (`E3.3.11.2.16` (10), `E3.3.11.2.8`)
+        its boxes         the holder's and the addressee's, and nothing else (ruling 2)
+        a restriction     a box bound by a binder that does not scope the matrix, nor any join above
+                          it: a relative clause, and an attitude is not a row that restricts a phrase
+        its truth         CLAIMED, or unasserted under the speech act's want — an attitude row has
+                          no truth slot (ruling 2: asked, supposed)
+
+    `above` is the matrix and every join over it; `wanted` says whether the speech act's want
+    stands over it.
+    """
+    if matrix.pov is not None:
+        return "its clause holds a point of view of its own"
+    if holder is None:
+        return no_holder or "no box of its clause holds the attitude"
+    if matrix.predicate is None and any(str(box.head) == str(verb) for box in matrix.boxes.values()):
+        return (f"its word «{keymod.word_of(str(verb))}» is the copula's complement — whether its "
+                f"subject holds it («I am sure that…») or it is said of the clause («It is true "
+                f"that…», E3.3.11.2.16 (10)) is a fact about the word, and no row holds it yet")
+    extra = set(matrix.boxes) - {holder, Role.RECIPIENT}
+    if extra:
+        return (f"a {' · '.join(sorted(r.value for r in extra))} box of its own, which an attitude "
+                f"row cannot hold")
+    for box in matrix.boxes.values():
+        binder = binders.get(box.head.name) if isinstance(box.head, Var) else None
+        if binder is not None and binder.scopes not in above:
+            return ("it is a RESTRICTION — it describes a phrase of another clause, and an "
+                    "attitude is not a row that can restrict one")
+    truth = matrix.truth
+    if truth != CLAIMED and not (truth is None and wanted):
+        if isinstance(truth, Open):
+            return "it is ASKED, and an attitude row has no truth slot to ask it in"
+        if truth is None:
+            return "it is SUPPOSED, and an attitude row has no truth slot to suppose it in"
+        return f"it is held at {truth}, and an attitude row has no truth slot to hold it at"
+    return None
+
+
+@dataclass
 class Compiled:
     """A zip and the bookkeeping the confidence scalar will need (req 4).
 
@@ -418,6 +511,18 @@ class Compiled:
     #: whole of req 8 here, and it is what req 4's confidence scalar reads.
     defaulted: tuple[str, ...] = field(default_factory=tuple)
 
+    #: The clause rows the station BUILT and then WITHHELD — what the zip declined to claim, as it
+    #: stood when it went. Not part of the zip, and never a claim: it is here for a caller that must
+    #: know what stood there without reading the sentence again — `tk2.language.utterance`, whose
+    #: quotation falls with a frame withheld one sentence earlier (`E3.3.11.2.12`).
+    withheld: tuple[ContentRow, ...] = field(default_factory=tuple)
+
+    #: The clause rows, by name — kept or withheld — whose clause took a COMPLEMENT of its own in
+    #: this sentence (`COMPLEMENT_DEPS`). A saying that said what it said here frames nothing after
+    #: it (`E3.3.11.2.23`): `tk2.language.utterance` reads this before it takes a saying for the
+    #: frame of the next sentence's quotation.
+    complemented: tuple[str, ...] = field(default_factory=tuple)
+
     @property
     def coverage(self) -> float:
         total = len(self.covered) + len(self.unplaced)
@@ -431,7 +536,8 @@ class Compiler:
                  adverbs: AdverbKinds | None = None, subjects: SubjectRoles | None = None,
                  strengths: AttitudeStrengths | None = None,
                  readings: UdReadings | None = None,
-                 takes_object: Callable[[str], bool | None] = primary_takes_object) -> None:
+                 takes_object: Callable[[str], bool | None] = primary_takes_object,
+                 priors: OpenPriors | None = None) -> None:
         self.table = table
         #: Whether a verb's primary sense takes an object, as WordNet's frames state it — half of
         #: the zero relative's agreement (`_zero_gap`). An argument for `selector`'s reason.
@@ -442,6 +548,19 @@ class Compiler:
         self.readings = readings if readings is not None else standing_ud_readings()
         #: Requirement 23 — how strongly a shape of wanting wants, as rows (`db/0020`).
         self.strengths = strengths if strengths is not None else standing_attitude_strengths()
+        # **EVERY IMPERATIVE'S WANT CARRIES A STRENGTH — AN INVARIANT, AND THIS IS WHERE IT IS HELD**
+        # (the Captain, 2026-09-27, `E3.3.11.2.24`). The speech act's want and a want the speaker
+        # STATES are one attitude row apart only in it: over an attitude the imperative's own clause
+        # has dissolved, and the strength is the one mark the zip keeps (`Decompiler._speech_act`).
+        # So a table with no row for the bare imperative is refused HERE, where it is met, and never
+        # in the middle of a sentence: a station that cannot say how strongly an imperative wants
+        # cannot build one, and one built without it would be read back as a statement.
+        if self.strengths.of(IMPERATIVE) is None:
+            raise ValueError(f"{self.strengths.source}: no strength for the bare imperative — every "
+                             f"imperative's want carries one (req 23, E3.3.11.2.24)")
+        #: Tkzip req 50 — how strongly a shape of asking expects its answer, as rows (`db/0042`).
+        #: A shape with no row is withheld, never opened without its number (`OpenPriors.of`).
+        self.priors = priors if priors is not None else standing_open_priors()
         #: Requirement 22 — the subject's role, as rows (`db/0018`), run by the marker selector.
         self.subjects = subjects if subjects is not None else standing_subject_roles()
         #: Requirement 23's four-way split, as rows (`db/0013`). A miss is the MANNER default, which
@@ -455,7 +574,8 @@ class Compiler:
 
     # -- the whole sentence -----------------------------------------------------------------------
 
-    def compile(self, skeleton: Skeleton, context: Context = NO_CONTEXT) -> Compiled:
+    def compile(self, skeleton: Skeleton, context: Context = NO_CONTEXT,
+                quotation_withheld: Collection[str] = (), quoted: bool = False) -> Compiled:
         """Skeleton → zip. One content row per CLAUSE, related by joins and attitudes.
 
         **`context` IS REQUIREMENT 7, FINALLY BUILT** — *«the station is pure: context is an ARGUMENT,
@@ -466,6 +586,28 @@ class Compiler:
 
         **Defaulting to `NO_CONTEXT` is what keeps this additive**: with no context every pronoun
         stays OPEN exactly as before, and not one existing measurement moves.
+
+        **`quotation_withheld` AND `quoted` ARE THE TWO OTHER THINGS ONLY THE CALLER KNOWS** — both
+        about a quotation stanza split into a sentence of its own (`tk2.language.utterance`):
+
+          `quotation_withheld`   the clause rows, by name, that frame a quotation the NEXT sentence
+                                 holds, where that quotation was withheld — the frame could not hand
+                                 it its place, or nothing of it could be read (`E3.3.11.2.12`). Such
+                                 a frame has lost a complement no skeleton here holds, so `_unentailed`
+                                 asks of it what it asks of a matrix's lost words: the restriction it
+                                 stands in and its position, and whether it describes a definite
+          `quoted`               this sentence IS such a quotation, standing under the previous
+                                 sentence's frame — so every position in it is under an attitude,
+                                 which no row of this compile holds (`E3.3.11.2.22`)
+
+        With both, a cut is judged by `_unentailed` on either side of a sentence boundary, never by
+        a copy of it: kept where it only weakens the claim, withheld where it widens it or moves a
+        definite description.
+
+        **AND WHAT COMES BACK SAYS WHAT A CALLER CANNOT READ OFF THE ZIP** — the rows this compile
+        withheld (`Compiled.withheld`), and the clauses that took a complement of their own
+        (`Compiled.complemented`): what the utterance needs to tell a quote's frame from a saying
+        that already said what it said (`E3.3.11.2.23`).
 
         The clauses are found first and compiled independently, because a box belongs to the clause
         whose head governs it: «if it RAINS I stay HOME» has two subjects and two predicates, and a
@@ -490,6 +632,9 @@ class Compiler:
         wants_antecedent: set[str] = set()    # rows asked «why» — an unknown row implies them
         asked: set[str] = set()               # rows a wh-word already made ask — the `?` adds nothing
         unscoped: list[int] = []              # clauses whose modal scope no row decides
+        elliptic: set[int] = set()            # clauses that elide what they say (`_elision`)
+        tags: dict[int, str | None] = {}      # tag clauses -> why they elide (`_is_tag`, `_tags`)
+        tagged: set[int] = set()              # every tag's words: no clause's content (`_tags`)
         focus: list[Word] = []                # focus particles, placed once their associate is
 
         # **THE ROTATION IS DECIDED BEFORE THE CLAUSES ARE COMPILED, AND IT HAS TO BE.** A pronoun
@@ -504,7 +649,7 @@ class Compiler:
             content[head.index] = self._clause(
                 skeleton, head, mine, marks, covered, prefix_rows, abstained, f"r{position}",
                 open_truth, wants_antecedent, defaulted, modifiers, adverb_joins,
-                inner.get(head.index, context), asked, unscoped, focus)
+                inner.get(head.index, context), asked, unscoped, focus, elliptic, tags)
 
         dissolved: set[str] = set()
         withheld: list[int] = []      # relative clauses whose gap no machinery could place
@@ -512,52 +657,72 @@ class Compiler:
         built_from: dict[str, set[int]] = {}   # a join -> the words that built it (`_withhold`)
         joined: dict[int, tuple] = {}  # a clause head -> (its joiner's index, the joiner, the join)
         tied: dict[str, set[str]] = {}          # a row -> the rows that stand or fall with it
+        seating = _Seating()                    # where each attitude came from (RAW → SEATED)
         joins = self._relate(skeleton, heads, content, marks, covered, prefix_rows, abstained,
-                             dissolved, withheld, coordinated, built_from, joined)
+                             dissolved, withheld, coordinated, built_from, joined, seating, tied)
         extra = self._ask(content, joins, open_truth, wants_antecedent)
-        self._question(skeleton, heads, owner, content, joins, asked)
-        self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins)
+        questioned: set[int] = set()          # statements a `?` closes (`_question`)
+        self._question(skeleton, heads, owner, content, joins, asked, marks, covered, prefix_rows,
+                       seating, questioned)
+        self._imperative(skeleton, heads, content, prefix_rows, inner, context, joins, seating)
+        self._tags(skeleton, heads, owner, content, tags, elliptic, unscoped, abstained,
+                   prefix_rows, joins, marks, covered, tagged, questioned)
         extra += self._modify(modifiers, joins, content)
         self._control(skeleton, heads, content, marks, covered, prefix_rows, joins, abstained)
         self._connect(adverb_joins, content, joins, abstained, coordinated, built_from)
         self._focus(skeleton, focus, owner, content, prefix_rows, extra, joins, covered, abstained,
-                    joined, dissolved, withheld, tied, built_from)
+                    joined, dissolved, withheld, tied, built_from, seating)
+        # **WHICH MATRIX HANDS ITS PLACE TO ITS ATTITUDE** — decided here, once every row's truth
+        # and every box is final: the question has been asked, the want raised, the focus placed.
+        self._places(content, prefix_rows, joins, dissolved, seating)
 
         # **WHAT REMAINS MUST BE ENTAILED** (E3.12.5 (1), the Captain 2026-09-26) — and whether it
         # is depends on what withholding already took, so the two alternate until neither moves:
         # a clause withheld under an attitude takes the attitude with it, which can leave the
         # matrix's own losses under a negation of its own.
         words_of = {h.index: {i for i, o in owner.items() if o == h.index} for h in heads}
+        built = dict(content)             # every clause row, before anything was withheld
         taken: set[int] = set()
         pending = set(unscoped)
         withheld_any = False
+        conditioned: set[str] = set()     # the halves of every conditional a withholding may take
         while True:
             if withheld or pending:
                 withheld_any = True
+                conditioned |= {operand for join in joins if self._conditional(join, content)
+                                for operand in join.operands}
                 prefix_rows, content, extra, joins = self._withhold(
                     skeleton, heads, withheld, content, prefix_rows, extra, joins, covered,
                     {h: words_of[h] for h in pending}, words_of, built_from, tied)
                 taken |= pending
                 withheld = []
-                self._orphaned(skeleton, heads, content, prefix_rows, joins, dissolved)
+                self._orphaned(content, prefix_rows, dissolved, seating)
             pending = self._unentailed(skeleton, heads, content, prefix_rows, joins, dissolved,
-                                       covered, abstained, marks, owner) - taken
+                                       covered, abstained, marks, owner, seating,
+                                       quotation_withheld, quoted, tagged) - taken
             if withheld_any:
                 # **AND WHAT A WITHHOLDING LEAVES STRANDED GOES WITH IT** (`E3.12.5.9.13`).
-                pending |= self._stranded(content, prefix_rows, joins, dissolved, abstained) - taken
+                pending |= self._stranded(content, prefix_rows, joins, dissolved, abstained,
+                                          conditioned) - taken
             if not pending:
                 break
 
         unplaced = tuple(w.text for w in skeleton
                          if w.index not in covered and w.upos not in ("PUNCT", "SYM"))
 
+        # **THE ATTITUDE TAKES ITS MATRIX CLAUSE'S PLACE** (`E3.3.11.1` · `E3.3.11.2`) — RAW becomes
+        # SEATED, now that nothing more will be withheld.
+        prefix_rows, joins = self._seat(content, prefix_rows, joins, dissolved, seating)
+
         # **A CLAUSE THAT BECAME AN ATTITUDE IS NOT ALSO A CLAIM.** «He thinks a cat is in the
         # garden» has ONE thinking in it, and the prefix row is where it lives; leaving the content
         # row beside it said the thinking twice, and the decompiler duly spoke it twice.
         #
-        # **UNLESS SOMETHING STILL NAMES IT.** «Anna thinks that Bob believes that X» dissolves Bob's
-        # clause into an attitude, and Anna's attitude scopes that same row — a prefix element nests
-        # over a MATRIX and cannot nest over nothing. A row anybody points at stays.
+        # **AND NOTHING NAMES IT ANY MORE** *(2026-09-26)*. «Anna thinks that Bob believes that X»
+        # used to keep Bob's clause because Anna's attitude scoped it — and so claimed that Bob
+        # believes it (`E3.3.11.2.3`). Seated, both attitudes stand over X, and what pointed at the
+        # dissolved clause points at the place its complement took (`_seat`). The rule below is
+        # kept for what it always said: a row something points at is never dropped.
         named = self._named(prefix_rows, joins)
         rows = [*prefix_rows,
                 *(row for row in content.values()
@@ -571,7 +736,11 @@ class Compiler:
                                 topicality=self._topicality(skeleton, root, covered)),
                         covered=tuple(sorted(covered)), unplaced=unplaced,
                         placement=covered.as_dict(),
-                        abstained=tuple(abstained), defaulted=tuple(defaulted))
+                        abstained=tuple(abstained), defaulted=tuple(defaulted),
+                        withheld=tuple(row for index, row in built.items() if index not in content),
+                        complemented=tuple(row.name for index, row in built.items()
+                                           if any(c.bare_dep in COMPLEMENT_DEPS
+                                                  for c in skeleton.children(index))))
 
     # -- when it happened, and which role was foregrounded ----------------------------------------
 
@@ -841,7 +1010,8 @@ class Compiler:
                 defaulted: list | None = None, modifiers: list | None = None,
                 adverb_joins: list | None = None,
                 context: Context = NO_CONTEXT, asked: set | None = None,
-                unscoped: list | None = None, focus: list | None = None) -> ContentRow:
+                unscoped: list | None = None, focus: list | None = None,
+                elliptic: set | None = None, tags: dict | None = None) -> ContentRow:
         """One clause → one content row. Only the tokens this clause owns are read."""
         boxes: dict[Role, Box] = {}
         unresolved: list[tuple[Word, Box]] = []
@@ -903,6 +1073,17 @@ class Compiler:
                 # so nothing else will ever build its box.
                 self._bare_quantifier(word, match, skeleton, marks, boxes, prefix_rows, covered,
                                       name, copular, defaulted, abstained)
+                continue
+            if match is not None and self._the_other_alternative(word, match, head, skeleton, mine,
+                                                                 marks):
+                # **«WHETHER HE SLEEPS OR NOT» ASKS WHETHER HE SLEEPS** — logic: an open truth asks
+                # p-or-not-p, so a conjunct that is nothing but the clause's own negation is the
+                # other alternative the open truth already holds (`E3.3.11.2.16` (9): the elided
+                # conjunct, and here it elides nothing the zip lacks). Read as the clause's own
+                # «not» it claimed «I do not know that he does not sleep»; read as an elided clause it
+                # withheld the sentence. Only under a truth the clause's OWN word opens — «whether»,
+                # «if» — which the rows say; a claimed «he sleeps or not» is still withheld whole.
+                covered.update(self._descendants(skeleton, index), label="open")
                 continue
             if match is not None:
                 raised = len(prefix_rows)
@@ -967,11 +1148,25 @@ class Compiler:
                 scoped.append(_Scoped(form=word.text, index=word.index, length=1,
                                       rows=prefix_rows[raised:]))
 
-        if not self._scope(scoped, prefix_rows, abstained) and unscoped is not None:
-            unscoped.append(head.index)
-        elif self._universal_meets_negation(scoped, mine, marks, covered, abstained) \
-                and unscoped is not None:
-            unscoped.append(head.index)
+        # **WHETHER THE CLAUSE ELIDES WHAT IT SAYS IS DECIDED ONCE, AND RECORDED WHATEVER WITHHOLDS
+        # IT** — `_tags` reads the record, so which rule below withheld the clause first cannot
+        # decide whether its host is still read as a question's (`E3.3.11.2.16` (9)).
+        elided = self._elision(head, scoped, skeleton, marks)
+        if tags is not None and self._is_tag(head, skeleton, marks):
+            # **A TAG'S ROWS NEVER REACH THE ZIP** — `_tags` reads the tag into its host's prior, or
+            # withholds it; either way nothing of this row is judged as a clause's claim here.
+            tags[head.index] = elided
+        else:
+            if elided is not None and elliptic is not None:
+                elliptic.add(head.index)
+            if not self._scope(scoped, prefix_rows, abstained) and unscoped is not None:
+                unscoped.append(head.index)
+            elif self._universal_meets_negation(scoped, mine, marks, covered, abstained) \
+                    and unscoped is not None:
+                unscoped.append(head.index)
+            elif elided is not None and unscoped is not None:
+                abstained.append(elided)
+                unscoped.append(head.index)
 
         for word, _box in unresolved:
             if word.index not in covered:
@@ -1033,6 +1228,326 @@ class Compiler:
         abstained.append(f"«{word} … not»: the universal and the negation scope both ways and "
                          f"nothing here says which — the clause is withheld")
         return True
+
+    @staticmethod
+    def _elision(head: Word, scoped: list, skeleton: Skeleton, marks: dict) -> str | None:
+        """**DOES THIS CLAUSE ELIDE WHAT IT SAYS?** — why, or None (`E3.3.11.2.15`, the Captain's
+        `E3.3.11.2.16` (9), 2026-09-26: the elided conjunct is withheld, the proforms later).
+
+        Read once, in `_clause`, which withholds such a clause — unless it is a TAG (`_is_tag`),
+        whose rows never reach the zip and whose reason this becomes if `_tags` withholds it. An
+        elided clause that ASKS and is no tag is recorded (`elliptic`), and `_tags` withholds the
+        clause it hangs off with it. Two cues, both read off the tree:
+
+          an AUXILIARY heading     «…and she DOES not» — when the verb an auxiliary carries is
+          its clause               elided, UD promotes the AUXILIARY to head the clause: UD's own
+                                   treatment of ellipsis, so frame. Read as the predicate it claimed
+                                   «she does» — do.v, a doing nobody said — and what was elided
+                                   (sleeping, and under which attitude) is not in the sentence.
+                                   Only an auxiliary the TABLE reads: **the copula is not this
+                                   case** — its row says `when: cop`, and `be` heading its clause is
+                                   copular structure or existential content (req 31) — and an
+                                   auxiliary with no row at all (stanza's «wo» of «won't», its «ca»
+                                   of «can't») is not read as one: without the row, nothing tells
+                                   it from the copula
+          a negation after the     «I hope NOT» — the station's law of word order, the one `_scope`
+          clause's VERB head       orders an adverb and a negation by: a negation scopes what
+                                   FOLLOWS it, so one standing after its lexical verb negates the
+                                   elided complement («I hope that not-p»); read as ¬hope it claims
+                                   the reverse scope. Only a negation that HANGS OFF that head —
+                                   «you need not DRIVE» hangs its «not» on «drive», and a copular
+                                   clause's head is its complement. Whether anything follows the
+                                   negation is not read
+
+        **AND THE PARSER'S TAG FOR AN AUXILIARY IS NOT WHAT DECIDES** *(2026-09-27)*. stanza tags the
+        «did» of «She slept, didn't she?» a VERB as readily as an AUX, and then only the second cue
+        sees it; the two cues are one fact, so both answer here.
+        """
+        if head.upos == "AUX":
+            match = marks.get(head.index)
+            if match is not None and match.compiled.get("when") != "cop":
+                return (f"«{head.text}»: an auxiliary heading its clause — the verb it carries is "
+                        f"elided, and what was elided is not in the sentence: the clause is "
+                        f"withheld (E3.3.11.2.16 (9))")
+            return None
+        if head.upos != "VERB":
+            return None
+        for item in scoped:
+            if item.negation and item.index > head.index \
+                    and skeleton[item.index].head == head.index:
+                return (f"«{item.form}» after «{head.text}»: a negation after its verb negates what "
+                        f"was elided, not the verb — the clause is withheld (E3.3.11.2.16 (9))")
+        return None
+
+    @staticmethod
+    def _the_other_alternative(word: Word, match, head: Word, skeleton: Skeleton, mine: set,
+                               marks: dict) -> bool:
+        """Is this word the «not» of «whether he sleeps OR NOT» — a negation that is a CONJUNCT of
+        its clause's head, with nothing of its own but its coordinator, in a clause whose own word
+        opens its truth? (The clause loop's rule; the tree's relations and the rows' `opens`.)"""
+        if match.kind != "prefix" or match.compiled.get("element") != "negation":
+            return False
+        if word.bare_dep != "conj" or word.head != head.index:
+            return False
+        if any(child.bare_dep not in ("cc", "punct") for child in skeleton.children(word.index)):
+            return False
+        return any(marks.get(i) is not None and marks[i].kind == "open"
+                   and marks[i].compiled.get("opens") == "truth" for i in mine)
+
+    def _is_tag(self, head: Word, skeleton: Skeleton, marks: dict) -> bool:
+        """**IS THIS CLAUSE A TAG — «…, ISN'T IT?»** — by the tree's shape alone (`E3.3.11.2.21`).
+
+        A tag is a carrier and a subject and nothing else, set beside its host:
+
+            its relation     `parataxis` — UD's relation for a clause set beside another, and the
+                             one it gives a tag question
+            its head         an AUXILIARY — UD's class, or a form the table reads as a function word
+                             where the parser called it a VERB («did», «have»: the label
+                             disagreement `ClosedClasses.candidates` forgives)
+            its dependents   exactly one subject, a PRONOUN; its own negation; punctuation. Nothing
+                             else — «…, but does BOB?» has a coordinator and a name, and is an elided
+                             question of its own, not a tag
+
+        Whether it ASKS is the `?`'s (`_question`), and `_tags` reads it. Frame: UD's relations and
+        classes, and the rows' own `element` for the negation — no word is asked.
+        """
+        if head.is_root or head.bare_dep != "parataxis":
+            return False
+        if head.upos != "AUX" and marks.get(head.index) is None:
+            return False
+        subjects = 0
+        for child in skeleton.children(head.index):
+            if child.upos in ("PUNCT", "SYM"):
+                continue
+            match = marks.get(child.index)
+            if match is not None and match.kind == "prefix" \
+                    and match.compiled.get("element") == "negation":
+                continue
+            if child.bare_dep in SUBJECT_DEPS and child.upos == "PRON":
+                subjects += 1
+                continue
+            return False
+        return subjects == 1
+
+    def _tags(self, skeleton: Skeleton, heads: list[Word], owner: dict, content: dict,
+              tags: dict, elliptic: set, unscoped: list, abstained: list, prefix_rows: list,
+              joins: list, marks: dict, covered: Placements, tagged: set,
+              questioned: set) -> None:
+        """**«IT'S COLD, ISN'T IT?» — THE HOST IS ASKED, WITH A PRIOR** (tkzip req 50; the Captain,
+        2026-09-27, `E3.3.11.2.21`: *«a tag question is req 50's: the host OPEN with a high prior,
+        the prior knowledge with a counted default»*).
+
+        **ONE RULE, BY THE TREE, FOR EVERY TAG AND EVERY HOST.** A tag (`_is_tag`) is elided — it
+        says nothing but the carrier its host already said — so its own row never reaches the zip.
+        What it DOES is the `?`'s work plus one number: its host's statement asks, exactly as
+        `_question` opens a statement (`_open_claim`: the claimed rows, and the claimed joins that
+        bind them — «If it rains, she stays, doesn't she?» asks the conditional, which is the one
+        claim there), and every OPEN it makes carries the prior of the tag's SHAPE, which is a row
+        (`db/0042`). The shape is the tag's polarity against its host's — reversed («isn't it»
+        after «it is», «can he» after «he can't») or constant («did she» after «she slept») — read
+        off the NEGATION rows and the negative binders each raised, so no word is asked.
+
+        *Superseded*: the 09-18 note's «a claim, then a request to confirm it». A claim and a
+        question about that same claim contradict each other; the prior holds what the speaker
+        does — expects, and asks.
+
+        **THE HOST IS THE CLAUSE THE TAG HANGS OFF, AND THREE CHECKS KEEP THAT HONEST** — each a
+        reason to withhold the host with its tag, never to guess another clause:
+
+            a coordination   UD hangs what a whole coordination shares on its FIRST conjunct, so a
+                             tag there asks that conjunct or all of them, and the tree cannot say
+                             which — «He slept and she left, didn't she?»
+            agreement        the tag's pronoun agrees with its host's subject, by the features the
+                             rows give a pronoun (a noun is third person, in the number UD marks on
+                             it): «He said that she was late, wasn't SHE?» asks the lateness, and
+                             hangs off the saying
+            its carrier      a tag repeats its host's FIRST auxiliary (the lemmas the parse gives),
+                             or — where the host has none — a carrier, a row that sets no time of
+                             its own: «He said that he was late, WASN'T he?» is not the saying's
+
+        and a shape with no row withholds too (`OpenPriors.of`): opened without its number, the host
+        would be req 50's OTHER question, «Is it cold?», which the sentence did not ask.
+
+        **A TAG ON AN IMPERATIVE ASKS NO TRUTH** — «Close the door, will you?». The host is wanted,
+        not claimed; the tag presses or softens the want, which is req 51's gradation of its
+        STRENGTH, and no row says by how much. So the want stands, at the bare imperative's strength,
+        and the tag's words are not placed.
+
+        **A TAG'S WORDS ARE NO CLAUSE'S CONTENT** (`tagged`), and `_unentailed` does not read a
+        lost one as a cut from the host: what a tag says is about the speech act — the host's truth,
+        or its want. Its pronoun is placed only where the host's subject already says everything it
+        does: «Anna sleeps, doesn't SHE?» tells that Anna is female, and no box holds that.
+
+        **AND AN ELIDED CLAUSE THAT ASKS AND IS NO TAG** — «Anna sleeps, but does Bob?» — is withheld
+        by ruling 9, and its host with it (`elliptic`), as before: what it asks is elided.
+        """
+        clauses = {w.index: None for w in heads}
+        statement_of, core = self._statements(skeleton, heads)
+        for index in sorted(tags):
+            tag, row = skeleton[index], content.get(index)
+            words = {i for i, o in owner.items() if o == index
+                     and skeleton[i].upos not in ("PUNCT", "SYM")}
+            tagged |= words
+            if row is None:
+                continue
+            said = " ".join(skeleton[i].text for i in sorted(words))
+            host = self._enclosing(skeleton, tag, clauses)
+            host_row = content.get(host.index) if host is not None else None
+            # The `?` closes the tag's statement — its truth may be unopened all the same: a tag
+            # on a supposed host was supposed with it by `_relate`, and asks nonetheless.
+            asks = index in questioned
+            reason, prior, conjuncts = None, None, []
+            if asks and host_row is not None and not self._wanted(host_row, prefix_rows):
+                conjuncts = [h.index for h in heads if h.bare_dep == "conj"
+                             and getattr(self._enclosing(skeleton, h, clauses), "index", None)
+                             == host.index]
+                reason = self._tag_mismatch(tag, host, skeleton, marks, bool(conjuncts))
+                if reason is None:
+                    reversed_ = self._negative(host_row.name, prefix_rows) \
+                        != self._negative(row.name, prefix_rows)
+                    shape = REVERSED_TAG if reversed_ else CONSTANT_TAG
+                    prior = self.priors.of(shape)
+                    if prior is None:
+                        reason = (f"a tag of its host's own polarity ({shape}) may expect, infer or "
+                                  f"doubt, and no row says how much it expects")
+            self._drop_tag(index, row.name, content, prefix_rows, joins)
+
+            if not asks or host_row is None:
+                for i in words:
+                    covered.discard(i)
+                abstained.append(tags[index] or f"«{said}»: a tag that asks nothing — what it elides "
+                                                f"is not in the sentence, and it is not placed")
+                continue
+            if self._wanted(host_row, prefix_rows):
+                for i in words:
+                    covered.discard(i)
+                abstained.append(f"«{said}»: a tag on an imperative asks for no truth — it presses or "
+                                 f"softens the want (req 51's gradation of its strength), and no "
+                                 f"row says by how much: the want stands at the bare imperative's "
+                                 f"strength, and the tag is not placed")
+                continue
+            if reason is None:
+                statement = statement_of.get(host.index, host.index)
+                claim = [content[h] for h in core if statement_of.get(h) == statement and h in content]
+                if not self._open_claim(claim, joins, content, lambda: Open(prior=prior)):
+                    reason = "it claims nothing of its own to be asked"
+            if reason is None:
+                subject = next(c for c in skeleton.children(index) if c.bare_dep in SUBJECT_DEPS)
+                more = self._says_more(subject, host, skeleton, marks)
+                for i in words:
+                    covered.discard(i)
+                    if i != subject.index or more is None:
+                        covered.add(i, "tag")
+                if more is not None:
+                    abstained.append(f"«{subject.text}»: the tag's pronoun states its host's subject's "
+                                     f"{more}, and the subject's box has no place for it")
+                continue
+            for i in words:
+                covered.discard(i)
+            for gone in (host.index, *conjuncts):
+                if gone not in unscoped:
+                    unscoped.append(gone)
+            abstained.append(f"«{host.text}»: the clause the tag «{said}» asks about — {reason} — is "
+                             f"withheld with it, or it would claim what the sentence asks "
+                             f"(E3.3.11.2.21)")
+
+        for index in sorted(elliptic):
+            head = skeleton[index]
+            row = content.get(index)
+            if head.is_root or row is None or not isinstance(row.truth, Open):
+                continue
+            host = self._enclosing(skeleton, head, clauses)
+            if host is None or host.index in unscoped or host.index not in content \
+                    or content[host.index].truth != CLAIMED:
+                continue
+            unscoped.append(host.index)
+            abstained.append(f"«{host.text}»: the clause an elided question hangs off — what it asks "
+                             f"is elided, so it is withheld with it, or it would claim what the "
+                             f"sentence may ask (E3.3.11.2.16 (9))")
+
+    @staticmethod
+    def _wanted(row: ContentRow, prefix_rows: list) -> bool:
+        """Is this row the one the speech act's want holds — the imperative's own clause?"""
+        return row.truth is None and any(
+            isinstance(p, AttitudeRow) and p.scopes == row.name and p.verb == IMPERATIVE_VERB
+            and p.strength is not None for p in prefix_rows)
+
+    @staticmethod
+    def _negative(name: str, prefix_rows: list) -> bool:
+        """**THE POLARITY OF A CLAUSE** — logic, read off what the zip raised over the row: its
+        negations and its negative binders («NOBODY came, did they?», «NOT EVERY cat sleeps, does
+        it?»), by parity. RAW, so every row counted is one the clause raised itself."""
+        count = sum(1 for p in prefix_rows if getattr(p, "scopes", None) == name and (
+            isinstance(p, NegationRow)
+            or (isinstance(p, QuantifierRow)
+                and p.quantity in (Quantity.NEGATIVE, Quantity.NEGATED_UNIVERSAL))))
+        return count % 2 == 1
+
+    def _tag_mismatch(self, tag: Word, host: Word, skeleton: Skeleton, marks: dict,
+                      coordination: bool) -> str | None:
+        """Why the tree does not show that this tag asks the clause it hangs off — None when it does
+        (`_tags`'s three checks, in their order)."""
+        if coordination:
+            return ("it heads a coordination, and UD hangs what the whole coordination shares on its "
+                    "first conjunct — the tree does not say whether the tag asks that conjunct or all "
+                    "of them")
+        subject = next(c for c in skeleton.children(tag.index) if c.bare_dep in SUBJECT_DEPS)
+        theirs = next((c for c in skeleton.children(host.index) if c.bare_dep in SUBJECT_DEPS),
+                      None)
+        if theirs is not None:
+            mine, their = self._person_of(subject, marks), self._person_of(theirs, marks)
+            for feature in ("person", "number", "gender"):
+                a, b = mine.get(feature), their.get(feature)
+                if a not in (None, "either") and b not in (None, "either") and a != b:
+                    return (f"its «{subject.text}» does not agree with «{theirs.text}» in {feature}, "
+                            f"so it asks a clause the tree does not hang it on")
+        carriers = ([host] if host.upos == "AUX" else []) + [
+            c for c in skeleton.children(host.index) if c.bare_dep in ("aux", "cop")]
+        if carriers:
+            if carriers[0].lemma != tag.lemma:
+                return (f"its «{tag.text}» is not its host's «{carriers[0].text}» — a tag repeats "
+                        f"its host's first auxiliary, so it asks another clause")
+            return None
+        match = marks.get(tag.index)
+        compiled = (match.compiled or {}) if match is not None else {}
+        if compiled.get("kind") != "theatre" or compiled.get("tense") or compiled.get("aspect"):
+            return (f"its «{tag.text}» is no carrier, and a host with no auxiliary of its own takes "
+                    f"one in its tag — so it asks another clause")
+        return None
+
+    def _person_of(self, word: Word, marks: dict) -> dict:
+        """The person, number and gender a SUBJECT states — its row's features for a pronoun; for a
+        noun, third person (grammar) in the number UD marks where a number is evidence (`db/0032`)."""
+        match = marks.get(word.index)
+        if match is not None and match.features:
+            return {k: match.features.get(k) for k in ("person", "number", "gender")}
+        if word.upos in ("NOUN", "PROPN"):
+            return {"person": 3, "number": self._number_of(word)}
+        return {}
+
+    def _says_more(self, pronoun: Word, host: Word, skeleton: Skeleton, marks: dict) -> str | None:
+        """What the tag's pronoun states that its host's subject does not — None when nothing."""
+        theirs = next((c for c in skeleton.children(host.index) if c.bare_dep in SUBJECT_DEPS),
+                      None)
+        their = self._person_of(theirs, marks) if theirs is not None else {}
+        more = [feature for feature, value in self._person_of(pronoun, marks).items()
+                if value not in (None, "either") and their.get(feature) in (None, "either")]
+        return " · ".join(more) if more else None
+
+    @staticmethod
+    def _drop_tag(index: int, name: str, content: dict, prefix_rows: list, joins: list) -> None:
+        """The tag's row leaves the zip, with what it raised and the join that set it beside its
+        host: that join's other operand takes its place wherever the join was named."""
+        content.pop(index, None)
+        prefix_rows[:] = [p for p in prefix_rows if getattr(p, "scopes", None) != name]
+        for join in [j for j in joins if name in j.operands]:
+            joins.remove(join)
+            standin = next(o for o in join.operands if o != name)
+            for other in joins:
+                other.operands = [standin if o == join.name else o for o in other.operands]
+            for p in prefix_rows:
+                if getattr(p, "scopes", None) == join.name:
+                    p.scopes = standin
 
     def _scope(self, scoped: list[_Scoped], prefix_rows: list, abstained: list) -> bool:
         """**WHICH OF A CLAUSE'S NEGATIONS AND MODALITIES SCOPES OVER WHICH** — the prefix order is
@@ -1108,7 +1623,8 @@ class Compiler:
                 dissolved: set, withheld: list | None = None,
                 coordinated: dict | None = None,
                 built_from: dict | None = None,
-                joined: dict | None = None) -> list[JoinRow]:
+                joined: dict | None = None, seating: "_Seating | None" = None,
+                tied: dict | None = None) -> list[JoinRow]:
         """How the clauses stand to one another — a join, an attitude, or a shared variable.
 
         **THE TRUTH SLOT IS WHERE «IF» AND «BECAUSE» PART.** Both are IMPLY; what differs is whether
@@ -1147,7 +1663,7 @@ class Compiler:
                 # And «I wonder WHETHER you swim» claims the wondering and ASKS the swimming — the
                 # clause's truth is opened by `_ask`, from the word's own row (req 21).
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, joiner,
-                               dissolved)
+                               dissolved, marks, seating, tied)
                 covered.update(range(at, at + joiner.length), label="join")
                 continue
 
@@ -1168,7 +1684,7 @@ class Compiler:
                 # claiming more is the sin (req 8). `_contexts` rotates a quoted one by this same
                 # test (E3.2.1.4).
                 self._attitude(skeleton, head, content, outer, prefix_rows, covered, None,
-                               dissolved)
+                               dissolved, marks, seating, tied)
                 continue
 
             if joiner is None and head.bare_dep != "conj" and self._lone_iobj(skeleton, outer):
@@ -1401,8 +1917,13 @@ class Compiler:
         return statement_of, core
 
     def _question(self, skeleton: Skeleton, heads: list[Word], owner: dict[int, int],
-                  content: dict, joins: list, asked: set) -> None:
+                  content: dict, joins: list, asked: set, marks: dict | None = None,
+                  covered: Placements | None = None, prefix_rows: list | None = None,
+                  seating: _Seating | None = None, closed: set | None = None) -> None:
         """A `?` makes the statement it closes ASK — its truth, and the claim of what it joins.
+
+        `closed` receives the head of every statement a `?` closes, whether or not it had a claim of
+        its own to open — a tag inside a supposition is still the one the `?` closes (`_tags`).
 
         **STANZA HANGS THE `?` ON THE ROOT**, not on the clause that asks: on *asked* in «I asked:
         "Do you know the muffin man?"», on *know* in «I know you are tired, but is the cat hungry?».
@@ -1417,10 +1938,19 @@ class Compiler:
         was CLAIMED opens — a row the joins left unasserted was never the speaker's claim to ask.
 
         **A STATEMENT THAT ALREADY ASKS THROUGH A WH-WORD KEEPS ITS TRUTH**: «Where is the cat?»
-        asks where, not whether.
+        asks where, not whether — **and so does one whose wh-word was FRONTED OUT OF ITS
+        COMPLEMENT** *(2026-09-26, the skeptic's amendment to `E3.3.11.2.16`)*: «What do you think he
+        ate?» asks what, through the thinking; it does not ask whether you think. The wh-word stands
+        before the statement's own head, and word order is frame. After it — «Do you know what he
+        ate?» — the question is embedded, and the knowing is what is asked.
+
+        **A `?` AFTER A QUOTATION'S CLOSING MARK CLOSES THE FRAME** — «Did John say to Marie: "You
+        are late"?» asks whether John said it, not whether Marie is late (`E3.3.11.2.12`). Inside
+        the marks — «I asked: "Do you know the man?"» — it is the quotation's own.
         """
-        marks = [w.index for w in skeleton if w.upos == "PUNCT" and w.text == QUESTION_MARK]
-        if not marks:
+        question_marks = [w.index for w in skeleton
+                          if w.upos == "PUNCT" and w.text == QUESTION_MARK]
+        if not question_marks:
             return
         statement_of, core = self._statements(skeleton, heads)
         # The statement each token belongs to, through the clause that owns it. Punctuation is
@@ -1431,35 +1961,113 @@ class Compiler:
                 words_of.setdefault(statement_of[clause], []).append(index)
 
         asking: set[int] = set()
-        for mark in marks:
+        clauses = {w.index: None for w in heads}
+        for mark in question_marks:
             before = {s: max(i for i in idx if i < mark)
                       for s, idx in words_of.items() if any(i < mark for i in idx)}
             if before:
-                asking.add(max(before, key=before.get))
+                statement = max(before, key=before.get)
+                for _ in range(len(heads)):
+                    frame = self._frame_asked(skeleton, statement, mark, clauses)
+                    if frame is None:
+                        break
+                    statement = statement_of.get(frame, frame)
+                asking.add(statement)
+        if closed is not None:
+            closed |= asking
 
         for statement in asking:
             claim = [content[h] for h in core
                      if statement_of.get(h) == statement and h in content]
             if any(row.name in asked for row in claim):
                 continue
-            names = {row.name for row in claim}
-            for row in claim:
-                if row.truth == CLAIMED:
-                    row.truth = Open()
-            rows = {row.name: row for row in content.values()}
-            for join in joins:
-                if join.truth == CLAIMED and names.intersection(join.operands):
-                    join.truth = Open()
-                    if join.operator == Operator.OR:
-                        # A disjunct is claimed only THROUGH its disjunction — free choice under a
-                        # modal — so asking the disjunction asks it too: «Can you have tea or can
-                        # you have coffee?» claims neither. «A, but B?» keeps A: AND claims it.
-                        for name in join.operands:
-                            if name in rows and rows[name].truth == CLAIMED:
-                                rows[name].truth = Open()
+            if self._asks_through_its_complement(skeleton, statement, claim, content, owner,
+                                                 marks or {}, covered, prefix_rows, seating):
+                continue
+            self._open_claim(claim, joins, content, Open)
+
+    @staticmethod
+    def _open_claim(claim: list, joins: list, content: dict, asked: Callable[[], Open]) -> set[str]:
+        """**WHAT A QUESTION OPENS IS THE STATEMENT'S CLAIM, WHEREVER IT SITS** — `_question`'s rule,
+        and a tag's (`_tags`): the claimed rows of the statement, every claimed join binding one of
+        them, and the disjuncts of a disjunction that opens. `asked` makes each new OPEN — a bare one
+        for a `?`, one with the tag's prior for a tag. Returns the names it opened; only what was
+        CLAIMED opens, so a statement whose claim is not its own opens nothing."""
+        names = {row.name for row in claim}
+        opened: set[str] = set()
+        for row in claim:
+            if row.truth == CLAIMED:
+                row.truth = asked()
+                opened.add(row.name)
+        rows = {row.name: row for row in content.values()}
+        for join in joins:
+            if join.truth == CLAIMED and names.intersection(join.operands):
+                join.truth = asked()
+                opened.add(join.name)
+                if join.operator == Operator.OR:
+                    # A disjunct is claimed only THROUGH its disjunction — free choice under a
+                    # modal — so asking the disjunction asks it too: «Can you have tea or can
+                    # you have coffee?» claims neither. «A, but B?» keeps A: AND claims it.
+                    for name in join.operands:
+                        if name in rows and rows[name].truth == CLAIMED:
+                            rows[name].truth = asked()
+                            opened.add(name)
+        return opened
+
+    def _frame_asked(self, skeleton: Skeleton, statement: int, mark: int,
+                     clauses: dict) -> int | None:
+        """The clause a QUOTED statement is framed by, when the `?` stands after the quotation's
+        closing mark — else None, and the `?` is the quotation's own.
+
+        The closing mark is read as `_is_quoted` reads it — a mark at the quotation's edge — and
+        never by which character it is: a mark standing between the quotation's last word and the
+        `?` has closed the quotation first, so the `?` is outside it. «"Do you know the man?"» has
+        none there, and neither has a quotation left unclosed.
+        """
+        head = skeleton[statement]
+        if head.is_root or head.bare_dep != "ccomp" or not self._is_quoted(skeleton, head):
+            return None
+        words = [i for i in self._descendants(skeleton, statement)
+                 if skeleton[i].upos not in ("PUNCT", "SYM")]
+        last = max(words) if words else statement
+        closed_before = any(skeleton[i].upos == "PUNCT" and skeleton[i].text != QUESTION_MARK
+                            for i in range(last + 1, mark))
+        if not closed_before:
+            return None
+        outer = self._enclosing(skeleton, head, clauses)
+        return outer.index if outer is not None else None
+
+    def _asks_through_its_complement(self, skeleton: Skeleton, statement: int, claim: list,
+                                     content: dict, owner: dict, marks: dict,
+                                     covered: Placements | None, prefix_rows: list | None,
+                                     seating: _Seating | None) -> bool:
+        """Does a wh-word of this statement's attitude-complement chain stand BEFORE the statement's
+        head — fronted out of the complement it asks in («WHAT do you think he ate?»)?"""
+        if seating is None or prefix_rows is None or covered is None:
+            return False
+        chain, frontier = set(), {row.name for row in claim}
+        for _ in range(len(prefix_rows) + 1):
+            found = {p.scopes for p in prefix_rows if isinstance(p, AttitudeRow)
+                     and seating.matrix.get(p.name) in frontier} - chain
+            if not found:
+                break
+            chain |= found
+            frontier = found
+        if not chain:
+            return False
+        name_of = {index: row.name for index, row in content.items()}
+        for index, match in marks.items():
+            if match.kind != "open" or index not in covered or index >= statement:
+                continue
+            if match.compiled.get("opens") not in OPENS_A_SLOT:
+                continue
+            if name_of.get(owner.get(index)) in chain:
+                return True
+        return False
 
     def _imperative(self, skeleton: Skeleton, heads: list[Word], content: dict, prefix_rows: list,
-                    inner: dict, context: Context, joins: list) -> None:
+                    inner: dict, context: Context, joins: list,
+                    seating: _Seating | None = None) -> None:
         """«Close the door!» — the speaker WANTS it, and claims nothing (task 2d, tkzip req 48).
 
         **STANZA CARRIES THE MOOD STRUCTURALLY**: `Mood=Imp` on the verb, or on its copula or
@@ -1477,9 +2085,13 @@ class Compiler:
 
         `strength` COMES FROM THE ROWS (req 23, `db/0020`): how strongly a bare imperative wants
         is not a fact the tree states, and the Captain ruled it knowledge — so the compiler asks the
-        table and leaves the slot empty when the table has no row, rather than holding a number of
-        its own. The drill's 0.9 measures «Close the door!»; «please» will move it, and will do so
-        by migration.
+        table rather than holding a number of its own. The drill's 0.9 measures «Close the door!»;
+        «please» will move it, and will do so by migration.
+
+        **AND IT IS NEVER EMPTY — AN INVARIANT** *(the Captain, 2026-09-27, `E3.3.11.2.24`)*: every
+        want this method raises carries the strength, because a table without the imperative's row
+        is refused when the compiler is built (`__init__`). The decompiler relies on it: a
+        speaker-held want with no strength is a want the speaker STATES, never the speech act's.
 
         **A JOIN OF WANTS CLAIMS NOTHING EITHER.** «Go and see» is two wants; the AND between them,
         left claimed, asserted that you go and see.
@@ -1496,10 +2108,17 @@ class Compiler:
             here = inner.get(head.index, context)
             speaker = here.speaker if here.speaker is not None else Open()
             addressee = here.addressee if here.addressee is not None else Open()
-            prefix_rows.append(AttitudeRow(
+            # **THE WANT IS THE SPEECH ACT, SO IT IS OUTERMOST** *(2026-09-26, `E3.3.11.2.7`)*.
+            # Appended, it landed after the «not» the clause had already raised — «Don't touch it!»
+            # was ¬WANT, «I do not want you to touch it», and said back it was «Touch it!». Inserted
+            # before every row already over the clause, as «unless» inserts its negation.
+            first = next((i for i, p in enumerate(prefix_rows)
+                          if getattr(p, "scopes", None) == row.name), len(prefix_rows))
+            strength = self.strengths.of(IMPERATIVE)
+            assert strength is not None, "the imperative's strength is an invariant (`__init__`)"
+            prefix_rows.insert(first, AttitudeRow(
                 name=f"p{len(prefix_rows)}", scopes=row.name, verb=IMPERATIVE_VERB,
-                holder=Box(head=speaker, sense=Open()),
-                strength=self.strengths.of(IMPERATIVE)))
+                holder=Box(head=speaker, sense=Open()), strength=strength))
             if row.truth == CLAIMED:
                 row.truth = None
             wanted.add(row.name)
@@ -1507,6 +2126,16 @@ class Compiler:
             role = self._subject_role(head, copular=row.predicate is None, skeleton=skeleton)
             if not has_subject and role not in row.boxes:
                 row.boxes[role] = Box(head=addressee, sense=Open())
+                # **AND AN ATTITUDE BUILT FROM THIS CLAUSE IS HELD BY WHOEVER NOW HOLDS IT** — two
+                # rules that already exist, composed: an imperative's subject is the addressee, and
+                # an attitude's holder is its verb's subject. «Suppose the cat is hungry» is YOUR
+                # supposing, wanted by me (`aw-20`).
+                for attitude in prefix_rows:
+                    if isinstance(attitude, AttitudeRow) and seating is not None \
+                            and seating.matrix.get(attitude.name) == row.name:
+                        attitude.holder = row.boxes[role]
+                        seating.holder[attitude.name] = role
+                        seating.no_holder.pop(attitude.name, None)
         for join in joins:
             if join.truth == CLAIMED and wanted and set(join.operands) <= wanted:
                 join.truth = None
@@ -1572,7 +2201,7 @@ class Compiler:
     def _focus(self, skeleton: Skeleton, pending: list, owner: dict, content: dict,
                prefix_rows: list, extra: list, joins: list, covered: Placements, abstained: list,
                joined: dict, dissolved: set, withheld: list, tied: dict,
-               built_from: dict) -> None:
+               built_from: dict, seating: _Seating | None = None) -> None:
         """Every focus particle `_relate` did not compose into a conditional — placed by its
         ASSOCIATE, which is the particle's head in the tree (`E3.12.5.9.12` (4): «the associate goes
         to the consequent» is logic).
@@ -1655,7 +2284,8 @@ class Compiler:
                 continue
             if role is not None and meaning == EXCLUSIVE:
                 why = self._exclusive_phrase(word, associate, role, owner, content, prefix_rows,
-                                             extra, joins, covered, dissolved, tied, built_from)
+                                             extra, joins, covered, dissolved, tied, built_from,
+                                             seating)
                 if why is None:
                     continue
                 abstained.append(f"{said} over «{associate.text}»: {why} — left unplaced")
@@ -1694,7 +2324,7 @@ class Compiler:
     def _exclusive_phrase(self, word: Word, associate: Word, role: Role, owner: dict,
                           content: dict, prefix_rows: list, extra: list, joins: list,
                           covered: Placements, dissolved: set, tied: dict,
-                          built_from: dict) -> str | None:
+                          built_from: dict, seating: _Seating | None = None) -> str | None:
         """«ONLY CATS eat fish» — the drill's `only-6` shape, and the prejacent beside it. None when
         built; otherwise why not, for the record.
 
@@ -1724,6 +2354,10 @@ class Compiler:
             return "something scopes its clause, and the copied frame would stand outside it"
         if row.truth not in (CLAIMED, None):
             return "its clause is asked, not claimed"
+        if seating is not None and row.name in seating.matrix.values():
+            # «Only Anna quietly said that he sleeps» — what was said lives in the attitude, so the
+            # copied frame would range over EVERY quiet saying: a wider claim, in the antecedent.
+            return "its clause is an attitude's, and the copied frame would leave out what it holds"
 
         var = f"x{len(prefix_rows)}"
         frame = row.model_copy(deep=True, update={"name": f"{row.name}_frame", "truth": None})
@@ -2267,39 +2901,69 @@ class Compiler:
         return steps
 
     def _attitude(self, skeleton, head, content, outer, prefix_rows, covered, joiner,
-                  dissolved: set) -> None:
+                  dissolved: set, marks: dict | None = None, seating: "_Seating | None" = None,
+                  tied: dict | None = None) -> None:
         """«he says that you swim» — an ATTITUDE over the inner row, claiming only the saying.
 
         `verb` is a key rather than a member of an enum: attitude verbs are open (think, believe,
         suppose, want, fear, pretend, hope, doubt), so the classification is nearest-anchor geometry
         over a small anchor set and never misses the verb nobody thought of (req 55).
+
+        **RAW, AND WHERE IT CAME FROM** *(2026-09-26, `E3.3.11.2.16`)*. The row is raised over the
+        complement it holds, as it always was; `seating` records which matrix it was built from, so
+        that `_places` can let it take that matrix's place and `_seat` can put it there.
         """
+        marks = marks if marks is not None else {}
         outer_row = content[outer.index]
-        # The holder is the attitude verb's SUBJECT, whichever role req 22 gave it — «Anna THINKS»
-        # has an experiencer, «John SAYS» an agent.
-        holder = (outer_row.boxes.get(Role.AGENT) or outer_row.boxes.get(Role.EXPERIENCER)
-                  or outer_row.boxes.get(Role.PATIENT) or Box(head=Open(), sense=Open()))
+        inner = content[head.index]
+        # **THE HOLDER IS THE MATRIX'S SUBJECT — THE ACTIVE ONE** (`_holder_role`). A box a passive
+        # subject fills is not somebody holding anything: «He was told that she sleeps» — nobody
+        # says HE told (`E3.3.11.2.10`).
+        role, no_holder = self._holder_role(skeleton, outer, outer_row, marks, covered)
+        holder = outer_row.boxes.get(role) if role is not None else None
         # **THE ADDRESSEE, schema v3.** «John said TO MARIE that…» — the person the attitude is
         # directed at, which an attitude with only a holder could not say. It is the `recipient` of
         # the attitude verb's own row, and it is EMPTY where there is none: thinking addresses
         # nobody, and that absence is what stops «John thinks I am wrong» rotating.
-        prefix_rows.append(AttitudeRow(
-            name=f"p{len(prefix_rows)}", scopes=content[head.index].name,
-            holder=holder, addressee=outer_row.boxes.get(Role.RECIPIENT),
+        attitude = AttitudeRow(
+            name=f"p{len(prefix_rows)}", scopes=inner.name,
+            holder=holder if holder is not None else Box(head=Open(), sense=Open()),
+            addressee=outer_row.boxes.get(Role.RECIPIENT),
             # **AND THE SAYING'S OWN TIME COMES WITH IT** (schema v5): «John SAID that the sky IS
             # green» is a past saying about a present sky. The clause below dissolves into this row,
             # so this row is the only place its tense can go.
             theatre=outer_row.theatre,
-            verb=self._key(outer)))
+            verb=self._key(outer))
+        prefix_rows.append(attitude)
+        if seating is not None:
+            seating.matrix[attitude.name] = outer_row.name
+            seating.holder[attitude.name] = role if holder is not None else None
+            if holder is None:
+                seating.no_holder[attitude.name] = no_holder or "its subject became no box of its clause"
+            # The complement is its clause AND every clause below it: «I think that he sleeps
+            # BECAUSE HE IS TIRED» holds the tiredness too, and so does its attitude.
+            below = self._descendants(skeleton, head.index)
+            seating.inside[attitude.name] = {row.name for index, row in content.items()
+                                             if index in below}
+        if tied is not None:
+            # **THE ATTITUDE STANDS OR FALLS WITH ITS MATRIX** — «he may not think that…» withheld
+            # its matrix and kept the thinking, «He thinks that she sleeps» (`E3.3.11.2.2`). And a
+            # complement stands or falls WHOLE: a clause inside it withheld alone would leave its
+            # neighbours claimed outside the attitude that held them.
+            tied.setdefault(outer_row.name, set()).update({attitude.name, inner.name})
+            if seating is not None:
+                tied.setdefault(inner.name, set()).update(
+                    seating.inside[attitude.name] - {inner.name})
 
         # **AND THE CLAUSE IT CAME FROM DISSOLVES INTO IT** *(2026-09-20)*. The attitude row carries
         # the verb, its holder and its addressee — everything «he thinks» and «John said to Marie»
         # contain — so a content row saying the same thing beside it is the same thinking written
         # down twice. It is dropped only where it holds NOTHING ELSE: a saying with a time or a
         # manner on it («he said QUIETLY that…») has content of its own, and losing that would be
-        # the opposite mistake.
-        spoken_for = {Role.AGENT, Role.EXPERIENCER, Role.PATIENT, Role.RECIPIENT}
-        if set(outer_row.boxes) <= spoken_for and outer_row.pov is None:
+        # the opposite mistake. *This is the first reading; `_places` makes the decision, once
+        # every box and every truth is final.*
+        if self._speaks_only_for(outer_row, seating.holder.get(attitude.name)
+                                 if seating is not None else role):
             dissolved.add(outer_row.name)
         # **THE INNER ROW STAYS CLAIMED, AND THE PREFIX IS WHAT KEEPS IT OUT OF THE WORLD.**
         # Changed 2026-09-17 on the Captain's ruling, to the convention the drill has always used:
@@ -2315,19 +2979,104 @@ class Compiler:
         # and «John told me to do X» (I may act) are three different things to the brain, and one
         # blanked slot made them the same row.
 
+    def _holder_role(self, skeleton: Skeleton, head: Word, row: ContentRow, marks: dict,
+                     covered: Placements) -> tuple[Role | None, str | None]:
+        """WHICH BOX of the matrix holds the attitude — the box its ACTIVE subject became — and,
+        where none does, WHY, in the terms of the subject the sentence actually has.
+
+        **THE ROLE CHAIN THIS REPLACES WAS A GUESS** — agent, else experiencer, else patient — and
+        its last link made every passive subject a holder: «He was told that she sleeps» came back
+        «He told that she sleeps», and negated it claimed the reverse (`E3.3.11.2.10`). The tree
+        says who the subject is and what kind of subject it is (UD's `:pass`, `expl`, `csubj`), and
+        `Placements` says which box that word became — the same two readings `_control` makes. So:
+
+            an active subject          the box it became — for a wh-word, the box it OPENED
+                                       (`_participant_role`), which the placement trace does not
+                                       label as a box: «WHO thinks that…?»
+            a passive subject          nobody: the one told is not the one who tells
+            an expletive               nobody: «It seems that…» — the expletive holds nothing
+            a clausal subject          nobody the tree can name: «That he lied surprised ME» —
+                                       which box holds a surprise is the verb's, knowledge
+            no subject word at all     the box a subject WOULD have filled, if the row has one: a
+                                       relative clause's gap, the imperative's addressee (which
+                                       `_imperative` adds later, and re-reads this for)
+
+        The reason is returned because it is RECORDED (`_unentailed`): a withholding that names the
+        wrong cause makes the record — and every ratchet re-based on it — say something false.
+        """
+        subjects = [c for c in skeleton.children(head.index) if c.bare_dep in SUBJECT_DEPS]
+        active = next((c for c in subjects
+                       if c.bare_dep == "nsubj" and not c.dep.endswith(":pass")), None)
+        copular = row.predicate is None
+        if active is not None:
+            match = marks.get(active.index)
+            opened = (self._participant_role(active)
+                      if match is not None and match.kind == "open"
+                      and match.compiled.get("opens") == "participant" else None)
+            role = (self._placed_role(covered, active.index) or opened
+                    or self._role_of(active, skeleton, marks, copular))
+            if role in row.boxes:
+                return role, None
+            return None, f"its subject «{active.text}» became no box of its clause"
+        if subjects:
+            subject = subjects[0]
+            if subject.dep.endswith(":pass"):
+                return None, (f"its subject «{subject.text}» is a passive one — the one the verb is "
+                              f"done to, not the one who holds the attitude")
+            if subject.bare_dep == "expl":
+                return None, f"its subject «{subject.text}» is an expletive, which holds nothing"
+            if subject.bare_dep == "csubj":
+                return None, ("its subject is a CLAUSE — which of its other boxes holds the "
+                              "attitude, if any, is a fact about the verb, and no row holds it")
+            return None, f"its subject «{subject.text}» holds nothing the tree can name"
+        role = self._subject_role(head, copular, skeleton)
+        if role in row.boxes:
+            return role, None
+        return None, "it has no subject to hold the attitude"
+
+    @staticmethod
+    def _participant_role(word: Word) -> Role | None:
+        """The box a wh-word that opens a PARTICIPANT fills — by RELATION, exactly as it does for
+        every other nominal (req 12): «WHO sleeps» is `nsubj`, «WHAT did you eat» is `obj`. Read in
+        two places, kept in one: where the box is opened, and where an attitude looks for its
+        holder."""
+        return RELATION_FILLS_ROLE.get(word.dep) or RELATION_FILLS_ROLE.get(word.bare_dep)
+
+    @staticmethod
+    def _speaks_only_for(row: ContentRow, holder: Role | None) -> bool:
+        """Does this matrix hold NOTHING an attitude row cannot — only its holder's box and its
+        addressee's (`E3.3.11.2.16` (2), and the skeptic's literal rule)? A second participant
+        («He persuaded ANNA that…») is a box no attitude row has, and dropping it would lose Anna in
+        silence (`E3.3.11.2.11`)."""
+        allowed = ({holder} if holder is not None else set()) | {Role.RECIPIENT}
+        return set(row.boxes) <= allowed and row.pov is None
+
+    @staticmethod
+    def _descendants(skeleton: Skeleton, index: int) -> set[int]:
+        """Every token of the subtree rooted at `index`, itself included. Bounded like every walk."""
+        seen, frontier = {index}, [index]
+        for _ in range(len(skeleton)):
+            if not frontier:
+                break
+            frontier = [child.index for node in frontier for child in skeleton.children(node)
+                        if child.index not in seen]
+            seen.update(frontier)
+        return seen
+
     @staticmethod
     def _outermost(name: str, joins: list) -> str:
         """The outermost join this row sits inside, or the row itself when no join names it.
 
         Walked rather than computed: a join names rows that name rows, and the chain is short.
+        **Bounded**, like every other walk here: a zip that is not a tree must fail to be one, not
+        stop responding.
         """
-        current, moved = name, True
-        while moved:
-            moved = False
-            for join in joins:
-                if current in join.operands:
-                    current, moved = join.name, True
-                    break
+        current = name
+        for _ in range(len(joins) + 1):
+            parent = next((join.name for join in joins if current in join.operands), None)
+            if parent is None or parent == name:
+                return current
+            current = parent
         return current
 
     def _share_variable(self, skeleton, head, content, outer, prefix_rows, covered, marks,
@@ -2611,8 +3360,12 @@ class Compiler:
                 return True
             if any(o in names for o in (getattr(row, "operands", None) or ())):
                 return True
+            # An attitude HELD by a dropped binder's variable goes with it, as a box would: «nobody»
+            # gone, «x0 thinks» is a thinking held by nobody in particular.
+            held = [getattr(row, "holder", None), getattr(row, "addressee", None)]
             return any(isinstance(b.head, Var) and b.head.name in gone_vars
-                       for b in (getattr(row, "boxes", None) or {}).values())
+                       for b in [*(getattr(row, "boxes", None) or {}).values(),
+                                 *(box for box in held if box is not None)])
 
         # A row TIED to one that goes goes with it (`_exclusive_phrase`: the frame copied from a
         # clause says what the clause said, and cannot outlive it).
@@ -2650,18 +3403,8 @@ class Compiler:
         named = {row.scopes for row in prefix_rows if getattr(row, "scopes", None)}
         return named | {operand for join in joins for operand in join.operands}
 
-    def _matrix_of(self, skeleton: Skeleton, heads: list[Word], content: dict,
-                   attitude) -> Word | None:
-        """The clause an attitude row was built FROM — the enclosing clause of the one it scopes,
-        which is where `_relate` read its verb and holder. None for an attitude no clause carries
-        (the imperative's want is the speech act's, not a clause's)."""
-        scoped = next((i for i, row in content.items() if row.name == attitude.scopes), None)
-        if scoped is None:
-            return None
-        return self._enclosing(skeleton, skeleton[scoped], {h.index: None for h in heads})
-
     def _stranded(self, content: dict, prefix_rows: list, joins: list, dissolved: set,
-                  abstained: list) -> set[int]:
+                  abstained: list, conditioned: set | None = None) -> set[int]:
         """The clauses a withholding left STATED, UNCLAIMED AND JOINED TO NOTHING (`E3.12.5.9.13`,
         the Captain 2026-09-26) — to be withheld in their turn.
 
@@ -2674,12 +3417,22 @@ class Compiler:
         **ONLY WHAT NOTHING HOLDS.** An unclaimed row something still names is doing its job — an
         operand, a prefix's target — and so is a relative clause, held by the VARIABLE it shares
         with a live binder rather than by a name. A claimed row stands on its own.
+
+        **AND A WANT THAT WAS WANTED ONLY ON A CONDITION** *(2026-09-26)*. «If you think that he
+        sleeps, tell me!» — the supposed thinking has no place in an attitude row (`E3.3.11.2.16`
+        (2)), so the antecedent goes and the conditional with it; the imperative is still named, by
+        its own want, and standing alone it would want what was wanted only IF. So a half of a
+        conditional that a withholding left in no join is stranded whatever else names it.
         """
         named = self._named(prefix_rows, joins)
+        operands = {operand for join in joins for operand in join.operands}
         bound = {getattr(row, "binds", None) for row in prefix_rows} - {None}
         found = set()
         for index, row in content.items():
-            if row.truth is not None or row.name in named or row.name in dissolved:
+            if row.truth is not None or row.name in dissolved:
+                continue
+            if row.name in named and not (row.name in (conditioned or ())
+                                          and row.name not in operands):
                 continue
             if any(isinstance(box.head, Var) and box.head.name in bound
                    for box in row.boxes.values()):
@@ -2689,8 +3442,8 @@ class Compiler:
                              f"withheld — it claims nothing on its own, and is withheld with it")
         return found
 
-    def _orphaned(self, skeleton: Skeleton, heads: list[Word], content: dict, prefix_rows: list,
-                  joins: list, dissolved: set) -> None:
+    def _orphaned(self, content: dict, prefix_rows: list, dissolved: set,
+                  seating: _Seating) -> None:
         """A matrix that DISSOLVED into an attitude, whose attitude was then withheld, is a clause
         of its own again (`E3.3.2.7` / `E3.12.5.1`, the Captain 2026-09-26).
 
@@ -2699,18 +3452,259 @@ class Compiler:
         said that he knew the muffin man» keeps say(he), because cutting the complement from a
         claimed clause only weakens it; «I WOULD like to know …» loses it, because «would» is an
         operator and cutting one is not a weakening (`_unentailed`).
+
+        **AND IT COMES BACK WITH ITS OPERATORS, BECAUSE IN RAW THEY NEVER LEFT IT** *(2026-09-26)*.
+        «I do NOT think that he knew the muffin man»: the «not» still scopes the thinking, so the
+        clause returns under its own negation and is withheld there — never «I think» claimed. Read
+        off where each attitude came from, not off the tree: a matrix with no attitude of its own
+        left is a clause, whatever still names it.
         """
-        named = self._named(prefix_rows, joins)
-        carried = {matrix.index for attitude in prefix_rows if isinstance(attitude, AttitudeRow)
-                   for matrix in (self._matrix_of(skeleton, heads, content, attitude),)
-                   if matrix is not None}
-        for index, row in content.items():
-            if row.name in dissolved and row.name not in named and index not in carried:
+        live = {seating.matrix[p.name] for p in prefix_rows
+                if isinstance(p, AttitudeRow) and p.name in seating.matrix}
+        for row in content.values():
+            if row.name in dissolved and row.name not in live:
                 dissolved.discard(row.name)
+
+    def _places(self, content: dict, prefix_rows: list, joins: list, dissolved: set,
+                seating: _Seating) -> None:
+        """**WHICH MATRIX HANDS ITS PLACE TO ITS ATTITUDE** (`E3.3.11.2.16`, the Captain 2026-09-26:
+        «accepted all your leans»).
+
+        The format's law, recursively (tkzip reqs 35 · 68, the drill's `dere-4` · `aw-11` · `q-9`):
+        the stack on the complement's place is [what stood over the matrix] · ATTITUDE · [what the
+        complement raised itself], and no matrix row is left. That is only a rewriting of the zip
+        where the attitude row can hold everything the matrix said, so a matrix hands over its place
+        only when all of these hold — and each one that fails is recorded, because what follows is
+        a withholding (`_unentailed`), never a wrong claim. The first SIX are
+        `matrix_keeps_its_place`, in its order — the rule a quote's frame obeys across a sentence
+        boundary too — and the last three are what only a tree has (`_keeps_its_place`):
+
+            no point of view   a row with a POV of its own is not a clause an attitude row can stand
+                               for
+            a holder           a box of the matrix holds the attitude — a passive, an expletive or a
+                               clausal subject holds nothing the tree can name (`_holder_role`)
+            its own word       not a copula's complement («I am sure», «It is true»): which of the
+                               two it is is the word's, and no row holds it (ruling 10)
+            its boxes          the holder's and the addressee's, and nothing else — a time, a
+                               manner, a second participant are boxes no attitude row has (ruling 2)
+            not a restriction  a box bound by a binder that scopes neither the matrix nor a join
+                               above it is a relative clause's, and an attitude is not a row that
+                               can restrict a phrase
+            its truth          CLAIMED, or WANTED by the speech act (the imperative) — an attitude
+                               row has no truth slot, so an ASKED or a SUPPOSED one has no place
+                               (ruling 2: «Do you think…?», «If Anna thinks…»)
+
+            one complement     its operators cannot go to two
+            a place of its own the complement is not joined to a clause outside it («I think,
+                               therefore I am»): the place it would take would contain its matrix
+            no bound pronoun   under a QUANTIFIED or QUESTIONED holder a pronoun may be bound by it
+                               or not («Nobody thinks that he sleeps», «Who thinks that she
+                               sleeps?») — ruling 8, on `E3.12.5` (5)'s precedent: an ambiguity is
+                               withheld, not decided
+
+        Everything read here is the format's own — truth slots, boxes, variables, scopes — and the
+        tree's relations for the subject, so no word is asked. **Frame**: this is the scope law of
+        the format, it rewrites the zip's own row structure and names no db row.
+        """
+        rows = {row.name: row for row in content.values()}
+        built: dict[str, list] = {}
+        for p in prefix_rows:
+            if isinstance(p, AttitudeRow) and p.name in seating.matrix:
+                built.setdefault(seating.matrix[p.name], []).append(p)
+        over: dict[str, list] = {}
+        for p in prefix_rows:
+            over.setdefault(p.scopes, []).append(p)
+        wanted = {p.scopes for p in prefix_rows
+                  if isinstance(p, AttitudeRow) and p.name not in seating.matrix}
+        parent = {operand: join for join in joins for operand in join.operands}
+        binders = {p.binds: p for p in prefix_rows if isinstance(p, QuantifierRow)}
+        for name, attitudes in built.items():
+            matrix = rows.get(name)
+            if matrix is None:
+                continue
+            why = self._keeps_its_place(matrix, attitudes, over, wanted, parent, binders, rows,
+                                        seating)
+            if why is None:
+                dissolved.add(name)
+                seating.cannot.pop(name, None)
+            else:
+                dissolved.discard(name)
+                seating.cannot[name] = why
+
+    def _keeps_its_place(self, matrix: ContentRow, attitudes: list, over: dict, wanted: set,
+                         parent: dict, binders: dict, rows: dict,
+                         seating: _Seating) -> str | None:
+        """Why this matrix cannot hand its place to its attitude — None when it can (`_places`).
+
+        The rule every matrix obeys is `matrix_keeps_its_place`, shared with the quote frame across
+        a sentence boundary; what follows it here is what only a tree has — two complements, the
+        place the complement takes, and a pronoun under a binding holder."""
+        first = attitudes[0]
+        above, current = {matrix.name}, matrix.name
+        for _ in range(len(parent) + 1):
+            join = parent.get(current)
+            if join is None or join.name in above:
+                break
+            above.add(join.name)
+            current = join.name
+        why = matrix_keeps_its_place(matrix, seating.holder.get(first.name), first.verb, binders,
+                                     above, matrix.name in wanted,
+                                     seating.no_holder.get(first.name))
+        if why is not None:
+            return why
+        if len(attitudes) > 1 and (over.get(matrix.name) or matrix.name in parent):
+            return "its operators would have to go to two complements"
+        for attitude in attitudes:
+            _place, clean = self._place(attitude.scopes, seating.inside.get(attitude.name, set()),
+                                        parent, rows)
+            if not clean:
+                return ("what it holds is joined to a clause outside it, so the place it would "
+                        "take is not a place of its own")
+        # **A HOLDER THAT BINDS** — a quantifier's variable, or the slot an interrogative opens (only
+        # an interrogative carries a `sort`, schema v4 · `E3.12.5` (3)). «Who thinks that she
+        # sleeps?» asks for the x who thinks that x sleeps as readily as for whoever thinks that SHE
+        # does: questions and quantifiers are one binding mechanism (tkzip req 36), and the ambiguity
+        # ruling 8 withholds is the same one.
+        holder = attitudes[0].holder.head
+        binder = binders.get(holder.name) if isinstance(holder, Var) else None
+        if (binder is not None and binder.quantity is not None) \
+                or (isinstance(holder, Open) and holder.sort is not None):
+            inside = set().union(*(seating.inside.get(a.name, set()) for a in attitudes))
+            if any(self._anaphor(box) for name in inside if name in rows
+                   for box in rows[name].boxes.values()):
+                return ("a pronoun under a quantified or questioned holder may be bound by it or "
+                        "not, and the tree does not say which (E3.3.11.2.16 (8), E3.12.5 (5))")
+        return None
+
+    @staticmethod
+    def _anaphor(box: Box) -> bool:
+        """A third-person pronoun nobody resolved — the head or the possessor an OPEN describes."""
+        return any(isinstance(slot, Open) and slot.person == 3 for slot in (box.head, box.relation))
+
+    @staticmethod
+    def _place(name: str, inside: set[str], parent: dict, rows: dict) -> tuple[str, bool]:
+        """**THE COMPLEMENT'S PLACE** — the outermost row above its clause whose every clause lies
+        inside the complement (the skeptic's amendment to `E3.3.11.2.16`). Seated on the clause
+        instead, the matrix's «not» would land UNDER the complement's own ∃, «because» or «if»:
+        «I don't think that an old man sleeps» would assert the man.
+
+        Returns the place, and False when a join above the complement reaches a clause outside it —
+        a place that would contain its own matrix. A row that is no clause (an adjective's, a
+        frame's) belongs to whatever joins it.
+        """
+        joins = {join.name: join for join in parent.values()}
+
+        def leaves(row: str, depth: int = 0) -> set[str]:
+            join = joins.get(row)
+            if join is None or depth > len(joins):
+                return {row}
+            return {leaf for operand in join.operands for leaf in leaves(operand, depth + 1)}
+
+        current = name
+        for _ in range(len(joins) + 1):
+            join = parent.get(current)
+            if join is None:
+                return current, True
+            if any(leaf in rows and leaf not in inside for leaf in leaves(join.name)):
+                return current, False
+            current = join.name
+        return current, False
+
+    def _seat(self, content: dict, prefix_rows: list, joins: list, dissolved: set,
+              seating: _Seating) -> tuple[list, list]:
+        """**RAW BECOMES SEATED** — every attitude takes its matrix clause's place (`E3.3.11.1` ·
+        `E3.3.11.2`).
+
+        For a matrix M that handed its place to its attitude A, over a complement whose place is P:
+
+            the stack on P    [what stood over M, in its order] · A · [what P's clause raised itself]
+            a join naming M   names P instead — the complement took M's place in it
+            M                 is named by nothing, and so is not in the zip
+
+        and recursively, because what stood over M may itself be an attitude whose matrix handed
+        ITS place to M («Anna thinks that Bob does not believe that he sleeps»: ATT(anna) · ¬ ·
+        ATT(bob) over the sleeping). No kind is listed: ¬ ◇ □ ∀ ∃ ¬∃, a domain, the speech act's want
+        and an outer attitude all move by the one rule. Names are kept, because order carries scope
+        (req 35); each place's rows are emitted together, at the first slot any of them held, and
+        every other row keeps its slot.
+        """
+        handed: dict[str, list] = {}
+        for p in prefix_rows:
+            if isinstance(p, AttitudeRow) and seating.matrix.get(p.name) in dissolved:
+                handed.setdefault(seating.matrix[p.name], []).append(p)
+        if not handed:
+            return prefix_rows, joins
+        rows = {row.name: row for row in content.values()}
+        parent = {operand: join for join in joins for operand in join.operands}
+        place = {a.name: self._place(a.scopes, seating.inside.get(a.name, set()), parent, rows)[0]
+                 for attitudes in handed.values() for a in attitudes}
+        moved = {id(a) for attitudes in handed.values() for a in attitudes}
+        raw: dict[str, list] = {}
+        for p in prefix_rows:
+            raw.setdefault(p.scopes, []).append(p)
+
+        def own(name: str) -> list:
+            return [p for p in raw.get(name, ()) if id(p) not in moved]
+
+        def incoming(name: str) -> list:
+            return [a for attitudes in handed.values() for a in attitudes if place[a.name] == name]
+
+        def forwarded(matrix: str, depth: int = 0) -> list:
+            assert depth <= len(handed), "a matrix forwarded into itself — the zip is not a tree"
+            return [*(row for a in incoming(matrix)
+                      for row in (*forwarded(seating.matrix[a.name], depth + 1), a)),
+                    *own(matrix)]
+
+        def resolve(name: str) -> str:
+            for _ in range(len(handed) + 1):
+                if name not in handed:
+                    return name
+                name = place[handed[name][0].name]
+            raise AssertionError(f"{name}: a matrix whose place is itself a matrix, unending")
+
+        blocks: dict[str, list] = {}
+        for target in {place[a.name] for attitudes in handed.values() for a in attitudes}:
+            if target in handed:
+                continue
+            blocks[target] = forwarded(target)
+        member = {id(row): target for target, block in blocks.items() for row in block}
+        seated, emitted = [], set()
+        for p in prefix_rows:
+            target = member.get(id(p))
+            if target is None:
+                seated.append(p)
+                continue
+            if target in emitted:
+                continue
+            emitted.add(target)
+            for row in blocks[target]:
+                row.scopes = target
+                seated.append(row)
+        for join in joins:
+            join.operands = [resolve(operand) for operand in join.operands]
+
+        # **A DEVELOPMENT ASSERTION, AND THE TREE RULE** — nothing may name a matrix that is gone,
+        # and a sentence is a tree: no join of a thing with itself, none that reaches itself.
+        assert len(seated) == len(prefix_rows), "a prefix row was lost or duplicated in seating"
+        assert not any(p.scopes in handed for p in seated), "a prefix row scopes a seated matrix"
+        by_join = {join.name: join for join in joins}
+        for join in joins:
+            assert len(set(join.operands)) == 2, f"{join.name} joins a row with itself"
+            frontier, seen = list(join.operands), set()
+            while frontier:
+                name = frontier.pop()
+                assert name != join.name, f"{join.name} reaches itself"
+                if name not in seen and name in by_join:
+                    seen.add(name)
+                    frontier.extend(by_join[name].operands)
+        return seated, joins
 
     def _unentailed(self, skeleton: Skeleton, heads: list[Word], content: dict,
                     prefix_rows: list, joins: list, dissolved: set, covered: Placements,
-                    abstained: list, marks: dict, owner: dict[int, int]) -> set[int]:
+                    abstained: list, marks: dict, owner: dict[int, int],
+                    seating: _Seating | None = None,
+                    quotation_withheld: Collection[str] = (), quoted: bool = False,
+                    tagged: Collection[int] = ()) -> set[int]:
         """The clauses whose partial reading is NOT entailed by the sentence — to be withheld.
 
         **A PARTIAL ZIP IS QUALITY ONLY IF WHAT IT STILL CLAIMS IS ENTAILED** (E3.12.5 (1), the
@@ -2749,17 +3743,54 @@ class Compiler:
         (no parity), and a word under a negation that STRENGTHENS it («not AT ALL») is withheld with
         the rest. Withholding costs coverage; a widened claim costs a false belief, which is
         retreated and never edited.
+
+        **A MATRIX THAT HANDED ITS PLACE TO ITS ATTITUDE IS STILL WHERE ITS WORDS ARE** *(2026-09-26,
+        `E3.3.11.2.2`)*. It is dissolved into the attitude, and a word lost from it is lost from
+        the attitude: «I WOULD think that he sleeps» came back «I think that he sleeps», because
+        nothing judged the «would». And an attitude whose matrix CANNOT hand over its place
+        (`_places`) holds a content the zip has no form for — asked, supposed, a box of its own —
+        so what it holds is withheld, and the matrix is judged on its own (`E3.12.5.1`).
+
+        **AND A FRAME WHOSE QUOTATION WAS WITHHELD IS JUDGED AS THAT MATRIX IS** *(2026-09-27,
+        `E3.3.11.2.12`)*. `quotation_withheld` names the rows whose complement stood in the next
+        sentence and was withheld there (`Compiler.compile`); its words are in no skeleton this
+        station reads, so the frame is asked here what a matrix's lost words ask of it — a
+        restriction it stands in, its position — and whether it describes a definite. The
+        utterance used to answer with a copy of its own, and the copy had drifted: it withheld a
+        frame something merely scoped or joined, and kept one that moved a definite description.
+
+        **AND A SENTENCE THAT IS ITSELF A QUOTATION STANDS UNDER AN ATTITUDE, WHOLE** (`quoted`,
+        *2026-09-27*, `E3.3.11.2.22`). Its attitude is the previous sentence's frame, which no row
+        of this compile holds — so every position in it is judged as a complement's is (`opaque`).
+        Judged at the top level, «Anna said to Bob. "John said to Marie yesterday." "You sleep."»
+        kept John's saying with its quotation cut, and under Anna's saying that cut widens the claim:
+        the one sentence «Anna said to Bob: "John said to Marie yesterday: 'You sleep.'"» withholds
+        it. One judgement on both sides of the boundary.
+
+        **A TAG'S WORDS ARE NO CLAUSE'S CONTENT** (`tagged`, `_tags`): what a tag says is about the
+        speech act, so a word of one that went unplaced is no cut from the clause it hangs off.
         """
+        seating = seating if seating is not None else _Seating()
         named = self._named(prefix_rows, joins)
+        live = {seating.matrix[p.name] for p in prefix_rows
+                if isinstance(p, AttitudeRow) and p.name in seating.matrix}
         present = {i for i, row in content.items()
-                   if row.name not in dissolved or row.name in named}
+                   if row.name not in dissolved or row.name in named or row.name in live}
         parent = {operand: (join, at) for join in joins for at, operand in enumerate(join.operands)}
         over: dict[str, list] = {}
         for row in prefix_rows:
             over.setdefault(row.scopes, []).append(row)
 
+        # **A COMPLEMENT IS OPAQUE WHOLE** — in RAW its attitude scopes the complement's clause, and
+        # the clauses joined inside it («I think that he sleeps AND HE KNEW …») are under it too:
+        # seated, the attitude stands over their join (`_place`).
+        opaque = set().union(*(seating.inside.get(p.name, set()) for p in prefix_rows
+                               if isinstance(p, AttitudeRow) and p.name in seating.matrix))
+
         def position(name: str) -> str | None:
             """Why this row's claim does NOT survive a cut, or None where it only weakens."""
+            if name in opaque or quoted:
+                return "under an attitude"
             seen = set()
             while name is not None and name not in seen:
                 seen.add(name)
@@ -2814,7 +3845,7 @@ class Compiler:
 
         lost: dict[int, list[tuple[Word, str | None]]] = {}
         for word in skeleton:
-            if word.index in covered or word.upos in ("PUNCT", "SYM"):
+            if word.index in covered or word.upos in ("PUNCT", "SYM") or word.index in tagged:
                 continue
             at = felt(word.index)
             if at is None:
@@ -2838,12 +3869,35 @@ class Compiler:
                 f"«{said}»: cut from a clause {why}, where the cut widens the claim rather than "
                 f"weakening it — the clause is withheld")
 
-        for attitude in prefix_rows:
-            if not isinstance(attitude, AttitudeRow):
+        index_of = {row.name: i for i, row in content.items()}
+        for name in sorted(quotation_withheld):
+            index = index_of.get(name)
+            if index is None or index not in present:
                 continue
-            matrix = self._matrix_of(skeleton, heads, content, attitude)
-            scoped = next((i for i, row in content.items() if row.name == attitude.scopes), None)
-            if matrix is None or scoped is None:
+            frame = skeleton[index]
+            why = restricted(index) or position(name)
+            if why is not None and index not in found:
+                found.add(index)
+                abstained.append(f"«{frame.text}»: the quotation it frames was withheld, cut from a "
+                                 f"clause {why}, where the cut widens the claim rather than "
+                                 f"weakening it — the clause is withheld (E3.3.11.2.12)")
+            found |= self._described_definitely(frame, content[index], content, prefix_rows,
+                                                present, abstained)
+        for attitude in prefix_rows:
+            if not isinstance(attitude, AttitudeRow) or attitude.name not in seating.matrix:
+                continue
+            at = index_of.get(seating.matrix[attitude.name])
+            scoped = index_of.get(attitude.scopes)
+            if at is None or scoped is None:
+                continue
+            matrix, matrix_row = skeleton[at], content[at]
+            if matrix_row.name not in dissolved:
+                found.add(scoped)
+                abstained.append(f"«{matrix.text}»: the attitude cannot take its clause's place — "
+                                 f"{seating.cannot.get(matrix_row.name, 'its clause stays')} — so "
+                                 f"what it holds is withheld (E3.3.11.2.16)")
+                found |= self._described_definitely(matrix, matrix_row, content, prefix_rows,
+                                                    present, abstained)
                 continue
             link, node = [], skeleton[skeleton[scoped].head]
             for _ in range(len(skeleton)):
@@ -2857,7 +3911,73 @@ class Compiler:
                 abstained.append(f"«{' '.join(w.text for w in reversed(link))}»: the link between "
                                  f"«{matrix.text}» and what it holds is unplaced, so the attitude "
                                  f"would hold a content its verb never took — withheld")
+                self._cut_with_the_link(skeleton, matrix, matrix_row, link, owner, covered, marks)
         return found
+
+    @staticmethod
+    def _described_definitely(matrix: Word, row: ContentRow, content: dict, prefix_rows: list,
+                              present: set, abstained: list) -> set[int]:
+        """**A RESTRICTION THAT LOSES WHAT ITS ATTITUDE HELD DESCRIBES ANOTHER MAN** — when the
+        description it restricts is DEFINITE (E3.12.5 (1), the logic of `E3.12.5.12`).
+
+        «The man who thinks that he sleeps is happy»: the thinking restricts a definite, and an
+        attitude row cannot restrict (`matrix_keeps_its_place`), so what was thought is withheld —
+        and «the man who thinks is happy» may be about somebody else: a definite description is
+        neither upward nor downward in what it describes, so the cut does not weaken the claim, it
+        moves it. Every clause about that description goes with it. «A woman who says that she
+        sleeps is here» keeps «a woman who says is here», which IS entailed; «every man who…» is
+        the universal's restriction, withheld by the rule for quantifiers.
+
+        *Only this cut, and deliberately*: a definite's restriction read as upward everywhere else
+        is `E3.12.5.12`, open — measured on the corpora it would withhold `t-dc-5` and one UD
+        sentence as well, which is a ratchet for the Captain, not a side effect of this fix.
+        """
+        binders = {p.binds: p for p in prefix_rows if isinstance(p, QuantifierRow)}
+
+        def definite(binder) -> bool:
+            # The binder of a relative clause states no force (v8); what it describes carries the
+            # determiner, on its restriction box.
+            return binder.quantity is None and Determination.DEFINITE in (
+                binder.determination, binder.restriction.determination)
+
+        described = {box.head.name for box in row.boxes.values()
+                     if isinstance(box.head, Var) and box.head.name in binders
+                     and definite(binders[box.head.name])
+                     and binders[box.head.name].scopes != row.name}
+        if not described:
+            return set()
+        about = {index for index, other in content.items()
+                 if other.name != row.name and index in present
+                 and any(isinstance(box.head, Var) and box.head.name in described
+                         for box in other.boxes.values())}
+        if about:
+            abstained.append(f"«{matrix.text}»: it restricts a DEFINITE description, and cut, the "
+                             f"description may pick out another — what is said of it is withheld "
+                             f"(E3.12.5 (1))")
+        return about
+
+    def _cut_with_the_link(self, skeleton: Skeleton, matrix: Word, row: ContentRow, link: list,
+                           owner: dict, covered: Placements, marks: dict) -> None:
+        """**THE BOXES A CUT LINK'S OWN DEPENDENTS FILLED GO WITH IT** (the skeptic's amendment to
+        `E3.3.11.2.16`). «I tried to tell HIM that she sleeps» — «tell» opens no row, so «him»
+        landed on the trying, and with the link cut the matrix came back «I tried him». A phrase
+        whose tree head is a cut link was that link's, never the matrix's: its box leaves the row
+        and its words go back to `unplaced`, where the next pass judges them. Frame: the tree's
+        shape, no word read."""
+        cut = {w.index for w in link}
+        copular = row.predicate is None
+        for word in skeleton:
+            if word.index in cut or owner.get(word.index) != matrix.index \
+                    or word.head not in cut or word.index not in covered:
+                continue
+            role = self._placed_role(covered, word.index)
+            if role is None and marks.get(word.index) is not None \
+                    and marks[word.index].kind == "entity":
+                role = self._role_of(word, skeleton, marks, copular)
+            if role is not None:
+                row.boxes.pop(role, None)
+            for index in self._descendants(skeleton, word.index):
+                covered.discard(index)
 
     # -- the pieces -------------------------------------------------------------------------------
 
@@ -3314,7 +4434,7 @@ class Compiler:
             # says; five kinds, and three of them are not boxes at all.
             opens = match.compiled["opens"]
 
-            if opens in ("box", "participant", "antecedent", "field"):
+            if opens in OPENS_A_SLOT:
                 # This clause already ASKS, through its wh-word — so a `?` closing it opens a slot
                 # that is already open, and must not open its truth as well (req 21): «Where is the
                 # cat?» asks where, and that the cat is somewhere stays claimed.
@@ -3327,8 +4447,7 @@ class Compiler:
             if opens == "participant":
                 # The role arrives by RELATION, exactly as it does for every other nominal
                 # (req 12): «WHO sleeps» is `nsubj` and «WHAT did you eat» is `obj`.
-                role = (RELATION_FILLS_ROLE.get(word.dep)
-                        or RELATION_FILLS_ROLE.get(word.bare_dep))
+                role = self._participant_role(word)
                 if role is not None and role not in boxes:
                     # **«WHO» RESTRICTS THE ANSWER TO A PERSON AND «WHAT» DOES NOT**, and the row
                     # says which (`features.sort`). Without it the two questions were one zip.
@@ -3412,6 +4531,21 @@ class Compiler:
                 # compiled — so reporting them here said the station had given up on words it
                 # goes on to place correctly. A report that cries wolf is worse than no report,
                 # and «if» was in the abstention list of a sentence whose IMPLY it had built.
+                if kind == "join" and word.bare_dep == "advmod" and word.index > word.head \
+                        and skeleton[word.head].bare_dep != "advcl":
+                    # **UNLESS NO LATER PASS CAN** *(2026-09-26, `E3.3.11.2.16` (9))*. `_relate`
+                    # reads a joining word only where it joins — a `mark` or `cc` of its clause, the
+                    # `advmod` of an adverbial clause (`_joiner_at`). AFTER its head, as an adverb,
+                    # it stands where a complement stands and joins nothing, and counting it placed
+                    # was a silent loss: «I think SO» claimed «I think», «I don't think SO» the
+                    # reverse — «so» is the elided complement, a proform the rows do not describe
+                    # yet (ruling 9: later). Left unplaced, what remains is judged like any other cut
+                    # (`_unentailed`). *Before its head — «SO a calculator does not…» — it is a
+                    # discourse connective to what came before, which is context (req 7) and a
+                    # question of its own; that reading is untouched here.*
+                    abstained.append(f"{match.form}: a joining word hanging off «{skeleton[word.head].text}» "
+                                     f"as an adverb joins nothing here — left unplaced")
+                    return set()
                 return taken
             abstained.append(f"{match.form}: {kind} is not compiled yet")
             return set()

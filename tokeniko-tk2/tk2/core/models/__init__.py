@@ -46,6 +46,7 @@ from tk2.core.models.heart import (
 )
 from tk2.core.models.adverbs import AdverbKindDoc
 from tk2.core.models.strength import AttitudeStrengthDoc
+from tk2.core.models.prior import OpenPriorDoc
 from tk2.core.models.subjects import SubjectRoleDoc
 from tk2.core.models.ud_readings import UdReadingDoc
 from tk2.core.models.inflection import InflectionDoc
@@ -72,6 +73,7 @@ LOGIC_MODELS = [
     SubjectRoleDoc,
     UdReadingDoc,
     AttitudeStrengthDoc,
+    OpenPriorDoc,
     InflectionDoc,
     # CURATION, and an INPUT to a build rather than an output of one — which is the whole reason it
     # is a collection. Two approved edges were lost in the E1b rebuild because they existed only as
@@ -133,6 +135,7 @@ __all__ = [
     "UdReadingDoc",
     "SubjectRoleDoc",
     "AttitudeStrengthDoc",
+    "OpenPriorDoc",
     "InflectionDoc",
     "ClosedClassDoc",
     "DerivedPointDoc",

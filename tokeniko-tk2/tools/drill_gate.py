@@ -351,11 +351,11 @@ def _prefix_pass(produced, expected, reading) -> None:
     prefix is E3 unfinished. An extra station row over a row the drill left bare is passed over in
     silence, exactly as an extra content row is: the drill is a floor, not a ceiling.
 
-    *The substitution branch is a GUARD and fires nowhere in the drill today.* The case it is written
+    *The substitution branch is a GUARD and fires nowhere in the drill today.* The case it was written
     for is `aw-20` — «Suppose the cat is hungry» read as a WANT where the drill holds a SUPPOSE — and
-    that one does not reach it, because the station's want scopes the `suppose.v` row it builds and
-    the drill's supposition scopes the cat's. Named as a guard so a later reader does not take its
-    silence for evidence.
+    that one does not reach it: since 2026-09-26 (`E3.3.11.2.16`) the station's want and its
+    supposing both stand over the cat's row, and the drill, amended, holds both, so each pairs on its
+    own verb. Named as a guard so a later reader does not take its silence for evidence.
     """
     mine_keys, their_keys = target_keys(produced), target_keys(expected)
 

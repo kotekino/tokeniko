@@ -78,6 +78,7 @@ def test_the_named_collections_are_all_present():
         "language_adverb_kinds",
         "language_subject_roles",
         "language_attitude_strengths",
+        "language_open_priors",
         "language_inflections",
         "language_ud_readings",
         "dictionary_curated_edges",
@@ -98,6 +99,9 @@ def test_the_architecture_is_rows_not_code():
         "language_adverb_kinds",
         "language_subject_roles",
         "language_attitude_strengths",
+        # How strongly a tag question expects its answer — `db/0042`, tkzip req 50: the prior is
+        # knowledge with a counted default, exactly as the imperative's strength is (2026-09-27).
+        "language_open_priors",
         "language_inflections",
         # Where a UD label does not mean for us what it NAMES — `db/0032`, and E3's frame/knowledge
         # audit is what put it here. Three frozensets in the compiler each encoded an argument, and

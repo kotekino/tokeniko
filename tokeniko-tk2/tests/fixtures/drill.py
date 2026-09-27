@@ -808,10 +808,14 @@ case("aw-19", "I ate with Anna.", "awkward:comitative",
      distinct_from=("aw-18",))
 
 case("aw-20", "Suppose the cat is hungry.", "awkward:supposition",
-     Zip(rows=[thinks("sup", n("me.n"), scopes="h", verb="suppose.v"),
+     Zip(rows=[thinks("want", n("me.n"), scopes="h", verb="want.v", strength=0.9),
+               thinks("sup", n("you.n"), scopes="h", verb="suppose.v"),
                c("h", experiencer=the("cat.n"), complement=n("hungry.a"))]),
      "pass", "supposition is an ATTITUDE, and it is what heart 16 reads to fire the feeling at the "
-             "imagination gain rather than at full strength")
+             "imagination gain rather than at full strength. AMENDED 2026-09-26 (E3.3.11.2.16 (4)): "
+             "the sentence is an IMPERATIVE — the speaker WANTS the addressee to suppose, `aw-21`'s "
+             "want over the supposing, which takes its clause's place (ruling 1). Was: ATT(me · "
+             "suppose) alone, a supposition of the speaker's the sentence does not state")
 
 case("aw-21", "Close the door!", "awkward:imperative",
      Zip(rows=[thinks("want", n("me.n"), scopes="cl", verb="want.v", strength=0.9),

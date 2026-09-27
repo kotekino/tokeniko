@@ -67,6 +67,8 @@ own word — `whether` (req 14), a wh-word.
 
 **The tag question was on the QM's parked list and this rule resolved it**: a tag question is
 exactly a claim followed by a request to confirm it.
+**SUPERSEDED 2026-09-27** (the Captain, `E3.3.11.2.21`): a tag question is tkzip req 50's — the
+host OPEN with a high prior. A claim and a question about that same claim contradict each other.
 
 ## FRAME — AND WHERE THE LINE FALLS
 
