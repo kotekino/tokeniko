@@ -5,7 +5,8 @@ model layer.
 
   - `guard.py`             THE GUARD, standard equipment: every entry point names its db, tk1's are
                            refused by name ahead of the whitelist, everything unlisted is refused.
-  - `client.py`            one pooled client; `database()` is the only path to a handle, and it guards.
+  - `client.py`            one pooled client; `database()` is the only path to a handle, and it guards;
+                           `tk1_database()` reads tk1, which tk2 never writes.
   - `traps.py`             the tk1 traps wrapped away — no caller ever holds a query, so no caller
                            can forget `.run()`; the timeseries delete is its own honest function.
   - `rcache.py`            the r-tier snapshot + the slow tick that makes a param edit land live.
@@ -19,7 +20,7 @@ not use the ODM at all. Which door a row came through is visible at every call s
 """
 
 from tk2.datatier.boot import boot_datatier
-from tk2.datatier.client import client, close, database
+from tk2.datatier.client import client, close, database, tk1_database
 from tk2.datatier.guard import DatabaseRefused, guard_db_name
 from tk2.datatier.migration_writer import MigrationWriter, shape_of
 from tk2.datatier.rcache import RCache
@@ -48,6 +49,7 @@ __all__ = [
     "close",
     "count",
     "database",
+    "tk1_database",
     "delete_many",
     "delete_timeseries_rows",
     "exists",

@@ -12,10 +12,11 @@ from pymongo import MongoClient
 from pymongo.database import Database
 
 from tk2.core import constants
-from tk2.core.config import MONGO_URI, SERVER_SELECTION_TIMEOUT_MS
+from tk2.core.config import MONGO_URI, SERVER_SELECTION_TIMEOUT_MS, TK1_MONGO_URI
 from tk2.datatier.guard import guard_db_name
 
 _client: MongoClient | None = None
+_tk1_client: MongoClient | None = None
 
 
 def client() -> MongoClient:
@@ -35,10 +36,20 @@ def database(name: str | None = None) -> Database:
     return client()[guard_db_name(name if name is not None else constants.TK2_BODY_DB)]
 
 
+def tk1_database(name: str) -> Database:
+    """tk1's database, for READING. tk2 reads tk1 whenever it needs to and never writes it (the
+    Captain, 2026-09-27) — so nothing in tk2 writes through this handle."""
+    global _tk1_client
+    if _tk1_client is None:
+        _tk1_client = MongoClient(TK1_MONGO_URI, serverSelectionTimeoutMS=SERVER_SELECTION_TIMEOUT_MS)
+    return _tk1_client[name]
+
+
 def close() -> None:
     """Drop the client. For tests and for a clean shutdown — the body itself does not close its
     own connection pool while it is alive."""
-    global _client
-    if _client is not None:
-        _client.close()
-        _client = None
+    global _client, _tk1_client
+    for c in (_client, _tk1_client):
+        if c is not None:
+            c.close()
+    _client = _tk1_client = None

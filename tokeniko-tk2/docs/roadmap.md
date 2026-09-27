@@ -25,7 +25,7 @@
       suite was slow by DEFECT: `Migration.load` re-ran the chain, now memoised (186s → 0.2s). Root
       `CLAUDE.md` holds the rule, `tokeniko-tk2/CLAUDE.md` the commands. Record `202609220900_…`
 - [x] `E1e.8.1 · E1e.8.2` **the gate's contract, leaking** *(09-26)* — the spine no longer reaches WordNet; 16 stanza tests marked `skeleton`
-- [x] `E1e.9` **a tool read the biography around the guard — disabled** *(09-26)*; its door waits on `E3b.3.2`
+- [x] `E1e.9` **a tool read the biography around the guard — disabled** *(09-26)*; door ruled 09-27, re-enabled through `E3b.3.2.1`
 - [x] `E1e.6.1` **the drill amended to the purpose ruling** *(09-26, brought forward by the Captain)* — `t-ws-1`, `aw-6` agree;
       drill gate 65 · 6 · 16 → 67 · 4 · 16, the ratchet green. Bar doc `E2-tkzip/202609140917_…` AMENDMENTS
 - [x] `E1e.6.4` **the drill amended to «only»'s rulings** *(09-26)* — `only-6`, `t-ws-3`, `only-4`; drill 63 · 4 · 20
@@ -291,7 +291,8 @@
 - [ ] `E3.2.17` **the compile core's shape** *(09-26)* — one state, one module per pass; at E3's close
 - [ ] `E2.3.1` **two spellings of one attitude — `Pov` and `AttitudeRow`** *(for the Captain)* — before E4 compares zips
 - [ ] `E3.3.4.1` **the format enforces less than the ratchets test** *(for the Captain)* — free variables, tree-ness, `Ref` placement
-- [ ] `E3.10` **a compiled zip cannot say what compiled it** *(for the Captain, data-modeling req 7)* — before the first zip is stored
+- [x] `E3.10` **a compiled zip cannot say what compiled it** *(ruled 09-27: no stamp — a station change triggers the check)*
+- [ ] `E3.10.1` **the check after a station change** — recompile from `original`, compare, change through the mind; before the first zip is stored
 - [ ] `E3.11` **the station reads its knowledge from migration FILES** — the r-cache at PS1 / E10
 - [ ] `E3.13` **ten carried-in features placed nowhere** — an epic each, or «stays OUT» with a reason
 
@@ -306,7 +307,8 @@
       read lazily, never materialized
 - [ ] `E3b.3.1` **the names list, INHERITED — and it cannot be a TEST** — 21,975 rows, **28.1% also place
       names**. Evidence, never a test: it is the measurement that forces the net
-- [ ] `E3b.3.2` **the door to tk1's rows** *(09-26, for the Captain)* — snapshot from tk1's side, or a read-only datatier door; serves `E3b.3` · `E3b.3.1` · `E3b.4`, `E9.3`, `E1e.9`
+- [x] `E3b.3.2` **the door to tk1's rows** *(ruled 09-27: tk1 is read always, written never — read in place)*
+- [x] `E3b.3.2.1` **the guard rewritten to the ruling** *(09-27)* — `tk1_database()` reads tk1; tk2 never writes it
 - [ ] `E3b.4` **have I met it?** — recognition; the mechanism is E3b's, the rows are E9's
 - [ ] `E3b.5.1` **⚑ the MICRO-NN abstraction — brought forward from E5**; built to serve the next line and
       generalized against it, never before it

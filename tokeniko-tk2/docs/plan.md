@@ -619,7 +619,7 @@ runtime, so it is app knowledge.
    `tools/journey_ledger_build.py` opened tk1's `tokeniko_mem.tkzipdebug` with a raw client, the only
    one of ten database-opening tools that skipped `guard_db_name`. Read-only in intent is not the
    protection the guard gives. **Disabled on 09-26** (it refuses to run); its door is `E3b.3.2`'s
-   ruling.
+   ruling — **ruled 09-27** (tk1 read always, written never); **re-enabled through `E3b.3.2.1`**.
 `E1e.10` *(the course check, 2026-09-26 — for the Captain)* **a held-out check for every exception row a
    gate justified** — `db/0019` (happy), `db/0025` (look, die) and `db/0038` (time, way) each add rows
    for the very cases that score them; only `db/0038` was checked on cases written afterwards (23 fresh:
@@ -1520,6 +1520,13 @@ opened 2026-09-16 — E3 closes with names unresolved and honestly marked, which
    Req 7: *«`derived_by` carries the STATION VERSION, so a station later found buggy has its zips
    findable and re-parseable.»* Needed before the first zip is STORED (PS1 / E6), not before.
    **For the Captain**: on the zip, or on the document (schema req 59 argues the document).
+   **RULED 2026-09-27 (the Captain): neither — no stamp.** A station change (code or knowledge) is
+   itself the trigger: the stored zips are checked and recompiled from `original` where they differ.
+   Data-modeling req 7 amended. Record `E0-data-modeling/202609271900_no-station-stamp.md`.
+`E3.10.1` **the check after a station change** — recompile each stored zip's `original`, compare, list
+   those that differ; a differing zip is a belief that changes, so it goes through the mind (retreat,
+   not override — additive, as E9's night), never a replacement in place. Before the first zip is
+   stored (PS1 / E6).
 `E3.11` **the station reads its knowledge from migration FILES** — every `Compiler` default calls
    `standing_*()` with no db, i.e. the newest migration module, «(not applied)»; nothing reads the
    body or the r-cache. Sandbox-era and deliberate, so every E3 measurement is against the file
@@ -1705,6 +1712,12 @@ biography**, and those go to different epics — the Captain's own boundary of 2
    (the `bar_snapshot.json` precedent), or a named read-only door in the datatier with its own
    whitelist, logged. And «read lazily, never materialized» says which: copied into `tokeniko_tk2`
    and read lazily, or read in place. Ruled before `E3b.3` starts.
+   **RULED 2026-09-27 (the Captain): «reading is ALWAYS allowed on tk1. Writing, in the context tk2, is
+   NEVER allowed.»** Read in place, nothing copied. Datatier req 4 amended. Record
+   `E0-datatier/202609271900_tk1-is-read-never-written.md`.
+`E3b.3.2.1` **the guard rewritten to the ruling** — **DONE 2026-09-27.** `tk1_database()` reads tk1;
+   `database()` keeps refusing tk1's names as a tk2 (writable) database. No second layer: «We just
+   don't write tk1, simple as that» (the Captain). `E1e.9`'s tool re-enabled through it.
 `E3b.4` **HAVE I MET IT?** — recognition against a names table, which is a different question from
    identification and is the one that carries identity. tk1's preference order is inherited whole:
    the individual scoped to THIS talker's context, else a participant (a real interlocutor with a

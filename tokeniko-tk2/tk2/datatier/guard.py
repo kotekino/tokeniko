@@ -6,7 +6,9 @@ written down.
 
 The order of the checks below is the design, not an accident:
 
-  1. tk1's databases are refused FIRST, by name, ahead of the whitelist. So the prohibition does not
+  1. tk1's databases are refused FIRST, by name, ahead of the whitelist — as a tk2 database, i.e. a
+     handle tk2 writes through. Reading tk1 is always allowed and goes through `tk1_database()`
+     (the Captain, 2026-09-27: «reading is ALWAYS allowed on tk1. Writing […] is NEVER allowed»). So the prohibition does not
      merely rest on the absence of a permission — if someone ever adds `tokeniko` to the whitelist,
      by hand or by merge, the biography is still refused. Two independent things would have to go
      wrong, and the second one cannot go wrong quietly.
@@ -40,9 +42,8 @@ def guard_db_name(name: str) -> str:
 
     if name in constants.TK1_BODY_DBS:
         raise DatabaseRefused(
-            f"REFUSING to open '{name}': that is tk1's live body — the BIOGRAPHY. tk2 never opens "
-            f"it, not to read and not to write. What crosses between the generations crosses by "
-            f"migration (E9), under the Captain's hand."
+            f"REFUSING to open '{name}' as a tk2 database: that is tk1's body — the BIOGRAPHY. tk2 "
+            f"never writes it. To READ it, use `tk1_database()` (the Captain, 2026-09-27)."
         )
 
     if name not in constants.DB_WHITELIST:

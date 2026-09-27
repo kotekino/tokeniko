@@ -10,18 +10,10 @@ Run from `tokeniko-tk2/`:  PYTHONPATH=. ../.venv/bin/python tools/journey_ledger
 """
 import sys, re, json, pathlib
 
-# **DISABLED UNTIL E1e.9 IS RULED** (2026-09-26). The connection below reaches tk1's `tokeniko_mem`
-# with a raw `MongoClient`, around the guard every other tk2 door goes through. How tk2 reads tk1's
-# evidence is E1e.9's question; the code below is kept intact for the answer.
-raise SystemExit("journey_ledger_build.py is disabled until E1e.9 (how tk2 reads tk1 evidence) "
-                 "is ruled: it opens tk1's tokeniko_mem through a raw MongoClient, around the guard.")
-
 sys.path.insert(0,'.')
 from collections import defaultdict
-from pymongo import MongoClient
-from tk2.core import config as settings
-tk1 = MongoClient("mongodb://tokeniko.local:27018/?directConnection=true", serverSelectionTimeoutMS=8000)
-body = MongoClient(settings.MONGO_URI, serverSelectionTimeoutMS=8000)['tokeniko_tk2']
+from tk2.datatier.client import database, tk1_database
+body = database('tokeniko_tk2')
 byrole = defaultdict(set)
 for r in body["language_closed_classes"].find({}, {"_id":0,"form":1,"role":1}):
     byrole[r["role"]].add(r["form"])
@@ -34,7 +26,7 @@ MODAL, NEG, AUX = byrole["modality"], byrole["negation"], byrole["tense_aspect"]
 WH = byrole["interrogative"] | byrole["free_relative"]
 MARK = byrole["role_marker"] - {"as"}
 norm = lambda s: re.sub(r"\s+"," ",(s or "").strip().lower()).rstrip(".!?").strip()
-rows = list(tk1["tokeniko_mem"]["tkzipdebug"].find({}, {"_id":0}))
+rows = list(tk1_database("tokeniko_mem")["tkzipdebug"].find({}, {"_id":0}))
 distinct = {}
 for r in rows:
     k = norm(r.get("original"))

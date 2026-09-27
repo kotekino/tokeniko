@@ -29,3 +29,6 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27018/?directConnection=
 # The driver fails fast rather than hanging a tick: a body that blocks on a dead socket stops
 # thinking, which is worse than a body that raises and says why.
 SERVER_SELECTION_TIMEOUT_MS = 8000
+
+# tk1's body, on its own server. READ from tk2 whenever needed, never written (the Captain, 2026-09-27).
+TK1_MONGO_URI = os.getenv("TK1_MONGO_URI", "mongodb://tokeniko.local:27018/?directConnection=true")

@@ -119,8 +119,9 @@ budget cannot afford.
 
 ## Standing invariants
 
-- **tk2 code writes sandbox databases only.** The guard refuses tk1's `tokeniko` / `tokeniko_mem` by
-  name and is never weakened. The biography is never wiped or edited.
+- **tk2 code writes sandbox databases only.** tk1's databases are **read always, written never**
+  *(the Captain, 2026-09-27)*: read through `tk1_database()`; `database()`, the handle tk2 writes
+  through, refuses them. The biography is never wiped or edited.
 - **tk2 work never enters `../tokeniko-tk1/docs/roadmap.md`** — that boundary is absolute.
 - **Never run two `pytest tests/` invocations at once.** They share one test database, and two
   concurrent runs fake a regression.
